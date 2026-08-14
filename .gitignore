@@ -1,0 +1,13 @@
+# DCS İhmal Edilecekler
+*.miz
+*.trk
+*.acmi
+
+# Build Klasörü
+build/
+
+# Geliştirme Ortamı Çöpleri
+__pycache__/
+*.log
+.DS_Store
+Thumbs.db
