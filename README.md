@@ -25,3 +25,31 @@ To overcome the limitations of tracking binary `.miz` files in Git, the mission 
 Whenever you need to test the mission in DCS or prepare it for a server, run the build script from the root directory:
 ```bash
 python build.py
+```
+This will generate `Syria_Dynamic_Template.miz` inside the `build/` folder.
+
+### 2. Editing the Mission (Mission Editor)
+1. Run the `build.py` script to get the latest `.miz` file.
+2. Open the `.miz` file in the DCS Mission Editor and make your map/unit changes.
+3. Save the mission.
+4. Rename the saved `.miz` file to `.zip` and extract its contents.
+5. Overwrite the files in the `src/` directory with these extracted files.
+6. Commit your changes to Git.
+
+### 3. Handling Lua Scripts
+**DO NOT** embed scripts using the Mission Editor's `Do Script File` trigger. This forces DCS to package the script inside the binary `.miz` archive, breaking version control.
+
+Instead, execute scripts dynamically from the disk using the `Do Script` trigger:
+```lua
+assert(loadfile("C:\\Path\\To\\Your\\Repo\\Syria-Dynamic-Template\\scripts\\your_script.lua"))()
+```
+This allows you to edit the script in VS Code and simply restart the mission in DCS to see the changes immediately.
+
+### Scripting Guidelines
+**Strict Requirement:** Every Lua script update or creation within this repository must feature the script title and version number as the top comment line. 
+
+Example:
+```lua
+-- Skynet_IADS_Init | v1.0.4
+-- Script logic starts here...
+```
