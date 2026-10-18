@@ -1,4 +1,4 @@
--- SAM_FireGate | v1.5.1
+-- SAM_FireGate | v1.5.2
 -- Belirtilen SAM gruplarinin ROE'sini (WEAPON_HOLD / WEAPON_FREE) kurala gore yonetir.
 -- Radar/lock davranisina dokunmaz; sadece atis iznini kontrol eder.
 --
@@ -7,6 +7,13 @@
 --   mode = "ceiling" : menzil (rangeNM) icinde irtifasi ceilingFt veya altinda
 --                      en az bir mavi ucak yoksa HOLD. Menzil icindeki tum mavi
 --                      ucaklar ceilingFt ustundeyse SAM atis yapmaz.
+--
+-- v1.5.2:
+--  * "SAM HS02 (SA-6)-1" icin ceiling kurali eklendi (22000 ft, highVeto="players").
+--    Kod degisikligi yok, sadece FIRE_GATE.groups girdisi. Sebep: dcs.log 10:27 testinde
+--    HS02 SA-6 grubu (kapi tanimsiz, "SHOT (ungated)") 23517 ft ve 18013 ft'teki
+--    oyuncuya iki fuze atti ve vurdu. Radar kapisi (radarGateNM) eklenmedi; yalnizca
+--    atis izni (ROE) kontrol edilir, YE53 (SA-3) ile ayni desen.
 --
 -- v1.5.1:
 --  * Teshis: kapi tanimli OLMAYAN kirmizi yer birimlerinin fuze atislari da loglanir
@@ -88,6 +95,16 @@ local FIRE_GATE = {
             radarGateNM       = 10,     -- radar bu mesafeden once acilmaz
             radarHysteresisNM = 2,      -- radar radarGateNM + 2 NM disinda kapanir
             radarTargets      = "low",  -- "low": sadece ceilingFt altindaki ucaklar radari acar; "any": hepsi
+        },
+        {
+            name         = "SAM HS02 (SA-6)-1",
+            mode         = "ceiling",
+            ceilingFt    = 22000,
+            hysteresisFt = 500,
+            rangeNM      = 20,    -- TAHMIN: BV22 ile ayni; SA-6 menzili dogrulanmadi, SHOT logundan ayarla
+            playersOnly  = false,
+            filterShots  = false,
+            highVeto     = "players",
         },
     },
 }
@@ -524,4 +541,4 @@ timer.scheduleFunction(function(_, t)
     return res
 end, nil, timer.getTime() + 2)
 
-env.info("[FIREGATE] v1.5.1 initialized for " .. #FIRE_GATE.groups .. " group(s)")
+env.info("[FIREGATE] v1.5.2 initialized for " .. #FIRE_GATE.groups .. " group(s)")

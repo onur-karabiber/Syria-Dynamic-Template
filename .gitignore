@@ -11,3 +11,6 @@ __pycache__/
 *.log
 .DS_Store
 Thumbs.db
+
+# build.py scripts/ klasöründen gömer; ME'den çıkarılan eski kopyalar repoya girmesin
+src/l10n/DEFAULT/*.lua

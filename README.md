@@ -16,7 +16,7 @@ To overcome the limitations of tracking binary `.miz` files in Git, the mission 
 
 * `src/`: Contains the unpacked raw mission files (`mission`, `options`, `warehouses`, `dictionary`, etc.). Git tracks the structural changes here.
 * `scripts/`: Holds all external Lua scripts (MOOSE, Skynet, RAT, custom logic). 
-* `build.py`: Python script used to pack the `src/` directory back into a playable `.miz` file.
+* `build.py`: Python script used to pack the `src/` directory **and the Lua scripts from `scripts/`** into a playable `.miz` file.
 * `build/`: The output directory for the compiled `.miz` file (ignored by Git).
 
 ## Development Workflow
@@ -26,7 +26,7 @@ Whenever you need to test the mission in DCS or prepare it for a server, run the
 ```bash
 python build.py
 ```
-This will generate `Syria_Dynamic_Template.miz` inside the `build/` folder.
+This will generate `Syria_Dynamic_Template.miz` inside the `build/` folder. The build embeds every Lua script that the mission references (`src/l10n/DEFAULT/mapResource`) from `scripts/`, prints each script's header line, and aborts without writing anything if a referenced script is missing.
 
 ### 2. Editing the Mission (Mission Editor)
 1. Run the `build.py` script to get the latest `.miz` file.
@@ -34,16 +34,16 @@ This will generate `Syria_Dynamic_Template.miz` inside the `build/` folder.
 3. Save the mission.
 4. Rename the saved `.miz` file to `.zip` and extract its contents.
 5. Overwrite the files in the `src/` directory with these extracted files.
+   * The extracted `l10n/DEFAULT/*.lua` copies are stale by definition; they are git-ignored and `build.py` ignores them. `scripts/` always wins.
 6. Commit your changes to Git.
 
 ### 3. Handling Lua Scripts
-**DO NOT** embed scripts using the Mission Editor's `Do Script File` trigger. This forces DCS to package the script inside the binary `.miz` archive, breaking version control.
+`scripts/` is the single source of truth. Do not edit the copies inside a `.miz`; they are overwritten on every build.
 
-Instead, execute scripts dynamically from the disk using the `Do Script` trigger:
-```lua
-assert(loadfile("C:\\Path\\To\\Your\\Repo\\Syria-Dynamic-Template\\scripts\\your_script.lua"))()
-```
-This allows you to edit the script in VS Code and simply restart the mission in DCS to see the changes immediately.
+* **Edit a script:** change it in `scripts/`, then run `python build.py` and use the new `.miz`. A running mission never sees changes until it is rebuilt (no hot reload).
+* **Add a script:** in the Mission Editor add a `Do Script File` trigger and pick the file from `scripts/`, save, extract the saved `.miz` over `src/` (this adds its key to `mapResource`), then build.
+* **Remove a script:** delete its `Do Script File` action in the Mission Editor and re-extract. Scripts that are not referenced by `mapResource` are not embedded.
+* The Mission Editor only runs the scripts in trigger order; the load order requirements noted in each script header still apply.
 
 ### 4. Player Slot Convention
 * The scenario's "hero" slot is the unit named `Player_01`. The **group name is free** (`CAS-1`, `SEAD-1`, ...); no scoring script depends on it.
