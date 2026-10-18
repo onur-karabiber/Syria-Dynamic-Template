@@ -41,4 +41,5 @@ mapResource =
 	["ResKey_Action_26"] = "Red_Flag_Radio_7.ogg",
 	["ResKey_Action_299"] = "myIADS_v9_fixed.lua",
 	["ResKey_Action_18"] = "ATC_Radio_3.ogg",
+	["ResKey_Action_312"] = "JTAC_LOS_Audit.lua",
 } -- end of mapResource
