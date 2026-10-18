@@ -1,4 +1,4 @@
-# extract.py | v1.0.0
+# extract.py | v1.1.0
 # Mission Editor'de kaydedilmiş .miz  ->  src/   (build.py'nin tersi)
 #
 #   python extract.py                  # config.py'deki Missions\...\Syria_Dynamic_Template.miz
@@ -13,6 +13,12 @@
 #   - .miz'de olmayan dosyalar src/'den silinir. Bu yalnızca .miz'in en üst
 #     seviyede içerdiği klasör/dosyalar için geçerlidir: .miz'de hiç Sounds/
 #     yoksa src/Sounds/ olduğu gibi kalır.
+#   - Normalize (v1.1.0): mission, options, warehouses, l10n/DEFAULT/dictionary ve
+#     mapResource Lua tabloları, ME'nin her kayıtta değiştirdiği anahtar sırası
+#     yerine anahtar-sıralı biçimde yazılır (dcslua.py). Veri aynı kalır, git diff
+#     yalnızca gerçek değişikliği gösterir. Yazmadan önce çıktı tekrar ayrıştırılıp
+#     orijinalle tip dahil karşılaştırılır; ayrıştırma/doğrulama başarısız olursa
+#     dosya HAM yazılır ve uyarı verilir. --no-normalize ile kapatılır.
 #   - Güvenlik: 'mission' girdisi olmayan arşiv reddedilir; 50'den fazla dosya
 #     silinecekse --force gerekir; arşivde dışarı taşan yol (../, sürücü harfi)
 #     varsa iptal edilir.
@@ -24,10 +30,19 @@ import zipfile
 import zlib
 
 import config
+import dcslua
 
 SRC_DIR = 'src'
 EMBED_DIR = 'l10n/DEFAULT'
 MAX_DELETE = 50
+# arşiv yolu -> beklenen üst seviye Lua değişkeni
+NORMALIZE = {
+    'mission': 'mission',
+    'options': 'options',
+    'warehouses': 'warehouses',
+    'l10n/DEFAULT/dictionary': 'dictionary',
+    'l10n/DEFAULT/mapResource': 'mapResource',
+}
 CHUNK = 1 << 20
 
 
@@ -53,11 +68,16 @@ def file_crc(path):
     return crc & 0xFFFFFFFF
 
 
-def plan(miz, src_dir=SRC_DIR):
+def plan(miz, src_dir=SRC_DIR, normalize=True, verify=False):
     """.miz'i src_dir ile karşılaştırır, hiçbir şey yazmaz.
-    new/changed: src'ye yazılacaklar, deleted: src'den silinecekler."""
-    entries = {}   # arc -> (size, crc, zip member name)
+    new/changed: src'ye yazılacaklar, deleted: src'den silinecekler.
+    normalize=True: NORMALIZE'daki dosyalar anahtar-sıralı biçimleriyle karşılaştırılır
+    (ME'nin sadece sıra değiştiren kaydı fark sayılmaz). verify=True: yazılacak
+    normalize çıktısı ayrıca yeniden ayrıştırılıp doğrulanır."""
+    entries = {}   # arc -> {size, crc, member, data (normalize edilmişse bytes)}
     skipped = 0
+    normalized = []
+    warnings = []
     with zipfile.ZipFile(miz) as z:
         for info in z.infolist():
             if info.is_dir():
@@ -66,7 +86,19 @@ def plan(miz, src_dir=SRC_DIR):
             if is_embedded_lua(arc):
                 skipped += 1
                 continue
-            entries[arc] = (info.file_size, info.CRC, info.filename)
+            e = {'size': info.file_size, 'crc': info.CRC,
+                 'member': info.filename, 'data': None}
+            var = NORMALIZE.get(arc)
+            if normalize and var:
+                try:
+                    data = dcslua.normalize(z.read(info.filename), var, verify)
+                    e['size'] = len(data)
+                    e['crc'] = zlib.crc32(data) & 0xFFFFFFFF
+                    e['data'] = data
+                    normalized.append(arc)
+                except dcslua.LuaError as ex:
+                    warnings.append("%s: %s -> ham yazılacak" % (arc, ex))
+            entries[arc] = e
 
     on_disk = {}
     for root, _dirs, files in os.walk(src_dir):
@@ -77,11 +109,11 @@ def plan(miz, src_dir=SRC_DIR):
     tops = {a.split('/')[0] for a in entries}
     new = sorted(a for a in entries if a not in on_disk)
     changed = []
-    for arc, (size, crc, _n) in sorted(entries.items()):
+    for arc, e in sorted(entries.items()):
         disk = on_disk.get(arc)
         if disk is None:
             continue
-        if os.path.getsize(disk) != size or file_crc(disk) != crc:
+        if os.path.getsize(disk) != e['size'] or file_crc(disk) != e['crc']:
             changed.append(arc)
     deleted = sorted(a for a in on_disk
                      if a.split('/')[0] in tops
@@ -90,6 +122,7 @@ def plan(miz, src_dir=SRC_DIR):
     kept = sorted({a.split('/')[0] for a in on_disk} - tops)
     return {'entries': entries, 'new': new, 'changed': changed,
             'deleted': deleted, 'kept_tops': kept, 'skipped_lua': skipped,
+            'normalized': normalized, 'warnings': warnings,
             'has_mission': 'mission' in entries}
 
 
@@ -99,12 +132,17 @@ def apply_plan(miz, p, src_dir=SRC_DIR):
             dest = os.path.join(src_dir, *arc.split('/'))
             os.makedirs(os.path.dirname(dest), exist_ok=True)
             tmp = dest + '.tmp'
-            with z.open(p['entries'][arc][2]) as fin, open(tmp, 'wb') as fout:
-                while True:
-                    b = fin.read(CHUNK)
-                    if not b:
-                        break
-                    fout.write(b)
+            e = p['entries'][arc]
+            if e['data'] is not None:
+                with open(tmp, 'wb') as fout:
+                    fout.write(e['data'])
+            else:
+                with z.open(e['member']) as fin, open(tmp, 'wb') as fout:
+                    while True:
+                        b = fin.read(CHUNK)
+                        if not b:
+                            break
+                        fout.write(b)
             os.replace(tmp, dest)
     for arc in p['deleted']:
         path = os.path.join(src_dir, *arc.split('/'))
@@ -132,6 +170,8 @@ def main():
                     help="yazma/silme yapmadan raporla")
     ap.add_argument('--force', action='store_true',
                     help="%d'den fazla dosya silmeye izin ver" % MAX_DELETE)
+    ap.add_argument('--no-normalize', action='store_true',
+                    help="Lua tablolarını anahtar-sıralı yazma, ME'nin ham çıktısını olduğu gibi yaz")
     args = ap.parse_args()
 
     miz = os.path.abspath(args.miz) if args.miz else config.deployed_miz()
@@ -141,7 +181,7 @@ def main():
         print("HATA: .miz bulunamadı: %s" % miz)
         return 1
     try:
-        p = plan(miz)
+        p = plan(miz, normalize=not args.no_normalize, verify=True)
     except (zipfile.BadZipFile, ValueError) as e:
         print("HATA: %s" % e)
         return 1
@@ -160,6 +200,10 @@ def main():
     show("Silinen", p['deleted'])
     if p['kept_tops']:
         print("Dokunulmadı (.miz'de yok): %s" % ", ".join(p['kept_tops']))
+    if p['normalized']:
+        print("Anahtar-sıralı yazıldı/karşılaştırıldı: %s" % ", ".join(p['normalized']))
+    for w in p['warnings']:
+        print("UYARI: " + w)
     if p['skipped_lua']:
         print("Atlandı: %d adet l10n/DEFAULT/*.lua (scripts/ geçerli)" % p['skipped_lua'])
 

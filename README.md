@@ -18,6 +18,7 @@ To overcome the limitations of tracking binary `.miz` files in Git, the mission 
 * `scripts/`: Holds all external Lua scripts (MOOSE, Skynet, RAT, custom logic). `scripts/legacy/` holds superseded scripts that the mission no longer references; `build.py` does not embed them.
 * `build.py`: Python script used to pack the `src/` directory **and the Lua scripts from `scripts/`** into a playable `.miz` file, and copy it to the DCS Missions folder.
 * `extract.py`: the reverse of `build.py`; unpacks a Mission Editor-saved `.miz` into `src/`.
+* `dcslua.py`: dependency-free reader/writer for DCS's plain-Lua data files, used by `extract.py` to write them in key order.
 * `config.py`: shared settings (Missions folder, `.miz` name).
 * `build/`: The output directory for the compiled `.miz` file (ignored by Git).
 
@@ -42,6 +43,9 @@ The `.miz` that DCS opens (`config.py`: `Saved Games\DCS\Missions\The Routine Th
    * Only files with different content are written (size + CRC32), so `git diff` stays clean.
    * Files missing from the `.miz` are deleted from `src/`, but only inside top-level folders/files that the `.miz` contains. If the saved `.miz` has no `Sounds/`, `src/Sounds/` is left untouched.
    * `l10n/DEFAULT/*.lua` copies are skipped (stale by definition; `scripts/` wins).
+   * **Key-ordered output:** `mission`, `options`, `warehouses`, `l10n/DEFAULT/dictionary` and `mapResource` are rewritten with table keys sorted. The Mission Editor writes the same data in a different order on every save, which made `git diff` ~16,000 lines for a tiny edit. The data is unchanged: the output is re-parsed and compared with the original (types included) before it is written, and if parsing or that check fails the file is written raw with a `UYARI` line. Array element order is never touched. `--no-normalize` writes the ME output as-is.
+   * The first run after this feature was added rewrites those five files once (large one-time diff); commit it on its own.
+   * The same comparison is used by the `build.py` copy guard, so an ME save that only reordered tables is not treated as an unextracted change.
    * Safety: an archive without a `mission` entry or with unsafe paths is rejected; deleting more than 50 files needs `--force`.
 3. `git status`, commit.
 4. `python build.py` rebuilds the `.miz` and copies it to the Missions folder (see 2a).
