@@ -1,0 +1,662 @@
+-- Core_Scoring | v1.3.0
+-- TRT Syria Recovery Framework - CASE-independent scoring core.
+-- Consolidates: dead-target scoring, refuel scoring (player+AI),
+-- landing scoring, groove fuel scoring, Bankler/TrapTrainer merge,
+-- and (as of v1.1.0) the active-case getter (TRT.getCurrentCase).
+-- Loaded ONCE regardless of active recovery case. Creates the shared
+-- _G.TRT namespace used by Recovery_Approach.lua and Departure.lua.
+--
+-- v1.1.0: CaseDeterminator.lua (weather-based auto-detection) is
+-- retired. Case is now a manual mission flag (100), set from a Mission
+-- Editor trigger - see the ACTIVE CASE section below. Do not load
+-- CaseDeterminator.lua anymore.
+--
+-- v1.2.1: added TRT.flagTrue(id) - shared helper for scripts that gate
+-- on a manually-set ME flag (same doctrine as flag 100: no automatic
+-- inference, full authorship in the Mission Editor). First consumer is
+-- Recovery_Approach.lua's commence-recovery gate; Hard Deck logic will
+-- likely want the same helper when it's written.
+--
+-- v1.3.0: dead-target scoring reworked. The old DEAD_SCORES table
+-- conflated two different mechanics; they are now split:
+--   1) ENEMY KILL SCORING (new) - S_EVENT_KILL, gated on
+--      initiator == PLAYER_NAME. Resolves a point value through a
+--      priority chain: exact unit name -> name prefix (handles DCS's
+--      auto " #001" suffix on duplicate names) -> unit type name ->
+--      group category -> flat default. Every RED-coalition kill
+--      scores now, not just names present in a curated table.
+--   2) FRIENDLY ASSET LOSS PENALTY (was: the negative entries in the
+--      old DEAD_SCORES table) - still S_EVENT_DEAD, still
+--      unattributed, because a lost tanker/AWACS is bad regardless of
+--      who or what killed it.
+-- DEAD_SCORES is retired; entries split between UNIT_NAME_OVERRIDES
+-- and FRIENDLY_LOSS_PENALTIES below. S_EVENT_KILL's reliability on
+-- StaticObject targets is UNVERIFIED for this project - see the
+-- DEBUG_LOG_UNATTRIBUTED_DEATHS note in that section before trusting
+-- static HVT scoring (e.g. the factory case) blind.
+--
+-- Load order requirement: load AFTER mist, BEFORE Recovery_Approach.lua
+-- and Departure.lua.
+
+----------------------------------------------------------------
+-- CONFIG
+----------------------------------------------------------------
+local PLAYER_NAME = "Player_01"
+local CARRIER     = "CVN"
+local FLAG_SCORE  = 1908
+
+local TRAP_RADIUS_NM = 0.15
+-- Source files used 0.05 (CASE-I) and 0.15 (CASE-II/III) inconsistently.
+-- Standardized to the majority value. Change here if 0.05 was the
+-- intended tuning - it's a single constant now, not a per-file guess.
+
+----------------------------------------------------------------
+-- NAMESPACE
+-- Everything cross-module now lives under one _G.TRT table instead of
+-- scattered globals (_G.TRT_UpdateGrooveFuel, _G.TRT_UpdateHardDeck, ...).
+-- That scatter is what let CASE-II silently overwrite functions CASE-III
+-- had already defined if both ever got loaded in the same session.
+----------------------------------------------------------------
+_G.TRT = _G.TRT or {}
+local TRT = _G.TRT
+
+----------------------------------------------------------------
+-- SCORE
+----------------------------------------------------------------
+function TRT.addScore(delta, reason)
+    local cur = trigger.misc.getUserFlag(FLAG_SCORE)
+    if type(cur) ~= "number" then cur = 0 end
+    local new = cur + delta
+
+    trigger.action.setUserFlag(FLAG_SCORE, new)
+
+    local sign = (delta >= 0) and ("+" .. tostring(delta)) or tostring(delta)
+    trigger.action.outTextForCoalition(
+        coalition.side.BLUE,
+        string.format("%s (%s) [TOTAL %s]", tostring(reason), sign, tostring(new)),
+        8, false
+    )
+end
+
+----------------------------------------------------------------
+-- UTILS
+----------------------------------------------------------------
+function TRT.uPlayer()
+    return Unit.getByName(PLAYER_NAME)
+end
+
+function TRT.uCarrier()
+    return Unit.getByName(CARRIER)
+end
+
+-- Reads a manually-set ME flag as a boolean, regardless of which ME
+-- action set it: "FLAG ON" writes a Lua boolean, "FLAG VALUE" writes a
+-- number. Mirrors the ME's own "FLAG IS TRUE" condition semantics -
+-- boolean true, or any non-zero number, counts as true. Does not
+-- infer anything; the flag's value is whatever the mission's own
+-- triggers decided.
+function TRT.flagTrue(flagId)
+    local v = trigger.misc.getUserFlag(flagId)
+    return v == true or (type(v) == "number" and v ~= 0)
+end
+
+function TRT.altFt(u)
+    if not u or not u:isExist() then return 0 end
+    local p = u:getPoint()
+    return (p and p.y or 0) * 3.28084
+end
+
+function TRT.spdKts(u)
+    if not u or not u:isExist() then return 0 end
+    local v = u:getVelocity()
+    if not v then return 0 end
+    return math.sqrt((v.x or 0)^2 + (v.y or 0)^2 + (v.z or 0)^2) * 1.94384
+end
+
+function TRT.distToCarrierNm(u, c)
+    c = c or TRT.uCarrier()
+    if not u or not u:isExist() or not c or not c:isExist() then return 99999 end
+    local pu, pc = u:getPoint(), c:getPoint()
+    if not pu or not pc then return 99999 end
+    return math.sqrt((pu.x - pc.x)^2 + (pu.z - pc.z)^2) / 1852
+end
+
+function TRT.inZone(u, zoneName)
+    if not u or not u:isExist() then return false end
+    local Z = trigger.misc.getZone(zoneName)
+    if not Z then return false end
+    local p = u:getPoint()
+    local dx, dz = p.x - Z.point.x, p.z - Z.point.z
+    return math.sqrt(dx*dx + dz*dz) <= Z.radius
+end
+
+function TRT.getHeading(u)
+    if not u or not u:isExist() then return 0 end
+    local pos = u:getPosition()
+    if not pos or not pos.x then return 0 end
+    local hdg = math.deg(math.atan2(pos.x.z, pos.x.x))
+    if hdg < 0 then hdg = hdg + 360 end
+    return hdg
+end
+
+function TRT.clamp(x, a, b)
+    if x < a then return a end
+    if x > b then return b end
+    return x
+end
+
+----------------------------------------------------------------
+-- ENEMY KILL SCORING
+-- Fires on S_EVENT_KILL, not DEAD - KILL is the only event carrying
+-- both initiator (killer) and target (victim). DEAD only tells you
+-- what died, not who did it. Gated on initiator name == PLAYER_NAME:
+-- only kills YOU personally get credit. Only RED-coalition targets
+-- score, so a wrong-target or blue-on-blue hit can't add points.
+--
+-- UNVERIFIED: community reports on S_EVENT_KILL are mixed for
+-- StaticObject targets - some report it does not fire reliably for
+-- statics, only S_EVENT_DEAD does. This directly affects your
+-- "factory" HVT case (#2 in your request). DEBUG_LOG_UNATTRIBUTED_DEATHS
+-- exists to let you check this empirically: it logs any RED death DEAD
+-- saw that never got a matching PLAYER_01 KILL, so you can read the
+-- dcs.log after a test hop and see whether your static targets are
+-- being missed. Set it false once you've confirmed coverage.
+--
+-- Resolution priority (first match wins):
+--   1. UNIT_NAME_OVERRIDES  - exact unit/static name
+--   2. UNIT_NAME_OVERRIDES  - name prefix (handles DCS's auto " #001"
+--      suffix when a unit/static name is duplicated in the ME)
+--   3. TYPE_SCORES          - unit:getTypeName(); matches the ME's
+--      "TYPE" field (e.g. "Infantry AK-74 Rus ver1")
+--   4. GROUP_CATEGORY_SCORES - unit:getGroup():getCategory(); statics
+--      have no getGroup() and go straight to STATIC_DEFAULT_SCORE
+--   5. DEFAULT_ENEMY_SCORE  - flat fallback, nothing scores nil/0 silently
+--
+-- The ME's "CATEGORY / SUB. CAT." fields (Infantry / All, etc.) are
+-- Mission-Editor placement-browser taxonomy - not queryable at runtime
+-- in that exact form. TYPE_SCORES (exact type name) is the practical
+-- runtime equivalent of "Sub. Cat."; group category is the equivalent
+-- of the coarse "Category" level.
+----------------------------------------------------------------
+local DEBUG_LOG_UNATTRIBUTED_DEATHS = true
+
+local UNIT_NAME_OVERRIDES = {
+    -- Migrated 1:1 from the old DEAD_SCORES table's positive entries.
+    -- These now ALSO require PLAYER_NAME to be the killer - before this
+    -- rework, ANY death of these names scored regardless of who or what
+    -- killed them. Confirm that behavior change is what you want.
+    ["SAM 15 (8-13-15-19)-1"] = 10,
+    ["SAM 15 (8-13-15-19)-2"] = 9,
+    ["SAM 15 (8-13-15-19)-3"] = 8,
+    ["SAM 15 (8-13-15-19)-4"] = 7,
+    ["SAM 7 (13)-1"] = 5,
+    ["SAM 7 (13)-2"] = 7,
+
+    ["POPUP_TARGET1"] = 9,
+    ["STRIKE1_TRG2"]  = 9,
+    ["AKROTIRI_Chemical_Factory"] = 10,
+    ["STRIKE1_TRG1"] = 10,
+}
+-- NOTE: you flagged these unit names as outdated - update this table
+-- when you rebuild the target list for your current mission.
+
+local TYPE_SCORES = {
+    -- Keyed by unit:getTypeName() - copy straight from the ME's TYPE
+    -- field. This is what covers "every kill scores" without hand-
+    -- curating every group; add entries as you identify recurring
+    -- types across missions.
+    ["Infantry AK-74 Rus ver1"] = 1,
+    -- ["Osa 9A33"]        = 12,
+    -- ["ZSU-23-4 Shilka"] = 8,
+}
+
+local GROUP_CATEGORY_SCORES = {
+    -- Verify these constant names against your DCS version if this
+    -- layer ever resolves to nil unexpectedly.
+    [Group.Category.GROUND]     = 1,
+    [Group.Category.SHIP]       = 5,
+    [Group.Category.AIRPLANE]   = 8,
+    [Group.Category.HELICOPTER] = 8,
+    [Group.Category.TRAIN]      = 3,
+}
+
+local STATIC_DEFAULT_SCORE = 2
+local DEFAULT_ENEMY_SCORE  = 1
+
+local function resolveEnemyScore(unitName, typeName, groupCategory, isStatic)
+    local delta = UNIT_NAME_OVERRIDES[unitName]
+    if delta then return delta, "name" end
+
+    for key, val in pairs(UNIT_NAME_OVERRIDES) do
+        if string.find(unitName, key, 1, true) == 1 then
+            return val, "name-prefix"
+        end
+    end
+
+    if typeName and TYPE_SCORES[typeName] then
+        return TYPE_SCORES[typeName], "type"
+    end
+
+    if isStatic then
+        return STATIC_DEFAULT_SCORE, "static-default"
+    end
+
+    if groupCategory and GROUP_CATEGORY_SCORES[groupCategory] then
+        return GROUP_CATEGORY_SCORES[groupCategory], "group-category"
+    end
+
+    return DEFAULT_ENEMY_SCORE, "default"
+end
+
+do
+    local killHandled = {}
+    local deadSeen = {}
+    local KEH = {}
+
+    function KEH:onEvent(e)
+        if not e then return end
+
+        -- Debug capture: any RED death, independent of KILL attribution.
+        if DEBUG_LOG_UNATTRIBUTED_DEATHS and e.id == world.event.S_EVENT_DEAD
+           and e.initiator and e.initiator.getName then
+            local okN, n = pcall(function() return e.initiator:getName() end)
+            local okC, c = pcall(function() return e.initiator:getCoalition() end)
+            if okN and n and okC and c == coalition.side.RED then
+                deadSeen[n] = true
+            end
+        end
+
+        if e.id ~= world.event.S_EVENT_KILL then return end
+
+        local killer, victim = e.initiator, e.target
+        if not killer or not killer.getName or not victim or not victim.getName then return end
+
+        local okK, killerName = pcall(function() return killer:getName() end)
+        if not okK or killerName ~= PLAYER_NAME then return end
+
+        local okV, victimName = pcall(function() return victim:getName() end)
+        if not okV or not victimName or killHandled[victimName] then return end
+
+        local okCo, victimCoalition = pcall(function() return victim:getCoalition() end)
+        if not okCo or victimCoalition ~= coalition.side.RED then return end
+
+        local okCat, cat = pcall(function() return victim:getCategory() end)
+        local isStatic = okCat and cat == Object.Category.STATIC
+
+        local typeName = nil
+        local okT, tn = pcall(function() return victim:getTypeName() end)
+        if okT then typeName = tn end
+
+        local groupCategory = nil
+        if not isStatic then
+            local okG, grp = pcall(function() return victim:getGroup() end)
+            if okG and grp then
+                local okGC, gc = pcall(function() return grp:getCategory() end)
+                if okGC then groupCategory = gc end
+            end
+        end
+
+        local delta, source = resolveEnemyScore(victimName, typeName, groupCategory, isStatic)
+        killHandled[victimName] = true
+        deadSeen[victimName] = nil
+        TRT.addScore(delta, string.format("TARGET DESTROYED [%s]: %s", source, victimName))
+    end
+
+    world.addEventHandler(KEH)
+
+    if DEBUG_LOG_UNATTRIBUTED_DEATHS then
+        timer.scheduleFunction(function()
+            for name in pairs(deadSeen) do
+                env.info("[Core_Scoring] DEAD without a matching " .. PLAYER_NAME ..
+                    " KILL: " .. name .. " - check whether this should have scored.")
+            end
+            deadSeen = {}
+            return timer.getTime() + 15
+        end, nil, timer.getTime() + 15)
+    end
+end
+
+----------------------------------------------------------------
+-- FRIENDLY ASSET LOSS PENALTY
+-- The negative half of the old DEAD_SCORES table. Kept on
+-- S_EVENT_DEAD with NO attribution check by design - a lost
+-- tanker/AWACS is a mission-state fact regardless of who or what
+-- killed it. Do not merge this back into the enemy-kill handler above,
+-- and do not add a second S_EVENT_DEAD/KILL scoring handler elsewhere
+-- in the framework or kills/losses will double-count.
+----------------------------------------------------------------
+local FRIENDLY_LOSS_PENALTIES = {
+    ["TANKER-1-1"] = -8, ["TANKER-2-1"] = -8, ["TANKER-3-1"] = -8, ["TANKER-4-1"] = -8,
+    ["ARCO-5-1"]   = -8, ["TANKER-6-1"] = -8,
+
+    ["MAGIC-2-1"]    = -10,
+    ["OVERLORD-1-1"] = -10,
+}
+
+do
+    local lossHandled = {}
+    local LEH2 = {}
+
+    function LEH2:onEvent(e)
+        if not e or e.id ~= world.event.S_EVENT_DEAD then return end
+        local obj = e.initiator
+        if not obj or not obj.getName then return end
+
+        local ok, name = pcall(function() return obj:getName() end)
+        if not ok or not name or lossHandled[name] then return end
+
+        local delta = FRIENDLY_LOSS_PENALTIES[name]
+        if not delta then return end
+
+        lossHandled[name] = true
+        TRT.addScore(delta, "ASSET LOST: " .. name)
+    end
+
+    world.addEventHandler(LEH2)
+end
+
+----------------------------------------------------------------
+-- GROOVE FUEL SCORING (one-shot per sortie)
+----------------------------------------------------------------
+do
+    local GROOVE_DIST_NM     = 1.6
+    local GROOVE_ALT_MIN_FT  = 50
+    local GROOVE_ALT_MAX_FT  = 900
+    local GROOVE_SPD_MIN_KTS = 105
+    local GROOVE_SPD_MAX_KTS = 240
+    -- CASE-III used 105-210. Standardized to the majority value (2 of 3
+    -- source files used 240). Its extra "high fuel / excess fuel"
+    -- zero-score informational messages were dropped for simplicity -
+    -- they never affected score, only chat text.
+
+    local FUEL_EMERGENCY_LBS = 1500
+    local FUEL_LOW_LBS       = 2000
+    local FUEL_GOOD_MIN_LBS  = 2500
+    local FUEL_GOOD_MAX_LBS  = 3500
+
+    local grooveDone = {}
+
+    local function fuelLbs(u)
+        local frac = u:getFuel()
+        if not frac then return nil end
+
+        local maxKg
+        local ok, desc = pcall(function() return u:getDesc() end)
+        if ok and desc and desc.fuelMassMax then
+            maxKg = desc.fuelMassMax
+        end
+
+        if not maxKg then
+            return frac * 11000 -- Hornet-class fallback
+        end
+        return frac * maxKg * 2.2046226218
+    end
+
+    function TRT.updateGrooveFuel(u)
+        if not u or not u:isExist() then return end
+        local uname = u:getName()
+        if not uname or grooveDone[uname] then return end
+
+        local c = TRT.uCarrier()
+        if not c or not c:isExist() then return end
+        if TRT.distToCarrierNm(u, c) > GROOVE_DIST_NM then return end
+
+        local alt = TRT.altFt(u)
+        if alt < GROOVE_ALT_MIN_FT or alt > GROOVE_ALT_MAX_FT then return end
+
+        local spd = TRT.spdKts(u)
+        if spd < GROOVE_SPD_MIN_KTS or spd > GROOVE_SPD_MAX_KTS then return end
+
+        local lbs = fuelLbs(u)
+        if not lbs then return end
+
+        local delta, msg
+        if lbs < FUEL_EMERGENCY_LBS then
+            delta, msg = -8, string.format("Fuel state below recovery minimum: %.0f lbs", lbs)
+        elseif lbs < FUEL_LOW_LBS then
+            delta, msg = -5, string.format("Fuel state critical for recovery: %.0f lbs", lbs)
+        elseif lbs >= FUEL_GOOD_MIN_LBS and lbs <= FUEL_GOOD_MAX_LBS then
+            delta, msg =  5, string.format("Fuel state within recovery limits: %.0f lbs", lbs)
+        end
+
+        if delta then
+            grooveDone[uname] = true
+            TRT.addScore(delta, msg)
+        end
+    end
+
+    local GEH = {}
+    function GEH:onEvent(e)
+        if e and e.id == world.event.S_EVENT_TAKEOFF and e.initiator then
+            grooveDone[e.initiator:getName()] = nil
+        end
+    end
+    world.addEventHandler(GEH)
+end
+
+----------------------------------------------------------------
+-- REFUEL SCORING (player zone-based + AI trend-based)
+----------------------------------------------------------------
+do
+    local PLAYER_REFUEL_ZONES = {
+        "TANKER_1_SAFE_ZONE",
+        "TANKER_2_SAFE_ZONE",
+        "TANKER_5_SAFE_ZONE",
+        -- CASE-I used zone "3" instead of "5". Uncomment if your current
+        -- mission still places a tanker safe-zone named TANKER_3_SAFE_ZONE:
+        -- "TANKER_3_SAFE_ZONE",
+    }
+
+    local REFUEL_UNITS = {}
+    local lastFuel, baseline, rewarded = {}, {}, {}
+    local playerRefuel = { inZone = false, baseline = nil, done = false }
+
+    local function inAnyRefuelZone(u)
+        for _, zn in ipairs(PLAYER_REFUEL_ZONES) do
+            if TRT.inZone(u, zn) then return true end
+        end
+        return false
+    end
+
+    timer.scheduleFunction(function()
+        local groups = coalition.getGroups(coalition.side.BLUE, Group.Category.AIRPLANE) or {}
+        for _, g in ipairs(groups) do
+            for _, u in ipairs(g:getUnits() or {}) do
+                if u and u:isExist() then REFUEL_UNITS[u:getName()] = true end
+            end
+        end
+        return timer.getTime() + 10
+    end, nil, timer.getTime() + 1)
+
+    local function updatePlayerZoneRefuel()
+        if playerRefuel.done then return end
+        local u = TRT.uPlayer()
+        if not u or not u:isExist() then return end
+
+        local f = u:getFuel()
+        if not f then return end
+
+        local inside = inAnyRefuelZone(u)
+
+        if inside and not playerRefuel.inZone then
+            playerRefuel.inZone, playerRefuel.baseline = true, f
+            return
+        end
+        if not inside and playerRefuel.inZone then
+            playerRefuel.inZone, playerRefuel.baseline = false, nil
+            return
+        end
+        if inside and playerRefuel.baseline and (f - playerRefuel.baseline) >= 0.2 then
+            playerRefuel.done = true
+            TRT.addScore(7, "Aerial Refuel Complete: " .. PLAYER_NAME)
+            if TRT.onRefuelComplete then TRT.onRefuelComplete(PLAYER_NAME) end
+        end
+    end
+
+    timer.scheduleFunction(function()
+        updatePlayerZoneRefuel()
+
+        for name in pairs(REFUEL_UNITS) do
+            if name ~= PLAYER_NAME then
+                local u = Unit.getByName(name)
+                if u and u:isExist() then
+                    local f = u:getFuel()
+                    if f then
+                        if lastFuel[name] == nil then
+                            lastFuel[name], baseline[name], rewarded[name] = f, nil, false
+                        else
+                            local df = f - lastFuel[name]
+                            if df < -0.005 then baseline[name], rewarded[name] = nil, false end
+                            if df > 0 and not baseline[name] then baseline[name] = lastFuel[name] end
+                            if baseline[name] and not rewarded[name] and (f - baseline[name]) >= 0.03 then
+                                rewarded[name] = true
+                                TRT.addScore(7, "Aerial Refuel Complete: " .. name)
+                                if TRT.onRefuelComplete then TRT.onRefuelComplete(name) end
+                            end
+                            lastFuel[name] = f
+                        end
+                    end
+                end
+            end
+        end
+        return timer.getTime() + 1
+    end, nil, timer.getTime() + 1)
+
+    local REH = {}
+    function REH:onEvent(e)
+        if not e or not e.initiator or e.id ~= world.event.S_EVENT_TAKEOFF then return end
+        local u = e.initiator
+        if not u or not u.getName then return end
+        local n = u:getName()
+        if n == PLAYER_NAME then
+            playerRefuel.inZone, playerRefuel.baseline, playerRefuel.done = false, nil, false
+        end
+        lastFuel[n], baseline[n], rewarded[n] = nil, nil, false
+    end
+    world.addEventHandler(REH)
+end
+
+----------------------------------------------------------------
+-- LANDING SCORING (carrier trap + land-base)
+----------------------------------------------------------------
+do
+    local TARGET_UNITS = {
+        ["LANDER-8-1"] = true, ["LANDER-6-1"] = true, ["CAS-1-1"] = true,
+        ["TOMCAT-2-1"] = true, ["TOMCAT-1-1"] = true, ["Player_01"] = true,
+    }
+    local LANDING_DONE = {}
+    local LEH = {}
+
+    function LEH:onEvent(e)
+        if not e or e.id ~= world.event.S_EVENT_LAND or not e.initiator then return end
+        local unit = e.initiator
+        local n = unit:getName()
+        if not TARGET_UNITS[n] or LANDING_DONE[n] then return end
+
+        local carrier = TRT.uCarrier()
+        if carrier and TRT.distToCarrierNm(unit, carrier) <= TRAP_RADIUS_NM then
+            LANDING_DONE[n] = true
+            TRT.addScore(5, "Successful carrier landing")
+            if TRT.onCarrierLanding then TRT.onCarrierLanding(n) end
+            return
+        end
+
+        local place = e.place
+        if place and place.getCategory and place:getCategory() == Object.Category.BASE then
+            LANDING_DONE[n] = true
+            TRT.addScore(2, "Successful land-based landing")
+        end
+    end
+    world.addEventHandler(LEH)
+end
+
+----------------------------------------------------------------
+-- BANKLER / TRAPTRAINER MERGE
+-- Skipped for Case III - both source files hard-excluded this on
+-- purpose (TrapTrainer scores an optical/visual pattern that a Case III
+-- radar/GCA-style approach doesn't fly). Now driven by the LIVE case
+-- flag instead of a hardcoded CASE_III_ENABLED check.
+----------------------------------------------------------------
+do
+    local merged = false
+
+    local function mergeBankler()
+        if merged then return nil end
+
+        local case = TRT.getCurrentCase and TRT.getCurrentCase()
+        if case == 3 then
+            merged = true
+            return nil
+        end
+
+        if not traptrainer or not traptrainer.PlayerData then
+            return timer.getTime() + 5
+        end
+
+        local b = traptrainer.PlayerData.score or 0
+        if b == 0 then return timer.getTime() + 5 end
+
+        merged = true
+        TRT.addScore(b, "Bankler score merged")
+        return nil
+    end
+
+    timer.scheduleFunction(mergeBankler, nil, timer.getTime() + 30)
+end
+
+----------------------------------------------------------------
+-- ACTIVE CASE (MANUAL, MISSION-EDITOR CONTROLLED)
+-- Case selection is a plain mission flag now, not weather-derived -
+-- set flag 100 directly from a Mission Editor trigger (FLAG VALUE
+-- action). Add further triggers (time/zone-based) if you want the
+-- case to change mid-mission (e.g. fog rolling in on the way back).
+----------------------------------------------------------------
+do
+    local warnedMissing = false
+
+    function TRT.getCurrentCase()
+        local c = trigger.misc.getUserFlag(100)
+        if type(c) ~= "number" or c < 1 or c > 3 then
+            if not warnedMissing then
+                warnedMissing = true
+                env.info("[Core_Scoring] WARNING: flag 100 not set (or invalid) - defaulting to CASE 1. Set flag 100 in a Mission Editor trigger (FLAG VALUE action).")
+                trigger.action.outText(
+                    "WARNING: Recovery Case flag (100) not set - defaulting to CASE I. Check mission triggers.",
+                    15
+                )
+            end
+            return 1
+        end
+        return c
+    end
+end
+
+----------------------------------------------------------------
+-- CASE-CHANGE ANNOUNCER
+-- Watches flag 100 (set manually via Mission Editor triggers - see
+-- the ACTIVE CASE section above) and announces every time its value
+-- changes, no matter what set it. Does not announce the initial read
+-- at mission start, only actual transitions.
+----------------------------------------------------------------
+do
+    local lastSeen = nil
+
+    local function watchCaseChange()
+        local case = TRT.getCurrentCase()
+        if case ~= lastSeen then
+            if lastSeen ~= nil then
+                trigger.action.outTextForCoalition(
+                    coalition.side.BLUE,
+                    string.format("RECOVERY CASE CHANGED: CASE %d -> CASE %d", lastSeen, case),
+                    12, false
+                )
+            end
+            lastSeen = case
+        end
+        return timer.getTime() + 5
+    end
+
+    timer.scheduleFunction(watchCaseChange, nil, timer.getTime() + 1)
+end
+
+env.info("[Core_Scoring] v1.3.0 loaded.")

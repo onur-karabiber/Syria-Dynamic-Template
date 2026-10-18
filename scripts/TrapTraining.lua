@@ -11,8 +11,8 @@ printDebugLineupFeedback = false
 printDebugWireFeedback = false
 sendPlayerFeedbackToAllPlayers = false
 inFlightFeedback = true
-scriptVersion = "7.4.0"
-numberOfPlayers = 36
+scriptVersion = "7.5.0"
+numberOfPlayers = 44
 carrierTCN = "74X"
 onSpeedAlpha_Hornet = 8.1
 onSpeedAlpha_Tomcat = 10.6
@@ -24,7 +24,7 @@ playerInTheGroove = -1
 maxScore = 75
 case = 1
 patternMode = false
-brc = 355
+brc = 353
 
 --This is the point at which the aircraft's center point should be aiming, to be on perfect 3.5 degree glideslope and nail a 3-wire.
 --Matt's point x=37.327, y=13.979, z=-23.655 (mine is 0.4m above since it seems to give more accurate results)
@@ -189,9 +189,9 @@ function PlayerData:New( id )
 	self.passes = 0
 	self.collectedResultString = ""
 	self.hasShownVersionMessage = false
-	self.typeName = self.unit:GetTypeName();
-	self.isTomcat = self.typeName == "F-14B" or self.typeName == "F-14A-135-GR";
-	self.isGoshawk = self.typeName == "T-45";
+	self.typeName = self.unit:GetTypeName()
+	self.isTomcat = self.typeName:find("F-14", 1, true) ~= nil
+	self.isGoshawk = self.typeName == "T-45"
 	
 	if(self.isTomcat) then
 		self.onSpeedAlpha = onSpeedAlpha_Tomcat
@@ -221,6 +221,7 @@ function PlayerData:InitNewRound()
 	self.lastLineupError = -9
 	self.highestLineupError = 0
 	self.lowestLineupError = 0
+	self.shbSpeed = 0
 	
 	--LSO DATA
 	self.lso_lastLineupError = -9 --Starting left since we always come from that direction
@@ -257,6 +258,113 @@ carrier:PatrolRoute()
 startZone = ZONE_UNIT:New( "startZone", carrier, 1000, { dx = -2000, dy = 100, relative_to_unit = true } )
 patternModeStartZone = ZONE_UNIT:New( "patternModeStartZone", carrier, 250, { dx = 500, dy = 0, relative_to_unit = true } )
 giantZone = ZONE_UNIT:New( "giantZone", carrier, 30000, { dx = 0, dy = 0, relative_to_unit = true } )
+
+initMonitorAltitudeMeters = 400
+initMonitorNormalZoneName = "InitZone"
+initMonitorNormalAnchorUnitName = "Oliver Hazzard Perry"
+initMonitorPatternZoneName = "PatternModeInitZone"
+initMonitorPatternAnchorUnitName = "PatternModeBoat"
+initMonitorNormalFallbackRadius = 3657.6
+initMonitorPatternFallbackRadius = 548.64
+
+initMonitorMissingLogs = {}
+
+function LogInitMonitorMissingOnce(key, message)
+	if(not initMonitorMissingLogs[key]) then
+		env.info(message)
+		initMonitorMissingLogs[key] = true
+	end
+end
+
+function CreateInitMonitorMovingZone(zoneName, anchorUnitName, fallbackRadius)
+	local anchorUnit = UNIT:FindByName(anchorUnitName)
+	if(not anchorUnit) then
+		LogInitMonitorMissingOnce("missing_anchor_" .. anchorUnitName, "TrapTraining init monitor: Anchor unit '" .. anchorUnitName .. "' not found; skipping zone '" .. zoneName .. "'")
+		return nil
+	end
+	
+	local radius = fallbackRadius
+	local templateZone = ZONE:FindByName(zoneName)
+	if(templateZone and templateZone.GetRadius) then
+		local templateRadius = templateZone:GetRadius()
+		if(templateRadius and templateRadius > 0) then
+			radius = templateRadius
+		end
+	else
+		LogInitMonitorMissingOnce("missing_zone_" .. zoneName, "TrapTraining init monitor: Zone template '" .. zoneName .. "' not found; using fallback radius " .. fallbackRadius)
+	end
+	
+	return ZONE_UNIT:New( zoneName .. "_Monitor", anchorUnit, radius )
+end
+
+initMonitorNormalZone = CreateInitMonitorMovingZone(initMonitorNormalZoneName, initMonitorNormalAnchorUnitName, initMonitorNormalFallbackRadius)
+initMonitorPatternZone = CreateInitMonitorMovingZone(initMonitorPatternZoneName, initMonitorPatternAnchorUnitName, initMonitorPatternFallbackRadius)
+
+initMonitorNormalWasTrue = {}
+initMonitorPatternWasTrue = {}
+for i=1, numberOfPlayers do
+	initMonitorNormalWasTrue[i] = false
+	initMonitorPatternWasTrue[i] = false
+end
+
+function GetPlayerUnitForInitMonitor(id)
+	local playerData = playerDatas[id]
+	if(playerData and playerData.unit and playerData.unit:IsAlive() and playerData.unit:GetPlayerName()) then
+		return playerData.unit
+	end
+
+	local playerUnit = UNIT:FindByName(GeneratePlayerId(id))
+	if(playerUnit and playerUnit:IsAlive() and playerUnit:GetPlayerName()) then
+		return playerUnit
+	end
+
+	return nil
+end
+
+function IsUnitBelowInitAltitude(unit)
+	if(not unit or not unit:IsAlive()) then
+		return false
+	end
+	
+	local position = unit:GetVec3()
+	if(not position) then
+		return false
+	end
+	
+	return position.y < initMonitorAltitudeMeters
+end
+
+function EvaluateInitMonitorForPlayer(id)
+	local playerUnit = GetPlayerUnitForInitMonitor(id)
+	if(not playerUnit) then
+		initMonitorNormalWasTrue[id] = false
+		initMonitorPatternWasTrue[id] = false
+		return
+	end
+	
+	local belowAltitude = IsUnitBelowInitAltitude(playerUnit)
+	local normalCondition = false
+	local patternCondition = false
+	
+	if(initMonitorNormalZone and belowAltitude and playerUnit:IsInZone(initMonitorNormalZone)) then
+		normalCondition = true
+	end
+	
+	if(initMonitorPatternZone and belowAltitude and playerUnit:IsInZone(initMonitorPatternZone)) then
+		patternCondition = true
+	end
+	
+	if(normalCondition and not initMonitorNormalWasTrue[id]) then
+		Init(id, false)
+	end
+	
+	if(patternCondition and not initMonitorPatternWasTrue[id]) then
+		Init(id, true)
+	end
+	
+	initMonitorNormalWasTrue[id] = normalCondition
+	initMonitorPatternWasTrue[id] = patternCondition
+end
 
 second = 0
 
@@ -448,6 +556,7 @@ SCHEDULER:New( nil,
 		--env.info(a.y)
 		
 		for i = 1, numberOfPlayers do
+			EvaluateInitMonitorForPlayer(i)
 			local playerData = playerDatas[i]
 			
 			if playerData then
@@ -600,11 +709,7 @@ function Init(id, patternModeZone)
 		brcText = ", BRC " .. brc .. ""
 	end 
 	
-	MessageToAllIncludingSpectators(
-    patternModeText .. "Welcome back, " ..
-    playerData.playerName .. "! Initial! TCN " ..
-    carrierTCN .. brcText .. ".", 5 )
-
+	MessageToAllIncludingSpectators( patternModeText .. "Welcome back, " .. playerData.playerName .. " (" .. playerData.modex .. ", " .. playerData.fixedCallsign .. ")! Initial! TCN " .. carrierTCN .. brcText .. ".", 5 )
 	--PrintTestSummary(playerData) --!!
 	
 	playerData.highestCarrierXDiff = -9999999
@@ -672,9 +777,7 @@ function Start(playerData)
 		speedText = "300"
 	end
 	
-	local hint = "Entering the break, " .. playerData.playerName ..
-             "! Aim for 800 feet and " .. speedText .. " kts in the break entry."
-
+	local hint = "Entering the break, " .. playerData.playerName .. " (" .. playerData.modex .. ", " .. playerData.fixedCallsign .. ")! Aim for 800 feet and " .. speedText .. " kts in the break entry."
 	SendInFlightFeedbackToPlayer(hint, 8, playerData)
 	playerData.score = 0
 	playerData.step = 2
@@ -688,8 +791,16 @@ function Upwind(playerData)
 	local cz = carrier:GetOrientationZ()  
 	local dotZ = UTILS.VecDot(cz, px)  -- dotZ < 0 means that we are heading port
 
+	if(dx > -1000) then
+		local velocityKnots = UTILS.Round(playerData.unit:GetVelocityKNOTS())
+		if(velocityKnots > playerData.shbSpeed) then
+			playerData.shbSpeed = velocityKnots
+			--SendInFlightFeedbackToPlayer("" .. playerData.shbSpeed .. " Kts", 2,  playerData)
+		end
+	end
+
 	if(dz < -10 and dotZ < -0.259) then --A small bit to the left and also heading more left (dot == -0.259 means 15 degrees left)
-		SendInFlightFeedbackToPlayer("Shit Hot Break", 5, playerData)
+		SendInFlightFeedbackToPlayer("Shit Hot Break (" .. playerData.shbSpeed .. " kts)", 5, playerData)
 		playerData.shitHotBreak = true;
 		playerData.step = 6 --Next step is the 90
 		return
@@ -975,7 +1086,7 @@ function Ninety(playerData)
 		--SHB Handling
 		if(playerData.shitHotBreak) then
 			if(not playerData.longDownwind) then
-				local hint = "• Shit Hot Break Bonus - 30/30"
+				local hint = "• Shit Hot Break Bonus - 30/30 (" .. playerData.shbSpeed .. " kts)"
 				SendInFlightFeedbackToPlayer(hint, 8, playerData )
 				playerData:AddToSummary(hint)
 				playerData:IncreaseScore(30)
@@ -2014,9 +2125,7 @@ function PrintFinalScore(playerData, duration, wire)
 		wireText = wire .. "-wire"
 	end
 	
-	local shortHandScoreSummary =
-  playerData.playerName ..
-  " - Final score: " .. playerData.score .. " / " .. maxScore .. " (" .. wireText .. ")"
+	local shortHandScoreSummary = playerData.playerName .. " (" .. playerData.modex .. ", " .. playerData.fixedCallsign .. ") - Final score: " .. playerData.score .. " / " .. maxScore .. " (" .. wireText .. ")"
 	
 	if(playerData.longDownwind) then
 		shortHandScoreSummary = shortHandScoreSummary .. " (Long DW)"
@@ -2034,36 +2143,6 @@ function PrintFinalScore(playerData, duration, wire)
 	local logMessage = "\n" .. shortHandScoreSummary .. " - " .. playerData.typeName .. "\n" .. playerData.summary:gsub("•", "*")
 	env.info(logMessage)
 	WriteSummaryToFile(logMessage)
-    ----------------------------------------------------------------
-    -- BANKLER SCORE MERGE TO FLAG 1908
-    ----------------------------------------------------------------
-    do
-        local FLAG = 1908
-        local cur = trigger.misc.getUserFlag(FLAG) or 0
-        local delta = playerData.score or 0
-        local new = cur + delta
-
-        trigger.action.setUserFlag(FLAG, new)
-
-        local sign = delta >= 0 and "(+"..delta..")" or "("..delta..")"
-        local txt  = "Bankler score added " .. sign .. "  (YOUR FINAL SCORE: " .. new .. ")"
-
-        trigger.action.outTextForCoalition(
-            coalition.side.BLUE,
-            txt,
-            40,      -- 40 sn ekranda
-            false    -- ClearView yok
-        )
--- 2. MESAJ - ClearView ON, 5 saniyelik kısa versiyon
-timer.scheduleFunction(function()
-    trigger.action.outTextForCoalition(
-        coalition.side.BLUE,
-        txt,
-        15,     -- 15 sn kısa süre
-        true    -- ClearView VAR, ekranı temizler
-    )
-end, nil, timer.getTime() + 25)
-    end
 end
 
 function WriteSummaryToFile(logMessage)
@@ -2113,9 +2192,7 @@ function HandleCollectedResult(playerData, wire)
 		playerData.collectedResultString = newString
 	else
 		playerData.collectedResultString = playerData.collectedResultString .. ", " .. newString
-		MessageToAllIncludingSpectators(
-  playerData.playerName .. "'s " .. playerData.passes .. " passes: " ..
-  playerData.collectedResultString .. " (TOTAL: " .. playerData.totalScore .. ")", 30 )
+		MessageToAllIncludingSpectators( playerData.playerName .. " (" .. playerData.modex .. ", " .. playerData.fixedCallsign .. ")'s " .. playerData.passes .. " passes: " .. playerData.collectedResultString .. " (TOTAL: " .. playerData.totalScore .. ")"  , 30 )
 	end
 end
 

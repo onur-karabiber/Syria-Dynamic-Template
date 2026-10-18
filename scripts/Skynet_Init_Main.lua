@@ -1,7 +1,18 @@
+-- Skynet_Init_Main | v1.1.0
 ----------------------------------------------------------------
 -- SKYNET IADS - CUSTOM INIT (PREFIX + COMMAND CENTER)
 -- Skynet version: 3.3.0
--- Author: sen (inat), ben (temizlikçi)
+-- Author: sen (inat), ben (temizlikci)
+--
+-- v1.1.0:
+--  * FIX: Command Center / Power / Connection node cozumlemesi.
+--    v1.0.x Unit.getByName("RED_CC_1") cagiriyordu; "RED_CC_1" bir GRUP adi,
+--    unit adi "RED_CC_1-1" (dcs.log MOOSE kaydi: Group RED_CC_1 -> Unit RED_CC_1-1).
+--    Sonuc: "COMMAND CENTER NOT FOUND", IADS komuta merkezsiz kuruluyordu.
+--    Ayni hata RED_PWR_1 ve RED_COM_1 icin de gecerliydi (CC bulunamadigi icin
+--    log'a dusmedi, cunku kontrol "if cc" blogunun icindeydi).
+--  * resolveObject(): once Unit, sonra Static, sonra Grup (ilk unit) dener.
+--    Config'e grup adi girilse de calisir; hangi yolla cozuldugu log'a yazilir.
 ----------------------------------------------------------------
 
 ----------------------------------------------------------------
@@ -14,10 +25,10 @@ local CFG = {
     EW_PREFIX      = "EW",     -- UNIT name prefix
     SAM_PREFIX     = "SAM",    -- GROUP name prefix
 
-    -- Command Center (UNIT name)
-    COMMAND_CENTER_UNIT = "RED_CC_1",
-    CC_POWER_UNIT       = "RED_PWR_1",   -- Command Center power source
-    CC_CONNECTION_UNIT  = "RED_COM_1",   -- Command Center connection node
+    -- Command Center (UNIT names; grup adi da kabul edilir, bkz. resolveObject)
+    COMMAND_CENTER_UNIT = "RED_CC_1-1",
+    CC_POWER_UNIT       = "RED_PWR_1-1",   -- Command Center power source
+    CC_CONNECTION_UNIT  = "RED_COM_1-1",   -- Command Center connection node
 
     -- Retry logic (DCS race condition fix)
     RETRY_INTERVAL = 1,   -- seconds
@@ -43,6 +54,26 @@ local function out(msg)
     if CFG.SHOW_TEXT then
         trigger.action.outText(msg, CFG.TEXT_TIME)
     end
+end
+
+-- Unit -> Static -> Grup(ilk unit) sirasiyla cozer.
+-- Dondurur: dcsObject, cozum_yolu (string) | nil
+local function resolveObject(name)
+    local u = Unit.getByName(name)
+    if u then return u, "unit" end
+
+    local s = StaticObject.getByName(name)
+    if s then return s, "static" end
+
+    local g = Group.getByName(name)
+    if g then
+        local units = g:getUnits()
+        if units and units[1] then
+            return units[1], "group -> unit '" .. units[1]:getName() .. "'"
+        end
+    end
+
+    return nil, nil
 end
 
 ----------------------------------------------------------------
@@ -81,15 +112,15 @@ local function initSkynet()
     debug.warnings       = true
     debug.harmDefence    = true
 
-    -- NOT: hasNoPower ve samNoConnection BİLEREK false/kapalı.
-    -- Skynet çekirdeği (satır 2059, 2067) bu bayraklar açıkken
-    -- printOutput()'u typeWarning=nil ile çağırıyor, bu da HER
-    -- kontrol turunda trigger.action.outText() ile EKRANA yazı
-    -- basıyor (log'a değil). CC'nin connection/power node'u ölünce
-    -- bu, saniyede defalarca tekrarlanan mesaj kutusu yağmuruna
-    -- dönüşüyor ve üst üste binen kutular ekranın büyük bölümünü
-    -- siyaha boğuyor. commandCenterStatusEnvOutput güvenli: o
-    -- printOutputToLog()/env.info() kullanıyor, sadece dcs.log'a yazıyor.
+    -- NOT: hasNoPower ve samNoConnection BILEREK false/kapali.
+    -- Skynet cekirdegi (satir 2059, 2067) bu bayraklar acikken
+    -- printOutput()'u typeWarning=nil ile cagiriyor, bu da HER
+    -- kontrol turunda trigger.action.outText() ile EKRANA yazi
+    -- basiyor (log'a degil). CC'nin connection/power node'u olunce
+    -- bu, saniyede defalarca tekrarlanan mesaj kutusu yagmuruna
+    -- donusuyor ve ust uste binen kutular ekranin buyuk bolumunu
+    -- siyaha bogyuyor. commandCenterStatusEnvOutput guvenli: o
+    -- printOutputToLog()/env.info() kullaniyor, sadece dcs.log'a yazıyor.
     debug.hasNoPower               = false
     debug.samNoConnection          = false
     debug.commandCenterStatusEnvOutput = true
@@ -107,28 +138,29 @@ local function initSkynet()
     ----------------------------------------------------------------
     -- ADD COMMAND CENTER (EXPLICIT)
     ----------------------------------------------------------------
-    local cc = Unit.getByName(CFG.COMMAND_CENTER_UNIT)
+    local cc, ccHow = resolveObject(CFG.COMMAND_CENTER_UNIT)
     if cc then
         local comCenter = redIADS:addCommandCenter(cc)
-        info("COMMAND CENTER ADDED: " .. CFG.COMMAND_CENTER_UNIT)
+        info("COMMAND CENTER ADDED: " .. CFG.COMMAND_CENTER_UNIT .. " (" .. ccHow .. ")")
 
-        local pwr = Unit.getByName(CFG.CC_POWER_UNIT)
+        local pwr, pwrHow = resolveObject(CFG.CC_POWER_UNIT)
         if pwr then
             comCenter:addPowerSource(pwr)
-            info("CC POWER SOURCE ADDED: " .. CFG.CC_POWER_UNIT)
+            info("CC POWER SOURCE ADDED: " .. CFG.CC_POWER_UNIT .. " (" .. pwrHow .. ")")
         else
             errorLog("CC POWER SOURCE NOT FOUND: " .. CFG.CC_POWER_UNIT)
         end
 
-        local conn = Unit.getByName(CFG.CC_CONNECTION_UNIT)
+        local conn, connHow = resolveObject(CFG.CC_CONNECTION_UNIT)
         if conn then
             comCenter:addConnectionNode(conn)
-            info("CC CONNECTION NODE ADDED: " .. CFG.CC_CONNECTION_UNIT)
+            info("CC CONNECTION NODE ADDED: " .. CFG.CC_CONNECTION_UNIT .. " (" .. connHow .. ")")
         else
             errorLog("CC CONNECTION NODE NOT FOUND: " .. CFG.CC_CONNECTION_UNIT)
         end
     else
-        errorLog("COMMAND CENTER NOT FOUND: " .. CFG.COMMAND_CENTER_UNIT)
+        errorLog("COMMAND CENTER NOT FOUND: " .. CFG.COMMAND_CENTER_UNIT
+            .. " (tried unit, static, group) - power/connection node also NOT attached")
     end
 
     ----------------------------------------------------------------
