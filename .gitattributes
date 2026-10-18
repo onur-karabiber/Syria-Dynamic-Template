@@ -2,3 +2,9 @@
 *.ogg binary
 *.wav binary
 *.miz binary
+# ME'den çıkarılan Lua veri dosyaları her zaman LF (extract.py bunları LF yazar)
+src/mission text eol=lf
+src/options text eol=lf
+src/warehouses text eol=lf
+src/l10n/DEFAULT/dictionary text eol=lf
+src/l10n/DEFAULT/mapResource text eol=lf

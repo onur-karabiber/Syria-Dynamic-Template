@@ -1,4 +1,4 @@
-# extract.py | v1.1.0
+# extract.py | v1.1.1
 # Mission Editor'de kaydedilmiş .miz  ->  src/   (build.py'nin tersi)
 #
 #   python extract.py                  # config.py'deki Missions\...\Syria_Dynamic_Template.miz
@@ -19,6 +19,8 @@
 #     yalnızca gerçek değişikliği gösterir. Yazmadan önce çıktı tekrar ayrıştırılıp
 #     orijinalle tip dahil karşılaştırılır; ayrıştırma/doğrulama başarısız olursa
 #     dosya HAM yazılır ve uyarı verilir. --no-normalize ile kapatılır.
+#   - Satır sonu (v1.1.1): normalize edilen dosyalar LF yazılır; karşılaştırmada
+#     src'deki CRLF (Windows'ta git autocrlf checkout'u) fark sayılmaz.
 #   - Güvenlik: 'mission' girdisi olmayan arşiv reddedilir; 50'den fazla dosya
 #     silinecekse --force gerekir; arşivde dışarı taşan yol (../, sürücü harfi)
 #     varsa iptal edilir.
@@ -113,7 +115,11 @@ def plan(miz, src_dir=SRC_DIR, normalize=True, verify=False):
         disk = on_disk.get(arc)
         if disk is None:
             continue
-        if os.path.getsize(disk) != e['size'] or file_crc(disk) != e['crc']:
+        if e['data'] is not None:
+            with open(disk, 'rb') as f:
+                if f.read().replace(b'\r\n', b'\n') != e['data']:
+                    changed.append(arc)
+        elif os.path.getsize(disk) != e['size'] or file_crc(disk) != e['crc']:
             changed.append(arc)
     deleted = sorted(a for a in on_disk
                      if a.split('/')[0] in tops
