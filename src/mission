@@ -8547,13 +8547,13 @@ mission =
 						["layerName"] = "Common",
 						["fontSize"] = 18,
 						["primitiveType"] = "TextBox",
-						["mapX"] = 240259.74130276,
+						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["name"] = "Point Tiger Text Box",
 						["fillColorString"] = "0x00408000",
 						["text"] = "TIGER",
 						["angle"] = 0,
-						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["colorString"] = "0x004080ff",
+						["mapX"] = 240259.74130276,
 					}, -- end of [20]
 					[21] = 
 					{
@@ -8563,13 +8563,13 @@ mission =
 						["layerName"] = "Common",
 						["fontSize"] = 18,
 						["primitiveType"] = "TextBox",
-						["mapX"] = 230418.28653182,
+						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["name"] = "Point Falcon Text Box",
 						["fillColorString"] = "0x00408000",
 						["text"] = "FALCON",
 						["angle"] = 0,
-						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["colorString"] = "0x004080ff",
+						["mapX"] = 230418.28653182,
 					}, -- end of [21]
 					[11] = 
 					{
@@ -9096,13 +9096,13 @@ mission =
 						["layerName"] = "Author",
 						["fontSize"] = 24,
 						["primitiveType"] = "TextBox",
-						["mapX"] = -310390.43824701,
+						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["name"] = "Text Box-1-3-1-1-1",
 						["fillColorString"] = "0x000080ff",
 						["text"] = "Jordan",
 						["angle"] = 0,
-						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["colorString"] = "0xc0c0c0ff",
+						["mapX"] = -310390.43824701,
 					}, -- end of [27]
 					[2] = 
 					{
@@ -10604,13 +10604,13 @@ mission =
 						["layerName"] = "Author",
 						["fontSize"] = 18,
 						["primitiveType"] = "TextBox",
-						["mapX"] = 24518.615018326,
+						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["name"] = "Text Box-1-3-1-3-1",
 						["fillColorString"] = "0x00000000",
 						["text"] = "ISIS",
 						["angle"] = 0,
-						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["colorString"] = "0xc0c0c0ff",
+						["mapX"] = 24518.615018326,
 					}, -- end of [38]
 					[3] = 
 					{
@@ -18107,13 +18107,13 @@ mission =
 						["layerName"] = "Author",
 						["fontSize"] = 24,
 						["primitiveType"] = "TextBox",
-						["mapX"] = -245752.98804781,
+						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["name"] = "Text Box-1-3-1-1",
 						["fillColorString"] = "0x000080ff",
 						["text"] = "Israel",
 						["angle"] = 0,
-						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["colorString"] = "0xc0c0c0ff",
+						["mapX"] = -245752.98804781,
 					}, -- end of [24]
 					[28] = 
 					{
@@ -18123,13 +18123,13 @@ mission =
 						["layerName"] = "Author",
 						["fontSize"] = 24,
 						["primitiveType"] = "TextBox",
-						["mapX"] = -364669.32270916,
+						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["name"] = "Text Box-1-3-1-1-1-1",
 						["fillColorString"] = "0x000080ff",
 						["text"] = "Saudi Arabia",
 						["angle"] = 0,
-						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["colorString"] = "0xc0c0c0ff",
+						["mapX"] = -364669.32270916,
 					}, -- end of [28]
 					[32] = 
 					{
@@ -18139,13 +18139,13 @@ mission =
 						["layerName"] = "Author",
 						["fontSize"] = 20,
 						["primitiveType"] = "TextBox",
-						["mapX"] = -208876.4940239,
+						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["name"] = "SA10 & Russian Cap Zone",
 						["fillColorString"] = "0xc50031ff",
 						["text"] = "SA10 & Russian Cap Zone",
 						["angle"] = 0,
-						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["colorString"] = "0xffff80c3",
+						["mapX"] = -208876.4940239,
 					}, -- end of [32]
 					[40] = 
 					{
@@ -18155,13 +18155,13 @@ mission =
 						["layerName"] = "Author",
 						["fontSize"] = 14,
 						["primitiveType"] = "TextBox",
-						["mapX"] = -215464.13220112,
+						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["name"] = "Hold Specs for CVN-73",
 						["fillColorString"] = "0x00404080",
 						["text"] = "CVN-73 George Washington HOLD FIX = 25 DME / R-195",
 						["angle"] = 0,
-						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["colorString"] = "0xb69100ff",
+						["mapX"] = -215464.13220112,
 					}, -- end of [40]
 					[33] = 
 					{
@@ -18171,13 +18171,13 @@ mission =
 						["layerName"] = "Author",
 						["fontSize"] = 20,
 						["primitiveType"] = "TextBox",
-						["mapX"] = 5752.9880478084,
+						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["name"] = "Russian Quarter-1",
 						["fillColorString"] = "0xc50031ff",
 						["text"] = "Russian Quarter",
 						["angle"] = 0,
-						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["colorString"] = "0xffff80c3",
+						["mapX"] = 5752.9880478084,
 					}, -- end of [33]
 					[17] = 
 					{
@@ -18276,13 +18276,13 @@ mission =
 						["layerName"] = "Author",
 						["fontSize"] = 24,
 						["primitiveType"] = "TextBox",
-						["mapX"] = -106828.68525896,
+						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["name"] = "Text Box-1-3-1-2",
 						["fillColorString"] = "0x000080ff",
 						["text"] = "Lebanon",
 						["angle"] = 0,
-						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["colorString"] = "0xc0c0c0ff",
+						["mapX"] = -106828.68525896,
 					}, -- end of [25]
 					[29] = 
 					{
@@ -18309,13 +18309,13 @@ mission =
 						["layerName"] = "Author",
 						["fontSize"] = 24,
 						["primitiveType"] = "TextBox",
-						["mapX"] = -208047.80876494,
+						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["name"] = "Text Box-1-3-1-1-1-1-1",
 						["fillColorString"] = "0x000080ff",
 						["text"] = "Iraq",
 						["angle"] = 0,
-						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["colorString"] = "0xc0c0c0ff",
+						["mapX"] = -208047.80876494,
 					}, -- end of [34]
 					[9] = 
 					{
@@ -20470,13 +20470,13 @@ mission =
 						["layerName"] = "Author",
 						["fontSize"] = 24,
 						["primitiveType"] = "TextBox",
-						["mapX"] = 55593.625498008,
+						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["name"] = "Text Box-1-3",
 						["fillColorString"] = "0x000080ff",
 						["text"] = "KKTC",
 						["angle"] = 0,
-						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["colorString"] = "0xc0c0c0ff",
+						["mapX"] = 55593.625498008,
 					}, -- end of [22]
 					[26] = 
 					{
@@ -20486,13 +20486,13 @@ mission =
 						["layerName"] = "Author",
 						["fontSize"] = 24,
 						["primitiveType"] = "TextBox",
-						["mapX"] = 33633.466135458,
+						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["name"] = "Text Box-1-3-1-3",
 						["fillColorString"] = "0x000080ff",
 						["text"] = "Syria",
 						["angle"] = 0,
-						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["colorString"] = "0xc0c0c0ff",
+						["mapX"] = 33633.466135458,
 					}, -- end of [26]
 					[30] = 
 					{
@@ -20519,13 +20519,13 @@ mission =
 						["layerName"] = "Author",
 						["fontSize"] = 15,
 						["primitiveType"] = "TextBox",
-						["mapX"] = 142175.25123729,
+						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["name"] = "pyd-1-1",
 						["fillColorString"] = "0xc50031ff",
 						["text"] = "PYD-YPG/PKK/SDF",
 						["angle"] = 0,
-						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["colorString"] = "0xffff80c3",
+						["mapX"] = 142175.25123729,
 					}, -- end of [36]
 					[37] = 
 					{
@@ -22189,7 +22189,7 @@ mission =
 						["layerName"] = "Author",
 						["fontSize"] = 13,
 						["primitiveType"] = "TextBox",
-						["mapX"] = 155521.91235059,
+						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["name"] = "Text Box-2",
 						["fillColorString"] = "0x00000011",
 						["text"] = "MOTHER\
@@ -22217,8 +22217,8 @@ JTACs\
 *  RedFlag Radio is set to 128.100-900MHz or 266.100-900MHz\
 ** Coordinates for Mk-84 Unguided Strike: 36 S YE 61583 40738 ALT 47",
 						["angle"] = 0,
-						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["colorString"] = "0xc0c0c0ff",
+						["mapX"] = 155521.91235059,
 					}, -- end of [35]
 					[1] = 
 					{
@@ -25095,13 +25095,13 @@ JTACs\
 						["layerName"] = "Author",
 						["fontSize"] = 24,
 						["primitiveType"] = "TextBox",
-						["mapX"] = 149529.88047809,
+						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["name"] = "Text Box-1",
 						["fillColorString"] = "0x000080ff",
 						["text"] = "Türkiye",
 						["angle"] = 0,
-						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["colorString"] = "0xc0c0c0ff",
+						["mapX"] = 149529.88047809,
 					}, -- end of [19]
 					[23] = 
 					{
@@ -25111,13 +25111,13 @@ JTACs\
 						["layerName"] = "Author",
 						["fontSize"] = 24,
 						["primitiveType"] = "TextBox",
-						["mapX"] = -1171.314741036,
+						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["name"] = "Text Box-1-3-1",
 						["fillColorString"] = "0x000080ff",
 						["text"] = "GKRY",
 						["angle"] = 0,
-						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["colorString"] = "0xc0c0c0ff",
+						["mapX"] = -1171.314741036,
 					}, -- end of [23]
 					[39] = 
 					{
@@ -25127,13 +25127,13 @@ JTACs\
 						["layerName"] = "Author",
 						["fontSize"] = 15,
 						["primitiveType"] = "TextBox",
-						["mapX"] = 160976.67763052,
+						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["name"] = "Turkish-controlled territory-1",
 						["fillColorString"] = "0x000080ff",
 						["text"] = "Turkish-controlled territory",
 						["angle"] = 0,
-						["font"] = "DejaVuLGCSansCondensed.ttf",
 						["colorString"] = "0xc0c0c0c3",
+						["mapX"] = 160976.67763052,
 					}, -- end of [39]
 				}, -- end of ["objects"]
 			}, -- end of [5]
@@ -26588,9 +26588,9 @@ JTACs\
 	}, -- end of ["triggers"]
 	["map"] = 
 	{
-		["centerY"] = -7031.5502546004,
-		["zoom"] = 1095927.9474971,
-		["centerX"] = -4967.9656375144,
+		["centerY"] = -8177.3588666309,
+		["zoom"] = 2445.3534045403,
+		["centerX"] = 71466.698235131,
 	}, -- end of ["map"]
 	["coalitions"] = 
 	{
@@ -29677,13 +29677,13 @@ JTACs\
 									{
 										[1] = 
 										{
-											["alt"] = 161,
+											["alt"] = 174,
 											["type"] = "Turning Point",
 											["ETA"] = 0,
 											["alt_type"] = "BARO",
 											["formation_template"] = "",
-											["y"] = 42227.815411209,
-											["x"] = 38745.338146568,
+											["y"] = 45862.460184018,
+											["x"] = 41151.457611249,
 											["ETA_locked"] = true,
 											["speed"] = 0,
 											["action"] = "Off Road",
@@ -29847,15 +29847,15 @@ JTACs\
 										["coldAtStart"] = false,
 										["type"] = "M1134 Stryker ATGM",
 										["unitId"] = 278,
-										["y"] = 42227.815411209,
-										["x"] = 38745.338146568,
+										["y"] = 45862.460184018,
+										["x"] = 41151.457611249,
 										["name"] = "JTAC-1-1",
 										["heading"] = 5.1487212933833,
 										["playerCanDrive"] = true,
 									}, -- end of [1]
 								}, -- end of ["units"]
-								["y"] = 42227.815411209,
-								["x"] = 38745.338146568,
+								["y"] = 45862.460184018,
+								["x"] = 41151.457611249,
 								["name"] = "JTAC-1",
 								["start_time"] = 0,
 							}, -- end of [1]
@@ -29875,13 +29875,13 @@ JTACs\
 									{
 										[1] = 
 										{
-											["alt"] = 13,
+											["alt"] = 46,
 											["type"] = "Turning Point",
 											["ETA"] = 0,
 											["alt_type"] = "BARO",
 											["formation_template"] = "",
-											["y"] = -1754.3318301744,
-											["x"] = 59147.677048133,
+											["y"] = -1658.8366664097,
+											["x"] = 59457.791202832,
 											["ETA_locked"] = true,
 											["speed"] = 0,
 											["action"] = "Off Road",
@@ -30045,15 +30045,15 @@ JTACs\
 										["coldAtStart"] = false,
 										["type"] = "M1134 Stryker ATGM",
 										["unitId"] = 279,
-										["y"] = -1754.3318301744,
-										["x"] = 59147.677048133,
+										["y"] = -1658.8366664097,
+										["x"] = 59457.791202832,
 										["name"] = "JTAC-2-1",
-										["heading"] = 4.1887902047864,
+										["heading"] = 2.0525072003453,
 										["playerCanDrive"] = true,
 									}, -- end of [1]
 								}, -- end of ["units"]
-								["y"] = -1754.3318301744,
-								["x"] = 59147.677048133,
+								["y"] = -1658.8366664097,
+								["x"] = 59457.791202832,
 								["name"] = "JTAC-2",
 								["start_time"] = 0,
 							}, -- end of [2]
@@ -44949,11 +44949,11 @@ JTACs\
 													["settings"] = 
 													{
 														["NFP_PRESID"] = "MDRN_B_A_GPHD",
-														["00_prfx_function_delay_ctrl_M904E4"] = 0,
+														["NFP_fuze_type_tail"] = "M905",
 														["01_prfx_function_delay_ctrl_M905"] = 0,
 														["NFP_PRESVER"] = 2,
-														["NFP_fuze_type_tail"] = "M905",
 														["00_prfx_arm_delay_ctrl_M904E4"] = 4,
+														["00_prfx_function_delay_ctrl_M904E4"] = 0,
 														["NFP_fuze_type_nose"] = "M904E4",
 														["01_prfx_arm_delay_ctrl_M905"] = 4,
 													}, -- end of ["settings"]
@@ -44976,11 +44976,11 @@ JTACs\
 													["settings"] = 
 													{
 														["NFP_PRESID"] = "MDRN_B_A_GPHD",
-														["00_prfx_function_delay_ctrl_M904E4"] = 0,
+														["NFP_fuze_type_tail"] = "M905",
 														["01_prfx_function_delay_ctrl_M905"] = 0,
 														["NFP_PRESVER"] = 2,
-														["NFP_fuze_type_tail"] = "M905",
 														["00_prfx_arm_delay_ctrl_M904E4"] = 4,
+														["00_prfx_function_delay_ctrl_M904E4"] = 0,
 														["NFP_fuze_type_nose"] = "M904E4",
 														["01_prfx_arm_delay_ctrl_M905"] = 4,
 													}, -- end of ["settings"]
@@ -46772,11 +46772,11 @@ JTACs\
 													["settings"] = 
 													{
 														["NFP_PRESID"] = "MDRN_B_A_GPHD",
-														["00_prfx_function_delay_ctrl_M904E4"] = 0,
+														["NFP_fuze_type_tail"] = "M905",
 														["01_prfx_function_delay_ctrl_M905"] = 0,
 														["NFP_PRESVER"] = 2,
-														["NFP_fuze_type_tail"] = "M905",
 														["00_prfx_arm_delay_ctrl_M904E4"] = 4,
+														["00_prfx_function_delay_ctrl_M904E4"] = 0,
 														["NFP_fuze_type_nose"] = "M904E4",
 														["01_prfx_arm_delay_ctrl_M905"] = 4,
 													}, -- end of ["settings"]
@@ -46807,11 +46807,11 @@ JTACs\
 													["settings"] = 
 													{
 														["NFP_PRESID"] = "MDRN_B_A_GPHD",
-														["00_prfx_function_delay_ctrl_M904E4"] = 0,
+														["NFP_fuze_type_tail"] = "M905",
 														["01_prfx_function_delay_ctrl_M905"] = 0,
 														["NFP_PRESVER"] = 2,
-														["NFP_fuze_type_tail"] = "M905",
 														["00_prfx_arm_delay_ctrl_M904E4"] = 4,
+														["00_prfx_function_delay_ctrl_M904E4"] = 0,
 														["NFP_fuze_type_nose"] = "M904E4",
 														["01_prfx_arm_delay_ctrl_M905"] = 4,
 													}, -- end of ["settings"]
@@ -46927,16 +46927,16 @@ JTACs\
 															["params"] = 
 															{
 																["groupId"] = 2158,
+																["lastWptIndexFlagChangedManually"] = true,
 																["altitudeEdited"] = true,
-																["targetTypes"] = 
-																{
-																	[1] = "Ships",
-																}, -- end of ["targetTypes"]
 																["altitude"] = 2133.6,
 																["speed"] = 138.88888888889,
 																["lastWptIndexFlag"] = true,
 																["lastWptIndex"] = 3,
-																["lastWptIndexFlagChangedManually"] = true,
+																["targetTypes"] = 
+																{
+																	[1] = "Ships",
+																}, -- end of ["targetTypes"]
 															}, -- end of ["params"]
 														}, -- end of [2]
 														[3] = 
@@ -47748,6 +47748,530 @@ JTACs\
 								["uncontrollable"] = false,
 								["frequency"] = 305,
 							}, -- end of [29]
+							[30] = 
+							{
+								["dynSpawnTemplate"] = false,
+								["modulation"] = 0,
+								["tasks"] = {},
+								["DTC"] = {},
+								["radioSet"] = false,
+								["task"] = "CAS",
+								["uncontrolled"] = false,
+								["taskSelected"] = true,
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["alt"] = 7315.2,
+											["action"] = "Turning Point",
+											["alt_type"] = "BARO",
+											["properties"] = 
+											{
+												["addopt"] = {},
+											}, -- end of ["properties"]
+											["speed"] = 179.86111111111,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+														[1] = 
+														{
+															["enabled"] = true,
+															["key"] = "CAS",
+															["id"] = "EngageTargets",
+															["number"] = 1,
+															["auto"] = true,
+															["params"] = 
+															{
+																["targetTypes"] = 
+																{
+																	[1] = "Helicopters",
+																	[2] = "Ground Units",
+																	[3] = "Light armed ships",
+																}, -- end of ["targetTypes"]
+																["priority"] = 0,
+															}, -- end of ["params"]
+														}, -- end of [1]
+														[2] = 
+														{
+															["enabled"] = true,
+															["auto"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 2,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "Option",
+																	["params"] = 
+																	{
+																		["value"] = 2,
+																		["name"] = 1,
+																	}, -- end of ["params"]
+																}, -- end of ["action"]
+															}, -- end of ["params"]
+														}, -- end of [2]
+														[3] = 
+														{
+															["enabled"] = true,
+															["auto"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 3,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "Option",
+																	["params"] = 
+																	{
+																		["value"] = 1,
+																		["name"] = 3,
+																	}, -- end of ["params"]
+																}, -- end of ["action"]
+															}, -- end of ["params"]
+														}, -- end of [3]
+														[4] = 
+														{
+															["enabled"] = true,
+															["auto"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 4,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "Option",
+																	["params"] = 
+																	{
+																		["value"] = 131074,
+																		["name"] = 5,
+																	}, -- end of ["params"]
+																}, -- end of ["action"]
+															}, -- end of ["params"]
+														}, -- end of [4]
+														[5] = 
+														{
+															["enabled"] = true,
+															["auto"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 5,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "Option",
+																	["params"] = 
+																	{
+																		["value"] = true,
+																		["name"] = 15,
+																	}, -- end of ["params"]
+																}, -- end of ["action"]
+															}, -- end of ["params"]
+														}, -- end of [5]
+														[6] = 
+														{
+															["enabled"] = true,
+															["auto"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 6,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "Option",
+																	["params"] = 
+																	{
+																		["targetTypes"] = {},
+																		["name"] = 21,
+																		["value"] = "none;",
+																		["noTargetTypes"] = 
+																		{
+																			[1] = "Fighters",
+																			[2] = "Multirole fighters",
+																			[3] = "Bombers",
+																			[4] = "Helicopters",
+																			[5] = "UAVs",
+																			[6] = "Infantry",
+																			[7] = "Fortifications",
+																			[8] = "Tanks",
+																			[9] = "IFV",
+																			[10] = "APC",
+																			[11] = "Artillery",
+																			[12] = "Unarmed vehicles",
+																			[13] = "AAA",
+																			[14] = "SR SAM",
+																			[15] = "MR SAM",
+																			[16] = "LR SAM",
+																			[17] = "Aircraft Carriers",
+																			[18] = "Cruisers",
+																			[19] = "Destroyers",
+																			[20] = "Frigates",
+																			[21] = "Corvettes",
+																			[22] = "Light armed ships",
+																			[23] = "Unarmed ships",
+																			[24] = "Submarines",
+																			[25] = "Cruise missiles",
+																			[26] = "Antiship Missiles",
+																			[27] = "AA Missiles",
+																			[28] = "AG Missiles",
+																			[29] = "SA Missiles",
+																		}, -- end of ["noTargetTypes"]
+																	}, -- end of ["params"]
+																}, -- end of ["action"]
+															}, -- end of ["params"]
+														}, -- end of [6]
+														[7] = 
+														{
+															["enabled"] = true,
+															["auto"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 7,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "Option",
+																	["params"] = 
+																	{
+																		["value"] = true,
+																		["name"] = 19,
+																	}, -- end of ["params"]
+																}, -- end of ["action"]
+															}, -- end of ["params"]
+														}, -- end of [7]
+														[8] = 
+														{
+															["enabled"] = true,
+															["auto"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 8,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "EPLRS",
+																	["params"] = 
+																	{
+																		["value"] = true,
+																		["groupId"] = 8,
+																	}, -- end of ["params"]
+																}, -- end of ["action"]
+															}, -- end of ["params"]
+														}, -- end of [8]
+														[9] = 
+														{
+															["enabled"] = true,
+															["auto"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 9,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "Option",
+																	["params"] = 
+																	{
+																		["value"] = true,
+																		["name"] = 35,
+																	}, -- end of ["params"]
+																}, -- end of ["action"]
+															}, -- end of ["params"]
+														}, -- end of [9]
+													}, -- end of ["tasks"]
+												}, -- end of ["params"]
+											}, -- end of ["task"]
+											["type"] = "Turning Point",
+											["ETA"] = 0,
+											["ETA_locked"] = true,
+											["y"] = 65006.754691844,
+											["x"] = 64628.986693464,
+											["speed_locked"] = true,
+											["formation_template"] = "",
+										}, -- end of [1]
+										[2] = 
+										{
+											["alt"] = 7315.2,
+											["action"] = "Turning Point",
+											["alt_type"] = "BARO",
+											["properties"] = 
+											{
+												["addopt"] = {},
+											}, -- end of ["properties"]
+											["speed"] = 179.86111111111,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = {},
+												}, -- end of ["params"]
+											}, -- end of ["task"]
+											["type"] = "Turning Point",
+											["ETA"] = 173.54351352599,
+											["ETA_locked"] = false,
+											["y"] = 44010.128280749,
+											["x"] = 41532.697641259,
+											["speed_locked"] = true,
+											["formation_template"] = "",
+										}, -- end of [2]
+									}, -- end of ["points"]
+								}, -- end of ["route"]
+								["groupId"] = 3148,
+								["hidden"] = false,
+								["units"] = 
+								{
+									[1] = 
+									{
+										["alt"] = 7315.2,
+										["alt_type"] = "BARO",
+										["livery_id"] = "vfa-37",
+										["skill"] = "Client",
+										["speed"] = 179.86111111111,
+										["AddPropAircraft"] = 
+										{
+											["HelmetMountedDevice"] = 1,
+											["VoiceCallsignLabel"] = "CT",
+											["OuterBoard"] = 0,
+											["InnerBoard"] = 0,
+											["STN_L16"] = "03060",
+											["VoiceCallsignNumber"] = "11",
+										}, -- end of ["AddPropAircraft"]
+										["type"] = "FA-18C_hornet",
+										["Radio"] = 
+										{
+											[1] = 
+											{
+												["channelsNames"] = {},
+												["modulations"] = 
+												{
+													[1] = 0,
+													[2] = 0,
+													[4] = 0,
+													[8] = 0,
+													[16] = 0,
+													[17] = 0,
+													[9] = 0,
+													[18] = 0,
+													[5] = 0,
+													[10] = 0,
+													[20] = 0,
+													[11] = 0,
+													[3] = 0,
+													[6] = 0,
+													[12] = 0,
+													[13] = 0,
+													[7] = 0,
+													[14] = 0,
+													[15] = 0,
+													[19] = 0,
+												}, -- end of ["modulations"]
+												["channels"] = 
+												{
+													[1] = 305,
+													[2] = 264,
+													[4] = 256,
+													[8] = 257,
+													[16] = 261,
+													[17] = 267,
+													[9] = 255,
+													[18] = 251,
+													[5] = 254,
+													[10] = 262,
+													[20] = 266,
+													[11] = 259,
+													[3] = 265,
+													[6] = 250,
+													[12] = 268,
+													[13] = 269,
+													[7] = 270,
+													[14] = 260,
+													[15] = 263,
+													[19] = 253,
+												}, -- end of ["channels"]
+											}, -- end of [1]
+											[2] = 
+											{
+												["channelsNames"] = {},
+												["modulations"] = 
+												{
+													[1] = 0,
+													[2] = 0,
+													[4] = 0,
+													[8] = 0,
+													[16] = 0,
+													[17] = 0,
+													[9] = 0,
+													[18] = 0,
+													[5] = 0,
+													[10] = 0,
+													[20] = 0,
+													[11] = 0,
+													[3] = 0,
+													[6] = 0,
+													[12] = 0,
+													[13] = 0,
+													[7] = 0,
+													[14] = 0,
+													[15] = 0,
+													[19] = 0,
+												}, -- end of ["modulations"]
+												["channels"] = 
+												{
+													[1] = 305,
+													[2] = 264,
+													[4] = 256,
+													[8] = 257,
+													[16] = 261,
+													[17] = 267,
+													[9] = 255,
+													[18] = 251,
+													[5] = 254,
+													[10] = 262,
+													[20] = 266,
+													[11] = 259,
+													[3] = 265,
+													[6] = 250,
+													[12] = 268,
+													[13] = 269,
+													[7] = 270,
+													[14] = 260,
+													[15] = 263,
+													[19] = 253,
+												}, -- end of ["channels"]
+											}, -- end of [2]
+										}, -- end of ["Radio"]
+										["unitId"] = 5552,
+										["psi"] = 2.4037775934693,
+										["onboard_num"] = "020",
+										["y"] = 65006.754691844,
+										["x"] = 64628.986693464,
+										["name"] = "Aerial-1-1",
+										["payload"] = 
+										{
+											["pylons"] = 
+											{
+												[1] = 
+												{
+													["CLSID"] = "{6CEB49FC-DED8-4DED-B053-E1F033FF72D3}",
+													["settings"] = 
+													{
+														["NFP_VIS_DrawArgNo_57"] = 0.1,
+														["NFP_PRESID"] = "MDRN_M_A_AIM9",
+													}, -- end of ["settings"]
+												}, -- end of [1]
+												[2] = 
+												{
+													["CLSID"] = "{F16A4DE0-116C-4A71-97F0-2CF85B0313EC}",
+												}, -- end of [2]
+												[3] = 
+												{
+													["CLSID"] = "{BRU33_2X_GBU-12}",
+													["settings"] = 
+													{
+														["NFP_VIS_DrawArgNo_57"] = 0,
+														["laser_code"] = 1688,
+														["NFP_PRESID"] = "Paveway_II",
+														["01_prfx_arm_delay_ctrl_FMU139CB_LD"] = 4,
+														["NFP_fuze_type_tail"] = "FMU139CB_LD",
+														["NFP_PRESVER"] = 2,
+														["01_prfx_function_delay_ctrl_FMU139CB_LD"] = 0,
+													}, -- end of ["settings"]
+												}, -- end of [3]
+												[4] = 
+												{
+													["CLSID"] = "{AN_ASQ_228}",
+												}, -- end of [4]
+												[5] = 
+												{
+													["CLSID"] = "{FPU_8A_FUEL_TANK}",
+												}, -- end of [5]
+												[6] = 
+												{
+													["CLSID"] = "{C8E06185-7CD6-4C90-959F-044679E90751}",
+												}, -- end of [6]
+												[7] = 
+												{
+													["CLSID"] = "{BRU33_2X_GBU-12}",
+													["settings"] = 
+													{
+														["NFP_VIS_DrawArgNo_57"] = 0,
+														["laser_code"] = 1688,
+														["NFP_PRESID"] = "Paveway_II",
+														["01_prfx_arm_delay_ctrl_FMU139CB_LD"] = 4,
+														["NFP_fuze_type_tail"] = "FMU139CB_LD",
+														["NFP_PRESVER"] = 2,
+														["01_prfx_function_delay_ctrl_FMU139CB_LD"] = 0,
+													}, -- end of ["settings"]
+												}, -- end of [7]
+												[8] = 
+												{
+													["CLSID"] = "{F16A4DE0-116C-4A71-97F0-2CF85B0313EC}",
+												}, -- end of [8]
+												[9] = 
+												{
+													["CLSID"] = "{6CEB49FC-DED8-4DED-B053-E1F033FF72D3}",
+													["settings"] = 
+													{
+														["NFP_VIS_DrawArgNo_57"] = 0.1,
+														["NFP_PRESID"] = "MDRN_M_A_AIM9",
+													}, -- end of ["settings"]
+												}, -- end of [9]
+											}, -- end of ["pylons"]
+											["fuel"] = 4900,
+											["flare"] = 60,
+											["ammo_type"] = 1,
+											["chaff"] = 60,
+											["gun"] = 100,
+										}, -- end of ["payload"]
+										["heading"] = -2.4037775934693,
+										["callsign"] = 
+										{
+											[1] = 4,
+											[2] = 1,
+											["name"] = "Colt11",
+											[3] = 1,
+										}, -- end of ["callsign"]
+										["datalinks"] = 
+										{
+											["Link16"] = 
+											{
+												["settings"] = 
+												{
+													["FF1_Channel"] = 2,
+													["FF2_Channel"] = 3,
+													["transmitPower"] = 0,
+													["VOCB_Channel"] = 5,
+													["VOCA_Channel"] = 4,
+													["AIC_Channel"] = 1,
+												}, -- end of ["settings"]
+												["network"] = 
+												{
+													["teamMembers"] = 
+													{
+														[1] = 
+														{
+															["missionUnitId"] = 5552,
+														}, -- end of [1]
+													}, -- end of ["teamMembers"]
+													["donors"] = {},
+												}, -- end of ["network"]
+											}, -- end of ["Link16"]
+										}, -- end of ["datalinks"]
+									}, -- end of [1]
+								}, -- end of ["units"]
+								["y"] = 65006.754691844,
+								["x"] = 64628.986693464,
+								["name"] = "Aerial-1",
+								["communication"] = true,
+								["start_time"] = 0,
+								["uncontrollable"] = false,
+								["frequency"] = 305,
+							}, -- end of [30]
 						}, -- end of ["group"]
 					}, -- end of ["plane"]
 					["static"] = 
@@ -155602,15 +156126,15 @@ JTACs\
 										["type"] = "Camouflage07",
 										["unitId"] = 1211,
 										["rate"] = 1,
-										["y"] = 42689.104284941,
-										["x"] = 38768.486210243,
-										["name"] = "Static M92 Camouflage 07-14-1",
+										["y"] = 44695.492130872,
+										["x"] = 41142.31443702,
+										["name"] = "SAM BV51 (SA-13)-1-Camouflage-1",
 										["heading"] = 0,
 									}, -- end of [1]
 								}, -- end of ["units"]
-								["y"] = 42689.104284941,
-								["x"] = 38768.486210243,
-								["name"] = "Static M92 Camouflage 07-14",
+								["y"] = 44695.492130872,
+								["x"] = 41142.31443702,
+								["name"] = "SAM BV51 (SA-13)-1-Camouflage-1",
 								["route"] = 
 								{
 									["points"] = 
@@ -155620,9 +156144,9 @@ JTACs\
 											["alt"] = 0,
 											["type"] = "",
 											["name"] = "",
-											["y"] = 42689.104284941,
+											["y"] = 44695.492130872,
 											["speed"] = 0,
-											["x"] = 38768.486210243,
+											["x"] = 41142.31443702,
 											["formation_template"] = "",
 											["action"] = "",
 										}, -- end of [1]
@@ -155943,13 +156467,13 @@ JTACs\
 										{
 											[1] = 
 											{
-												["y"] = 42697.899643425,
-												["x"] = 38768.611513817,
+												["y"] = 44701.873678047,
+												["x"] = 41142.399452429,
 											}, -- end of [1]
 											[2] = 
 											{
-												["y"] = 42697.899643425,
-												["x"] = 38768.611513817,
+												["y"] = 44701.873678047,
+												["x"] = 41142.399452429,
 											}, -- end of [2]
 										}, -- end of [1]
 									}, -- end of ["spans"]
@@ -155957,13 +156481,13 @@ JTACs\
 									{
 										[1] = 
 										{
-											["alt"] = 156,
+											["alt"] = 165,
 											["type"] = "Turning Point",
 											["ETA"] = 0,
 											["alt_type"] = "BARO",
 											["formation_template"] = "",
-											["y"] = 42697.899643425,
-											["x"] = 38768.611513817,
+											["y"] = 44701.873678047,
+											["x"] = 41142.399452429,
 											["ETA_locked"] = true,
 											["speed"] = 0,
 											["action"] = "Off Road",
@@ -156039,8 +156563,8 @@ JTACs\
 										["coldAtStart"] = false,
 										["type"] = "T-55",
 										["unitId"] = 1057,
-										["y"] = 42697.899643425,
-										["x"] = 38768.611513817,
+										["y"] = 44701.873678047,
+										["x"] = 41142.399452429,
 										["name"] = "SAM BV51 (SA-13)-1-1",
 										["heading"] = 1.9931660057775,
 										["playerCanDrive"] = true,
@@ -156051,15 +156575,15 @@ JTACs\
 										["coldAtStart"] = false,
 										["type"] = "Strela-10M3",
 										["unitId"] = 1058,
-										["y"] = 42621.148808684,
-										["x"] = 38663.84053306,
+										["y"] = 44679.17766351,
+										["x"] = 40949.17662597,
 										["name"] = "SAM BV51 (SA-13)-1-2",
 										["heading"] = 4.9910111516146,
 										["playerCanDrive"] = false,
 									}, -- end of [2]
 								}, -- end of ["units"]
-								["y"] = 42697.899643425,
-								["x"] = 38768.611513817,
+								["y"] = 44701.873678047,
+								["x"] = 41142.399452429,
 								["name"] = "SAM BV51 (SA-13)-1",
 								["start_time"] = 0,
 							}, -- end of [2]
@@ -162274,7 +162798,7 @@ JTACs\
 			["colorItem"] = "0xff0000ff",
 		}, -- end of [97]
 	}, -- end of ["trigrules"]
-	["currentKey"] = 12203605,
+	["currentKey"] = 12266958,
 	["failures"] = 
 	{
 		["Failure_Fuel_Tank1Transfer"] = 
