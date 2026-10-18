@@ -132076,215 +132076,6 @@ mission =
 				},
 				[3] = 
 				{
-					["id"] = 17,
-					["name"] = "Insurgents",
-					["vehicle"] = 
-					{
-						["group"] = 
-						{
-							[1] = 
-							{
-								["groupId"] = 2283,
-								["hidden"] = true,
-								["hiddenOnMFD"] = true,
-								["hiddenOnPlanner"] = true,
-								["name"] = "PYD BV77 (Scout)-1",
-								["route"] = 
-								{
-									["points"] = 
-									{
-										[1] = 
-										{
-											["ETA"] = 0,
-											["ETA_locked"] = true,
-											["action"] = "Off Road",
-											["alt"] = 213,
-											["alt_type"] = "BARO",
-											["formation_template"] = "",
-											["speed"] = 0,
-											["speed_locked"] = true,
-											["task"] = 
-											{
-												["id"] = "ComboTask",
-												["params"] = 
-												{
-													["tasks"] = 
-													{
-													},
-												},
-											},
-											["type"] = "Turning Point",
-											["x"] = 92337.460862397,
-											["y"] = 56438.794458832,
-										},
-									},
-									["spans"] = 
-									{
-									},
-								},
-								["start_time"] = 0,
-								["task"] = "Ground Nothing",
-								["taskSelected"] = true,
-								["tasks"] = 
-								{
-								},
-								["uncontrollable"] = false,
-								["units"] = 
-								{
-									[1] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 3.5220744305246,
-										["name"] = "PYD BV77 (Scout)-1-1",
-										["playerCanDrive"] = false,
-										["skill"] = "Average",
-										["type"] = "UAZ-469",
-										["unitId"] = 2737,
-										["x"] = 92337.460862397,
-										["y"] = 56438.794458832,
-									},
-									[2] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 1.9896753472735,
-										["name"] = "PYD BV77 (Scout)-1-2",
-										["playerCanDrive"] = true,
-										["skill"] = "Average",
-										["type"] = "HL_KORD",
-										["unitId"] = 2747,
-										["x"] = 92337.30573302,
-										["y"] = 56422.402454664,
-									},
-									[3] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 5.1382493178713,
-										["name"] = "PYD BV77 (Scout)-1-3",
-										["playerCanDrive"] = true,
-										["skill"] = "Average",
-										["type"] = "tt_DSHK",
-										["unitId"] = 2748,
-										["x"] = 92341.28738703,
-										["y"] = 56423.746909265,
-									},
-									[4] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 5.1679199151552,
-										["name"] = "PYD BV77 (Scout)-1-4",
-										["playerCanDrive"] = true,
-										["skill"] = "Average",
-										["type"] = "tt_KORD",
-										["unitId"] = 2749,
-										["x"] = 92328.877036871,
-										["y"] = 56416.145569793,
-									},
-									[5] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 0.85172067497323,
-										["name"] = "PYD BV77 (Scout)-1-5",
-										["playerCanDrive"] = false,
-										["skill"] = "Average",
-										["type"] = "Infantry AK Ins",
-										["unitId"] = 2750,
-										["x"] = 92326.514371687,
-										["y"] = 56428.741254031,
-									},
-									[6] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 4.3528511544739,
-										["name"] = "PYD BV77 (Scout)-1-6",
-										["playerCanDrive"] = false,
-										["skill"] = "Average",
-										["type"] = "Infantry AK Ins",
-										["unitId"] = 2751,
-										["x"] = 92326.808645178,
-										["y"] = 56432.020476037,
-									},
-									[7] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 4.7123889803847,
-										["name"] = "PYD BV77 (Scout)-1-7",
-										["playerCanDrive"] = false,
-										["skill"] = "Average",
-										["type"] = "Infantry AK Ins",
-										["unitId"] = 2752,
-										["x"] = 92336.685215512,
-										["y"] = 56415.4216327,
-									},
-									[8] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 5.6950093492575,
-										["name"] = "PYD BV77 (Scout)-1-8",
-										["playerCanDrive"] = false,
-										["skill"] = "Average",
-										["type"] = "Infantry AK Ins",
-										["unitId"] = 2753,
-										["x"] = 92333.604211769,
-										["y"] = 56442.019562993,
-									},
-									[9] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 5.1766465614152,
-										["name"] = "PYD BV77 (Scout)-1-9",
-										["playerCanDrive"] = false,
-										["skill"] = "High",
-										["type"] = "Ural-375 ZU-23 Insurgent",
-										["unitId"] = 2754,
-										["x"] = 92323.292379299,
-										["y"] = 56413.973758515,
-									},
-									[10] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 4.3528511544739,
-										["name"] = "PYD BV77 (Scout)-1-10",
-										["playerCanDrive"] = false,
-										["skill"] = "Average",
-										["type"] = "Igla manpad INS",
-										["unitId"] = 4051,
-										["x"] = 92308.363524182,
-										["y"] = 56434.381030824,
-									},
-									[11] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 2.2654373690886,
-										["name"] = "PYD BV77 (Scout)-1-11",
-										["playerCanDrive"] = false,
-										["skill"] = "Average",
-										["type"] = "Infantry AK Ins",
-										["unitId"] = 4052,
-										["x"] = 92309.846355946,
-										["y"] = 56432.512968868,
-									},
-									[12] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 2.6162485487395,
-										["name"] = "PYD BV77 (Scout)-1-12",
-										["playerCanDrive"] = false,
-										["skill"] = "Average",
-										["type"] = "Infantry AK Ins",
-										["unitId"] = 4053,
-										["x"] = 92328.92924731,
-										["y"] = 56429.454740011,
-									},
-								},
-								["visible"] = false,
-								["x"] = 92337.460862397,
-								["y"] = 56438.794458832,
-							},
-						},
-					},
-				},
-				[4] = 
-				{
 					["id"] = 47,
 					["name"] = "Syria",
 					["static"] = 
@@ -137801,6 +137592,215 @@ mission =
 						},
 					},
 				},
+				[4] = 
+				{
+					["id"] = 17,
+					["name"] = "Insurgents",
+					["vehicle"] = 
+					{
+						["group"] = 
+						{
+							[1] = 
+							{
+								["groupId"] = 2283,
+								["hidden"] = true,
+								["hiddenOnMFD"] = true,
+								["hiddenOnPlanner"] = true,
+								["name"] = "PYD BV77 (Scout)-1",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["ETA"] = 0,
+											["ETA_locked"] = true,
+											["action"] = "Off Road",
+											["alt"] = 213,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["speed"] = 0,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 92337.460862397,
+											["y"] = 56438.794458832,
+										},
+									},
+									["spans"] = 
+									{
+									},
+								},
+								["start_time"] = 0,
+								["task"] = "Ground Nothing",
+								["taskSelected"] = true,
+								["tasks"] = 
+								{
+								},
+								["uncontrollable"] = false,
+								["units"] = 
+								{
+									[1] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 3.5220744305246,
+										["name"] = "PYD BV77 (Scout)-1-1",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "UAZ-469",
+										["unitId"] = 2737,
+										["x"] = 92337.460862397,
+										["y"] = 56438.794458832,
+									},
+									[2] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 1.9896753472735,
+										["name"] = "PYD BV77 (Scout)-1-2",
+										["playerCanDrive"] = true,
+										["skill"] = "Average",
+										["type"] = "HL_KORD",
+										["unitId"] = 2747,
+										["x"] = 92337.30573302,
+										["y"] = 56422.402454664,
+									},
+									[3] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 5.1382493178713,
+										["name"] = "PYD BV77 (Scout)-1-3",
+										["playerCanDrive"] = true,
+										["skill"] = "Average",
+										["type"] = "tt_DSHK",
+										["unitId"] = 2748,
+										["x"] = 92341.28738703,
+										["y"] = 56423.746909265,
+									},
+									[4] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 5.1679199151552,
+										["name"] = "PYD BV77 (Scout)-1-4",
+										["playerCanDrive"] = true,
+										["skill"] = "Average",
+										["type"] = "tt_KORD",
+										["unitId"] = 2749,
+										["x"] = 92328.877036871,
+										["y"] = 56416.145569793,
+									},
+									[5] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 0.85172067497323,
+										["name"] = "PYD BV77 (Scout)-1-5",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "Infantry AK Ins",
+										["unitId"] = 2750,
+										["x"] = 92326.514371687,
+										["y"] = 56428.741254031,
+									},
+									[6] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 4.3528511544739,
+										["name"] = "PYD BV77 (Scout)-1-6",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "Infantry AK Ins",
+										["unitId"] = 2751,
+										["x"] = 92326.808645178,
+										["y"] = 56432.020476037,
+									},
+									[7] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 4.7123889803847,
+										["name"] = "PYD BV77 (Scout)-1-7",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "Infantry AK Ins",
+										["unitId"] = 2752,
+										["x"] = 92336.685215512,
+										["y"] = 56415.4216327,
+									},
+									[8] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 5.6950093492575,
+										["name"] = "PYD BV77 (Scout)-1-8",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "Infantry AK Ins",
+										["unitId"] = 2753,
+										["x"] = 92333.604211769,
+										["y"] = 56442.019562993,
+									},
+									[9] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 5.1766465614152,
+										["name"] = "PYD BV77 (Scout)-1-9",
+										["playerCanDrive"] = false,
+										["skill"] = "High",
+										["type"] = "Ural-375 ZU-23 Insurgent",
+										["unitId"] = 2754,
+										["x"] = 92323.292379299,
+										["y"] = 56413.973758515,
+									},
+									[10] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 4.3528511544739,
+										["name"] = "PYD BV77 (Scout)-1-10",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "Igla manpad INS",
+										["unitId"] = 4051,
+										["x"] = 92308.363524182,
+										["y"] = 56434.381030824,
+									},
+									[11] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 2.2654373690886,
+										["name"] = "PYD BV77 (Scout)-1-11",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "Infantry AK Ins",
+										["unitId"] = 4052,
+										["x"] = 92309.846355946,
+										["y"] = 56432.512968868,
+									},
+									[12] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 2.6162485487395,
+										["name"] = "PYD BV77 (Scout)-1-12",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "Infantry AK Ins",
+										["unitId"] = 4053,
+										["x"] = 92328.92924731,
+										["y"] = 56429.454740011,
+									},
+								},
+								["visible"] = false,
+								["x"] = 92337.460862397,
+								["y"] = 56438.794458832,
+							},
+						},
+					},
+				},
 			},
 			["name"] = "red",
 			["nav_points"] = 
@@ -137912,7 +137912,7 @@ mission =
 			[4] = 47,
 		},
 	},
-	["currentKey"] = 12282783,
+	["currentKey"] = 12298608,
 	["date"] = 
 	{
 		["Day"] = 12,
