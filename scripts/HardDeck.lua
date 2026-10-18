@@ -1,8 +1,11 @@
+-- HardDeck | v1.0.1
+-- v1.0.1: PLAYER_UNIT_NAME read from _G.TRT.PLAYER_NAME (default "Player_01").
+-- File was unversioned before this change; treated as v1.0.0.
 -------------------------------------------------
 -- ALTITUDE PENALTY SYSTEM (MOOSE)
 -------------------------------------------------
 
-PLAYER_UNIT_NAME = "Player_01"
+PLAYER_UNIT_NAME = (_G.TRT and _G.TRT.PLAYER_NAME) or "Player_01"
 
 ALT_LIMIT_FT        = 21000     -- eşik
 WARNING_TIME        = 60        -- saniye (önce uyarı)

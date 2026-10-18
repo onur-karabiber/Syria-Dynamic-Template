@@ -1,4 +1,4 @@
--- Core_Scoring | v1.3.0
+-- Core_Scoring | v1.3.1
 -- TRT Syria Recovery Framework - CASE-independent scoring core.
 -- Consolidates: dead-target scoring, refuel scoring (player+AI),
 -- landing scoring, groove fuel scoring, Bankler/TrapTrainer merge,
@@ -35,13 +35,22 @@
 -- DEBUG_LOG_UNATTRIBUTED_DEATHS note in that section before trusting
 -- static HVT scoring (e.g. the factory case) blind.
 --
+-- v1.3.1: hero unit name is no longer hardcoded. PLAYER_NAME comes from
+-- _G.TRT.PLAYER_NAME (default "Player_01") and is published back to the
+-- same field so later modules agree. To use another slot in a given .miz,
+-- run this one-liner in a Do Script trigger BEFORE any script is loaded:
+--   _G.TRT = _G.TRT or {}; _G.TRT.PLAYER_NAME = "Player_03"
+-- The hero's landing TARGET_UNITS entry follows PLAYER_NAME.
+--
 -- Load order requirement: load AFTER mist, BEFORE Recovery_Approach.lua
 -- and Departure.lua.
 
 ----------------------------------------------------------------
 -- CONFIG
 ----------------------------------------------------------------
-local PLAYER_NAME = "Player_01"
+_G.TRT = _G.TRT or {}
+local PLAYER_NAME = _G.TRT.PLAYER_NAME or "Player_01"
+_G.TRT.PLAYER_NAME = PLAYER_NAME
 local CARRIER     = "CVN"
 local FLAG_SCORE  = 1908
 
@@ -542,7 +551,7 @@ end
 do
     local TARGET_UNITS = {
         ["LANDER-8-1"] = true, ["LANDER-6-1"] = true, ["CAS-1-1"] = true,
-        ["TOMCAT-2-1"] = true, ["TOMCAT-1-1"] = true, ["Player_01"] = true,
+        ["TOMCAT-2-1"] = true, ["TOMCAT-1-1"] = true, [PLAYER_NAME] = true,
     }
     local LANDING_DONE = {}
     local LEH = {}
@@ -659,4 +668,4 @@ do
     timer.scheduleFunction(watchCaseChange, nil, timer.getTime() + 1)
 end
 
-env.info("[Core_Scoring] v1.3.0 loaded.")
+env.info("[Core_Scoring] v1.3.1 loaded. Player unit: " .. PLAYER_NAME)

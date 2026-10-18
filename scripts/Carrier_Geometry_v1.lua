@@ -1,14 +1,18 @@
--- Carrier_Geometry | v1.1.0
+-- Carrier_Geometry | v1.1.1
 -- Distance_Flag_v3 + Radial_Flag_v1 birlesimi. Ayni Unit lookup, ayni tick,
 -- iki flag. Flag ID'leri (6550, 6551) eskisiyle ayni - mevcut ME trigger'lar
 -- bozulmaz. Bu dosya yuklendiginde eski iki dosyayi loadfile zincirinden
 -- CIKAR, aksi halde iki ayri script ayni flag'lere yazmaya calisir.
+-- v1.1.1: playerName artik _G.TRT.PLAYER_NAME'den okunur (varsayilan
+-- "Player_01"). Core_Scoring'e yukleme sirasi bagimliligi yok; .miz basina
+-- override yapiliyorsa o Do Script satiri bu script'ten ONCE calismali.
 
 -- DEBUG: script loading check (one-time)
 trigger.action.outText("Carrier geometry measuring activated", 5)
 
 do
-  local playerName = "Player_01"
+  local playerName = (_G.TRT and _G.TRT.PLAYER_NAME) or "Player_01"
+  env.info("[Carrier_Geometry] v1.1.1 player unit: " .. playerName)
   local cvnName    = "CVN"
 
   local distFlagId = 6550   -- DME (NM)

@@ -1,12 +1,13 @@
--- Overspeed Penalty in Marshal Zone v7
+-- Overspeed_Penalty_In_Marshal_Zone | v7.1.0
+-- v7.1.0: player unit read from _G.TRT.PLAYER_NAME (default "Player_01");
+-- hardcoded GROUP_NAME "CAS-1" removed - messages go to unit:getGroup().
 
 local SPEED_THRESHOLD_MS = 355 * 0.514444
 local WARNING_DELAY      = 20
 local PENALTY_INTERVAL   = 5
 local PENALTY_FLAG       = 1908
-local PLAYER_UNIT_NAME   = "Player_01"
+local PLAYER_UNIT_NAME   = (_G.TRT and _G.TRT.PLAYER_NAME) or "Player_01"
 local TRIGGER_ZONE_NAME  = "Marshal_Zone"
-local GROUP_NAME         = "CAS-1"
 local ALTITUDE_FLOOR_M   = 366  -- 1200 ft MSL (~AGL), altında script devre dışı
 
 local warningShown    = false
@@ -48,7 +49,7 @@ local function checkMarshalSpeed()
 
         if speed > SPEED_THRESHOLD_MS then
             if not warningShown then
-                local grp = Group.getByName(GROUP_NAME)
+                local grp = unit:getGroup()
                 if grp then
                     sendGroupMessage(grp,
                         "WARNING: Do not exceed 350 knots (Ground Speed) within the Marshal Zone!\n" ..
@@ -65,7 +66,7 @@ local function checkMarshalSpeed()
                     local currentVal = trigger.misc.getUserFlag(PENALTY_FLAG)
                     local newVal     = currentVal - 1
                     trigger.action.setUserFlag(PENALTY_FLAG, newVal)
-                    local grp = Group.getByName(GROUP_NAME)
+                    local grp = unit:getGroup()
                     if grp then
                         sendGroupMessage(grp,
                             "PENALTY (-1 point): Speed violation in Marshal Zone!\n" ..

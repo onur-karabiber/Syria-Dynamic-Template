@@ -45,6 +45,17 @@ assert(loadfile("C:\\Path\\To\\Your\\Repo\\Syria-Dynamic-Template\\scripts\\your
 ```
 This allows you to edit the script in VS Code and simply restart the mission in DCS to see the changes immediately.
 
+### 4. Player Slot Convention
+* The scenario's "hero" slot is the unit named `Player_01`. The **group name is free** (`CAS-1`, `SEAD-1`, ...); no scoring script depends on it.
+* Additional human slots should be named `Player_02` ... `Player_NN`. Bankler's `TrapTraining.lua` grades `Player_01`-`Player_44` per slot; the TRT scoring layer (flags, departure, approach, kill/landing score) follows only the hero.
+* To make another unit the hero in a specific `.miz`, add a `Do Script` trigger that runs **before every script load** (including `Carrier_Geometry_v1.lua`, which does not depend on `Core_Scoring.lua`):
+```lua
+_G.TRT = _G.TRT or {}; _G.TRT.PLAYER_NAME = "Player_03"
+```
+* Each script logs `Player unit: <name>` when it loads. Check `dcs.log` to confirm all of them resolved the same name.
+* Unit names are unique per mission. Renaming a slot to `Player_01` requires renaming the previous holder.
+* Not yet migrated: `CASE-I/II/III_v14.lua`, `CASE_IorII_Departure.lua`, `CASE_III_Departure.lua` still hardcode `Player_01` (superseded by `Recovery_Approach.lua` / `Departure.lua`).
+
 ### Scripting Guidelines
 **Strict Requirement:** Every Lua script update or creation within this repository must feature the script title and version number as the top comment line. 
 

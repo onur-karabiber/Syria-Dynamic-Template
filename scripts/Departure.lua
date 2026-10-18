@@ -1,16 +1,18 @@
--- Departure | v1.0.0
+-- Departure | v1.0.1
 -- CASE-adaptive departure scoring. Replaces CASE_III_Departure.lua and
 -- CASE_IorII_Departure.lua. Case is snapshotted at ARM time (takeoff) -
 -- a departure procedure doesn't switch profile mid-transit in practice,
 -- unlike the approach, which can span a longer window where weather
 -- may actually change.
 --
+-- v1.0.1: PLAYER_NAME read from TRT.PLAYER_NAME (see Core_Scoring v1.3.1).
+--
 -- Load order: AFTER Core_Scoring.lua and CaseDeterminator.lua.
 
 _G.TRT = _G.TRT or {}
 local TRT = _G.TRT
 
-local PLAYER_NAME = "Player_01"
+local PLAYER_NAME = TRT.PLAYER_NAME or "Player_01"
 local BRC = 355
 
 -- CASE I/II profile (from CASE_IorII_Departure.lua)
@@ -169,4 +171,4 @@ timer.scheduleFunction(function()
     return timer.getTime() + 1
 end, nil, timer.getTime() + 1)
 
-env.info("[Departure] v1.0.0 loaded.")
+env.info("[Departure] v1.0.1 loaded. Player unit: " .. PLAYER_NAME)
