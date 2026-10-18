@@ -16,7 +16,9 @@ To overcome the limitations of tracking binary `.miz` files in Git, the mission 
 
 * `src/`: Contains the unpacked raw mission files (`mission`, `options`, `warehouses`, `dictionary`, etc.). Git tracks the structural changes here. `src/Sounds/` holds the audio packs (ATIS, AIRBOSS, RANGE, General, ... ~22 MB, ~1300 files) that are packed into the `.miz` as-is.
 * `scripts/`: Holds all external Lua scripts (MOOSE, Skynet, RAT, custom logic). `scripts/legacy/` holds superseded scripts that the mission no longer references; `build.py` does not embed them.
-* `build.py`: Python script used to pack the `src/` directory **and the Lua scripts from `scripts/`** into a playable `.miz` file.
+* `build.py`: Python script used to pack the `src/` directory **and the Lua scripts from `scripts/`** into a playable `.miz` file, and copy it to the DCS Missions folder.
+* `extract.py`: the reverse of `build.py`; unpacks a Mission Editor-saved `.miz` into `src/`.
+* `config.py`: shared settings (Missions folder, `.miz` name).
 * `build/`: The output directory for the compiled `.miz` file (ignored by Git).
 
 ## Development Workflow
@@ -29,13 +31,23 @@ python build.py
 This will generate `Syria_Dynamic_Template.miz` inside the `build/` folder. The build embeds every Lua script that the mission references (`src/l10n/DEFAULT/mapResource`) from `scripts/`, prints each script's header line, and aborts without writing anything if a referenced script is missing.
 
 ### 2. Editing the Mission (Mission Editor)
-1. Run the `build.py` script to get the latest `.miz` file.
-2. Open the `.miz` file in the DCS Mission Editor and make your map/unit changes.
-3. Save the mission.
-4. Rename the saved `.miz` file to `.zip` and extract its contents.
-5. Overwrite the files in the `src/` directory with these extracted files.
-   * The extracted `l10n/DEFAULT/*.lua` copies are stale by definition; they are git-ignored and `build.py` ignores them. `scripts/` always wins.
-6. Commit your changes to Git.
+The `.miz` that DCS opens (`config.py`: `Saved Games\DCS\Missions\The Routine Things (With RAT)\Syria_Dynamic_Template.miz`) is the working copy; `src/` is its Git mirror. Syncing is only required **before the next build or commit**, not after every ME save.
+
+1. Edit and save in the Mission Editor as usual.
+2. Before the next build/commit, pull the ME changes into the repo:
+   ```bash
+   python extract.py          # reads the .miz from config.py; or: python extract.py "path\to\file.miz"
+   python extract.py -n       # dry-run: only report what would change
+   ```
+   * Only files with different content are written (size + CRC32), so `git diff` stays clean.
+   * Files missing from the `.miz` are deleted from `src/`, but only inside top-level folders/files that the `.miz` contains. If the saved `.miz` has no `Sounds/`, `src/Sounds/` is left untouched.
+   * `l10n/DEFAULT/*.lua` copies are skipped (stale by definition; `scripts/` wins).
+   * Safety: an archive without a `mission` entry or with unsafe paths is rejected; deleting more than 50 files needs `--force`.
+3. `git status`, commit.
+4. `python build.py` rebuilds the `.miz` and copies it to the Missions folder (see 2a).
+
+### 2a. Build output in the Missions folder
+`python build.py` writes `build/Syria_Dynamic_Template.miz` and then also copies it to the Missions folder from `config.py` (override with the `DCS_MISSIONS_DIR` environment variable). The copy is **refused** (exit code 2) when the `.miz` already there differs from `src/`, because that means ME edits have not been extracted yet and would be overwritten. Run `python extract.py`, or use `python build.py --force` to overwrite anyway. `--no-deploy` skips the copy. If the Missions folder does not exist, the copy is skipped. If DCS has the file open, the copy fails with exit code 3; close the mission and rebuild.
 
 ### 3. Handling Lua Scripts
 `scripts/` is the single source of truth. Do not edit the copies inside a `.miz`; they are overwritten on every build.
