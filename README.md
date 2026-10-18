@@ -14,8 +14,8 @@ To overcome the limitations of tracking binary `.miz` files in Git, the mission 
 
 ## Repository Structure
 
-* `src/`: Contains the unpacked raw mission files (`mission`, `options`, `warehouses`, `dictionary`, etc.). Git tracks the structural changes here.
-* `scripts/`: Holds all external Lua scripts (MOOSE, Skynet, RAT, custom logic). 
+* `src/`: Contains the unpacked raw mission files (`mission`, `options`, `warehouses`, `dictionary`, etc.). Git tracks the structural changes here. `src/Sounds/` holds the audio packs (ATIS, AIRBOSS, RANGE, General, ... ~22 MB, ~1300 files) that are packed into the `.miz` as-is.
+* `scripts/`: Holds all external Lua scripts (MOOSE, Skynet, RAT, custom logic). `scripts/legacy/` holds superseded scripts that the mission no longer references; `build.py` does not embed them.
 * `build.py`: Python script used to pack the `src/` directory **and the Lua scripts from `scripts/`** into a playable `.miz` file.
 * `build/`: The output directory for the compiled `.miz` file (ignored by Git).
 
@@ -54,12 +54,12 @@ _G.TRT = _G.TRT or {}; _G.TRT.PLAYER_NAME = "Player_03"
 ```
 * Each script logs `Player unit: <name>` when it loads. Check `dcs.log` to confirm all of them resolved the same name.
 * Unit names are unique per mission. Renaming a slot to `Player_01` requires renaming the previous holder.
-* Not yet migrated: `CASE-I/II/III_v14.lua`, `CASE_IorII_Departure.lua`, `CASE_III_Departure.lua` still hardcode `Player_01` (superseded by `Recovery_Approach.lua` / `Departure.lua`).
+* Legacy, not migrated: `scripts/legacy/CASE-I/II/III_v14.lua`, `CASE_IorII_Departure.lua`, `CASE_III_Departure.lua` still hardcode `Player_01`. They are superseded by `Recovery_Approach.lua` / `Departure.lua`, are not referenced by the mission and are not built. To reuse one, move it back to `scripts/` (`build.py` looks for referenced scripts only directly in `scripts/`).
 
 ### 5. AI JTAC Placement Rule
 An AI JTAC (a ground group with a `FAC_AttackGroup` task, e.g. `JTAC-1`) lases only targets it can see. Observed in `dcs.log` tests (2026-10): when terrain blocked the line of sight (LOS) from the JTAC to its target group, the JTAC gave coordinates but no laser, said "type-3 in effect", and its comm menu showed `Repeat brief` instead of `IP INBOUND`. After the target was moved to a position with clear LOS, all four test JTACs lased, said "type-2 in effect" and showed `IP INBOUND`.
 
-* **Rule:** the target group must be visible from the JTAC's position over terrain. A 0.4-0.7 m terrain rise on the line was enough to block it at ~190 m. A higher JTAC position does not guarantee LOS (a JTAC 3.6 m above its target was still blocked).
+* **Rule:** the target group must be visible from the JTAC's position over terrain. A 0.4-0.7 m terrain rise on the line was enough to block it at ~190 m. The elevation difference between JTAC and target does not matter by itself, in either direction: a JTAC 3.6 m above its target was blocked by a rise in between, and a JTAC 5.6 m below its target lased with clear terrain in between.
 * **Check:** `scripts/JTAC_LOS_Audit.lua` runs once ~15 s after mission start and writes `[JTAC_LOS]` lines to `dcs.log` for every FAC group: `OK`, `MARGINAL` (LOS but clearance < 1 m), `BLOCKED` (warning, with the observer height at which LOS would open), or `SKIP` (group not spawned yet). It only logs; it never moves units. Search `dcs.log` for `JTAC_LOS` after each build or after moving a JTAC or its target.
 * **Fix a BLOCKED pair in the Mission Editor:** move the target group or the JTAC to another position and rebuild; re-check the log.
 * **Known limits:** the audit uses `land.isVisible` (terrain only) with assumed eye heights of 2.5 m. Whether buildings, trees or vehicles between JTAC and target affect JTAC lasing is **not verified**. The cause-and-effect link above rests on a small number of test pairs; DCS does not document the JTAC detection logic.
