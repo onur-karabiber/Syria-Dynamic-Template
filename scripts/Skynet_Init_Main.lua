@@ -1,8 +1,16 @@
--- Skynet_Init_Main | v1.1.0
+-- Skynet_Init_Main | v1.1.1
 ----------------------------------------------------------------
 -- SKYNET IADS - CUSTOM INIT (PREFIX + COMMAND CENTER)
 -- Skynet version: 3.3.0
 -- Author: sen (inat), ben (temizlikci)
+--
+-- v1.1.1:
+--  * FIX: debug bayragi adi. Config "debug.samWentDark" set ediyordu; Skynet 3.3.0
+--    cekirdegi "GOING DARK" logunu "radarWentDark" bayragina bagliyor
+--    (skynet-iads-compiled.lua: getDebugSettings().radarWentDark), samWentDark
+--    cekirdekte hicbir yerde okunmuyor. Sonuc: goDark() olaylari hic loglanmiyordu.
+--    Simdi debug.radarWentDark = true. Etki: dcs.log'da her radar kapanisinda
+--    "GOING DARK: ..." satiri gorunur (radarWentLive ile simetrik).
 --
 -- v1.1.0:
 --  * FIX: Command Center / Power / Connection node cozumlemesi.
@@ -104,7 +112,7 @@ local function initSkynet()
 
     debug.IADSStatus     = false
     debug.contacts       = false
-    debug.samWentDark    = true
+    debug.radarWentDark  = true
     debug.radarWentLive  = true
 
     debug.addedEWRadar   = true
