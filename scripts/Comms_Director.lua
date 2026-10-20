@@ -1,4 +1,4 @@
--- Comms_Director | v1.0.1
+-- Comms_Director | v1.0.2
 --[[
   CAS-1 Communications State Machine — Syria Dynamic Template
   Scope: DEPARTURE check-in · OVERLORD picture · INJ-1..4 · RTB corridor
@@ -35,7 +35,7 @@
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
     -- ME unit / group names
-    PLAYER_UNIT    = "CAS-1",         -- player aircraft unit name  [ME: group CAS-1, unit 1]
+    PLAYER_UNIT    = "Player_01",      -- player aircraft unit name  [ME: unit name = Player_01]
     CARRIER_UNIT   = "CVN",          -- carrier ship unit name     [ME: UNIT NAME = CVN]
     PLAYER_GRP     = "CAS-1",        -- player group name (for F10 menu)
 
