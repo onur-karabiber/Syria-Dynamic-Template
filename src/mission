@@ -12387,7 +12387,7 @@ mission =
 										{
 											["ETA"] = 0,
 											["ETA_locked"] = true,
-											["action"] = "From Parking Area",
+											["action"] = "From Runway",
 											["alt"] = 0,
 											["alt_type"] = "BARO",
 											["formation_template"] = "",
@@ -12616,7 +12616,7 @@ mission =
 													},
 												},
 											},
-											["type"] = "TakeOffParking",
+											["type"] = "TakeOff",
 											["x"] = -216601.40284255,
 											["y"] = -363049.70156328,
 										},
@@ -12652,7 +12652,7 @@ mission =
 										},
 										[3] = 
 										{
-											["ETA"] = 2420.1995322277,
+											["ETA"] = 2423.9077078989,
 											["ETA_locked"] = false,
 											["action"] = "Turning Point",
 											["alt"] = 6705.6,
@@ -12678,8 +12678,8 @@ mission =
 												},
 											},
 											["type"] = "Turning Point",
-											["x"] = 73182.78004872,
-											["y"] = -40399.73754315,
+											["x"] = 73640.283050887,
+											["y"] = -39914.06718488,
 										},
 									},
 								},
@@ -137912,7 +137912,7 @@ mission =
 			[4] = 47,
 		},
 	},
-	["currentKey"] = 12298608,
+	["currentKey"] = 12323449,
 	["date"] = 
 	{
 		["Day"] = 12,
@@ -163057,9 +163057,9 @@ mission =
 	},
 	["map"] = 
 	{
-		["centerX"] = 44820.350969173,
-		["centerY"] = 7484.8917420817,
-		["zoom"] = 405369.43314084,
+		["centerX"] = 62626.606672525,
+		["centerY"] = 35640.517048747,
+		["zoom"] = 293199.86230344,
 	},
 	["maxDictId"] = 311,
 	["pictureFileNameB"] = 
@@ -163131,7 +163131,7 @@ mission =
 		{
 			[1] = "a_set_flag_value(\"100\", 3);",
 			[2] = "a_do_script_file(getValueResourceByKey(\"ResKey_Action_286\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_287\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_297\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_298\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_299\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_311\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_301\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_302\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_312\"));",
-			[3] = "a_do_script_file(getValueResourceByKey(\"ResKey_Action_279\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_282\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_283\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_303\"));",
+			[3] = "a_do_script_file(getValueResourceByKey(\"ResKey_Action_279\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_282\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_283\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_303\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_313\"));",
 			[4] = "a_do_script_file(getValueResourceByKey(\"ResKey_Action_227\")); mission.trig.func[4]=nil;",
 			[5] = "a_do_script(\"SetSuperCarrier(true)\"); mission.trig.func[5]=nil;",
 			[6] = "a_do_script_file(getValueResourceByKey(\"ResKey_Action_213\")); mission.trig.func[6]=nil;",
@@ -165137,6 +165137,11 @@ mission =
 				[4] = 
 				{
 					["file"] = "ResKey_Action_303",
+					["predicate"] = "a_do_script_file",
+				},
+				[5] = 
+				{
+					["file"] = "ResKey_Action_313",
 					["predicate"] = "a_do_script_file",
 				},
 			},

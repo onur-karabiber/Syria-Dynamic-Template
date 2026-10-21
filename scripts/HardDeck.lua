@@ -1,4 +1,5 @@
--- HardDeck | v1.0.1
+-- HardDeck | v1.0.2
+-- v1.0.2: hard deck unified to 23,000 ft MSL (was 21,000 / "FL210"), matches Comms_Director v1.2.0.
 -- v1.0.1: PLAYER_UNIT_NAME read from _G.TRT.PLAYER_NAME (default "Player_01").
 -- File was unversioned before this change; treated as v1.0.0.
 -------------------------------------------------
@@ -7,7 +8,7 @@
 
 PLAYER_UNIT_NAME = (_G.TRT and _G.TRT.PLAYER_NAME) or "Player_01"
 
-ALT_LIMIT_FT        = 21000     -- eşik
+ALT_LIMIT_FT        = 23000     -- eşik (ft MSL)
 WARNING_TIME        = 60        -- saniye (önce uyarı)
 PENALTY_INTERVAL    = 3         -- her 3 sn
 CHECK_INTERVAL      = 1
@@ -86,8 +87,8 @@ function ALTITUDE_PENALTY_UPDATE()
     if belowAltTime <= WARNING_TIME then
         MESSAGE:New(
             string.format(
-                "ROE: Do not descend below FL210 within this area. | %.0f ft MSL",
-                altMSL_ft
+                "ROE: Hard deck %d ft MSL in this area. | %.0f ft MSL",
+                ALT_LIMIT_FT, altMSL_ft
             ),
             1
         ):ToAll()
@@ -119,6 +120,7 @@ end
 -- START
 -------------------------------------------------
 MESSAGE:New("Hard Deck altitude monitoring has been initiated.", 10):ToAll()
+env.info("[HardDeck] v1.0.2 loaded. Limit " .. ALT_LIMIT_FT .. " ft MSL")
 
 ALTITUDE_PENALTY_SCHEDULER = SCHEDULER:New(
     nil,

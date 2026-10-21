@@ -1,33 +1,56 @@
--- Comms_Director | v1.0.2
+-- Comms_Director | v1.2.0
 --[[
   CAS-1 Communications State Machine — Syria Dynamic Template
-  Scope: DEPARTURE check-in · OVERLORD picture · INJ-1..4 · RTB corridor
-  Out of scope: JTAC comms (native DCS JTAC preserved, do not touch)
+  Scope: Departure→Strike→OVERLORD hand-offs · JTAC hand-offs · INFLTREP · TANKER
+         · RTB (OVERLORD→Strike→Marshal) · INJ-1..4
+  Out of scope: JTAC comms themselves (native DCS JTAC check-in / 9-line / clearance
+                preserved, do not touch)
+
+  v1.2.0 — realistic C2 flow (JP 3-09.3 Ch V + CV ops practice)
+    * Pilot-initiated check-ins via F10. No agency talks to the player until the
+      player has checked in on its frequency. Only directive hand-offs ("switch X"),
+      threat/abort calls and corridor violations are controller-initiated.
+    * Hand-offs are position-gated, not time-gated:
+        Departure → Strike    ≥ DEP_HANDOFF_NM from the carrier
+        OVERLORD  → JTAC      ≤ JTAC_HANDOFF_NM from CP TIGER (ME WP2)
+        OVERLORD  → Strike    ≤ RTB_STRIKE_NM from the carrier
+        Strike    → Marshal   ≤ RECOVERY_NM from the carrier (AIRBOSS takes over)
+    * Agencies corrected: CP / JTAC / tanker / RTB tasking = OVERLORD (C2 agency).
+      Strike = Mode 4 / Kilo outbound, corridor + Marshal hand-off inbound.
+    * Hard deck: single value, 23,000 ft MSL, engagement area (flag 200 = 1).
+    * INFLTREP (JP 3-09.3 Fig V-17) to OVERLORD after JTAC-2, then tanker assignment.
+    * Feet dry / feet wet reports offered in F10 when the coastline is crossed
+      (land.getSurfaceType).
+    * Fix: Bearing() used atan2(dx, dz) → mirrored about 045°; now atan2(dz, dx).
+    * Removed: unsolicited 4-min OVERLORD "no change" calls.
 
   PHASE FLOW
   ──────────────────────────────────────────────────────────────
-    IDLE  →  DEPARTED  →  ENROUTE  →  CAS_ALPHA  →  CAS_BRAVO
-      →  RTB  →  RECOVERY  →  DONE
+    IDLE ─airborne→ DEPARTURE ─≥20 NM→ STRIKE_OUT ─F10→ STRIKE_CHK ─Mode 4 sweet→
+    OVL_OUT ─F10→ ENROUTE ─≤20 NM CP→ JTAC1 ─tgt dead→ J1_OFF ─F10→ JTAC2
+    ─tgt dead→ J2_OFF ─F10 INFLTREP→ REFUEL ─refuel done→ TKR_DONE ─F10→ RTB
+    ─≤90 NM CVN→ STRIKE_IN ─F10→ INBOUND ─≤50 NM CVN→ RECOVERY
+    (J2_OFF / REFUEL / TKR_DONE / RTB fall through to STRIKE_IN at ≤ RTB_STRIKE_NM)
 
   INJECTS
-    INJ-1  Abort (30%, JTAC-2 / pass 2-3):   Eyeball "abort, abort, abort"
-    INJ-2  IFF sour (15%, DEP check-in):      Strike "Mode 4 SOUR, recycle"
-    INJ-3  MANPADS (25%, JTAC-2 before p3):  Eyeball hard-deck → 20 000 ft
-    INJ-4  Corridor dev (auto, 80-50 NM):     Strike "outside corridor"
+    INJ-1  Abort (30%, JTAC-2 / pass 2-3):     Eyeball "abort, abort, abort"
+    INJ-2  IFF sour (15%, Strike check-in):    Strike "Mode 4 SOUR, recycle"
+    INJ-3  MANPADS (25%, JTAC-2 before p3):    Eyeball threat call, hard deck reminder
+    INJ-4  Corridor dev (auto, 80-50 NM):      Strike "outside corridor"
+    INJ-1/3 are armed once the player is within INJ_ARM_NM of JTAC-2's targets.
 
-  FLAGS  (do not conflict with existing ME triggers)
+  FLAGS  (no ME trigger reads 200-205 as of v1.2.0)
     100  = departure CASE (3 = CASE III — pre-set, DO NOT WRITE)
-    200  = hard-deck code  0=idle  1=JTAC1/12k  2=JTAC2/18k  3=JTAC2+MANPADS/20k
+    200  = hard deck  0 = not in effect   1 = in effect, 23,000 ft MSL
     201  = INJ-1 state     0=clear  1=abort active  2=re-cleared
     202  = INJ-2 fired
     203  = INJ-3 fired (MANPADS)
     204  = INJ-4 fired (corridor deviation)
-    205  = RTB corridor passed clean (set when player exits inner boundary clean)
+    205  = RTB corridor passed clean
 
   LOADING
-    Place Comms_Director.lua in scripts/.
-    Add "Do Script File" → Comms_Director.lua in ME (ONCE, at mission start).
-    Requires: DCS base Lua API, coord.*  (no external libraries).
+    scripts/Comms_Director.lua, referenced by ME "Do Script File" (ResKey_Action_313).
+    Embedded by build.py. Requires: DCS base Lua API, coord.*, land.* (no libraries).
 ]]
 
 -- ══════════════════════════════════════════════════════════════
@@ -35,49 +58,66 @@
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
     -- ME unit / group names
-    PLAYER_UNIT    = "Player_01",      -- player aircraft unit name  [ME: unit name = Player_01]
-    CARRIER_UNIT   = "CVN",          -- carrier ship unit name     [ME: UNIT NAME = CVN]
-    PLAYER_GRP     = "CAS-1",        -- player group name (for F10 menu)
+    PLAYER_UNIT    = "Player_01",
+    CARRIER_UNIT   = "CVN",
+    TANKER_UNIT    = "TANKER-1-1",    -- KC-130, Texaco 11
+    CS             = "HORNET 51",
 
-    -- Target reference (tries unit first, falls back to lat/lon)
-    -- Set to nil if no named unit; script will use lat/lon.
-    TGT_A_UNIT     = nil,            -- e.g. "SA-13 Alpha-1"
-    TGT_B_UNIT     = nil,            -- e.g. "SA-8 Bravo-1"
+    -- Mission numbers (kneeboard 01 ADMIN)
+    MSN_J1         = "4101",
+    MSN_J2         = "4102",
 
-    -- Fallback lat/lon (degrees) — verify against ME placement
-    -- BV 6187 2081 → approximate; adjust after confirming in ME
-    TGT_A_LAT      =  36.521,
-    TGT_A_LON      =  38.432,
-    -- YE 5987 3843 → approximate
-    TGT_B_LAT      =  36.142,
-    TGT_B_LON      =  35.984,
+    -- CP TIGER = CAS-1 route point 3 in src/mission (ME shows it as WP2).
+    -- DCS world coords (ME x = north -> vec3.x, ME y = east -> vec3.z).
+    CP_NAME        = "CP TIGER",
+    CP_POS         = { x = 73640, z = -39914 },   -- update if the WP is moved in ME
 
-    -- Phase proximity thresholds (NM)
-    ALPHA_RADIUS   = 40,
-    BRAVO_RADIUS   = 40,
-    RECOVERY_NM    = 50,
+    -- JTAC target groups
+    JTAC1_TGT_GROUP = "SAM BV51 (SA-13)-1",       -- Pointer 11, 2 units
+    JTAC2_TGT_GROUP = "SAM YE53 (SA-8)-1",        -- Eyeball 11, 4 units
+    JTAC2_POS      = { x = 59271, z = -1176 },    -- fallback; live centroid preferred
+    INJ_ARM_NM     = 20,
 
-    -- Departure detection
-    DEP_ALT_M      = 100,            -- ~330 ft; altitude in metres
-    DEP_SPD_MS     = 41,             -- ~80 kts; speed in m/s
-    DEP_HOLD_SECS  = 20,             -- seconds airborne before firing dep seq
-    DEP_ENROUTE_S  = 60,             -- seconds after departure before ENROUTE
+    -- Hand-off geometry (NM)
+    DEP_HANDOFF_NM  = 20,    -- Departure → Strike (outbound, on departure radial)
+    JTAC_HANDOFF_NM = 20,    -- OVERLORD → JTAC, distance to CP TIGER
+    RTB_STRIKE_NM   = 90,    -- OVERLORD → Strike (inbound)
+    RECOVERY_NM     = 50,    -- Strike → Marshal (AIRBOSS)
 
-    -- RTB corridor (TRUE degrees; Syria mag var ≈ +5° → 050M = 055T)
-    CORRIDOR_TRUE  = 55,             -- bearing FROM carrier TO player (true)
-    CORRIDOR_HALF  = 15,             -- ±15° tolerance
-    CORRIDOR_OUT   = 80,             -- outer boundary (NM)
-    CORRIDOR_IN    = 50,             -- inner boundary (NM) — AIRBOSS takes over
+    -- Airborne detection
+    DEP_ALT_M      = 100,    -- ~330 ft MSL
+    DEP_SPD_MS     = 41,     -- ~80 kt
+
+    -- RTB corridor (TRUE degrees; Syria mag var ≈ +5° E → 050M = 055T)
+    CORRIDOR_TRUE  = 55,     -- bearing FROM carrier TO player (true)
+    CORRIDOR_HALF  = 15,
+    CORRIDOR_OUT   = 80,
+    CORRIDOR_IN    = 50,
+
+    MAGVAR         = 5,      -- east; magnetic = true − MAGVAR
+    HARD_DECK_FT   = 23000,  -- MSL, engagement area
+    INTERNAL_FUEL_LB = 10860,
+
+    FREQ = {
+        DEP     = "127.60",
+        STRIKE  = "265.00",
+        J1      = "333.30",
+        J2      = "333.40",
+        OVL     = "251.10",
+        TKR     = "252.10",
+        MARSHAL = "305.00 FM",
+    },
 
     -- Inject probabilities (integer 0–100)
     PROB_INJ1      = 30,
     PROB_INJ2      = 15,
     PROB_INJ3      = 25,
 
-    -- Scheduler
-    TICK           = 5,              -- main tick interval (seconds)
+    TICK           = 5,      -- main tick (s)
+    REPLY_GAP      = 2,      -- gap between pilot call and controller reply (s)
+    PILOT_HOLD     = 2,      -- pilot call "airtime" before the reply gap starts (s)
 
-    -- Text display durations (seconds)
+    DUR_PILOT      = 7,
     DUR_SHORT      = 8,
     DUR_LONG       = 16,
     DUR_URGENT     = 12,
@@ -88,379 +128,606 @@ local CFG = {
 -- ══════════════════════════════════════════════════════════════
 local CD = {
     phase         = "IDLE",
-    depTs         = nil,             -- timer.getTime() when airborne confirmed
-    departedTs    = nil,             -- timer.getTime() when DEPARTED phase entered
-    queue         = {},              -- clip queue; each = {text, dur, after, audio}
+    queue         = {},
     qPlaying      = false,
-    qTimer        = nil,             -- timer handle (informational; not cancellable)
-    tgtA          = nil,             -- vec3 position of Target Alpha (cached)
-    tgtB          = nil,             -- vec3 position of Target Bravo (cached)
-    visitedAlpha  = false,
-    visitedBravo  = false,
-    corridorArmed = false,
+    seenJ1 = false, seenJ2 = false,
+    deadJ1 = false, deadJ2 = false,
+    j1 = { pos = nil, size = 0, tot = nil },   -- INFLTREP data
+    j2 = { pos = nil, size = 0, tot = nil },
+    j2Armed       = false,
+    tkrCheckedIn  = false,
+    refuelDone    = false,
     corridorDone  = false,
-    overlordClock = 0,
-    inj           = { i1=false, i2=false, i3=false },  -- fired flags
+    surf          = nil,      -- "LAND" / "WATER" (debounced)
+    surfCand      = nil,
+    surfCount     = 0,
+    feetPending   = nil,      -- "DRY" / "WET" — report offered in F10
+    awaiting      = false,    -- pilot call made, controller reply pending
+    inj           = { i1 = false, i2 = false, i3 = false },
+    menu          = { gid = nil, root = nil },
+}
+
+-- Phases in which the player is (or should be) working OVERLORD
+local OVL_PHASES = {
+    ENROUTE = true, JTAC1 = true, J1_OFF = true, JTAC2 = true,
+    J2_OFF = true, REFUEL = true, TKR_DONE = true, RTB = true,
 }
 
 -- ══════════════════════════════════════════════════════════════
 --  UTILITIES
 -- ══════════════════════════════════════════════════════════════
-local function MtoNM(m)   return m  / 1852 end
-local function NMtoM(nm)  return nm * 1852 end
+local function MtoNM(m)   return m / 1852 end
 local function Roll(pct)  return math.random(1, 100) <= pct end
 
 local function Player()   return Unit.getByName(CFG.PLAYER_UNIT)  end
 local function Carrier()  return Unit.getByName(CFG.CARRIER_UNIT) end
+local function Tanker()   return Unit.getByName(CFG.TANKER_UNIT)  end
 
---- 2-D distance in NM between two DCS vec3 points (ignores altitude)
 local function Dist2D(a, b)
-    local dx = a.x - b.x
-    local dz = a.z - b.z
+    local dx, dz = a.x - b.x, a.z - b.z
     return MtoNM(math.sqrt(dx * dx + dz * dz))
 end
 
---- True bearing (°) from point A to point B (0 = north)
+--- True bearing (°) from A to B. Vec3: x = north, z = east.
 local function Bearing(a, b)
-    return math.deg(math.atan2(b.x - a.x, b.z - a.z)) % 360
+    return math.deg(math.atan2(b.z - a.z, b.x - a.x)) % 360
 end
 
---- Signed angle difference, normalised to –180 … +180
+local function BrgMag(a, b)
+    return (Bearing(a, b) - CFG.MAGVAR) % 360
+end
+
 local function ADiff(a, b)
     local d = (a - b + 360) % 360
     return (d > 180) and (d - 360) or d
 end
 
---- Display text to player group only
-local function Msg(text, dur, clear)
-    local p = Player(); if not p then return end
-    trigger.action.outTextForGroup(
-        p:getGroup():getID(), text, dur or CFG.DUR_SHORT, clear or false)
+--- "bears 043 for 37"
+local function BrgRng(from, to)
+    return string.format("bears %03d for %d",
+        math.floor(BrgMag(from, to) + 0.5) % 360, math.floor(Dist2D(from, to) + 0.5))
 end
 
---- DCS flag helpers
+local function Angels(u)
+    return math.floor(u:getPoint().y * 3.28084 / 1000 + 0.5)
+end
+
+local function State(u)
+    local f = u:getFuel() or 0
+    return string.format("%.1f", f * CFG.INTERNAL_FUEL_LB / 1000)
+end
+
+local function MGRS(pos)
+    local ok, s = pcall(function()
+        local lat, lon = coord.LOtoLL(pos)
+        local m = coord.LLtoMGRS(lat, lon)
+        return string.format("%s %s %04d %04d", m.UTMZone, m.MGRSDigraph,
+            math.floor(m.Easting / 10), math.floor(m.Northing / 10))
+    end)
+    return ok and s or "unknown"
+end
+
+local function Clock(abs)
+    if not abs then return "unknown" end
+    local t = math.floor(abs) % 86400
+    return string.format("%02d%02dL", math.floor(t / 3600), math.floor((t % 3600) / 60))
+end
+
+local function Msg(text, dur, clear)
+    local p = Player(); if not p then return end
+    trigger.action.outTextForGroup(p:getGroup():getID(), text, dur or CFG.DUR_SHORT, clear or false)
+end
+
 local function SetFlag(f, v)  trigger.action.setUserFlag(tostring(f), v) end
-local function GetFlag(f)     return trigger.misc.getUserFlag(tostring(f)) end
+
+local HD_TEXT = "hard deck two-three thousand MSL in the engagement area"
 
 -- ══════════════════════════════════════════════════════════════
 --  CLIP QUEUE
 -- ══════════════════════════════════════════════════════════════
 --- Push a clip to the end of the queue.
--- @param text   String displayed as radio call subtitle.
--- @param dur    Display duration in seconds.
+-- @param text   Radio call subtitle.
+-- @param dur    Display duration (s).
 -- @param after  Gap after the PREVIOUS clip ends before this one fires (s).
--- @param audio  Optional .ogg filename. Uncomment outSoundForGroup line
---               once .ogg files are present in sounds/ inside the .miz.
-local function Q(text, dur, after, audio)
-    table.insert(CD.queue, {
-        text  = text,
-        dur   = dur   or CFG.DUR_SHORT,
-        after = after or 1,
-        audio = audio,
-    })
+-- @param fn     Optional callback run when this clip fires (phase change etc.).
+-- @param hold   Time from this clip's start until the next clip may start
+--               (default = dur). Shorter than dur → next clip overlaps on screen.
+local function Q(text, dur, after, fn, hold)
+    table.insert(CD.queue, { text = text, dur = dur or CFG.DUR_SHORT, after = after or 1,
+                             fn = fn, hold = hold })
 end
 
---- Push a clip to the FRONT of the queue (priority / urgent).
-local function QU(text, dur, audio)
-    table.insert(CD.queue, 1, {
-        text  = text,
-        dur   = dur   or CFG.DUR_URGENT,
-        after = 0,
-        audio = audio,
-    })
-end
-
---- Fire the next clip.
 local function QFire()
-    if #CD.queue == 0 then
-        CD.qPlaying = false
+    if #CD.queue == 0 then CD.qPlaying = false; return end
+    local clip = table.remove(CD.queue, 1)
+    if clip.after > 0 and not clip.waited then
+        -- honour the pre-gap before showing the clip
+        clip.waited = true
+        table.insert(CD.queue, 1, clip)
+        CD.qPlaying = true
+        timer.scheduleFunction(function() QFire() end, nil, timer.getTime() + clip.after)
         return
     end
-    local clip = table.remove(CD.queue, 1)
     Msg(clip.text, clip.dur)
-    -- outSoundForGroup: enable when .ogg files are embedded in .miz
-    -- if clip.audio then
-    --     local p = Player()
-    --     if p then trigger.action.outSoundForGroup(p:getGroup():getID(), clip.audio) end
-    -- end
+    if clip.fn then pcall(clip.fn) end
     CD.qPlaying = true
-    local delay = clip.dur + clip.after
-    timer.scheduleFunction(function(_, t)
-        CD.qPlaying = false
-        QFire()
-    end, nil, timer.getTime() + delay)
+    timer.scheduleFunction(function() CD.qPlaying = false; QFire() end,
+        nil, timer.getTime() + (clip.hold or clip.dur))
 end
 
---- Start queue if not already running.
 local function QPlay()
     if not CD.qPlaying and #CD.queue > 0 then QFire() end
 end
 
---- Flush queue (abort / emergency use only).
 local function QClear()
-    CD.queue    = {}
-    CD.qPlaying = false
+    CD.queue = {}
 end
+
+--- Pilot transmission followed by controller reply(ies).
+local function Pilot(text)
+    -- pilot text stays DUR_PILOT s; the reply may start PILOT_HOLD s after it
+    Q("[" .. CFG.CS .. "] " .. text, CFG.DUR_PILOT, 0, nil, CFG.PILOT_HOLD)
+end
+
+-- forward declarations
+local SetPhase, MenuRebuild
 
 -- ══════════════════════════════════════════════════════════════
---  SCRIPTS (radio calls)
+--  RADIO CALLS — controller-initiated (hand-offs / threats)
 -- ══════════════════════════════════════════════════════════════
--- Departure ───────────────────────────────────────────────────
-local function S_DepOpen()
-    Q("[STRIKE] HORNET 51, STRIKE. Check Mode 4.", 9, 0)
-end
-local function S_IFFSour()
-    QU("[STRIKE] HORNET 51, Mode 4 SOUR. Recycle.", 10)
-end
-local function S_IFFSweet()
-    Q("[STRIKE] HORNET 51, Mode 4 sweet. Fragged: Target Alpha—Pointer 11, then Bravo—Eyeball 11.", 14, 3)
-end
-local function S_IFFSweetClean()   -- no prior sour
-    Q("[STRIKE] HORNET 51, Mode 4 sweet.", 8, 0)
-    Q("[STRIKE] Fragged: Target Alpha—Pointer 11, then Target Bravo—Eyeball 11. Good hunting.", 14, 2)
+local function C_DepSwitchStrike()
+    Q(string.format("[DEPARTURE] %s, Departure. Switch Strike, %s.", CFG.CS, CFG.FREQ.STRIKE),
+        CFG.DUR_SHORT + 2, 0)
 end
 
--- OVERLORD ────────────────────────────────────────────────────
-local function S_OvldInitial()
-    Q("[OVERLORD] HORNET 51, OVERLORD. Picture: SA-13 active BV 62, SA-8 active YE 53. "
-    .."Remain above 18,000 feet transiting YE 53. Advise feet wet on egress.", 18, 4)
-end
-local function S_OvldUpdate()
-    Q("[OVERLORD] HORNET 51, OVERLORD. SA-8 still active YE 53. No change to picture.", 12, 0)
-end
-local function S_OvldAlpha()
-    Q("[OVERLORD] HORNET 51, threat update. SA-13 active BV 62. Pointer 11 on station.", 12, 0)
-end
-local function S_OvldRTB()
-    Q("[OVERLORD] HORNET 51, feet wet. RTB 050 corridor, ±15. Check in with Strike.", 12, 0)
+local function C_OvlContactPointer(p)
+    Q(string.format("[OVERLORD] %s, Overlord. %s %s. Pointer 11 is on station. "
+        .. "Contact Pointer 11, %s. Return to this frequency on check-out.",
+        CFG.CS, CFG.CP_NAME, BrgRng(p:getPoint(), CFG.CP_POS), CFG.FREQ.J1), CFG.DUR_LONG, 0)
 end
 
--- Strike RTB / tanker ─────────────────────────────────────────
-local function S_StrikeRTB()
-    Q("[STRIKE] HORNET 51, STRIKE. Good work. RTB 050 corridor. "
-    .."Texaco 11 on station 252.1. Switch Marshal at 50 miles.", 16, 2)
+local function C_OvlSwitchStrike(p)
+    local c = Carrier()
+    local mother = c and (", Mother " .. BrgRng(p:getPoint(), c:getPoint())) or ""
+    Q(string.format("[OVERLORD] %s, Overlord%s. Switch Strike, %s.",
+        CFG.CS, mother, CFG.FREQ.STRIKE), CFG.DUR_SHORT + 4, 0)
 end
 
--- Injects ─────────────────────────────────────────────────────
-local function S_Abort()
+local function C_StrikeSwitchMarshal()
+    Q(string.format("[STRIKE] %s, Strike. Switch Marshal, %s.", CFG.CS, CFG.FREQ.MARSHAL),
+        CFG.DUR_SHORT + 2, 0)
+end
+
+-- Urgent calls bypass the queue: shown immediately, queued routine traffic is dropped.
+local function C_Abort()
     QClear()
-    QU("[EYEBALL 11] HORNET 51, abort, abort, abort. Civilian vehicle in target area. Ceasefire.", 14)
+    Msg(string.format("[EYEBALL 11] %s, abort, abort, abort. Civilian vehicle in target area.", CFG.CS),
+        CFG.DUR_URGENT + 2)
     SetFlag(201, 1)
 end
-local function S_Rearm()
-    Q("[EYEBALL 11] HORNET 51, area is clear. Resume as briefed.", 10, 6)
+
+local function C_Rearm()
+    Q(string.format("[EYEBALL 11] %s, target area clear. Continue as briefed.", CFG.CS), 10, 6)
     SetFlag(201, 2)
 end
-local function S_Manpads()
-    QU("[EYEBALL 11] HORNET 51, MANPADS threat 1 klick east. Hard deck now 20,000.", 13)
-    SetFlag(200, 3)
+
+local function C_Manpads()
+    Msg(string.format("[EYEBALL 11] %s, MANPADS launch observed one klick east of the target. "
+        .. "Remain at or above hard deck, two-three thousand MSL.", CFG.CS), CFG.DUR_URGENT + 1)
     SetFlag(203, 1)
 end
-local function S_CorridorDev()
-    QU("[STRIKE] HORNET 51, STRIKE. You are OUTSIDE the return corridor. Turn now for the 050 radial.", 13)
+
+local function C_CorridorDev()
+    Msg(string.format("[STRIKE] %s, Strike. You are outside the return corridor. "
+        .. "Turn now for the 050 radial.", CFG.CS), CFG.DUR_URGENT + 1)
     SetFlag(204, 1)
 end
 
 -- ══════════════════════════════════════════════════════════════
---  INJECT EVALUATION
+--  F10 ACTIONS — pilot-initiated
 -- ══════════════════════════════════════════════════════════════
-local function EvalInjects(phase)
-    if phase == "DEPARTED" and not CD.inj.i2 then
-        -- INJ-2: IFF sour on Strike check-in
+local function A_StrikeCheckInOut()
+    local p = Player(); if not p then return end
+    SetPhase("STRIKE_CHK")
+    Pilot(string.format("Strike, %s, checking in outbound, passing angels %d, Kilo.", CFG.CS, Angels(p)))
+    Q(string.format("[STRIKE] %s, Strike, radar contact. Check Mode 4.", CFG.CS), CFG.DUR_SHORT, CFG.REPLY_GAP)
+    local sweetToOvl = function()
+        Q(string.format("[STRIKE] %s, Mode 4 sweet. Kilo copied. Switch Overlord, %s.",
+            CFG.CS, CFG.FREQ.OVL), CFG.DUR_SHORT + 2, 3, function() SetPhase("OVL_OUT") end)
+    end
+    if not CD.inj.i2 and Roll(CFG.PROB_INJ2) then
+        CD.inj.i2 = true
+        SetFlag(202, 1)
+        Q(string.format("[STRIKE] %s, Mode 4 sour. Recycle.", CFG.CS), CFG.DUR_URGENT, 4)
+        Q(string.format("[STRIKE] %s, Strike. Mode 4 sweet now.", CFG.CS), CFG.DUR_SHORT, 16)
+        Q(string.format("[STRIKE] %s, Kilo copied. Switch Overlord, %s.", CFG.CS, CFG.FREQ.OVL),
+            CFG.DUR_SHORT + 2, 2, function() SetPhase("OVL_OUT") end)
+    else
+        sweetToOvl()
+    end
+    QPlay()
+end
+
+local function A_OvlCheckIn()
+    local p = Player(); if not p then return end
+    CD.awaiting = true; MenuRebuild()
+    Pilot(string.format("Overlord, %s, checking in as fragged, mission %s and %s, angels %d, state %s.",
+        CFG.CS, CFG.MSN_J1, CFG.MSN_J2, Angels(p), State(p)))
+    Q(string.format("[OVERLORD] %s, Overlord, radar contact. Picture clean. "
+        .. "Mission as fragged, Pointer 11 and Eyeball 11 on station. Proceed %s, %s. "
+        .. "SAM activity reported in both target areas, %s. Report feet dry.",
+        CFG.CS, CFG.CP_NAME, BrgRng(p:getPoint(), CFG.CP_POS), HD_TEXT),
+        CFG.DUR_LONG + 4, CFG.REPLY_GAP, function() SetPhase("ENROUTE") end)
+    QPlay()
+end
+
+local function A_OvlOffPointer()
+    local p = Player(); if not p then return end
+    CD.awaiting = true; MenuRebuild()
+    Pilot(string.format("Overlord, %s, off Pointer 11, mission %s complete, angels %d, state %s. "
+        .. "Ready for retasking.", CFG.CS, CFG.MSN_J1, Angels(p), State(p)))
+    Q(string.format("[OVERLORD] %s, Overlord, copy. Return to %s, %s. "
+        .. "Eyeball 11 is on station. Contact Eyeball 11, %s.",
+        CFG.CS, CFG.CP_NAME, BrgRng(p:getPoint(), CFG.CP_POS), CFG.FREQ.J2),
+        CFG.DUR_LONG, CFG.REPLY_GAP, function() SetPhase("JTAC2") end)
+    QPlay()
+end
+
+local function A_Inflrep()
+    local p = Player(); if not p then return end
+    CD.awaiting = true; MenuRebuild()
+    Pilot(string.format("Overlord, %s, INFLTREP.\n"
+        .. "Line 1, %s.\nLine 2, mission %s and %s.\nLine 3, %s and %s.\n"
+        .. "Line 4, time on target %s and %s.\nLine 5, %d and %d vehicles destroyed.\n"
+        .. "Remarks, SAM activity in both target areas.",
+        CFG.CS, CFG.CS, CFG.MSN_J1, CFG.MSN_J2,
+        CD.j1.pos and MGRS(CD.j1.pos) or "unknown", CD.j2.pos and MGRS(CD.j2.pos) or "unknown",
+        Clock(CD.j1.tot), Clock(CD.j2.tot), CD.j1.size, CD.j2.size))
+    -- INFLTREP is long — give it time on screen
+    CD.queue[#CD.queue].dur  = CFG.DUR_LONG + 4
+    CD.queue[#CD.queue].hold = 8
+    local t = Tanker()
+    local tkr = t and string.format("Texaco 11 %s, angels %d", BrgRng(p:getPoint(), t:getPoint()), Angels(t))
+                or "Texaco 11 on station"
+    Q(string.format("[OVERLORD] %s, Overlord, copy INFLTREP. %s, TACAN 21 Yankee. Switch Texaco, %s.",
+        CFG.CS, tkr, CFG.FREQ.TKR), CFG.DUR_LONG, CFG.REPLY_GAP, function() SetPhase("REFUEL") end)
+    QPlay()
+end
+
+local function A_TexacoCheckIn()
+    local p = Player(); if not p then return end
+    CD.tkrCheckedIn = true
+    Pilot(string.format("Texaco 11, %s, checking in, angels %d, state %s.", CFG.CS, Angels(p), State(p)))
+    Q(string.format("[TEXACO 11] %s, Texaco 11, angels 15. Cleared to join, left observation. "
+        .. "Port drogue, call pre-contact.", CFG.CS), CFG.DUR_LONG - 2, CFG.REPLY_GAP)
+    QPlay()
+    MenuRebuild()
+end
+
+local function A_OvlRTB()
+    local p = Player(); if not p then return end
+    CD.awaiting = true; MenuRebuild()
+    local c = Carrier()
+    local from = (CD.phase == "TKR_DONE") and "off Texaco" or "no tanker required"
+    Pilot(string.format("Overlord, %s, %s, RTB, angels %d, state %s.", CFG.CS, from, Angels(p), State(p)))
+    local mother = c and (" Mother " .. BrgRng(p:getPoint(), c:getPoint()) .. ".") or ""
+    Q(string.format("[OVERLORD] %s, Overlord, RTB approved.%s Recover via the 050 return corridor. "
+        .. "Report feet wet.", CFG.CS, mother), CFG.DUR_LONG, CFG.REPLY_GAP,
+        function() SetPhase("RTB") end)
+    QPlay()
+end
+
+local function A_StrikeCheckInIn()
+    local p = Player(); if not p then return end
+    CD.awaiting = true; MenuRebuild()
+    Pilot(string.format("Strike, %s, inbound, angels %d, state %s.", CFG.CS, Angels(p), State(p)))
+    Q(string.format("[STRIKE] %s, Strike, radar contact, Mode 4 sweet. Continue the 050 corridor. "
+        .. "Switch Marshal at 50 miles, %s.", CFG.CS, CFG.FREQ.MARSHAL),
+        CFG.DUR_LONG, CFG.REPLY_GAP, function() SetPhase("INBOUND") end)
+    QPlay()
+end
+
+local function A_FeetReport()
+    local kind = CD.feetPending; if not kind then return end
+    CD.feetPending = nil
+    local word = (kind == "DRY") and "feet dry" or "feet wet"
+    Pilot(string.format("Overlord, %s, %s.", CFG.CS, word))
+    Q(string.format("[OVERLORD] %s, Overlord, copy %s.", CFG.CS, word), CFG.DUR_SHORT, CFG.REPLY_GAP)
+    QPlay()
+    MenuRebuild()
+end
+
+local function A_Picture()
+    if not OVL_PHASES[CD.phase] then
+        Msg("[CAS-1] Not checked in with OVERLORD.", 7); return
+    end
+    Pilot(string.format("Overlord, %s, request picture.", CFG.CS))
+    Q(string.format("[OVERLORD] %s, Overlord, picture clean. SAM activity reported in the target areas.",
+        CFG.CS), CFG.DUR_SHORT + 2, CFG.REPLY_GAP)
+    QPlay()
+end
+
+-- "What is my next call?" — single-line hint per phase
+local NEXT = {
+    IDLE       = "Launch. CASE III departure on Departure " .. CFG.FREQ.DEP .. ".",
+    DEPARTURE  = "On Departure " .. CFG.FREQ.DEP .. ". Hand-off to Strike at "
+                 .. CFG.DEP_HANDOFF_NM .. " NM.",
+    STRIKE_OUT = "Check in with STRIKE " .. CFG.FREQ.STRIKE .. " (F10).",
+    STRIKE_CHK = "Stand by, Strike working Mode 4.",
+    OVL_OUT    = "Check in with OVERLORD " .. CFG.FREQ.OVL .. " (F10).",
+    ENROUTE    = "Proceed " .. CFG.CP_NAME .. ". OVERLORD hands you to Pointer 11 at "
+                 .. CFG.JTAC_HANDOFF_NM .. " NM.",
+    JTAC1      = "Work Pointer 11 " .. CFG.FREQ.J1 .. " (native JTAC menu).",
+    J1_OFF     = "Check out with Pointer 11, report to OVERLORD (F10).",
+    JTAC2      = "Work Eyeball 11 " .. CFG.FREQ.J2 .. " (native JTAC menu).",
+    J2_OFF     = "Check out with Eyeball 11, pass INFLTREP to OVERLORD (F10).",
+    REFUEL     = "Check in with TEXACO 11 " .. CFG.FREQ.TKR .. " (F10), refuel.",
+    TKR_DONE   = "Report RTB to OVERLORD (F10).",
+    RTB        = "RTB via 050 corridor. OVERLORD hands you to Strike at "
+                 .. CFG.RTB_STRIKE_NM .. " NM.",
+    STRIKE_IN  = "Check in with STRIKE " .. CFG.FREQ.STRIKE .. " inbound (F10).",
+    INBOUND    = "Switch Marshal " .. CFG.FREQ.MARSHAL .. " at " .. CFG.RECOVERY_NM .. " NM.",
+    RECOVERY   = "Marshal / AIRBOSS.",
+}
+
+-- ══════════════════════════════════════════════════════════════
+--  F10 MENU (rebuilt on every phase change)
+-- ══════════════════════════════════════════════════════════════
+local function PhaseActions()
+    local ph, a = CD.phase, {}
+    if CD.awaiting then return a end
+    if ph == "STRIKE_OUT" then a[#a+1] = { "Check in: STRIKE " .. CFG.FREQ.STRIKE, A_StrikeCheckInOut } end
+    if ph == "OVL_OUT"    then a[#a+1] = { "Check in: OVERLORD " .. CFG.FREQ.OVL, A_OvlCheckIn } end
+    if ph == "J1_OFF"     then a[#a+1] = { "OVERLORD: off Pointer 11, ready for retasking", A_OvlOffPointer } end
+    if ph == "J2_OFF"     then a[#a+1] = { "OVERLORD: INFLTREP", A_Inflrep } end
+    if ph == "REFUEL" and not CD.tkrCheckedIn then
+        a[#a+1] = { "Check in: TEXACO 11 " .. CFG.FREQ.TKR, A_TexacoCheckIn }
+    end
+    if ph == "REFUEL" or ph == "TKR_DONE" then
+        a[#a+1] = { (ph == "TKR_DONE") and "OVERLORD: RTB" or "OVERLORD: RTB (no tanker)", A_OvlRTB }
+    end
+    if ph == "STRIKE_IN"  then a[#a+1] = { "Check in: STRIKE " .. CFG.FREQ.STRIKE .. " inbound", A_StrikeCheckInIn } end
+    if CD.feetPending and OVL_PHASES[ph] then
+        a[#a+1] = { "OVERLORD: " .. ((CD.feetPending == "DRY") and "feet dry" or "feet wet"), A_FeetReport }
+    end
+    return a
+end
+
+MenuRebuild = function()
+    local p = Player(); if not p then return false end
+    local gid = p:getGroup():getID()
+    if CD.menu.root then pcall(missionCommands.removeItemForGroup, CD.menu.gid, CD.menu.root) end
+    CD.menu.gid  = gid
+    CD.menu.root = missionCommands.addSubMenuForGroup(gid, "CAS-1 COMMS")
+    local root = CD.menu.root
+
+    for _, it in ipairs(PhaseActions()) do
+        missionCommands.addCommandForGroup(gid, it[1], root, it[2])
+    end
+
+    if OVL_PHASES[CD.phase] then
+        missionCommands.addCommandForGroup(gid, "OVERLORD: request picture", root, A_Picture)
+    end
+
+    missionCommands.addCommandForGroup(gid, "Show: next call", root, function()
+        Msg("[CAS-1] " .. (NEXT[CD.phase] or CD.phase), CFG.DUR_SHORT)
+    end)
+
+    missionCommands.addCommandForGroup(gid, "Show: hard deck", root, function()
+        local on = trigger.misc.getUserFlag("200") == 1
+        Msg(string.format("[CAS-1] Hard deck %d ft MSL, engagement area — %s",
+            CFG.HARD_DECK_FT, on and "IN EFFECT" or "not in effect (transit)"), CFG.DUR_SHORT)
+    end)
+
+    missionCommands.addCommandForGroup(gid, "Show: comm ladder", root, function()
+        Msg(
+            "── CAS-1 COMM LADDER ──────────────────\n"
+         .. "COMM1-01  127.60 AM   DEPARTURE\n"
+         .. "COMM1-03  265.00 AM   STRIKE\n"
+         .. "COMM1-04  333.30 AM   POINTER 11  (JTAC-1)\n"
+         .. "COMM1-05  333.40 AM   EYEBALL 11  (JTAC-2)\n"
+         .. "COMM1-06  251.10 AM   OVERLORD\n"
+         .. "COMM1-07  252.10 AM   TEXACO 11\n"
+         .. "COMM2-01  305.00 FM   MARSHAL\n"
+         .. "── FLOW ───────────────────────────────\n"
+         .. "DEP → (20 NM) STRIKE → OVERLORD → (CP-20 NM) POINTER\n"
+         .. "→ OVERLORD → EYEBALL → OVERLORD INFLTREP → TEXACO\n"
+         .. "→ OVERLORD RTB → (90 NM) STRIKE → (50 NM) MARSHAL",
+            CFG.DUR_LONG + 4)
+    end)
+    return true
+end
+
+-- ══════════════════════════════════════════════════════════════
+--  INJECTS (JTAC-2)
+-- ══════════════════════════════════════════════════════════════
+local function ArmJ2Injects()
+    if not CD.inj.i3 then
+        local d3 = 55 + math.random(0, 20)
         timer.scheduleFunction(function()
-            if CD.phase ~= "DEPARTED" and CD.phase ~= "ENROUTE" then return end
-            if Roll(CFG.PROB_INJ2) then
-                CD.inj.i2 = true
-                SetFlag(202, 1)
-                S_IFFSour()
-                QPlay()
-                timer.scheduleFunction(function()
-                    S_IFFSweet(); QPlay()
-                end, nil, timer.getTime() + 16)
-            else
-                S_IFFSweetClean(); QPlay()
+            if CD.phase == "JTAC2" and not CD.inj.i3 and Roll(CFG.PROB_INJ3) then
+                CD.inj.i3 = true
+                C_Manpads()
             end
-        end, nil, timer.getTime() + 11)
-
-    elseif phase == "ENROUTE" then
+        end, nil, timer.getTime() + d3)
+    end
+    if not CD.inj.i1 then
+        local d1 = 85 + math.random(0, 60)
         timer.scheduleFunction(function()
-            S_OvldInitial(); QPlay()
-        end, nil, timer.getTime() + 6)
-
-    elseif phase == "CAS_BRAVO" then
-        -- INJ-3: MANPADS before pass 3 (~55-75s into Bravo phase)
-        if not CD.inj.i3 then
-            local d3 = 55 + math.random(0, 20)
-            timer.scheduleFunction(function()
-                if CD.phase == "CAS_BRAVO" and not CD.inj.i3 and Roll(CFG.PROB_INJ3) then
-                    CD.inj.i3 = true
-                    S_Manpads(); QPlay()
-                end
-            end, nil, timer.getTime() + d3)
-        end
-        -- INJ-1: Abort (pass 2 or 3; ~85-145s into Bravo phase)
-        if not CD.inj.i1 then
-            local d1 = 85 + math.random(0, 60)
-            timer.scheduleFunction(function()
-                if CD.phase == "CAS_BRAVO" and not CD.inj.i1 and Roll(CFG.PROB_INJ1) then
-                    CD.inj.i1 = true
-                    S_Abort(); QPlay()
-                    -- Auto-rearm after 45s
-                    timer.scheduleFunction(function()
-                        if CD.phase == "CAS_BRAVO" or CD.phase == "RTB" then
-                            S_Rearm(); QPlay()
-                        end
-                    end, nil, timer.getTime() + 45)
-                end
-            end, nil, timer.getTime() + d1)
-        end
+            if CD.phase == "JTAC2" and not CD.inj.i1 and Roll(CFG.PROB_INJ1) then
+                CD.inj.i1 = true
+                C_Abort()
+                timer.scheduleFunction(function()
+                    if CD.phase == "JTAC2" or CD.phase == "J2_OFF" then C_Rearm(); QPlay() end
+                end, nil, timer.getTime() + 45)
+            end
+        end, nil, timer.getTime() + d1)
     end
 end
 
 -- ══════════════════════════════════════════════════════════════
---  OVERLORD PERIODIC
+--  CORRIDOR MONITOR  (RTB / STRIKE_IN / INBOUND)
 -- ══════════════════════════════════════════════════════════════
-local OVLD_INTERVAL = 240   -- 4 minutes between unsolicited picture calls
-
-local function OvldTick(dt)
-    local p = CD.phase
-    if p ~= "ENROUTE" and p ~= "CAS_ALPHA" then return end
-    CD.overlordClock = CD.overlordClock + dt
-    if CD.overlordClock >= OVLD_INTERVAL and not CD.qPlaying then
-        CD.overlordClock = 0
-        S_OvldUpdate(); QPlay()
-    end
-end
-
--- ══════════════════════════════════════════════════════════════
---  CORRIDOR MONITOR  (RTB phase only)
--- ══════════════════════════════════════════════════════════════
-local function CorridorCheck()
+local function CorridorCheck(pPos, cPos)
     if CD.corridorDone then return end
-    local p = Player(); local c = Carrier()
-    if not p or not c then return end
-
-    local pPos = p:getPoint()
-    local cPos = c:getPoint()
     local dist = Dist2D(pPos, cPos)
-
-    if dist > CFG.CORRIDOR_OUT then return end               -- not yet in window
-    if dist < CFG.CORRIDOR_IN  then                          -- past inner boundary
-        if not CD.corridorDone then
-            SetFlag(205, 1)                                  -- passed clean
-        end
+    if dist > CFG.CORRIDOR_OUT then return end
+    if dist < CFG.CORRIDOR_IN then
+        SetFlag(205, 1)
         CD.corridorDone = true
         return
     end
-
-    -- Inside 80-50 NM window: check radial
-    CD.corridorArmed = true
-    -- CORRIDOR_TRUE (55°T) is the bearing FROM carrier TO player.
-    local brg   = Bearing(cPos, pPos)
-    local delta = math.abs(ADiff(brg, CFG.CORRIDOR_TRUE))
+    local delta = math.abs(ADiff(Bearing(cPos, pPos), CFG.CORRIDOR_TRUE))
     if delta > CFG.CORRIDOR_HALF then
-        CD.corridorDone = true                               -- fire once
-        S_CorridorDev(); QPlay()
+        CD.corridorDone = true
+        C_CorridorDev()
+    end
+end
+
+-- ══════════════════════════════════════════════════════════════
+--  FEET DRY / WET MONITOR
+-- ══════════════════════════════════════════════════════════════
+local function SurfaceCheck(pPos)
+    local ok, st = pcall(land.getSurfaceType, { x = pPos.x, y = pPos.z })
+    if not ok or not st then return end
+    local s = (st == land.SurfaceType.WATER or st == land.SurfaceType.SHALLOW_WATER) and "WATER" or "LAND"
+    if s == CD.surf then CD.surfCand, CD.surfCount = nil, 0; return end
+    if s ~= CD.surfCand then CD.surfCand, CD.surfCount = s, 1; return end
+    CD.surfCount = CD.surfCount + 1
+    if CD.surfCount < 2 then return end              -- debounce: 2 ticks
+    local prev = CD.surf
+    CD.surf, CD.surfCand, CD.surfCount = s, nil, 0
+    if prev and OVL_PHASES[CD.phase] then
+        CD.feetPending = (s == "LAND") and "DRY" or "WET"
+        MenuRebuild()
     end
 end
 
 -- ══════════════════════════════════════════════════════════════
 --  PHASE STATE MACHINE
 -- ══════════════════════════════════════════════════════════════
-local function SetPhase(new)
+SetPhase = function(new)
     if CD.phase == new then return end
+    CD.awaiting = false
     env.info(string.format("[CD] %s → %s", CD.phase, new))
     CD.phase = new
 
-    if new == "DEPARTED" then
-        CD.departedTs = timer.getTime()
-        S_DepOpen(); QPlay()
-        EvalInjects("DEPARTED")
-
-    elseif new == "ENROUTE" then
+    if new == "JTAC1" or new == "JTAC2" or new == "J1_OFF" or new == "J2_OFF" then
+        SetFlag(200, 1)
+    else
         SetFlag(200, 0)
-        EvalInjects("ENROUTE")
+    end
 
-    elseif new == "CAS_ALPHA" then
-        CD.visitedAlpha = true
-        SetFlag(200, 1)   -- hard deck code: JTAC-1 / 12 000 ft
-        S_OvldAlpha(); QPlay()
-
-    elseif new == "CAS_BRAVO" then
-        CD.visitedBravo = true
-        SetFlag(200, 2)   -- hard deck code: JTAC-2 / 18 000 ft
-        EvalInjects("CAS_BRAVO")
-
-    elseif new == "RTB" then
-        SetFlag(200, 0)
-        S_OvldRTB(); QPlay()
-        timer.scheduleFunction(function()
-            S_StrikeRTB(); QPlay()
-        end, nil, timer.getTime() + 14)
-
+    if new == "J1_OFF" then
+        Msg("[CAS-1] Pointer 11 tasking complete. Check out, then report to OVERLORD (F10).", CFG.DUR_SHORT)
+    elseif new == "J2_OFF" then
+        Msg("[CAS-1] Eyeball 11 tasking complete. Check out, then INFLTREP to OVERLORD (F10).", CFG.DUR_SHORT)
     elseif new == "RECOVERY" then
-        QClear()
-        -- AIRBOSS (native DCS, 305 FM) takes over from here.
-        env.info("[CD] RECOVERY phase — AIRBOSS active, CD standing down.")
+        env.info("[CD] RECOVERY phase — AIRBOSS active, CD standing down after Marshal hand-off.")
+    end
+
+    MenuRebuild()
+end
+
+local function GroupAlive(name)
+    local g = Group.getByName(name)
+    if not g or not g:isExist() then return false end
+    for _, u in ipairs(g:getUnits() or {}) do
+        if u and u:isExist() and u:getLife() > 0 then return true end
+    end
+    return false
+end
+
+--- Centroid + initial size of a live group (for INFLTREP / inject arming).
+local function Snapshot(name, rec)
+    local g = Group.getByName(name)
+    if not g then return end
+    local sx, sz, n = 0, 0, 0
+    for _, u in ipairs(g:getUnits() or {}) do
+        if u and u:isExist() then
+            local p = u:getPoint(); sx, sz, n = sx + p.x, sz + p.z, n + 1
+        end
+    end
+    if n > 0 then rec.pos = { x = sx / n, y = 0, z = sz / n } end
+    local ok, sz0 = pcall(function() return g:getInitialSize() end)
+    rec.size = (ok and sz0) or n
+end
+
+local function TrackTargets()
+    if not CD.deadJ1 then
+        if GroupAlive(CFG.JTAC1_TGT_GROUP) then
+            if not CD.seenJ1 then CD.seenJ1 = true; Snapshot(CFG.JTAC1_TGT_GROUP, CD.j1) end
+        elseif CD.seenJ1 then
+            CD.deadJ1 = true; CD.j1.tot = timer.getAbsTime()
+            env.info("[CD] JTAC-1 target group destroyed: " .. CFG.JTAC1_TGT_GROUP)
+        end
+    end
+    if not CD.deadJ2 then
+        if GroupAlive(CFG.JTAC2_TGT_GROUP) then
+            if not CD.seenJ2 then CD.seenJ2 = true; Snapshot(CFG.JTAC2_TGT_GROUP, CD.j2) end
+        elseif CD.seenJ2 then
+            CD.deadJ2 = true; CD.j2.tot = timer.getAbsTime()
+            env.info("[CD] JTAC-2 target group destroyed: " .. CFG.JTAC2_TGT_GROUP)
+        end
     end
 end
 
-local function EvalPhase(pUnit, cUnit, dt)
+local function EvalPhase(pUnit, cUnit)
     local pPos = pUnit:getPoint()
-    local vel  = pUnit:getVelocity()
-    local spd  = math.sqrt(vel.x^2 + vel.y^2 + vel.z^2)
-    local alt  = pPos.y   -- DCS y = altitude (metres MSL; carrier deck ≈ 20 m)
+    local cPos = cUnit and cUnit:getPoint()
+    local ph   = CD.phase
 
-    -- IDLE: wait for takeoff
-    if CD.phase == "IDLE" then
-        if alt > CFG.DEP_ALT_M and spd > CFG.DEP_SPD_MS then
-            if not CD.depTs then
-                CD.depTs = timer.getTime()
-            elseif timer.getTime() - CD.depTs >= CFG.DEP_HOLD_SECS then
-                SetPhase("DEPARTED")
-            end
-        else
-            CD.depTs = nil
+    if ph == "IDLE" then
+        local v = pUnit:getVelocity()
+        local spd = math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
+        if pPos.y > CFG.DEP_ALT_M and spd > CFG.DEP_SPD_MS then SetPhase("DEPARTURE") end
+
+    elseif ph == "DEPARTURE" then
+        if cPos and Dist2D(pPos, cPos) >= CFG.DEP_HANDOFF_NM then
+            C_DepSwitchStrike(); QPlay()
+            SetPhase("STRIKE_OUT")
         end
 
-    -- DEPARTED: hold until departure sequence has had time to play
-    elseif CD.phase == "DEPARTED" then
-        if CD.departedTs and timer.getTime() - CD.departedTs >= CFG.DEP_ENROUTE_S then
-            SetPhase("ENROUTE")
+    elseif ph == "ENROUTE" then
+        if Dist2D(pPos, CFG.CP_POS) <= CFG.JTAC_HANDOFF_NM then
+            C_OvlContactPointer(pUnit); QPlay()
+            SetPhase("JTAC1")
         end
 
-    -- ENROUTE: watch for Alpha proximity
-    elseif CD.phase == "ENROUTE" then
-        if CD.tgtA and Dist2D(pPos, CD.tgtA) <= CFG.ALPHA_RADIUS then
-            SetPhase("CAS_ALPHA")
-        end
+    elseif ph == "JTAC1" then
+        if CD.deadJ1 then SetPhase("J1_OFF") end
 
-    -- CAS_ALPHA: transition to Bravo when left Alpha AND entered Bravo
-    elseif CD.phase == "CAS_ALPHA" then
-        if CD.tgtA and CD.tgtB then
-            local dA = Dist2D(pPos, CD.tgtA)
-            local dB = Dist2D(pPos, CD.tgtB)
-            if dA > CFG.ALPHA_RADIUS and dB <= CFG.BRAVO_RADIUS then
-                SetPhase("CAS_BRAVO")
-            end
+    elseif ph == "JTAC2" then
+        if not CD.j2Armed then
+            local tgt = CD.j2.pos or CFG.JTAC2_POS
+            if Dist2D(pPos, tgt) <= CFG.INJ_ARM_NM then CD.j2Armed = true; ArmJ2Injects() end
         end
+        if CD.deadJ2 then SetPhase("J2_OFF") end
 
-    -- CAS_BRAVO: transition to RTB when left Bravo area
-    elseif CD.phase == "CAS_BRAVO" then
-        if CD.tgtB and CD.visitedBravo then
-            if Dist2D(pPos, CD.tgtB) > CFG.BRAVO_RADIUS then
-                SetPhase("RTB")
-            end
+    elseif ph == "REFUEL" then
+        if CD.refuelDone then
+            Q(string.format("[TEXACO 11] %s, Texaco 11, offload complete. Cleared to depart, "
+                .. "return to Overlord, %s.", CFG.CS, CFG.FREQ.OVL), CFG.DUR_SHORT + 4, 0)
+            QPlay()
+            SetPhase("TKR_DONE")
         end
+    end
 
-    -- RTB: corridor monitor + recovery transition
-    elseif CD.phase == "RTB" then
-        CorridorCheck()
-        if cUnit then
-            local cPos = cUnit:getPoint()
-            if Dist2D(pPos, cPos) <= CFG.RECOVERY_NM then
-                SetPhase("RECOVERY")
-            end
+    -- Inbound: OVERLORD → Strike (also catches a skipped INFLTREP / tanker / RTB call)
+    ph = CD.phase
+    if (ph == "J2_OFF" or ph == "REFUEL" or ph == "TKR_DONE" or ph == "RTB")
+        and cPos and Dist2D(pPos, cPos) <= CFG.RTB_STRIKE_NM then
+        C_OvlSwitchStrike(pUnit); QPlay()
+        SetPhase("STRIKE_IN")
+    end
+
+    ph = CD.phase
+    if (ph == "RTB" or ph == "STRIKE_IN" or ph == "INBOUND") and cPos then
+        CorridorCheck(pPos, cPos)
+        if Dist2D(pPos, cPos) <= CFG.RECOVERY_NM then
+            QClear()
+            C_StrikeSwitchMarshal(); QPlay()
+            SetPhase("RECOVERY")
         end
     end
 end
@@ -468,116 +735,44 @@ end
 -- ══════════════════════════════════════════════════════════════
 --  MAIN TICK
 -- ══════════════════════════════════════════════════════════════
-local CD_prevTick = 0
-
 local function CD_Tick(_, t)
     if CD.phase == "DONE" or CD.phase == "RECOVERY" then return end
-
-    local dt = t - CD_prevTick
-    CD_prevTick = t
-
+    TrackTargets()
     local p = Player()
-    if not p then return t + CFG.TICK end    -- not yet in slot / dead; retry
-
-    EvalPhase(p, Carrier(), dt)
-    OvldTick(dt)
-
-    return t + CFG.TICK   -- reschedule
-end
-
--- ══════════════════════════════════════════════════════════════
---  F10 MENU
--- ══════════════════════════════════════════════════════════════
-local function BuildMenu()
-    local p = Player(); if not p then return false end
-    local gid = p:getGroup():getID()
-    local root = missionCommands.addSubMenuForGroup(gid, "CAS-1 COMMS")
-
-    missionCommands.addCommandForGroup(gid, "OVERLORD — request picture", root,
-        function()
-            local ph = CD.phase
-            if ph=="ENROUTE" or ph=="CAS_ALPHA" or ph=="CAS_BRAVO" or ph=="RTB" then
-                S_OvldUpdate(); QPlay(); CD.overlordClock = 0
-            else
-                Msg("[OVERLORD] Not available in current phase.", 7)
-            end
-        end)
-
-    missionCommands.addCommandForGroup(gid, "TEXACO — check-in", root,
-        function()
-            local ph = CD.phase
-            if ph=="RTB" or ph=="CAS_BRAVO" then
-                Q("[TEXACO 11] HORNET 51, Texaco 11. Come right, heading 270. Call pre-contact.", 12, 0)
-                QPlay()
-            else
-                Msg("[TEXACO 11] Not yet on station.", 7)
-            end
-        end)
-
-    missionCommands.addCommandForGroup(gid, "Show: Current hard deck", root,
-        function()
-            local lut = {
-                [0] = "Hard deck: transit / not CAS-active",
-                [1] = "Hard deck: 12,000 ft AGL  (Target Alpha / JTAC-1)",
-                [2] = "Hard deck: 18,000 ft AGL  (Target Bravo / JTAC-2)",
-                [3] = "Hard deck: 20,000 ft AGL  (JTAC-2 + MANPADS active)",
-            }
-            Msg("[CAS-1] " .. (lut[GetFlag(200)] or "Unknown"), CFG.DUR_SHORT)
-        end)
-
-    missionCommands.addCommandForGroup(gid, "Show: Comm ladder", root,
-        function()
-            Msg(
-                "── CAS-1 COMM LADDER ──────────────────\n"
-             .. "COMM1-01  127.60 AM   DEPARTURE\n"
-             .. "COMM1-03  265.00 AM   STRIKE\n"
-             .. "COMM1-04  333.30 AM   POINTER 11  (JTAC-1)\n"
-             .. "COMM1-05  333.40 AM   EYEBALL 11  (JTAC-2)\n"
-             .. "COMM1-06  251.10 AM   OVERLORD\n"
-             .. "COMM1-07  252.10 AM   TEXACO 11\n"
-             .. "COMM2-01  305.00 FM   MARSHAL  (switch at 50 NM)",
-            CFG.DUR_LONG)
-        end)
-    return true
+    if not p then return t + CFG.TICK end
+    if not CD.menu.root then MenuRebuild() end
+    EvalPhase(p, Carrier())
+    if OVL_PHASES[CD.phase] or CD.phase == "DEPARTURE" then SurfaceCheck(p:getPoint()) end
+    return t + CFG.TICK
 end
 
 -- ══════════════════════════════════════════════════════════════
 --  INIT
 -- ══════════════════════════════════════════════════════════════
 local function CD_Init()
-    pcall(math.randomseed, timer.getAbsTime()) -- DCS sandbox: randomseed may not be available
+    pcall(math.randomseed, timer.getAbsTime())
 
-    -- Resolve target positions: named unit → coord.LLtoLO fallback
-    local function TgtPos(unitName, lat, lon)
-        if unitName then
-            local u = Unit.getByName(unitName)
-            if u then return u:getPoint() end
-            env.warning("[CD] Unit '" .. unitName .. "' not found — using lat/lon fallback.")
+    -- Core_Scoring refuel-complete callback (TRT.onRefuelComplete); retry until TRT exists.
+    local function HookRefuel(_, tm)
+        if _G.TRT then
+            local prev = _G.TRT.onRefuelComplete
+            _G.TRT.onRefuelComplete = function(name, ...)
+                if prev then pcall(prev, name, ...) end
+                if name == CFG.PLAYER_UNIT then
+                    CD.refuelDone = true
+                    env.info("[CD] refuel complete reported for " .. tostring(name))
+                end
+            end
+            env.info("[CD] hooked TRT.onRefuelComplete")
+            return nil
         end
-        local ok, v = pcall(coord.LLtoLO, lat, lon, 0)
-        if ok then return v end
-        env.error("[CD] coord.LLtoLO failed for lat=" .. lat .. " lon=" .. lon)
-        return nil
+        return tm + 2
     end
+    timer.scheduleFunction(HookRefuel, nil, timer.getTime() + 2)
 
-    CD.tgtA = TgtPos(CFG.TGT_A_UNIT, CFG.TGT_A_LAT, CFG.TGT_A_LON)
-    CD.tgtB = TgtPos(CFG.TGT_B_UNIT, CFG.TGT_B_LAT, CFG.TGT_B_LON)
-
-    if not CD.tgtA then env.warning("[CD] WARN: TGT_A position unavailable — CAS_ALPHA transition disabled.") end
-    if not CD.tgtB then env.warning("[CD] WARN: TGT_B position unavailable — CAS_BRAVO transition disabled.") end
-
-    -- Build F10 menu (retry until player is in slot)
-    local function TryMenu(_, t)
-        if not BuildMenu() then return t + 5 end   -- retry in 5 s
-    end
-    timer.scheduleFunction(TryMenu, nil, timer.getTime() + 5)
-
-    -- Start main tick
-    CD_prevTick = timer.getTime()
+    SetFlag(200, 0)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-
-    env.info("[CD] Comms_Director v1.0.0 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.2.0 online — CAS-1 Syria")
 end
 
--- ═══════════════════════════ ENTRY ════════════════════════════
 CD_Init()
