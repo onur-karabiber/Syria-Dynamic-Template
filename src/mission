@@ -12373,7 +12373,7 @@ mission =
 								},
 								["communication"] = true,
 								["dynSpawnTemplate"] = false,
-								["frequency"] = 127.6,
+								["frequency"] = 305,
 								["groupId"] = 2326,
 								["hidden"] = false,
 								["modulation"] = 0,
@@ -12387,7 +12387,7 @@ mission =
 										{
 											["ETA"] = 0,
 											["ETA_locked"] = true,
-											["action"] = "From Runway",
+											["action"] = "From Parking Area",
 											["alt"] = 0,
 											["alt_type"] = "BARO",
 											["formation_template"] = "",
@@ -12616,13 +12616,13 @@ mission =
 													},
 												},
 											},
-											["type"] = "TakeOff",
+											["type"] = "TakeOffParking",
 											["x"] = -216601.40284255,
 											["y"] = -363049.70156328,
 										},
 										[2] = 
 										{
-											["ETA"] = 18.739379932009,
+											["ETA"] = 92.344406678891,
 											["ETA_locked"] = false,
 											["action"] = "Turning Point",
 											["alt"] = 2000,
@@ -12647,12 +12647,12 @@ mission =
 												},
 											},
 											["type"] = "Turning Point",
-											["x"] = -213998.79332372,
-											["y"] = -363029.02415831,
+											["x"] = -203775.79180841,
+											["y"] = -363054.77788953,
 										},
 										[3] = 
 										{
-											["ETA"] = 2423.9077078989,
+											["ETA"] = 2460.2094435971,
 											["ETA_locked"] = false,
 											["action"] = "Turning Point",
 											["alt"] = 6705.6,
@@ -12710,8 +12710,8 @@ mission =
 											{
 												["channels"] = 
 												{
-													[1] = 127.6,
-													[2] = 264,
+													[1] = 305,
+													[2] = 127.6,
 													[3] = 265,
 													[4] = 256,
 													[5] = 254,
@@ -12849,7 +12849,7 @@ mission =
 												},
 											},
 										},
-										["heading"] = 0.0079447069478552,
+										["heading"] = -0.00039579603430927,
 										["livery_id"] = "vfa-113",
 										["name"] = "Player_01",
 										["onboard_num"] = "467",
@@ -12932,7 +12932,7 @@ mission =
 												},
 											},
 										},
-										["psi"] = -0.0079447069478552,
+										["psi"] = 0.00039579603430927,
 										["skill"] = "Player",
 										["speed"] = 138.88888888889,
 										["type"] = "FA-18C_hornet",
@@ -13736,7 +13736,7 @@ mission =
 										},
 										[2] = 
 										{
-											["ETA"] = 104.25471807101,
+											["ETA"] = 118.75234781937,
 											["ETA_locked"] = false,
 											["action"] = "Turning Point",
 											["alt"] = 2133.6,
@@ -13844,8 +13844,8 @@ mission =
 												},
 											},
 											["type"] = "Turning Point",
-											["x"] = -209825.49827629,
-											["y"] = -348475.21480628,
+											["x"] = -223446.32599885,
+											["y"] = -346069.79555256,
 										},
 									},
 								},
@@ -13873,7 +13873,7 @@ mission =
 											[4] = "Arco31",
 											["name"] = "Arco31",
 										},
-										["heading"] = 1.1356081465246,
+										["heading"] = 1.9539886233546,
 										["livery_id"] = "va34-500-1987",
 										["name"] = "TANKER-3-1",
 										["onboard_num"] = "036",
@@ -13909,7 +13909,7 @@ mission =
 												},
 											},
 										},
-										["psi"] = -1.1356081465246,
+										["psi"] = -1.9539886233546,
 										["skill"] = "Excellent",
 										["speed"] = 138.88888888889,
 										["type"] = "A6E",
@@ -132076,6 +132076,215 @@ mission =
 				},
 				[3] = 
 				{
+					["id"] = 17,
+					["name"] = "Insurgents",
+					["vehicle"] = 
+					{
+						["group"] = 
+						{
+							[1] = 
+							{
+								["groupId"] = 2283,
+								["hidden"] = true,
+								["hiddenOnMFD"] = true,
+								["hiddenOnPlanner"] = true,
+								["name"] = "PYD BV77 (Scout)-1",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["ETA"] = 0,
+											["ETA_locked"] = true,
+											["action"] = "Off Road",
+											["alt"] = 213,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["speed"] = 0,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 92337.460862397,
+											["y"] = 56438.794458832,
+										},
+									},
+									["spans"] = 
+									{
+									},
+								},
+								["start_time"] = 0,
+								["task"] = "Ground Nothing",
+								["taskSelected"] = true,
+								["tasks"] = 
+								{
+								},
+								["uncontrollable"] = false,
+								["units"] = 
+								{
+									[1] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 3.5220744305246,
+										["name"] = "PYD BV77 (Scout)-1-1",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "UAZ-469",
+										["unitId"] = 2737,
+										["x"] = 92337.460862397,
+										["y"] = 56438.794458832,
+									},
+									[2] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 1.9896753472735,
+										["name"] = "PYD BV77 (Scout)-1-2",
+										["playerCanDrive"] = true,
+										["skill"] = "Average",
+										["type"] = "HL_KORD",
+										["unitId"] = 2747,
+										["x"] = 92337.30573302,
+										["y"] = 56422.402454664,
+									},
+									[3] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 5.1382493178713,
+										["name"] = "PYD BV77 (Scout)-1-3",
+										["playerCanDrive"] = true,
+										["skill"] = "Average",
+										["type"] = "tt_DSHK",
+										["unitId"] = 2748,
+										["x"] = 92341.28738703,
+										["y"] = 56423.746909265,
+									},
+									[4] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 5.1679199151552,
+										["name"] = "PYD BV77 (Scout)-1-4",
+										["playerCanDrive"] = true,
+										["skill"] = "Average",
+										["type"] = "tt_KORD",
+										["unitId"] = 2749,
+										["x"] = 92328.877036871,
+										["y"] = 56416.145569793,
+									},
+									[5] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 0.85172067497323,
+										["name"] = "PYD BV77 (Scout)-1-5",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "Infantry AK Ins",
+										["unitId"] = 2750,
+										["x"] = 92326.514371687,
+										["y"] = 56428.741254031,
+									},
+									[6] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 4.3528511544739,
+										["name"] = "PYD BV77 (Scout)-1-6",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "Infantry AK Ins",
+										["unitId"] = 2751,
+										["x"] = 92326.808645178,
+										["y"] = 56432.020476037,
+									},
+									[7] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 4.7123889803847,
+										["name"] = "PYD BV77 (Scout)-1-7",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "Infantry AK Ins",
+										["unitId"] = 2752,
+										["x"] = 92336.685215512,
+										["y"] = 56415.4216327,
+									},
+									[8] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 5.6950093492575,
+										["name"] = "PYD BV77 (Scout)-1-8",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "Infantry AK Ins",
+										["unitId"] = 2753,
+										["x"] = 92333.604211769,
+										["y"] = 56442.019562993,
+									},
+									[9] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 5.1766465614152,
+										["name"] = "PYD BV77 (Scout)-1-9",
+										["playerCanDrive"] = false,
+										["skill"] = "High",
+										["type"] = "Ural-375 ZU-23 Insurgent",
+										["unitId"] = 2754,
+										["x"] = 92323.292379299,
+										["y"] = 56413.973758515,
+									},
+									[10] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 4.3528511544739,
+										["name"] = "PYD BV77 (Scout)-1-10",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "Igla manpad INS",
+										["unitId"] = 4051,
+										["x"] = 92308.363524182,
+										["y"] = 56434.381030824,
+									},
+									[11] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 2.2654373690886,
+										["name"] = "PYD BV77 (Scout)-1-11",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "Infantry AK Ins",
+										["unitId"] = 4052,
+										["x"] = 92309.846355946,
+										["y"] = 56432.512968868,
+									},
+									[12] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 2.6162485487395,
+										["name"] = "PYD BV77 (Scout)-1-12",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "Infantry AK Ins",
+										["unitId"] = 4053,
+										["x"] = 92328.92924731,
+										["y"] = 56429.454740011,
+									},
+								},
+								["visible"] = false,
+								["x"] = 92337.460862397,
+								["y"] = 56438.794458832,
+							},
+						},
+					},
+				},
+				[4] = 
+				{
 					["id"] = 47,
 					["name"] = "Syria",
 					["static"] = 
@@ -137592,215 +137801,6 @@ mission =
 						},
 					},
 				},
-				[4] = 
-				{
-					["id"] = 17,
-					["name"] = "Insurgents",
-					["vehicle"] = 
-					{
-						["group"] = 
-						{
-							[1] = 
-							{
-								["groupId"] = 2283,
-								["hidden"] = true,
-								["hiddenOnMFD"] = true,
-								["hiddenOnPlanner"] = true,
-								["name"] = "PYD BV77 (Scout)-1",
-								["route"] = 
-								{
-									["points"] = 
-									{
-										[1] = 
-										{
-											["ETA"] = 0,
-											["ETA_locked"] = true,
-											["action"] = "Off Road",
-											["alt"] = 213,
-											["alt_type"] = "BARO",
-											["formation_template"] = "",
-											["speed"] = 0,
-											["speed_locked"] = true,
-											["task"] = 
-											{
-												["id"] = "ComboTask",
-												["params"] = 
-												{
-													["tasks"] = 
-													{
-													},
-												},
-											},
-											["type"] = "Turning Point",
-											["x"] = 92337.460862397,
-											["y"] = 56438.794458832,
-										},
-									},
-									["spans"] = 
-									{
-									},
-								},
-								["start_time"] = 0,
-								["task"] = "Ground Nothing",
-								["taskSelected"] = true,
-								["tasks"] = 
-								{
-								},
-								["uncontrollable"] = false,
-								["units"] = 
-								{
-									[1] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 3.5220744305246,
-										["name"] = "PYD BV77 (Scout)-1-1",
-										["playerCanDrive"] = false,
-										["skill"] = "Average",
-										["type"] = "UAZ-469",
-										["unitId"] = 2737,
-										["x"] = 92337.460862397,
-										["y"] = 56438.794458832,
-									},
-									[2] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 1.9896753472735,
-										["name"] = "PYD BV77 (Scout)-1-2",
-										["playerCanDrive"] = true,
-										["skill"] = "Average",
-										["type"] = "HL_KORD",
-										["unitId"] = 2747,
-										["x"] = 92337.30573302,
-										["y"] = 56422.402454664,
-									},
-									[3] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 5.1382493178713,
-										["name"] = "PYD BV77 (Scout)-1-3",
-										["playerCanDrive"] = true,
-										["skill"] = "Average",
-										["type"] = "tt_DSHK",
-										["unitId"] = 2748,
-										["x"] = 92341.28738703,
-										["y"] = 56423.746909265,
-									},
-									[4] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 5.1679199151552,
-										["name"] = "PYD BV77 (Scout)-1-4",
-										["playerCanDrive"] = true,
-										["skill"] = "Average",
-										["type"] = "tt_KORD",
-										["unitId"] = 2749,
-										["x"] = 92328.877036871,
-										["y"] = 56416.145569793,
-									},
-									[5] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 0.85172067497323,
-										["name"] = "PYD BV77 (Scout)-1-5",
-										["playerCanDrive"] = false,
-										["skill"] = "Average",
-										["type"] = "Infantry AK Ins",
-										["unitId"] = 2750,
-										["x"] = 92326.514371687,
-										["y"] = 56428.741254031,
-									},
-									[6] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 4.3528511544739,
-										["name"] = "PYD BV77 (Scout)-1-6",
-										["playerCanDrive"] = false,
-										["skill"] = "Average",
-										["type"] = "Infantry AK Ins",
-										["unitId"] = 2751,
-										["x"] = 92326.808645178,
-										["y"] = 56432.020476037,
-									},
-									[7] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 4.7123889803847,
-										["name"] = "PYD BV77 (Scout)-1-7",
-										["playerCanDrive"] = false,
-										["skill"] = "Average",
-										["type"] = "Infantry AK Ins",
-										["unitId"] = 2752,
-										["x"] = 92336.685215512,
-										["y"] = 56415.4216327,
-									},
-									[8] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 5.6950093492575,
-										["name"] = "PYD BV77 (Scout)-1-8",
-										["playerCanDrive"] = false,
-										["skill"] = "Average",
-										["type"] = "Infantry AK Ins",
-										["unitId"] = 2753,
-										["x"] = 92333.604211769,
-										["y"] = 56442.019562993,
-									},
-									[9] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 5.1766465614152,
-										["name"] = "PYD BV77 (Scout)-1-9",
-										["playerCanDrive"] = false,
-										["skill"] = "High",
-										["type"] = "Ural-375 ZU-23 Insurgent",
-										["unitId"] = 2754,
-										["x"] = 92323.292379299,
-										["y"] = 56413.973758515,
-									},
-									[10] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 4.3528511544739,
-										["name"] = "PYD BV77 (Scout)-1-10",
-										["playerCanDrive"] = false,
-										["skill"] = "Average",
-										["type"] = "Igla manpad INS",
-										["unitId"] = 4051,
-										["x"] = 92308.363524182,
-										["y"] = 56434.381030824,
-									},
-									[11] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 2.2654373690886,
-										["name"] = "PYD BV77 (Scout)-1-11",
-										["playerCanDrive"] = false,
-										["skill"] = "Average",
-										["type"] = "Infantry AK Ins",
-										["unitId"] = 4052,
-										["x"] = 92309.846355946,
-										["y"] = 56432.512968868,
-									},
-									[12] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 2.6162485487395,
-										["name"] = "PYD BV77 (Scout)-1-12",
-										["playerCanDrive"] = false,
-										["skill"] = "Average",
-										["type"] = "Infantry AK Ins",
-										["unitId"] = 4053,
-										["x"] = 92328.92924731,
-										["y"] = 56429.454740011,
-									},
-								},
-								["visible"] = false,
-								["x"] = 92337.460862397,
-								["y"] = 56438.794458832,
-							},
-						},
-					},
-				},
 			},
 			["name"] = "red",
 			["nav_points"] = 
@@ -137912,7 +137912,7 @@ mission =
 			[4] = 47,
 		},
 	},
-	["currentKey"] = 12323449,
+	["currentKey"] = 12395769,
 	["date"] = 
 	{
 		["Day"] = 12,
@@ -163057,9 +163057,9 @@ mission =
 	},
 	["map"] = 
 	{
-		["centerX"] = 62626.606672525,
-		["centerY"] = 35640.517048747,
-		["zoom"] = 293199.86230344,
+		["centerX"] = -30536.482683061,
+		["centerY"] = -16034.070267001,
+		["zoom"] = 1069968.7532369,
 	},
 	["maxDictId"] = 311,
 	["pictureFileNameB"] = 
@@ -163150,7 +163150,7 @@ mission =
 			[19] = "a_activate_group(204); mission.trig.func[19]=nil;",
 			[20] = "a_activate_group(879); mission.trig.func[20]=nil;",
 			[21] = "a_activate_group(2332);a_activate_group(2333);a_activate_group(2334);a_activate_group(2345); mission.trig.func[21]=nil;",
-			[22] = "a_radio_transmission(getValueResourceByKey(\"ResKey_Action_76\"), 1237, true, true, 305000, 10000, \"\", 0, false, true, getValueDictByKey(\"DictKey_ActionText_77\"), 0); mission.trig.func[22]=nil;",
+			[22] = "a_radio_transmission(getValueResourceByKey(\"ResKey_Action_76\"), 1237, true, true, 305500, 10000, \"\", 0, false, true, getValueDictByKey(\"DictKey_ActionText_77\"), 0); mission.trig.func[22]=nil;",
 			[23] = "a_radio_transmission(getValueResourceByKey(\"ResKey_Action_10\"), 120, true, true, 128100, 10000, \"128.1\", 0, false, true, getValueDictByKey(\"DictKey_ActionText_35\"), 0); mission.trig.func[23]=nil;",
 			[24] = "a_radio_transmission(getValueResourceByKey(\"ResKey_Action_309\"), 130, true, true, 266100, 10000, \"266-1\", 0, false, true, getValueDictByKey(\"DictKey_ActionText_310\"), 0); mission.trig.func[24]=nil;",
 			[25] = "a_radio_transmission(getValueResourceByKey(\"ResKey_Action_11\"), 121, true, true, 128200, 10000, \"128.2\", 0, false, true, getValueDictByKey(\"DictKey_ActionText_37\"), 0); mission.trig.func[25]=nil;",
@@ -163554,7 +163554,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "128.1 MHz",
 				["properties"] = 
 				{
@@ -163575,7 +163575,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "128.2 MHz",
 				["properties"] = 
 				{
@@ -163596,7 +163596,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "128.3 MHz",
 				["properties"] = 
 				{
@@ -163617,7 +163617,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "128.4 MHz",
 				["properties"] = 
 				{
@@ -163638,7 +163638,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "128.5 MHz",
 				["properties"] = 
 				{
@@ -163659,7 +163659,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "128.6 MHz",
 				["properties"] = 
 				{
@@ -163680,7 +163680,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "128.7 MHz",
 				["properties"] = 
 				{
@@ -163701,7 +163701,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "128.8 MHz",
 				["properties"] = 
 				{
@@ -163722,7 +163722,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "128.9 MHz",
 				["properties"] = 
 				{
@@ -163743,7 +163743,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "267.0 MHz",
 				["properties"] = 
 				{
@@ -163764,7 +163764,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "266.1 MHz",
 				["properties"] = 
 				{
@@ -163785,7 +163785,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "266.2 MHz",
 				["properties"] = 
 				{
@@ -163806,7 +163806,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "266.3 MHz",
 				["properties"] = 
 				{
@@ -163827,7 +163827,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "266.4 MHz",
 				["properties"] = 
 				{
@@ -163848,7 +163848,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "266.5 MHz",
 				["properties"] = 
 				{
@@ -163869,7 +163869,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "266.6 MHz",
 				["properties"] = 
 				{
@@ -163890,7 +163890,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "266.7 MHz",
 				["properties"] = 
 				{
@@ -163911,7 +163911,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "266.8 MHz",
 				["properties"] = 
 				{
@@ -163932,7 +163932,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "266.9 MHz",
 				["properties"] = 
 				{
@@ -163953,7 +163953,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "129.0 MHz",
 				["properties"] = 
 				{
@@ -163974,7 +163974,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "Incirlik_ATIS_VHF",
 				["properties"] = 
 				{
@@ -163995,7 +163995,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "Salute-36",
 				["properties"] = 
 				{
@@ -164016,7 +164016,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "Salute-80a",
 				["properties"] = 
 				{
@@ -164037,7 +164037,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "Salute-80b",
 				["properties"] = 
 				{
@@ -164081,7 +164081,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "Remove-1",
 				["properties"] = 
 				{
@@ -164125,7 +164125,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "Salute-117",
 				["properties"] = 
 				{
@@ -164146,7 +164146,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "Directives-117",
 				["properties"] = 
 				{
@@ -164167,7 +164167,7 @@ mission =
 					[4] = 0.14901960784314,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["linkUnit"] = 176,
 				["name"] = "TANKER_1_SAFE_ZONE",
 				["properties"] = 
@@ -164189,7 +164189,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "Salute-25",
 				["properties"] = 
 				{
@@ -164210,7 +164210,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "Directives-25",
 				["properties"] = 
 				{
@@ -164231,7 +164231,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "Activate_Firefigters",
 				["properties"] = 
 				{
@@ -164252,7 +164252,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "Salute-28",
 				["properties"] = 
 				{
@@ -164273,7 +164273,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "Directives_DeArming",
 				["properties"] = 
 				{
@@ -164294,7 +164294,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "Salute_DeArming",
 				["properties"] = 
 				{
@@ -164315,7 +164315,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "Salute-48",
 				["properties"] = 
 				{
@@ -164336,7 +164336,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "Directives-48",
 				["properties"] = 
 				{
@@ -164357,7 +164357,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "267.1 MHz",
 				["properties"] = 
 				{
@@ -164378,7 +164378,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "Incirlik_ATIS_UHF",
 				["properties"] = 
 				{
@@ -164398,8 +164398,8 @@ mission =
 					[3] = 1,
 					[4] = 0.15,
 				},
-				["heading"] = 0.0079447069478552,
-				["hidden"] = true,
+				["heading"] = -0.00039579603430927,
+				["hidden"] = false,
 				["linkUnit"] = 2804,
 				["name"] = "Radio-Wingman",
 				["properties"] = 
@@ -164407,8 +164407,8 @@ mission =
 				},
 				["radius"] = 4.8768,
 				["type"] = 0,
-				["x"] = -314791.08575335,
-				["y"] = 267620.93314901,
+				["x"] = -312548.06944264,
+				["y"] = 270237.11036238,
 				["zoneId"] = 1237,
 			},
 			[40] = 
@@ -164421,7 +164421,7 @@ mission =
 					[4] = 0.14901960784314,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "InitZone",
 				["properties"] = 
 				{
@@ -164442,7 +164442,7 @@ mission =
 					[4] = 0.14901960784314,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "PatternModeInitZone",
 				["properties"] = 
 				{
@@ -164463,7 +164463,7 @@ mission =
 					[4] = 0.14901960784314,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "CarrierHeadingSouth",
 				["properties"] = 
 				{
@@ -164484,7 +164484,7 @@ mission =
 					[4] = 0.14901960784314,
 				},
 				["heading"] = 0.00012543825560569,
-				["hidden"] = true,
+				["hidden"] = false,
 				["linkUnit"] = 2605,
 				["name"] = "InitialFix_Zone",
 				["properties"] = 
@@ -164506,7 +164506,7 @@ mission =
 					[4] = 0.14901960784314,
 				},
 				["heading"] = 0.00012543825560569,
-				["hidden"] = true,
+				["hidden"] = false,
 				["linkUnit"] = 2605,
 				["name"] = "Holding_Zone",
 				["properties"] = 
@@ -164551,7 +164551,7 @@ mission =
 					[4] = 0.14901960784314,
 				},
 				["heading"] = 0.00012543825560569,
-				["hidden"] = true,
+				["hidden"] = false,
 				["linkUnit"] = 2605,
 				["name"] = "12NMa_Zone",
 				["properties"] = 
@@ -164596,7 +164596,7 @@ mission =
 					[4] = 0.14901960784314,
 				},
 				["heading"] = 0.00012543825560569,
-				["hidden"] = true,
+				["hidden"] = false,
 				["linkUnit"] = 2605,
 				["name"] = "Marshal_Zone",
 				["properties"] = 
@@ -164618,7 +164618,7 @@ mission =
 					[4] = 0.14901960784314,
 				},
 				["heading"] = 0.00012543825560569,
-				["hidden"] = true,
+				["hidden"] = false,
 				["linkUnit"] = 2605,
 				["name"] = "10NM_Zone",
 				["properties"] = 
@@ -164640,7 +164640,7 @@ mission =
 					[4] = 0.027450980392157,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "Incirlik_Zone",
 				["properties"] = 
 				{
@@ -164661,7 +164661,7 @@ mission =
 					[4] = 0.14901960784314,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "Engagement_Zone",
 				["properties"] = 
 				{
@@ -164705,7 +164705,7 @@ mission =
 					[4] = 0,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "TANKER_DEFENDERS_ZONE",
 				["properties"] = 
 				{
@@ -164726,7 +164726,7 @@ mission =
 					[4] = 0.14901960784314,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "TANKER_5_SAFE_ZONE",
 				["properties"] = 
 				{
@@ -164747,7 +164747,7 @@ mission =
 					[4] = 0.14901960784314,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["linkUnit"] = 183,
 				["name"] = "TANKER_2_SAFE_ZONE",
 				["properties"] = 
@@ -164769,7 +164769,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "SA8_1",
 				["properties"] = 
 				{
@@ -164790,7 +164790,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "SA8_2",
 				["properties"] = 
 				{
@@ -164811,7 +164811,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "SA8_3",
 				["properties"] = 
 				{
@@ -164832,7 +164832,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "SA8_4",
 				["properties"] = 
 				{
@@ -164853,7 +164853,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "BASE_Patrols_Activations",
 				["properties"] = 
 				{
@@ -164874,7 +164874,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "BASE-WD68",
 				["properties"] = 
 				{
@@ -164895,7 +164895,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "BASE-HC05",
 				["properties"] = 
 				{
@@ -164916,7 +164916,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "BASE HC03 (Building)-1",
 				["properties"] = 
 				{
@@ -164980,7 +164980,7 @@ mission =
 					[4] = 0.15,
 				},
 				["heading"] = 0,
-				["hidden"] = true,
+				["hidden"] = false,
 				["name"] = "BASE WE20 (Building)-1",
 				["properties"] = 
 				{
@@ -165631,7 +165631,7 @@ mission =
 				{
 					["KeyDict_text"] = "DictKey_ActionText_77",
 					["file"] = "ResKey_Action_76",
-					["frequency"] = 305,
+					["frequency"] = 305.5,
 					["loop"] = true,
 					["mic_effects"] = false,
 					["modulation"] = true,
