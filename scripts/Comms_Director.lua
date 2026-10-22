@@ -1,10 +1,14 @@
--- Comms_Director | v1.3.1
+-- Comms_Director | v1.3.2
 --[[
   CAS-1 Communications State Machine — Syria Dynamic Template
   Scope: Departure→Strike→OVERLORD hand-offs · JTAC hand-offs · INFLTREP · TANKER
          · RTB (OVERLORD→Strike→Marshal) · INJ-1..4
   Out of scope: JTAC comms themselves (native DCS JTAC check-in / 9-line / clearance
                 preserved, do not touch)
+
+  v1.3.2 — HORNET 51 (pilot) calls voiced too: static part only (call sign, agency,
+           request); angels / state / MGRS / TOT stay on-screen. Played on the called
+           agency's frequency (CFG.AUDIO ch), voice = Piper ryan pitched down.
 
   v1.3.1 — clips re-rendered with make_clips.py v1.1.0 (~2x faster speech, heavier
            radio chain: squelch bursts, noise floor, soft-clip). CFG.AUDIO lengths updated.
@@ -171,6 +175,17 @@ local CFG = {
         eye_abort              = { ch = "EYEBALL", len = 3.0 },
         eye_manpads            = { ch = "EYEBALL", len = 4.6 },
         str_corridor           = { ch = "STRIKE", len = 3.7 },
+        p_str_checkin_out      = { ch = "STRIKE", len = 1.8 },
+        p_ovl_checkin          = { ch = "OVERLORD", len = 3.6 },
+        p_ovl_off_pointer      = { ch = "OVERLORD", len = 3.5 },
+        p_ovl_inflrep          = { ch = "OVERLORD", len = 1.6 },
+        p_tkr_checkin          = { ch = "TEXACO", len = 1.7 },
+        p_ovl_rtb_tkr          = { ch = "OVERLORD", len = 2.0 },
+        p_ovl_rtb_notkr        = { ch = "OVERLORD", len = 2.3 },
+        p_str_inbound          = { ch = "STRIKE", len = 1.5 },
+        p_ovl_feet_dry         = { ch = "OVERLORD", len = 1.5 },
+        p_ovl_feet_wet         = { ch = "OVERLORD", len = 1.4 },
+        p_ovl_picture          = { ch = "OVERLORD", len = 1.6 },
     },
 
     -- Inject probabilities (integer 0–100)
@@ -351,9 +366,11 @@ local function QClear()
 end
 
 --- Pilot transmission followed by controller reply(ies).
-local function Pilot(text)
+-- @param audio  Optional voice clip id (pilot side, CFG.AUDIO key).
+local function Pilot(text, audio)
     -- pilot text stays DUR_PILOT s; the reply may start PILOT_HOLD s after it
-    Q("[" .. CFG.CS .. "] " .. text, CFG.DUR_PILOT, 0, nil, CFG.PILOT_HOLD)
+    -- (or after the pilot clip ends, whichever is later)
+    Q("[" .. CFG.CS .. "] " .. text, CFG.DUR_PILOT, 0, nil, CFG.PILOT_HOLD, audio)
 end
 
 -- forward declarations
@@ -419,7 +436,7 @@ end
 local function A_StrikeCheckInOut()
     local p = Player(); if not p then return end
     SetPhase("STRIKE_CHK")
-    Pilot(string.format("Strike, %s, checking in outbound, passing angels %d, Kilo.", CFG.CS, Angels(p)))
+    Pilot(string.format("Strike, %s, checking in outbound, passing angels %d, Kilo.", CFG.CS, Angels(p)), "p_str_checkin_out")
     Q(string.format("[STRIKE] %s, Strike, radar contact. Check Mode 4.", CFG.CS), CFG.DUR_SHORT, CFG.REPLY_GAP, nil, nil, "str_radar_contact")
     local sweetToOvl = function()
         Q(string.format("[STRIKE] %s, Mode 4 sweet. Kilo copied. Switch Overlord, %s.",
@@ -442,7 +459,7 @@ local function A_OvlCheckIn()
     local p = Player(); if not p then return end
     CD.awaiting = true; MenuRebuild()
     Pilot(string.format("Overlord, %s, checking in as fragged, mission %s and %s, angels %d, state %s.",
-        CFG.CS, CFG.MSN_J1, CFG.MSN_J2, Angels(p), State(p)))
+        CFG.CS, CFG.MSN_J1, CFG.MSN_J2, Angels(p), State(p)), "p_ovl_checkin")
     Q(string.format("[OVERLORD] %s, Overlord, radar contact. Picture clean. "
         .. "Mission as fragged, Pointer 11 and Eyeball 11 on station. Proceed %s, %s. "
         .. "SAM activity reported in both target areas, %s. Report feet dry.",
@@ -455,7 +472,7 @@ local function A_OvlOffPointer()
     local p = Player(); if not p then return end
     CD.awaiting = true; MenuRebuild()
     Pilot(string.format("Overlord, %s, off Pointer 11, mission %s complete, angels %d, state %s. "
-        .. "Ready for retasking.", CFG.CS, CFG.MSN_J1, Angels(p), State(p)))
+        .. "Ready for retasking.", CFG.CS, CFG.MSN_J1, Angels(p), State(p)), "p_ovl_off_pointer")
     Q(string.format("[OVERLORD] %s, Overlord, copy. Return to %s, %s. "
         .. "Eyeball 11 is on station. Contact Eyeball 11, %s.",
         CFG.CS, CFG.CP_NAME, BrgRng(p:getPoint(), CFG.CP_POS), CFG.FREQ.J2),
@@ -472,7 +489,7 @@ local function A_Inflrep()
         .. "Remarks, SAM activity in both target areas.",
         CFG.CS, CFG.CS, CFG.MSN_J1, CFG.MSN_J2,
         CD.j1.pos and MGRS(CD.j1.pos) or "unknown", CD.j2.pos and MGRS(CD.j2.pos) or "unknown",
-        Clock(CD.j1.tot), Clock(CD.j2.tot), CD.j1.size, CD.j2.size))
+        Clock(CD.j1.tot), Clock(CD.j2.tot), CD.j1.size, CD.j2.size), "p_ovl_inflrep")
     -- INFLTREP is long — give it time on screen
     CD.queue[#CD.queue].dur  = CFG.DUR_LONG + 4
     CD.queue[#CD.queue].hold = 8
@@ -487,7 +504,7 @@ end
 local function A_TexacoCheckIn()
     local p = Player(); if not p then return end
     CD.tkrCheckedIn = true
-    Pilot(string.format("Texaco 11, %s, checking in, angels %d, state %s.", CFG.CS, Angels(p), State(p)))
+    Pilot(string.format("Texaco 11, %s, checking in, angels %d, state %s.", CFG.CS, Angels(p), State(p)), "p_tkr_checkin")
     Q(string.format("[TEXACO 11] %s, Texaco 11, angels 15. Cleared to join, left observation. "
         .. "Port drogue, call pre-contact.", CFG.CS), CFG.DUR_LONG - 2, CFG.REPLY_GAP, nil, nil, "tkr_checkin")
     QPlay()
@@ -499,7 +516,7 @@ local function A_OvlRTB()
     CD.awaiting = true; MenuRebuild()
     local c = Carrier()
     local from = (CD.phase == "TKR_DONE") and "off Texaco" or "no tanker required"
-    Pilot(string.format("Overlord, %s, %s, RTB, angels %d, state %s.", CFG.CS, from, Angels(p), State(p)))
+    Pilot(string.format("Overlord, %s, %s, RTB, angels %d, state %s.", CFG.CS, from, Angels(p), State(p)), (CD.phase == "TKR_DONE") and "p_ovl_rtb_tkr" or "p_ovl_rtb_notkr")
     local mother = c and (" Mother " .. BrgRng(p:getPoint(), c:getPoint()) .. ".") or ""
     Q(string.format("[OVERLORD] %s, Overlord, RTB approved.%s Recover via the 050 return corridor. "
         .. "Report feet wet.", CFG.CS, mother), CFG.DUR_LONG, CFG.REPLY_GAP,
@@ -510,7 +527,7 @@ end
 local function A_StrikeCheckInIn()
     local p = Player(); if not p then return end
     CD.awaiting = true; MenuRebuild()
-    Pilot(string.format("Strike, %s, inbound, angels %d, state %s.", CFG.CS, Angels(p), State(p)))
+    Pilot(string.format("Strike, %s, inbound, angels %d, state %s.", CFG.CS, Angels(p), State(p)), "p_str_inbound")
     Q(string.format("[STRIKE] %s, Strike, radar contact, Mode 4 sweet. Continue the 050 corridor. "
         .. "Switch Marshal at 50 miles, %s.", CFG.CS, CFG.FREQ.MARSHAL),
         CFG.DUR_LONG, CFG.REPLY_GAP, function() SetPhase("INBOUND") end, nil, "str_inbound")
@@ -521,7 +538,7 @@ local function A_FeetReport()
     local kind = CD.feetPending; if not kind then return end
     CD.feetPending = nil
     local word = (kind == "DRY") and "feet dry" or "feet wet"
-    Pilot(string.format("Overlord, %s, %s.", CFG.CS, word))
+    Pilot(string.format("Overlord, %s, %s.", CFG.CS, word), "p_ovl_feet_" .. kind:lower())
     Q(string.format("[OVERLORD] %s, Overlord, copy %s.", CFG.CS, word), CFG.DUR_SHORT, CFG.REPLY_GAP, nil, nil, "ovl_feet_" .. kind:lower())
     QPlay()
     MenuRebuild()
@@ -531,7 +548,7 @@ local function A_Picture()
     if not OVL_PHASES[CD.phase] then
         Msg("[CAS-1] Not checked in with OVERLORD.", 7); return
     end
-    Pilot(string.format("Overlord, %s, request picture.", CFG.CS))
+    Pilot(string.format("Overlord, %s, request picture.", CFG.CS), "p_ovl_picture")
     Q(string.format("[OVERLORD] %s, Overlord, picture clean. SAM activity reported in the target areas.",
         CFG.CS), CFG.DUR_SHORT + 2, CFG.REPLY_GAP, nil, nil, "ovl_picture")
     QPlay()

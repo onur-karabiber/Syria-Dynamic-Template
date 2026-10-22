@@ -29,3 +29,15 @@ ovl_texaco_freq;OVERLORD;Hornet five one, Overlord. Texaco one one is on two fiv
 eye_abort;EYEBALL;Hornet five one, abort, abort, abort. Civilian vehicle in target area.
 eye_manpads;EYEBALL;Hornet five one, MANPADS launch observed one klick east of the target. Remain at or above hard deck, two three thousand MSL.
 str_corridor;STRIKE;Hornet five one, Strike. You are outside the return corridor. Turn now for the zero five zero radial.
+# HORNET 51 (pilot) — static part only; angels, state, MGRS, TOT stay on-screen
+p_str_checkin_out;PILOT>STRIKE;Strike, Hornet five one, checking in outbound, Kilo.
+p_ovl_checkin;PILOT>OVERLORD;Overlord, Hornet five one, checking in as fragged, mission four one zero one and four one zero two.
+p_ovl_off_pointer;PILOT>OVERLORD;Overlord, Hornet five one, off Pointer one one, mission four one zero one complete. Ready for retasking.
+p_ovl_inflrep;PILOT>OVERLORD;Overlord, Hornet five one, INFLTREP.
+p_tkr_checkin;PILOT>TEXACO;Texaco one one, Hornet five one, checking in.
+p_ovl_rtb_tkr;PILOT>OVERLORD;Overlord, Hornet five one, off Texaco, RTB.
+p_ovl_rtb_notkr;PILOT>OVERLORD;Overlord, Hornet five one, no tanker required, RTB.
+p_str_inbound;PILOT>STRIKE;Strike, Hornet five one, inbound.
+p_ovl_feet_dry;PILOT>OVERLORD;Overlord, Hornet five one, feet dry.
+p_ovl_feet_wet;PILOT>OVERLORD;Overlord, Hornet five one, feet wet.
+p_ovl_picture;PILOT>OVERLORD;Overlord, Hornet five one, request picture.

@@ -1,10 +1,13 @@
-# make_clips.py | v1.1.0
+# make_clips.py | v1.2.0
 # tts/clips.csv -> src/Sounds/CAS1/<id>.ogg  (Piper TTS + ffmpeg radio chain)
 # Also writes tts/audio_table.lua: paste into Comms_Director CFG.AUDIO.
 # Usage:  python tts/make_clips.py              (all clips)
 #         python tts/make_clips.py str_m4_sour  (only the listed ids)
 #         python tts/make_clips.py --out DIR id (write to DIR, table untouched; A/B tests)
 #
+# v1.2.0: pilot (HORNET 51) voice. clips.csv agency field may be VOICE>CHANNEL
+#         (e.g. PILOT>OVERLORD): voice from VOICE[VOICE], ch in audio_table = CHANNEL.
+#         VOICE entries may be (model, pitch); pitch < 1 lowers the voice, speed kept.
 # v1.1.0: speech ~2x faster (Piper LENGTH_SCALE x ffmpeg TEMPO); radio chain adds
 #         narrower band, soft-clip distortion, bit crush, pink-noise floor and
 #         squelch bursts at key-up / key-down.
@@ -23,6 +26,7 @@ VOICE = {
     'OVERLORD':  'en_GB-alan-medium.onnx',
     'EYEBALL':   'en_US-hfc_male-medium.onnx',
     'TEXACO':    'en_US-kusal-medium.onnx',
+    'PILOT':     ('en_US-ryan-medium.onnx', 0.93),  # ryan = Departure, pitched down
 }
 FALLBACK = None  # model file name used for any agency missing above
 
@@ -62,9 +66,11 @@ def synth(model, text, wav_path):
         return wf.getnframes() / float(wf.getframerate())
 
 
-def radio(wav, raw_len, ogg):
+def radio(wav, raw_len, ogg, pitch=1.0):
     total = KEYUP + raw_len / TEMPO + KEYDOWN
-    fc = ('[0:a]' + SPEECH % (TEMPO, int(KEYUP * 1000), KEYDOWN) + ',aresample=22050[s];'
+    shift = '' if pitch == 1.0 else 'asetrate=%d,aresample=22050,' % round(22050 * pitch)
+    fc = ('[0:a]' + shift + SPEECH % (TEMPO / pitch, int(KEYUP * 1000), KEYDOWN)
+          + ',aresample=22050[s];'
           'anoisesrc=d=%.3f:c=pink:a=%.4f:r=22050,%s[n];' % (total, HISS, BAND) +
           'anoisesrc=d=%.3f:c=white:a=%.3f:r=22050,%s,afade=t=out:d=%.3f[k1];'
           % (KEYUP, BURST, BAND, KEYUP) +
@@ -100,16 +106,19 @@ def main():
     for cid, agency, text in rows:
         ogg = os.path.join(outdir, cid + '.ogg')
         if not a.ids or cid in a.ids:
-            name = VOICE.get(agency, FALLBACK)
+            vkey, _, _ = agency.partition('>')
+            name = VOICE.get(vkey, FALLBACK)
+            name, pitch = name if isinstance(name, tuple) else (name, 1.0)
             model = name and os.path.join(VOICES, name)
             if not model or not os.path.isfile(model) or not os.path.isfile(model + '.json'):
                 print('ATLANDI  %-22s ses modeli yok: %s' % (cid, name)); failed.append(cid); continue
             with tempfile.TemporaryDirectory() as td:
                 wav = os.path.join(td, 'raw.wav')
-                radio(wav, synth(model, text, wav), ogg)
+                radio(wav, synth(model, text, wav), ogg, pitch)
         if os.path.isfile(ogg):
             d = duration(ogg)
-            table.append('        %-22s = { ch = "%s", len = %.1f },' % (cid, agency, d))
+            ch = agency.partition('>')[2] or agency
+            table.append('        %-22s = { ch = "%s", len = %.1f },' % (cid, ch, d))
             print('OK       %-22s %5.1f s  %s' % (cid, d, agency))
     if not a.out:
         with open(TABLE, 'w', encoding='utf-8') as f:
