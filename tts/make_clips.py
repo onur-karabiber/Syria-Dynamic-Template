@@ -1,10 +1,11 @@
-# make_clips.py | v1.2.0
+# make_clips.py | v1.2.1
 # tts/clips.csv -> src/Sounds/CAS1/<id>.ogg  (Piper TTS + ffmpeg radio chain)
 # Also writes tts/audio_table.lua: paste into Comms_Director CFG.AUDIO.
 # Usage:  python tts/make_clips.py              (all clips)
 #         python tts/make_clips.py str_m4_sour  (only the listed ids)
 #         python tts/make_clips.py --out DIR id (write to DIR, table untouched; A/B tests)
 #
+# v1.2.1: voices: DEPARTURE lessac (f), OVERLORD kristin (f), PILOT john (no pitch shift).
 # v1.2.0: pilot (HORNET 51) voice. clips.csv agency field may be VOICE>CHANNEL
 #         (e.g. PILOT>OVERLORD): voice from VOICE[VOICE], ch in audio_table = CHANNEL.
 #         VOICE entries may be (model, pitch); pitch < 1 lowers the voice, speed kept.
@@ -21,12 +22,12 @@ TABLE  = os.path.join(ROOT, 'tts', 'audio_table.lua')
 
 # agency -> voice model file in tts/voices/
 VOICE = {
-    'DEPARTURE': 'en_US-ryan-medium.onnx',
+    'DEPARTURE': 'en_US-lessac-medium.onnx',   # female
     'STRIKE':    'en_US-joe-medium.onnx',
-    'OVERLORD':  'en_GB-alan-medium.onnx',
+    'OVERLORD':  'en_US-kristin-medium.onnx',  # female
     'EYEBALL':   'en_US-hfc_male-medium.onnx',
     'TEXACO':    'en_US-kusal-medium.onnx',
-    'PILOT':     ('en_US-ryan-medium.onnx', 0.93),  # ryan = Departure, pitched down
+    'PILOT':     'en_US-john-medium.onnx',
 }
 FALLBACK = None  # model file name used for any agency missing above
 
