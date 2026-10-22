@@ -1,0 +1,31 @@
+# id;agency;spoken text  (only the STATIC part; bearings, ranges, angels, MGRS, TOT stay on-screen)
+dep_switch_strike;DEPARTURE;Hornet five one, Departure. Switch Strike, two six five decimal zero.
+ovl_contact_pointer;OVERLORD;Hornet five one, Overlord. Pointer one one is on station. Contact Pointer one one, three three three decimal three. Return to this frequency on check-out.
+ovl_switch_strike;OVERLORD;Hornet five one, Overlord. Switch Strike, two six five decimal zero.
+str_switch_marshal;STRIKE;Hornet five one, Strike. Switch Marshal, three zero five decimal zero.
+eye_area_clear;EYEBALL;Hornet five one, target area clear. Continue as briefed.
+str_radar_contact;STRIKE;Hornet five one, Strike, radar contact. Check Mode four.
+str_m4_sweet_ovl;STRIKE;Hornet five one, Mode four sweet. Kilo copied. Switch Overlord, two five one decimal one.
+str_m4_sour;STRIKE;Hornet five one, Mode four sour. Recycle.
+str_m4_sweet_now;STRIKE;Hornet five one, Strike. Mode four sweet now.
+str_kilo_ovl;STRIKE;Hornet five one, Kilo copied. Switch Overlord, two five one decimal one.
+ovl_checkin;OVERLORD;Hornet five one, Overlord, radar contact. Picture clean. Mission as fragged, Pointer one one and Eyeball one one on station. Proceed C P Tiger. SAM activity reported in both target areas, hard deck two three thousand. Report feet dry.
+ovl_off_pointer;OVERLORD;Hornet five one, Overlord, copy. Return to C P Tiger. Eyeball one one is on station. Contact Eyeball one one, three three three decimal four.
+ovl_inflrep;OVERLORD;Hornet five one, Overlord, copy INFLTREP. Texaco one one, TACAN two one Yankee. Switch Texaco, two five two decimal one.
+tkr_checkin;TEXACO;Hornet five one, Texaco one one, angels fifteen. Cleared to join, left observation. Port drogue, call pre-contact.
+tkr_done;TEXACO;Hornet five one, Texaco one one, offload complete. Cleared to depart, return to Overlord, two five one decimal one.
+ovl_rtb;OVERLORD;Hornet five one, Overlord, RTB approved. Recover via the zero five zero return corridor. Report feet wet.
+str_inbound;STRIKE;Hornet five one, Strike, radar contact, Mode four sweet. Continue the zero five zero corridor. Switch Marshal at fifty miles, three zero five decimal zero.
+ovl_feet_dry;OVERLORD;Hornet five one, Overlord, copy feet dry.
+ovl_feet_wet;OVERLORD;Hornet five one, Overlord, copy feet wet.
+ovl_picture;OVERLORD;Hornet five one, Overlord, picture clean. SAM activity reported in the target areas.
+ovl_say_int;OVERLORD;Hornet five one, Overlord. Say intentions.
+ovl_contact_strike;OVERLORD;Hornet five one, Overlord. Contact Strike, two six five decimal zero, how copy?
+dep_contact_strike;DEPARTURE;Hornet five one, Departure. Contact Strike, two six five decimal zero, how copy?
+str_contact_ovl;STRIKE;Hornet five one, Strike. Contact Overlord, two five one decimal one.
+ovl_say_status;OVERLORD;Hornet five one, Overlord. Say status.
+ovl_say_status_tkr;OVERLORD;Hornet five one, Overlord. Say status, advise when ready for tanker.
+ovl_texaco_freq;OVERLORD;Hornet five one, Overlord. Texaco one one is on two five two decimal one.
+eye_abort;EYEBALL;Hornet five one, abort, abort, abort. Civilian vehicle in target area.
+eye_manpads;EYEBALL;Hornet five one, MANPADS launch observed one klick east of the target. Remain at or above hard deck, two three thousand MSL.
+str_corridor;STRIKE;Hornet five one, Strike. You are outside the return corridor. Turn now for the zero five zero radial.
