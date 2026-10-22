@@ -1,10 +1,16 @@
--- Comms_Director | v1.2.0
+-- Comms_Director | v1.2.1
 --[[
   CAS-1 Communications State Machine — Syria Dynamic Template
   Scope: Departure→Strike→OVERLORD hand-offs · JTAC hand-offs · INFLTREP · TANKER
          · RTB (OVERLORD→Strike→Marshal) · INJ-1..4
   Out of scope: JTAC comms themselves (native DCS JTAC check-in / 9-line / clearance
                 preserved, do not touch)
+
+  v1.2.1 — check-in reminders
+    * If a pilot check-in / report is pending, the handing-off or monitoring agency
+      repeats the call after REMIND_FIRST s, then every REMIND_EVERY s
+      ("..., contact Strike 265.00, how copy?"), followed by an F10 hint line.
+    * One-time F10 hint on takeoff. Hand-off calls stay on screen longer (DUR_HANDOFF).
 
   v1.2.0 — realistic C2 flow (JP 3-09.3 Ch V + CV ops practice)
     * Pilot-initiated check-ins via F10. No agency talks to the player until the
@@ -121,6 +127,10 @@ local CFG = {
     DUR_SHORT      = 8,
     DUR_LONG       = 16,
     DUR_URGENT     = 12,
+    DUR_HANDOFF    = 15,
+
+    REMIND_FIRST   = 60,     -- s after a check-in becomes due before the first repeat
+    REMIND_EVERY   = 120,    -- s between further repeats
 }
 
 -- ══════════════════════════════════════════════════════════════
@@ -270,14 +280,14 @@ local function Pilot(text)
 end
 
 -- forward declarations
-local SetPhase, MenuRebuild
+local SetPhase, MenuRebuild, Remind
 
 -- ══════════════════════════════════════════════════════════════
 --  RADIO CALLS — controller-initiated (hand-offs / threats)
 -- ══════════════════════════════════════════════════════════════
 local function C_DepSwitchStrike()
     Q(string.format("[DEPARTURE] %s, Departure. Switch Strike, %s.", CFG.CS, CFG.FREQ.STRIKE),
-        CFG.DUR_SHORT + 2, 0)
+        CFG.DUR_HANDOFF, 0)
 end
 
 local function C_OvlContactPointer(p)
@@ -290,7 +300,7 @@ local function C_OvlSwitchStrike(p)
     local c = Carrier()
     local mother = c and (", Mother " .. BrgRng(p:getPoint(), c:getPoint())) or ""
     Q(string.format("[OVERLORD] %s, Overlord%s. Switch Strike, %s.",
-        CFG.CS, mother, CFG.FREQ.STRIKE), CFG.DUR_SHORT + 4, 0)
+        CFG.CS, mother, CFG.FREQ.STRIKE), CFG.DUR_HANDOFF, 0)
 end
 
 local function C_StrikeSwitchMarshal()
@@ -609,6 +619,7 @@ end
 SetPhase = function(new)
     if CD.phase == new then return end
     CD.awaiting = false
+    CD.dueSince, CD.nextRemind = timer.getTime(), nil
     env.info(string.format("[CD] %s → %s", CD.phase, new))
     CD.phase = new
 
@@ -618,7 +629,9 @@ SetPhase = function(new)
         SetFlag(200, 0)
     end
 
-    if new == "J1_OFF" then
+    if new == "DEPARTURE" then
+        Msg("[CAS-1] All radio calls: F10 > CAS-1 COMMS. \"Show: next call\" lists the next step.", CFG.DUR_HANDOFF)
+    elseif new == "J1_OFF" then
         Msg("[CAS-1] Pointer 11 tasking complete. Check out, then report to OVERLORD (F10).", CFG.DUR_SHORT)
     elseif new == "J2_OFF" then
         Msg("[CAS-1] Eyeball 11 tasking complete. Check out, then INFLTREP to OVERLORD (F10).", CFG.DUR_SHORT)
@@ -735,6 +748,32 @@ end
 -- ══════════════════════════════════════════════════════════════
 --  MAIN TICK
 -- ══════════════════════════════════════════════════════════════
+-- Pending pilot call → repeated controller call (+ F10 hint)
+local REMIND = {
+    STRIKE_OUT = function() return string.format("[DEPARTURE] %s, Departure. Contact Strike, %s, how copy?", CFG.CS, CFG.FREQ.STRIKE) end,
+    OVL_OUT    = function() return string.format("[STRIKE] %s, Strike. Contact Overlord, %s.", CFG.CS, CFG.FREQ.OVL) end,
+    J1_OFF     = function() return string.format("[OVERLORD] %s, Overlord. Say status.", CFG.CS) end,
+    J2_OFF     = function() return string.format("[OVERLORD] %s, Overlord. Say status, advise when ready for tanker.", CFG.CS) end,
+    REFUEL     = function()
+        if CD.tkrCheckedIn then return nil end
+        return string.format("[OVERLORD] %s, Overlord. Texaco 11 is on %s.", CFG.CS, CFG.FREQ.TKR)
+    end,
+    TKR_DONE   = function() return string.format("[OVERLORD] %s, Overlord. Say intentions.", CFG.CS) end,
+    STRIKE_IN  = function() return string.format("[OVERLORD] %s, Overlord. Contact Strike, %s, how copy?", CFG.CS, CFG.FREQ.STRIKE) end,
+}
+
+Remind = function(now)
+    local f = REMIND[CD.phase]
+    if not f or CD.awaiting or not CD.dueSince then return end
+    if not CD.nextRemind then CD.nextRemind = CD.dueSince + CFG.REMIND_FIRST end
+    if now < CD.nextRemind or CD.qPlaying then return end
+    CD.nextRemind = now + CFG.REMIND_EVERY
+    local txt = f(); if not txt then return end
+    Q(txt, CFG.DUR_HANDOFF, 0)
+    QPlay()
+    Msg("[CAS-1] F10 > CAS-1 COMMS - " .. (NEXT[CD.phase] or ""), CFG.DUR_HANDOFF)
+end
+
 local function CD_Tick(_, t)
     if CD.phase == "DONE" or CD.phase == "RECOVERY" then return end
     TrackTargets()
@@ -742,6 +781,7 @@ local function CD_Tick(_, t)
     if not p then return t + CFG.TICK end
     if not CD.menu.root then MenuRebuild() end
     EvalPhase(p, Carrier())
+    Remind(t)
     if OVL_PHASES[CD.phase] or CD.phase == "DEPARTURE" then SurfaceCheck(p:getPoint()) end
     return t + CFG.TICK
 end
@@ -772,7 +812,7 @@ local function CD_Init()
 
     SetFlag(200, 0)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.2.0 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.2.1 online — CAS-1 Syria")
 end
 
 CD_Init()
