@@ -12373,7 +12373,7 @@ mission =
 								},
 								["communication"] = true,
 								["dynSpawnTemplate"] = false,
-								["frequency"] = 305,
+								["frequency"] = 262,
 								["groupId"] = 2326,
 								["hidden"] = false,
 								["modulation"] = 0,
@@ -12387,7 +12387,7 @@ mission =
 										{
 											["ETA"] = 0,
 											["ETA_locked"] = true,
-											["action"] = "From Runway",
+											["action"] = "From Parking Area",
 											["alt"] = 0,
 											["alt_type"] = "BARO",
 											["formation_template"] = "",
@@ -12616,7 +12616,7 @@ mission =
 													},
 												},
 											},
-											["type"] = "TakeOff",
+											["type"] = "TakeOffParking",
 											["x"] = -216601.40284255,
 											["y"] = -363049.70156328,
 										},
@@ -137912,7 +137912,7 @@ mission =
 			[4] = 47,
 		},
 	},
-	["currentKey"] = 12513616,
+	["currentKey"] = 12545266,
 	["date"] = 
 	{
 		["Day"] = 12,
@@ -163057,7 +163057,7 @@ mission =
 	},
 	["map"] = 
 	{
-		["centerX"] = -41015.936254981,
+		["centerX"] = -52146.326062058,
 		["centerY"] = 50000,
 		["zoom"] = 1254980.0796813,
 	},
