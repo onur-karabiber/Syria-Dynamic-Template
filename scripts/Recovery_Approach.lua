@@ -1,4 +1,7 @@
--- Recovery_Approach | v1.0.3
+-- Recovery_Approach | v1.0.4
+-- v1.0.4: on arming (flag 101) the planned recovery case (flag 102) is applied first
+-- via TRT.CaseSync.ApplyRecoveryCase (Airboss_CaseSync v1.0.7), so "Recovery Rules
+-- Activated: CASE N" shows the recovery case, not the departure case.
 -- v1.0.3: CASE I 10NM speed window 275-320 -> 230-270 kt. No source gives a 10 NM
 -- speed; the CASE I stack is flown at 250 KIAS (masterarms CASE 1), so the check is
 -- centred on the holding speed. Speed is still the 3D velocity (wind-affected).
@@ -107,6 +110,7 @@ local function checkRulesActivation()
     resetChart()
     CASE1.done = false
 
+    if TRT.CaseSync and TRT.CaseSync.ApplyRecoveryCase then pcall(TRT.CaseSync.ApplyRecoveryCase) end
     local case = TRT.getCurrentCase()
     trigger.action.outText("Recovery Rules Activated: CASE " .. case, 10)
 end
@@ -211,4 +215,4 @@ local function mainLoop()
 end
 
 timer.scheduleFunction(mainLoop, nil, timer.getTime() + 1)
-env.info("[Recovery_Approach] v1.0.3 loaded.")
+env.info("[Recovery_Approach] v1.0.4 loaded.")

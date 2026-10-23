@@ -162,3 +162,18 @@ a_at;APPROACH;at;tok
 a_dme_final;APPROACH;D M E, turn left to final bearing;tok
 p_abeam;PILOT;abeam,;tok:0.08
 p_wilco;PILOT;wilco.;tok
+# R5 (v1.5.0): 99 calls, Delta, time hack
+m_99;MARSHAL;nine nine,;tok:0.1
+m_mother_now;MARSHAL;Mother is now;tok
+m_new_fb;MARSHAL;new final bearing;tok
+m_turning;MARSHAL;Mother turning to;tok
+m_deck_closed;MARSHAL;recovery complete, deck is closed.;tok
+m_delta_hold;MARSHAL;Delta. Recovery paused, hold and conserve fuel, expect further instructions.;tok
+m_delta;MARSHAL;Delta;tok
+m_plus;MARSHAL;approach times plus;tok
+m_minutes;MARSHAL;minutes.;tok
+m_resume;MARSHAL;recovery resumed, commence at your approach time.;tok
+m_new_eat;MARSHAL;new expected approach time;tok
+m_time_hack;MARSHAL;stand by for time hack.;tok
+m_mark;MARSHAL;mark,;tok:0.1
+m_time;MARSHAL;time;tok

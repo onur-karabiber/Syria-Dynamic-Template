@@ -1,6 +1,19 @@
--- Airboss_CaseSync.lua | v1.0.4
+-- Airboss_CaseSync.lua | v1.0.7
 -- TRT Syria Recovery Framework - syncs TRT.Airboss recovery case to ME flag 100
 --
+-- v1.0.7: ApplyRecoveryCase exported as TRT.CaseSync.ApplyRecoveryCase (idempotent);
+--   Recovery_Approach v1.0.4 calls it when it arms, before announcing the case.
+-- v1.0.6: departure and recovery case are both planned in the ME:
+--   flag 100 = active case; set in the ME "CASE SELECTOR" = DEPARTURE case.
+--   flag 102 = RECOVERY case (1/2/3), also set in the ME at mission start.
+--   When recovery arms (flag 101, ME "Commence Recovery", ~51 NM inbound) this
+--   script copies flag 102 into flag 100 once. The usual rebuild below then
+--   moves AIRBOSS, Bankler and scoring to the recovery case, and CV_Comms
+--   v1.5.1 has Marshal announce it ("99, Mother is now CASE N recovery ...").
+--   Flag 102 unset / 0 -> recovery case = departure case (no change).
+-- v1.0.5: TRT.CaseSync.tRebuild = timer.getTime() at each window rebuild; CV_Comms
+--   v1.5.0 keeps AIRBOSS's "recovery stopped, deck closed" call silent right after a
+--   case change (the deck is not closing, the window is being replaced).
 -- v1.0.4: Bankler identity: its PlayerData uses fixed per-slot tables (Player_01 ->
 --   modex 200, "Chevy11"). Each poll now overwrites pd.modex with the unit's real
 --   onboard number (467) and pd.fixedCallsign with the DCS group callsign
@@ -150,7 +163,33 @@ local function BanklerSync(case)
   end
 end
 
+-- v1.0.6: recovery case (flag 102) applied once when recovery arms (flag 101)
+TRT.CaseSync.RECOVERY_CASE_FLAG = 102
+TRT.CaseSync.COMMENCE_FLAG      = 101
+local recoveryCaseApplied = false
+
+local function ApplyRecoveryCase()
+  if recoveryCaseApplied then return end
+  local arm = trigger.misc.getUserFlag(TRT.CaseSync.COMMENCE_FLAG)
+  if not (arm == true or (type(arm) == "number" and arm ~= 0)) then return end
+  recoveryCaseApplied = true
+  local r, cur = trigger.misc.getUserFlag(TRT.CaseSync.RECOVERY_CASE_FLAG), trigger.misc.getUserFlag(100)
+  if r == 1 or r == 2 or r == 3 then
+    if r ~= cur then
+      env.info(string.format("Airboss_CaseSync | recovery armed: flag 100 %s -> %d (recovery case, flag 102)", tostring(cur), r))
+      trigger.action.setUserFlag(100, r)
+    else
+      env.info(string.format("Airboss_CaseSync | recovery armed: recovery case %d = departure case", r))
+    end
+  else
+    env.info(string.format("Airboss_CaseSync | recovery armed: flag 102 = %s (unset) -> recovery case stays %s", tostring(r), tostring(cur)))
+  end
+end
+
+TRT.CaseSync.ApplyRecoveryCase = ApplyRecoveryCase   -- v1.0.7
+
 local function CheckFlag100(_, time)
+  pcall(ApplyRecoveryCase)
   pcall(BanklerSync, trigger.misc.getUserFlag(100))
 
   local current = trigger.misc.getUserFlag(100)
@@ -167,6 +206,7 @@ local function CheckFlag100(_, time)
         env.info(string.format("AIRBOSS CaseSync | flag 100 -> CASE %d (offset %d deg) -- rebuilding recovery window", current, offset))
       end
 
+      TRT.CaseSync.tRebuild = timer.getTime()   -- v1.0.5
       TRT.Airboss:DeleteAllRecoveryWindows()
       TRT.Airboss:AddRecoveryWindow(nil, WINDOW_STOP, current, offset)
 
@@ -184,4 +224,4 @@ end
 
 timer.scheduleFunction(CheckFlag100, nil, timer.getTime() + 5)
 
-env.info("Airboss_CaseSync | v1.0.4 | listening on flag 100")
+env.info("Airboss_CaseSync | v1.0.7 | listening on flag 100")
