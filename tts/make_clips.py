@@ -1,4 +1,4 @@
-# make_clips.py | v1.3.0
+# make_clips.py | v1.3.1
 # tts/clips.csv -> src/Sounds/CAS1/<id>.ogg  (Piper TTS + ffmpeg radio chain)
 # CV comms:  python tts/make_clips.py --set cv   (tts/cv_clips.csv -> src/Sounds/CV/,
 #            table tts/cv_audio_table.lua -> paste into CV_Comms CFG.AUDIO)
@@ -7,6 +7,7 @@
 #         python tts/make_clips.py str_m4_sour  (only the listed ids)
 #         python tts/make_clips.py --out DIR id (write to DIR, table untouched; A/B tests)
 #
+# v1.3.1: table len always 2 decimals (CAS1 set now chains token clips too).
 # v1.3.0: --set cv (CV_Comms clip set). Optional 4th csv field 'tok' = token clip:
 #         no squelch bursts, leading/trailing silence trimmed, short tail pad
 #         (pad = 4th field 'tok:0.25' for a comma pause). Text <KEYUP>/<KEYDOWN>
@@ -173,8 +174,7 @@ def main():
         if os.path.isfile(ogg):
             d = duration(ogg)
             ch = agency.partition('>')[2] or agency
-            fmt = '        %-22s = { ch = "%s", len = %.2f },' if a.set != 'cas1' else \
-                  '        %-22s = { ch = "%s", len = %.1f },'
+            fmt = '        %-22s = { ch = "%s", len = %.2f },'
             table.append(fmt % (cid, ch, d))
             print('OK       %-22s %5.1f s  %s' % (cid, d, agency))
     if not a.out:

@@ -1,8 +1,37 @@
--- CV_Comms | v1.2.1
+-- CV_Comms | v1.3.1
 --[[
   Carrier (CVN) departure / recovery radio — TRT Syria Dynamic Template
   Template-level module (not CAS-1 specific). Plan: project doc
   claude/cv-comms-gap-analysis.md (§5 decisions, §5.4 = this release, "R1").
+
+  v1.3.1 — groove fixes from the 2026-10-23 test
+    * Roger ball / Paddles contact: one subtitle (AIRBOSS "LSO: Roger ball, 23 knots,
+      axial.") instead of AIRBOSS "Roger ball." + a CV duplicate.
+    * Bolter / wave-off (CASE III): when AIRBOSS sends the hero back to Bolter Pattern /
+      Bullseye / Dirty Up after a Groove step, CV re-arms the ¾ mile call (GROOVE -> BALLWAIT), so the
+      next pass gets "call the ball" + roger ball again. The ¾ mile trigger now also
+      requires the aircraft to be astern (AIRBOSS _GetDistances X < sterndist) — after a
+      bolter the jet is over the deck, i.e. < 1 NM from the stern but not astern.
+      (Bolter-pattern radio = R4, not yet.)
+
+  v1.3.0 — D1: CASE III departure (Departure 269.00, voice lessac = Comms_Director's)
+    Armed by S_EVENT_TAKEOFF within 3 NM of the ship when the case is III
+    (TRT.getCurrentCase / flag 100). CASE I/II departures stay ZIPLIP (no calls).
+      auto  467: Departure, 467, airborne.        DEP: 467, radar contact, altimeter 2984.
+                                                   467: 467.
+      auto  >= 2,500 ft           467: 467, passing 2.5, Kilo.           DEP: 467, roger.
+      auto  arc (6.5-11.5 DME, heading >= 30 deg off the launch heading)
+                                  467: 467, arcing.                      DEP: 467, roger.
+      auto  on R-DEP_RADIAL +/-5 deg, >= 9 DME, heading within 30 deg
+                                  467: 467, established outbound.        DEP: 467, roger.
+      F10   >= 17,500 ft  "Departure: Popeye, angels NN"  -> DEP: 467, roger.
+      F10   >= 15,000 ft  "Departure: on top, angels NN"  -> DEP: 467, cleared to switch.
+                                                              467: 467.
+      fallback: >= DEP_FALLBACK_NM without "on top" -> DEP: 467, cleared to switch.
+    TRT.CV.depActive (true from takeoff until cleared) and TRT.CV_DEP_CLEARED tell
+    Comms_Director (v1.4.0) to skip its own 20 NM "switch Strike".
+    Exports TRT.CV_AUDIO / TRT.CV_SND_DIR so Comms_Director can chain the pilot
+    digit / letter tokens.
 
   v1.2.1 — commencing item label shows the time to EAT, refreshed every tick (2 s):
            "Marshal: commencing (EAT :32, T-1:20)" / "(EAT :32, T+0:15)".
@@ -113,7 +142,7 @@
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "1.2.1",
+    VERSION      = "1.3.1",
     PLAYER_UNIT  = "Player_01",
     CARRIER_UNIT = "CVN",
     MODEX        = "467",       -- fallback if AIRBOSS has no onboard number yet
@@ -126,6 +155,15 @@ local CFG = {
     SWITCH_APP_DME = 21,        -- ... or DME, whichever first
     SWITCH_APP_MIN = 10,        -- s after "radar contact" at the earliest
     PLATFORM_FT    = 5500,      -- "platform" offered below this (ft MSL; ship at sea level)
+    DEP_RADIAL     = 50,        -- CASE III departure radial (magnetic)
+    DEP_ARC_MIN    = 6.5,       -- DME window in which the turn onto the arc is detected
+    DEP_ARC_MAX    = 11.5,
+    DEP_ARC_TURN   = 30,        -- deg off the launch heading = turning onto the arc
+    DEP_RAD_TOL    = 5,         -- deg, "established outbound" on the departure radial
+    DEP_RAD_MIN    = 9,         -- DME, minimum for "established outbound"
+    POPEYE_FT      = 17500,     -- "Popeye" offered above this (mandatory at FL180 in IMC)
+    ONTOP_FT       = 15000,     -- "on top" offered above this
+    DEP_FALLBACK_NM= 30,        -- no "on top" by then -> Departure clears to switch anyway
     ACLS_NM        = 6.5,       -- "ACLS lock on, say needles" (DME)
     NEEDLES_TIMEOUT= 15,        -- s without a needles answer -> "fly bullseye"
     BALL_NM        = 1.0,       -- Approach starts "...three-quarter mile, call the ball" (NM from stern;
@@ -152,98 +190,148 @@ local CFG = {
     AUDIO = {
         sq_up                  = { ch = "MARSHAL", len = 0.07 },
         sq_dn                  = { ch = "MARSHAL", len = 0.12 },
-        m_0                    = { ch = "MARSHAL", len = 0.41 },
-        m_1                    = { ch = "MARSHAL", len = 0.28 },
+        m_0                    = { ch = "MARSHAL", len = 0.36 },
+        m_1                    = { ch = "MARSHAL", len = 0.29 },
         m_2                    = { ch = "MARSHAL", len = 0.27 },
         m_3                    = { ch = "MARSHAL", len = 0.34 },
-        m_4                    = { ch = "MARSHAL", len = 0.27 },
-        m_5                    = { ch = "MARSHAL", len = 0.34 },
-        m_6                    = { ch = "MARSHAL", len = 0.34 },
-        m_7                    = { ch = "MARSHAL", len = 0.42 },
-        m_8                    = { ch = "MARSHAL", len = 0.20 },
-        m_9                    = { ch = "MARSHAL", len = 0.34 },
-        m_vfr                  = { ch = "MARSHAL", len = 0.89 },
-        m_altimeter            = { ch = "MARSHAL", len = 0.45 },
-        m_case1                = { ch = "MARSHAL", len = 0.94 },
-        m_case2                = { ch = "MARSHAL", len = 1.69 },
-        m_case3                = { ch = "MARSHAL", len = 1.63 },
-        m_brc                  = { ch = "MARSHAL", len = 0.54 },
-        m_exp_brc              = { ch = "MARSHAL", len = 0.90 },
-        m_exp_fb               = { ch = "MARSHAL", len = 0.99 },
-        m_hold_angels          = { ch = "MARSHAL", len = 0.65 },
-        m_report_see_me        = { ch = "MARSHAL", len = 0.67 },
-        m_marshal_on           = { ch = "MARSHAL", len = 0.45 },
-        m_radial               = { ch = "MARSHAL", len = 0.36 },
-        m_dme                  = { ch = "MARSHAL", len = 0.52 },
-        m_angels               = { ch = "MARSHAL", len = 0.37 },
-        m_eat                  = { ch = "MARSHAL", len = 0.84 },
-        m_btn15                = { ch = "MARSHAL", len = 0.95 },
-        m_readback             = { ch = "MARSHAL", len = 0.61 },
+        m_4                    = { ch = "MARSHAL", len = 0.25 },
+        m_5                    = { ch = "MARSHAL", len = 0.36 },
+        m_6                    = { ch = "MARSHAL", len = 0.36 },
+        m_7                    = { ch = "MARSHAL", len = 0.35 },
+        m_8                    = { ch = "MARSHAL", len = 0.21 },
+        m_9                    = { ch = "MARSHAL", len = 0.33 },
+        m_vfr                  = { ch = "MARSHAL", len = 0.92 },
+        m_altimeter            = { ch = "MARSHAL", len = 0.41 },
+        m_case1                = { ch = "MARSHAL", len = 0.92 },
+        m_case2                = { ch = "MARSHAL", len = 1.77 },
+        m_case3                = { ch = "MARSHAL", len = 1.58 },
+        m_brc                  = { ch = "MARSHAL", len = 0.55 },
+        m_exp_brc              = { ch = "MARSHAL", len = 0.93 },
+        m_exp_fb               = { ch = "MARSHAL", len = 0.90 },
+        m_hold_angels          = { ch = "MARSHAL", len = 0.62 },
+        m_report_see_me        = { ch = "MARSHAL", len = 0.60 },
+        m_marshal_on           = { ch = "MARSHAL", len = 0.46 },
+        m_radial               = { ch = "MARSHAL", len = 0.38 },
+        m_dme                  = { ch = "MARSHAL", len = 0.51 },
+        m_angels               = { ch = "MARSHAL", len = 0.43 },
+        m_eat                  = { ch = "MARSHAL", len = 0.87 },
+        m_btn15                = { ch = "MARSHAL", len = 0.92 },
+        m_readback             = { ch = "MARSHAL", len = 0.64 },
         m_roger                = { ch = "MARSHAL", len = 0.35 },
-        m_go1                  = { ch = "MARSHAL", len = 1.07 },
-        p_0                    = { ch = "PILOT", len = 0.38 },
-        p_1                    = { ch = "PILOT", len = 0.27 },
-        p_2                    = { ch = "PILOT", len = 0.34 },
+        m_go1                  = { ch = "MARSHAL", len = 1.10 },
+        p_0                    = { ch = "PILOT", len = 0.35 },
+        p_1                    = { ch = "PILOT", len = 0.31 },
+        p_2                    = { ch = "PILOT", len = 0.33 },
         p_3                    = { ch = "PILOT", len = 0.27 },
-        p_4                    = { ch = "PILOT", len = 0.37 },
-        p_5                    = { ch = "PILOT", len = 0.35 },
-        p_6                    = { ch = "PILOT", len = 0.38 },
-        p_7                    = { ch = "PILOT", len = 0.32 },
-        p_8                    = { ch = "PILOT", len = 0.22 },
-        p_9                    = { ch = "PILOT", len = 0.40 },
-        p_point                = { ch = "PILOT", len = 0.32 },
-        p_marshal              = { ch = "PILOT", len = 0.42 },
-        p_marking              = { ch = "PILOT", len = 0.62 },
-        p_for                  = { ch = "PILOT", len = 0.31 },
+        p_4                    = { ch = "PILOT", len = 0.36 },
+        p_5                    = { ch = "PILOT", len = 0.33 },
+        p_6                    = { ch = "PILOT", len = 0.37 },
+        p_7                    = { ch = "PILOT", len = 0.37 },
+        p_8                    = { ch = "PILOT", len = 0.25 },
+        p_9                    = { ch = "PILOT", len = 0.35 },
+        p_point                = { ch = "PILOT", len = 0.31 },
+        p_marshal              = { ch = "PILOT", len = 0.46 },
+        p_marking              = { ch = "PILOT", len = 0.63 },
+        p_for                  = { ch = "PILOT", len = 0.32 },
         p_angels               = { ch = "PILOT", len = 0.47 },
-        p_state                = { ch = "PILOT", len = 0.37 },
-        p_established          = { ch = "PILOT", len = 0.85 },
-        p_see_you              = { ch = "PILOT", len = 0.66 },
-        p_marshal_on           = { ch = "PILOT", len = 0.50 },
-        p_approach_time        = { ch = "PILOT", len = 0.55 },
-        p_btn15                = { ch = "PILOT", len = 0.53 },
-        m_radar_fb             = { ch = "MARSHAL", len = 1.20 },
-        m_switch_app           = { ch = "MARSHAL", len = 1.26 },
-        a_0                    = { ch = "APPROACH", len = 0.37 },
-        a_1                    = { ch = "APPROACH", len = 0.31 },
-        a_2                    = { ch = "APPROACH", len = 0.27 },
-        a_3                    = { ch = "APPROACH", len = 0.26 },
-        a_4                    = { ch = "APPROACH", len = 0.28 },
+        p_state                = { ch = "PILOT", len = 0.38 },
+        p_established          = { ch = "PILOT", len = 0.93 },
+        p_see_you              = { ch = "PILOT", len = 0.73 },
+        p_marshal_on           = { ch = "PILOT", len = 0.51 },
+        p_approach_time        = { ch = "PILOT", len = 0.58 },
+        p_btn15                = { ch = "PILOT", len = 0.56 },
+        m_radar_fb             = { ch = "MARSHAL", len = 1.34 },
+        m_switch_app           = { ch = "MARSHAL", len = 1.09 },
+        a_0                    = { ch = "APPROACH", len = 0.31 },
+        a_1                    = { ch = "APPROACH", len = 0.29 },
+        a_2                    = { ch = "APPROACH", len = 0.26 },
+        a_3                    = { ch = "APPROACH", len = 0.27 },
+        a_4                    = { ch = "APPROACH", len = 0.25 },
         a_5                    = { ch = "APPROACH", len = 0.26 },
-        a_6                    = { ch = "APPROACH", len = 0.37 },
-        a_7                    = { ch = "APPROACH", len = 0.38 },
-        a_8                    = { ch = "APPROACH", len = 0.19 },
-        a_9                    = { ch = "APPROACH", len = 0.32 },
-        a_approach             = { ch = "APPROACH", len = 0.45 },
-        a_radar_contact        = { ch = "APPROACH", len = 0.63 },
-        a_final_bearing        = { ch = "APPROACH", len = 0.53 },
-        a_roger                = { ch = "APPROACH", len = 0.37 },
+        a_6                    = { ch = "APPROACH", len = 0.34 },
+        a_7                    = { ch = "APPROACH", len = 0.34 },
+        a_8                    = { ch = "APPROACH", len = 0.20 },
+        a_9                    = { ch = "APPROACH", len = 0.31 },
+        a_approach             = { ch = "APPROACH", len = 0.47 },
+        a_radar_contact        = { ch = "APPROACH", len = 0.70 },
+        a_final_bearing        = { ch = "APPROACH", len = 0.52 },
+        a_roger                = { ch = "APPROACH", len = 0.34 },
         a_go1                  = { ch = "APPROACH", len = 1.13 },
-        p_commencing           = { ch = "PILOT", len = 0.46 },
-        p_approach             = { ch = "PILOT", len = 0.48 },
-        p_checking_in          = { ch = "PILOT", len = 0.60 },
-        p_miles                = { ch = "PILOT", len = 0.40 },
-        p_platform             = { ch = "PILOT", len = 0.45 },
-        a_acls                 = { ch = "APPROACH", len = 0.99 },
-        a_miles                = { ch = "APPROACH", len = 0.43 },
+        p_commencing           = { ch = "PILOT", len = 0.57 },
+        p_approach             = { ch = "PILOT", len = 0.50 },
+        p_checking_in          = { ch = "PILOT", len = 0.63 },
+        p_miles                = { ch = "PILOT", len = 0.42 },
+        p_platform             = { ch = "PILOT", len = 0.48 },
+        a_acls                 = { ch = "APPROACH", len = 0.98 },
+        a_miles                = { ch = "APPROACH", len = 0.44 },
         a_say_needles          = { ch = "APPROACH", len = 0.57 },
         a_concur               = { ch = "APPROACH", len = 0.89 },
-        a_bullseye             = { ch = "APPROACH", len = 0.53 },
-        a_gp_on                = { ch = "APPROACH", len = 0.51 },
-        a_gp_sl_above          = { ch = "APPROACH", len = 0.85 },
-        a_gp_above             = { ch = "APPROACH", len = 0.56 },
-        a_gp_sl_below          = { ch = "APPROACH", len = 0.82 },
-        a_gp_below             = { ch = "APPROACH", len = 0.56 },
-        a_crs_on               = { ch = "APPROACH", len = 0.45 },
-        a_crs_sl_left          = { ch = "APPROACH", len = 0.82 },
-        a_crs_left             = { ch = "APPROACH", len = 0.62 },
-        a_crs_sl_right         = { ch = "APPROACH", len = 0.87 },
-        a_crs_right            = { ch = "APPROACH", len = 0.62 },
-        a_3q_ball              = { ch = "APPROACH", len = 1.20 },
-        p_up_on                = { ch = "PILOT", len = 0.54 },
-        p_neg_needles          = { ch = "PILOT", len = 0.96 },
-        p_hornet_ball          = { ch = "PILOT", len = 0.62 },
-        p_clara                = { ch = "PILOT", len = 0.29 },
+        a_bullseye             = { ch = "APPROACH", len = 0.55 },
+        a_gp_on                = { ch = "APPROACH", len = 0.45 },
+        a_gp_sl_above          = { ch = "APPROACH", len = 0.75 },
+        a_gp_above             = { ch = "APPROACH", len = 0.55 },
+        a_gp_sl_below          = { ch = "APPROACH", len = 0.78 },
+        a_gp_below             = { ch = "APPROACH", len = 0.58 },
+        a_crs_on               = { ch = "APPROACH", len = 0.46 },
+        a_crs_sl_left          = { ch = "APPROACH", len = 0.84 },
+        a_crs_left             = { ch = "APPROACH", len = 0.55 },
+        a_crs_sl_right         = { ch = "APPROACH", len = 0.90 },
+        a_crs_right            = { ch = "APPROACH", len = 0.60 },
+        a_3q_ball              = { ch = "APPROACH", len = 1.13 },
+        p_up_on                = { ch = "PILOT", len = 0.78 },
+        p_neg_needles          = { ch = "PILOT", len = 0.83 },
+        p_hornet_ball          = { ch = "PILOT", len = 0.49 },
+        p_clara                = { ch = "PILOT", len = 0.31 },
+        d_0                    = { ch = "DEPARTURE", len = 0.31 },
+        d_1                    = { ch = "DEPARTURE", len = 0.26 },
+        d_2                    = { ch = "DEPARTURE", len = 0.23 },
+        d_3                    = { ch = "DEPARTURE", len = 0.27 },
+        d_4                    = { ch = "DEPARTURE", len = 0.26 },
+        d_5                    = { ch = "DEPARTURE", len = 0.30 },
+        d_6                    = { ch = "DEPARTURE", len = 0.31 },
+        d_7                    = { ch = "DEPARTURE", len = 0.31 },
+        d_8                    = { ch = "DEPARTURE", len = 0.26 },
+        d_9                    = { ch = "DEPARTURE", len = 0.34 },
+        d_radar_alt            = { ch = "DEPARTURE", len = 1.08 },
+        d_roger                = { ch = "DEPARTURE", len = 0.33 },
+        d_cleared              = { ch = "DEPARTURE", len = 0.56 },
+        p_departure            = { ch = "PILOT", len = 0.46 },
+        p_airborne             = { ch = "PILOT", len = 0.44 },
+        p_passing              = { ch = "PILOT", len = 0.37 },
+        p_kilo                 = { ch = "PILOT", len = 0.33 },
+        p_arcing               = { ch = "PILOT", len = 0.38 },
+        p_est_out              = { ch = "PILOT", len = 0.73 },
+        p_popeye               = { ch = "PILOT", len = 0.37 },
+        p_on_top               = { ch = "PILOT", len = 0.40 },
+        p_and                  = { ch = "PILOT", len = 0.28 },
+        p_local                = { ch = "PILOT", len = 0.37 },
+        p_unknown              = { ch = "PILOT", len = 0.44 },
+        p_l_a                  = { ch = "PILOT", len = 0.35 },
+        p_l_b                  = { ch = "PILOT", len = 0.42 },
+        p_l_c                  = { ch = "PILOT", len = 0.33 },
+        p_l_d                  = { ch = "PILOT", len = 0.35 },
+        p_l_e                  = { ch = "PILOT", len = 0.36 },
+        p_l_f                  = { ch = "PILOT", len = 0.45 },
+        p_l_g                  = { ch = "PILOT", len = 0.28 },
+        p_l_h                  = { ch = "PILOT", len = 0.38 },
+        p_l_i                  = { ch = "PILOT", len = 0.46 },
+        p_l_j                  = { ch = "PILOT", len = 0.38 },
+        p_l_k                  = { ch = "PILOT", len = 0.28 },
+        p_l_l                  = { ch = "PILOT", len = 0.41 },
+        p_l_m                  = { ch = "PILOT", len = 0.31 },
+        p_l_n                  = { ch = "PILOT", len = 0.51 },
+        p_l_o                  = { ch = "PILOT", len = 0.39 },
+        p_l_p                  = { ch = "PILOT", len = 0.45 },
+        p_l_q                  = { ch = "PILOT", len = 0.37 },
+        p_l_r                  = { ch = "PILOT", len = 0.49 },
+        p_l_s                  = { ch = "PILOT", len = 0.42 },
+        p_l_t                  = { ch = "PILOT", len = 0.39 },
+        p_l_u                  = { ch = "PILOT", len = 0.44 },
+        p_l_v                  = { ch = "PILOT", len = 0.39 },
+        p_l_w                  = { ch = "PILOT", len = 0.28 },
+        p_l_x                  = { ch = "PILOT", len = 0.48 },
+        p_l_y                  = { ch = "PILOT", len = 0.35 },
+        p_l_z                  = { ch = "PILOT", len = 0.41 },
     },
 
     -- AIRBOSS calls dropped in every case (CV_Comms makes them)
@@ -282,9 +370,13 @@ local CV = {
     tPhase     = 0,         -- timer.getTime() of the last phase change
     allowRB    = false,     -- let one LSO "Roger ball" through (CV plays it)
     origRT     = nil,       -- AIRBOSS:RadioTransmission before the override
+    depActive  = false,     -- CASE III departure in progress (Comms_Director reads it)
+    dep        = nil,       -- { hdg0, popeye, ontop }
 }
 _G.TRT = _G.TRT or {}
 TRT.CV = CV
+TRT.CV_AUDIO   = CFG.AUDIO     -- shared token clips (Comms_Director v1.4.0)
+TRT.CV_SND_DIR = CFG.SND_DIR
 
 -- ══════════════════════════════════════════════════════════════
 --  UTILITIES
@@ -619,6 +711,15 @@ local function A_Platform()
 end
 
 -- ── R3: final ─────────────────────────────────────────────────
+--- True when the hero is astern of the ship (AIRBOSS geometry; groove side).
+local function Astern()
+    local pd, ab = HeroPD(), AB()
+    if not (pd and ab) then return true end
+    local ok, X = pcall(ab._GetDistances, ab, pd.unit)
+    if not ok or not X then return true end
+    return X < ((ab.carrierparam and ab.carrierparam.sterndist) or 0)
+end
+
 --- NM from the carrier stern (AIRBOSS geometry), fallback ship centre.
 local function SternNM()
     local pd, ab, u, s = HeroPD(), AB(), Hero(), Ship()
@@ -692,11 +793,16 @@ local function C_CallBall()
 end
 
 --- Raynor LSO transmission that bypasses the drop filter.
-local function LsoRaw(call)
+local function LsoRaw(call, subtitle)
     local ab = AB()
     if not (ab and CV.origRT and call) then return end
+    local c = call
+    if subtitle then
+        local ok, cp = pcall(function() return UTILS.DeepCopy(call) end)
+        if ok and cp then cp.subtitle = subtitle; c = cp end
+    end
     CV.allowRB = true
-    pcall(CV.origRT, ab, ab.LSORadio, call, false)
+    pcall(CV.origRT, ab, ab.LSORadio, c, false)
     CV.allowRB = false
 end
 
@@ -711,10 +817,9 @@ local function A_Ball(auto)
             local kts, cross = nil, 0
             local ok, ax, cr = pcall(ab.GetWindOnDeck, ab)
             if ok and ax then kts = math.floor(ax * 1.94384 + 0.5); cross = math.floor(math.abs(cr or 0) * 1.94384 + 0.5) end
-            LsoRaw(ab.LSOCall.ROGERBALL)
-            if kts and kts > 0 then pcall(ab._Number2Radio, ab, ab.LSORadio, tostring(kts)) end
-            Msg(string.format("[PADDLES · APPROACH %.2f] Roger ball%s.", CFG.CHAN.APPROACH.hz / 1e6,
+            LsoRaw(ab.LSOCall.ROGERBALL, string.format("Roger ball%s.",
                 kts and string.format(", %d knots%s", kts, (cross > 2) and string.format(" (cross %d kt)", cross) or ", axial") or ""))
+            if kts and kts > 0 then pcall(ab._Number2Radio, ab, ab.LSORadio, tostring(kts)) end
         end)
 end
 
@@ -723,9 +828,121 @@ local function A_Clara()
     local m, ab = Modex(), AB()
     SetPhase("GROOVE")
     Pilot("APPROACH", Seq(D("p", m), CFG.P, "p_clara"), string.format("%s, Clara.", m), function()
-        LsoRaw(ab.LSOCall.PADDLESCONTACT)
-        Msg(string.format("[PADDLES · APPROACH %.2f] Paddles contact.", CFG.CHAN.APPROACH.hz / 1e6))
+        LsoRaw(ab.LSOCall.PADDLESCONTACT, "Paddles contact.")
     end)
+end
+
+-- ── D1: CASE III departure ─────────────────────────────────────
+local function MagHdg(u)
+    local ab = AB()
+    local pos = u:getPosition()
+    local h = math.deg(math.atan2(pos.x.z, pos.x.x)) % 360
+    return (h - ((ab and ab.magvar) or 0)) % 360
+end
+
+local function MagRadial(u, s)
+    local ab = AB()
+    local up, sp = u:getPoint(), s:getPoint()
+    return (math.deg(math.atan2(up.z - sp.z, up.x - sp.x)) - ((ab and ab.magvar) or 0)) % 360
+end
+
+local function ADiff(a, b) local d = (a - b + 540) % 360 - 180; return d end
+
+local function DepAck(text)   -- Departure "467, roger."
+    local m = Modex()
+    Q("DEPARTURE", "DEPARTURE", Seq(D("d", m), CFG.P, "d_roger"), string.format("%s, roger.", m), nil, 0.8)
+end
+
+local function DepCleared()
+    local m = Modex()
+    if CV.phase == "IDLE" then return end
+    Q("DEPARTURE", "DEPARTURE", Seq(D("d", m), CFG.P, "d_cleared"), string.format("%s, cleared to switch.", m),
+        function()
+            Pilot("DEPARTURE", D("p", m), string.format("%s.", m), function()
+                TRT.CV_DEP_CLEARED = true
+                CV.depActive = false
+                Msg("[CV] Departure complete — switch Strike.", 8)
+            end)
+        end, 0.8)
+    SetPhase("IDLE")
+end
+
+local function DepStart()
+    local u, ab = Hero(), AB()
+    if not u then return end
+    local m = Modex()
+    CV.dep = { hdg0 = MagHdg(u) }
+    CV.depActive, TRT.CV_DEP_CLEARED = true, false
+    SetPhase("DEP_AIR")
+    local alt4 = "2992"
+    if ab then
+        local ok, p = pcall(function() return UTILS.hPa2inHg(ab:GetCoordinate():GetPressure()) end)
+        if ok and p then alt4 = Alt4(p) end
+    end
+    Pilot("DEPARTURE", Seq("p_departure", D("p", m), CFG.P, "p_airborne"),
+        string.format("Departure, %s, airborne.", m), function()
+            Q("DEPARTURE", "DEPARTURE", Seq(D("d", m), CFG.P, "d_radar_alt", D("d", alt4)),
+                string.format("%s, radar contact, altimeter %s.%s.", m, alt4:sub(1, 2), alt4:sub(3, 4)),
+                function() Pilot("DEPARTURE", D("p", m), string.format("%s.", m)) end, 0.8)
+        end)
+    SetPhase("DEP_CLIMB")
+end
+
+local function DepReport(seq, text, nextPhase)
+    local m = Modex()
+    Pilot("DEPARTURE", Seq(D("p", m), CFG.P, seq), string.format("%s, %s", m, text), function() DepAck() end)
+    SetPhase(nextPhase)
+end
+
+local function DepTick(u, s, d)
+    local ph = CV.phase
+    if CV.busy then return end
+    local altFt = u:getPoint().y * 3.28084
+    if ph == "DEP_CLIMB" and altFt >= 2500 then
+        DepReport(Seq("p_passing", D("p", "2"), "p_point", D("p", "5"), CFG.P, "p_kilo"), "passing 2.5, Kilo.", "DEP_ARC")
+        return
+    end
+    if ph == "DEP_ARC" or ph == "DEP_RADIAL" then
+        local onRadial = math.abs(ADiff(MagRadial(u, s), CFG.DEP_RADIAL)) <= CFG.DEP_RAD_TOL
+            and d >= CFG.DEP_RAD_MIN and math.abs(ADiff(MagHdg(u), CFG.DEP_RADIAL)) <= 30
+        if onRadial then
+            DepReport("p_est_out", "established outbound.", "DEP_OUT")
+            return
+        end
+        if ph == "DEP_ARC" and d >= CFG.DEP_ARC_MIN and d <= CFG.DEP_ARC_MAX
+           and math.abs(ADiff(MagHdg(u), CV.dep.hdg0)) >= CFG.DEP_ARC_TURN then
+            DepReport("p_arcing", "arcing.", "DEP_RADIAL")
+            return
+        end
+    end
+    if d >= CFG.DEP_FALLBACK_NM then DepCleared() end
+end
+
+local function A_Popeye()
+    local u = Hero(); if not u then return end
+    local a = tostring(math.floor(u:getPoint().y * 3.28084 / 1000 + 0.5))
+    CV.dep.popeye = true
+    local m = Modex()
+    Pilot("DEPARTURE", Seq(D("p", m), CFG.P, "p_popeye", "p_angels", D("p", a)),
+        string.format("%s, Popeye, angels %s.", m, a), function() DepAck() end)
+end
+
+local function A_OnTop()
+    local u = Hero(); if not u then return end
+    local a = tostring(math.floor(u:getPoint().y * 3.28084 / 1000 + 0.5))
+    CV.dep.ontop = true
+    local m = Modex()
+    Pilot("DEPARTURE", Seq(D("p", m), CFG.P, "p_on_top", "p_angels", D("p", a)),
+        string.format("%s, on top, angels %s.", m, a), function() DepCleared() end)
+end
+
+local function CaseNow()
+    if TRT.getCurrentCase then
+        local ok, c = pcall(TRT.getCurrentCase)
+        if ok and c then return c end
+    end
+    local f = trigger.misc.getUserFlag(100)
+    return (f == 1 or f == 2 or f == 3) and f or 3
 end
 
 --- Marshal reply (from the _MarshalCallArrived override).
@@ -789,6 +1006,18 @@ local function Actions()
     if (CV.busy and CV.phase ~= "BALL") or not (u and s) then return a end
     local d = DistNM(u:getPoint(), s:getPoint())
     local ph = CV.phase
+    if ph:sub(1, 4) == "DEP_" and ph ~= "DEP_AIR" and CV.dep then
+        local altFt = u:getPoint().y * 3.28084
+        if altFt >= CFG.POPEYE_FT and not CV.dep.popeye and not CV.dep.ontop then
+            a[#a + 1] = { string.format("Departure %.2f: Popeye, angels %d", CFG.CHAN.DEPARTURE.hz / 1e6,
+                math.floor(altFt / 1000 + 0.5)), A_Popeye }
+        end
+        if altFt >= CFG.ONTOP_FT and not CV.dep.ontop then
+            a[#a + 1] = { string.format("Departure %.2f: on top, angels %d", CFG.CHAN.DEPARTURE.hz / 1e6,
+                math.floor(altFt / 1000 + 0.5)), A_OnTop }
+        end
+        return a
+    end
     if ph == "CHECKIN" then
         a[#a + 1] = { string.format("Marshal %.2f: check in (inbound)", CFG.CHAN.MARSHAL.hz / 1e6), A_CheckIn }
     elseif ph == "READBACK" then
@@ -953,6 +1182,7 @@ end
 -- ══════════════════════════════════════════════════════════════
 local function Reset(reason)
     CV.q, CV.clr, CV.case, CV.tRadar, CV.tBallAsk = {}, nil, nil, nil, nil
+    CV.dep, CV.depActive, CV.sawGroove = nil, false, false
     CV.wasOutside = false
     SetPhase("IDLE")
     Log("reset (" .. reason .. ")")
@@ -966,6 +1196,14 @@ function EH:onEvent(e)
     if e.id == world.event.S_EVENT_TAKEOFF then
         CV.air, CV.tAir = true, timer.getTime()
         Reset("takeoff")
+        local u, s = Hero(), Ship()
+        if u and s and DistNM(u:getPoint(), s:getPoint()) <= 3 then
+            local c = CaseNow()
+            Log("carrier launch, CASE " .. tostring(c))
+            if c == 3 then
+                timer.scheduleFunction(function() pcall(DepStart) end, nil, timer.getTime() + 2)
+            end
+        end
     elseif e.id == world.event.S_EVENT_LAND then
         CV.air = false
         Reset("landed")
@@ -984,7 +1222,10 @@ local function Tick(_, t)
         if not CV.air and u:inAir() then CV.air, CV.tAir = true, timer.getTime() end
         local d = DistNM(u:getPoint(), s:getPoint())
         if d > CFG.CCA_NM then CV.wasOutside = true end
-        if CV.phase == "IDLE" and CV.air and d <= CFG.CCA_NM then
+        local pd = HeroPD()
+        if CV.phase:sub(1, 4) == "DEP_" and CV.phase ~= "DEP_AIR" then
+            DepTick(u, s, d)
+        elseif CV.phase == "IDLE" and CV.air and d <= CFG.CCA_NM and not CV.depActive then
             local long = CV.tAir and (timer.getTime() - CV.tAir) >= CFG.ARM_AIRBORNE
             if CV.wasOutside or long then SetPhase("CHECKIN") end
         elseif CV.phase == "CHECKIN_SENT" and not CV.busy and not CV.replied then
@@ -997,12 +1238,18 @@ local function Tick(_, t)
             C_AclsLock()
         elseif CV.phase == "NEEDLES" and not CV.busy and timer.getTime() - CV.tPhase >= CFG.NEEDLES_TIMEOUT then
             C_FlyBullseye()
-        elseif CV.phase == "BALLWAIT" and SternNM() <= CFG.BALL_NM then
+        elseif CV.phase == "GROOVE" and pd and type(pd.step) == "string" and pd.step:sub(1, 6) == "Groove" then
+            CV.sawGroove = true
+        elseif CV.phase == "GROOVE" and CV.sawGroove and pd and (pd.step == AIRBOSS.PatternStep.BOLTER
+               or pd.step == AIRBOSS.PatternStep.BULLSEYE or pd.step == AIRBOSS.PatternStep.DIRTYUP) then
+            Log("bolter / wave-off -> BALLWAIT (AIRBOSS step " .. tostring(pd.step) .. ")")
+            CV.sawGroove = false
+            SetPhase("BALLWAIT")
+        elseif CV.phase == "BALLWAIT" and SternNM() <= CFG.BALL_NM and Astern() then
             C_CallBall()
         elseif CV.phase == "BALL" and CV.tBallAsk and timer.getTime() - CV.tBallAsk >= CFG.BALL_AUTO then
             A_Ball(true)
         end
-        local pd = HeroPD()
         if pd then
             if pd.step ~= CV.abStep then
                 Log("AIRBOSS step " .. tostring(CV.abStep) .. " -> " .. tostring(pd.step)

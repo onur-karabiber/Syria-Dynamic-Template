@@ -103,3 +103,55 @@ p_up_on;PILOT;up and on.;tok
 p_neg_needles;PILOT;negative needles.;tok
 p_hornet_ball;PILOT;Hornet ball,;tok:0.08
 p_clara;PILOT;Clara.;tok
+# ── D1 (CV_Comms v1.3.0): CASE III departure. DEPARTURE = lessac (same voice as Comms_Director)
+d_0;DEPARTURE;zero;tok
+d_1;DEPARTURE;one;tok
+d_2;DEPARTURE;two;tok
+d_3;DEPARTURE;three;tok
+d_4;DEPARTURE;four;tok
+d_5;DEPARTURE;five;tok
+d_6;DEPARTURE;six;tok
+d_7;DEPARTURE;seven;tok
+d_8;DEPARTURE;eight;tok
+d_9;DEPARTURE;niner;tok
+d_radar_alt;DEPARTURE;radar contact, altimeter;tok
+d_roger;DEPARTURE;roger.;tok
+d_cleared;DEPARTURE;cleared to switch.;tok
+p_departure;PILOT;Departure,;tok:0.1
+p_airborne;PILOT;airborne.;tok
+p_passing;PILOT;passing;tok
+p_kilo;PILOT;Kilo.;tok
+p_arcing;PILOT;arcing.;tok
+p_est_out;PILOT;established outbound.;tok
+p_popeye;PILOT;Popeye,;tok:0.08
+p_on_top;PILOT;on top,;tok:0.08
+# ── generic pilot tokens (also used by Comms_Director v1.4.0 via TRT.CV_AUDIO)
+p_and;PILOT;and;tok
+p_local;PILOT;local;tok
+p_unknown;PILOT;unknown;tok
+p_l_a;PILOT;alfa;tok
+p_l_b;PILOT;bravo;tok
+p_l_c;PILOT;charlie;tok
+p_l_d;PILOT;delta;tok
+p_l_e;PILOT;echo;tok
+p_l_f;PILOT;foxtrot;tok
+p_l_g;PILOT;golf;tok
+p_l_h;PILOT;hotel;tok
+p_l_i;PILOT;india;tok
+p_l_j;PILOT;juliet;tok
+p_l_k;PILOT;kilo;tok
+p_l_l;PILOT;lima;tok
+p_l_m;PILOT;mike;tok
+p_l_n;PILOT;november;tok
+p_l_o;PILOT;oscar;tok
+p_l_p;PILOT;papa;tok
+p_l_q;PILOT;quebec;tok
+p_l_r;PILOT;romeo;tok
+p_l_s;PILOT;sierra;tok
+p_l_t;PILOT;tango;tok
+p_l_u;PILOT;uniform;tok
+p_l_v;PILOT;victor;tok
+p_l_w;PILOT;whiskey;tok
+p_l_x;PILOT;x-ray;tok
+p_l_y;PILOT;yankee;tok
+p_l_z;PILOT;zulu;tok

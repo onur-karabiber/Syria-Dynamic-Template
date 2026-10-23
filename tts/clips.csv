@@ -1,7 +1,5 @@
 # id;agency;spoken text  (only the STATIC part; bearings, ranges, angels, MGRS, TOT stay on-screen)
 dep_switch_strike;DEPARTURE;Hornet five one, Departure. Switch Strike, two six five decimal zero.
-ovl_contact_pointer;OVERLORD;Hornet five one, Overlord. Pointer one one is on station. Contact Pointer one one, three three three decimal three. Return to this frequency on check-out.
-ovl_switch_strike;OVERLORD;Hornet five one, Overlord. Switch Strike, two six five decimal zero.
 str_switch_marshal;STRIKE;Hornet five one, Strike. Switch Marshal, two six one decimal zero.
 eye_area_clear;EYEBALL;Hornet five one, target area clear. Continue as briefed.
 str_radar_contact;STRIKE;Hornet five one, Strike, radar contact. Check Mode four.
@@ -9,12 +7,8 @@ str_m4_sweet_ovl;STRIKE;Hornet five one, Mode four sweet. Kilo copied. Switch Ov
 str_m4_sour;STRIKE;Hornet five one, Mode four sour. Recycle.
 str_m4_sweet_now;STRIKE;Hornet five one, Strike. Mode four sweet now.
 str_kilo_ovl;STRIKE;Hornet five one, Kilo copied. Switch Overlord, two five one decimal one.
-ovl_checkin;OVERLORD;Hornet five one, Overlord, radar contact. Picture clean. Mission as fragged, Pointer one one and Eyeball one one on station. Proceed C P Tiger. SAM activity reported in both target areas, hard deck two three thousand. Report feet dry.
-ovl_off_pointer;OVERLORD;Hornet five one, Overlord, copy. Return to C P Tiger. Eyeball one one is on station. Contact Eyeball one one, three three three decimal four.
-ovl_inflrep;OVERLORD;Hornet five one, Overlord, copy INFLTREP. Texaco one one, TACAN two one Yankee. Switch Texaco, two five two decimal one.
 tkr_checkin;TEXACO;Hornet five one, Texaco one one, angels fifteen. Cleared to join, left observation. Port drogue, call pre-contact.
 tkr_done;TEXACO;Hornet five one, Texaco one one, offload complete. Cleared to depart, return to Overlord, two five one decimal one.
-ovl_rtb;OVERLORD;Hornet five one, Overlord, RTB approved. Recover via the zero five zero return corridor. Report feet wet.
 str_inbound;STRIKE;Hornet five one, Strike, radar contact, Mode four sweet. Continue the zero five zero corridor. Switch Marshal at fifty miles, two six one decimal zero.
 ovl_feet_dry;OVERLORD;Hornet five one, Overlord, copy feet dry.
 ovl_feet_wet;OVERLORD;Hornet five one, Overlord, copy feet wet.
@@ -30,14 +24,56 @@ eye_abort;EYEBALL;Hornet five one, abort, abort, abort. Civilian vehicle in targ
 eye_manpads;EYEBALL;Hornet five one, MANPADS launch observed one klick east of the target. Remain at or above hard deck, two three thousand MSL.
 str_corridor;STRIKE;Hornet five one, Strike. You are outside the return corridor. Turn now for the zero five zero radial.
 # HORNET 51 (pilot) — static part only; angels, state, MGRS, TOT stay on-screen
-p_str_checkin_out;PILOT>STRIKE;Strike, Hornet five one, checking in outbound, Kilo.
-p_ovl_checkin;PILOT>OVERLORD;Overlord, Hornet five one, checking in as fragged, mission four one zero one and four one zero two.
-p_ovl_off_pointer;PILOT>OVERLORD;Overlord, Hornet five one, off Pointer one one, mission four one zero one complete. Ready for retasking.
-p_ovl_inflrep;PILOT>OVERLORD;Overlord, Hornet five one, INFLTREP.
-p_tkr_checkin;PILOT>TEXACO;Texaco one one, Hornet five one, checking in.
-p_ovl_rtb_tkr;PILOT>OVERLORD;Overlord, Hornet five one, off Texaco, RTB.
-p_ovl_rtb_notkr;PILOT>OVERLORD;Overlord, Hornet five one, no tanker required, RTB.
-p_str_inbound;PILOT>STRIKE;Strike, Hornet five one, inbound.
 p_ovl_feet_dry;PILOT>OVERLORD;Overlord, Hornet five one, feet dry.
 p_ovl_feet_wet;PILOT>OVERLORD;Overlord, Hornet five one, feet wet.
 p_ovl_picture;PILOT>OVERLORD;Overlord, Hornet five one, request picture.
+# ── v1.4.0 (Comms_Director): token clips chained with pilot digits from the CV set
+# (cv:p_*, TRT.CV_AUDIO). Mode 'tok' = no squelch bursts; sequences add cv:sq_up / cv:sq_dn.
+o_0;OVERLORD;zero;tok
+o_1;OVERLORD;one;tok
+o_2;OVERLORD;two;tok
+o_3;OVERLORD;three;tok
+o_4;OVERLORD;four;tok
+o_5;OVERLORD;five;tok
+o_6;OVERLORD;six;tok
+o_7;OVERLORD;seven;tok
+o_8;OVERLORD;eight;tok
+o_9;OVERLORD;niner;tok
+o_bears;OVERLORD;bears;tok
+o_for;OVERLORD;for;tok:0.1
+o_angels;OVERLORD;angels;tok
+o_mother;OVERLORD;Mother;tok
+ovl_checkin_a;OVERLORD;Hornet five one, Overlord, radar contact. Picture clean. Mission as fragged, Pointer one one and Eyeball one one on station. Proceed C P Tiger,;tok:0.1
+ovl_checkin_b;OVERLORD;SAM activity reported in both target areas, hard deck two three thousand M S L in the engagement area. Report feet dry.;tok
+ovl_contact_pointer_a;OVERLORD;Hornet five one, Overlord. C P Tiger;tok:0.05
+ovl_contact_pointer_b;OVERLORD;Pointer one one is on station. Contact Pointer one one, three three three decimal three. Return to this frequency on check-out.;tok
+ovl_off_pointer_a;OVERLORD;Hornet five one, Overlord, copy. Return to C P Tiger,;tok:0.05
+ovl_off_pointer_b;OVERLORD;Eyeball one one is on station. Contact Eyeball one one, three three three decimal four.;tok
+ovl_switch_strike_a;OVERLORD;Hornet five one, Overlord,;tok:0.1
+ovl_switch_strike_b;OVERLORD;Switch Strike, two six five decimal zero.;tok
+ovl_rtb_a;OVERLORD;Hornet five one, Overlord, RTB approved.;tok:0.15
+ovl_rtb_b;OVERLORD;Recover via the zero five zero return corridor. Report feet wet.;tok
+ovl_inflrep_a;OVERLORD;Hornet five one, Overlord, copy INFLTREP. Texaco one one;tok:0.05
+ovl_inflrep_b;OVERLORD;TACAN two one Yankee. Switch Texaco, two five two decimal one.;tok
+ovl_inflrep_nt;OVERLORD;Hornet five one, Overlord, copy INFLTREP. Texaco one one on station, TACAN two one Yankee. Switch Texaco, two five two decimal one.;tok
+p_str_out_a;PILOT;Strike, Hornet five one, checking in outbound, passing angels;tok
+p_ovl_checkin_a;PILOT;Overlord, Hornet five one, checking in as fragged, mission four one zero one and four one zero two,;tok:0.1
+p_ovl_off_pointer_a;PILOT;Overlord, Hornet five one, off Pointer one one, mission four one zero one complete,;tok:0.1
+p_ovl_off_pointer_b;PILOT;Ready for retasking.;tok
+p_tkr_checkin_a;PILOT;Texaco one one, Hornet five one, checking in,;tok:0.1
+p_ovl_rtb_tkr_a;PILOT;Overlord, Hornet five one, off Texaco, RTB,;tok:0.1
+p_ovl_rtb_notkr_a;PILOT;Overlord, Hornet five one, no tanker required, RTB,;tok:0.1
+p_str_inbound_a;PILOT;Strike, Hornet five one, inbound,;tok:0.1
+p_switching;PILOT;Hornet five one, switching.;tok
+p_wilco;PILOT;Hornet five one, wilco.;tok
+i_head;PILOT;Overlord, Hornet five one, INFLTREP.;tok:0.25
+i_l1;PILOT;Line one, Hornet five one.;tok:0.2
+i_l2;PILOT;Line two, mission four one zero one and four one zero two.;tok:0.2
+i_l3;PILOT;Line three,;tok:0.1
+i_l4;PILOT;Line four, time on target,;tok:0.1
+i_l5;PILOT;Line five,;tok:0.1
+i_l5b;PILOT;vehicles destroyed.;tok:0.2
+i_rmk;PILOT;Remarks, SAM activity in both target areas.;tok
+# ── v1.4.2: mission abort / RTB from any mission phase
+p_ovl_abort_a;PILOT;Overlord, Hornet five one, mission abort, RTB,;tok:0.1
+ovl_abort_a;OVERLORD;Hornet five one, Overlord, copy abort. RTB approved.;tok:0.15
