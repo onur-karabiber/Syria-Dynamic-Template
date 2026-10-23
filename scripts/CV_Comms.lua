@@ -1,8 +1,11 @@
--- CV_Comms | v1.5.2
+-- CV_Comms | v1.5.3
 --[[
   Carrier (CVN) departure / recovery radio — TRT Syria Dynamic Template
   Template-level module (not CAS-1 specific). Plan: project doc
   claude/cv-comms-gap-analysis.md (§5 decisions, §5.4 = this release, "R1").
+
+  v1.5.3 — commencing graded once per pass (CASE II/III): within EAT_TOL (20 s) of the
+           EAT -> +EAT_PTS, otherwise -EAT_PTS (TRT.addScore -> flag 1908).
 
   v1.5.2 — test helpers removed (Onur): no "Set CASE" on deck, no airborne "Test: set
            CASE" / "Test: deck fouled, Delta 5". Cases are planned in the ME (flag 100
@@ -210,7 +213,7 @@
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "1.5.2",
+    VERSION      = "1.5.3",
     PLAYER_UNIT  = "Player_01",
     CARRIER_UNIT = "CVN",
     MODEX        = "467",       -- fallback if AIRBOSS has no onboard number yet
@@ -220,6 +223,8 @@ local CFG = {
     HOLD_KIAS    = 250,         -- ... holding speed and tolerance (estimated KIAS)
     EST_KIAS     = 30,
     EST_PTS      = 5,           -- +/- points
+    EAT_TOL      = 20,          -- v1.5.3 commence window, s either side of the EAT
+    EAT_PTS      = 5,           -- +/- points
     CCA_NM       = 50,          -- Marshal check-in offered inside this range
     ARM_AIRBORNE = 900,         -- s airborne after which check-in is offered even
                                 -- if the player never left the CCA
@@ -786,8 +791,17 @@ local function A_Commencing()
     if not c then return end
     local dt = timer.getAbsTime() - (c.eatAbs or timer.getAbsTime())
     TRT.CV_COMMENCE = { t = timer.getAbsTime(), dt = dt }
-    Log(string.format("commencing: %+d s vs EAT :%s%s", math.floor(dt + 0.5), c.eat,
-        (math.abs(dt) > 10) and " (outside +/-10 s)" or ""))
+    local ok = math.abs(dt) <= CFG.EAT_TOL
+    Log(string.format("commencing: %+d s vs EAT :%s (%s +/-%d s)", math.floor(dt + 0.5), c.eat,
+        ok and "inside" or "outside", CFG.EAT_TOL))
+    if c.eatAbs and not c.eatScored and TRT.addScore then          -- v1.5.3
+        c.eatScored = true
+        local sdt = string.format("%+d s", math.floor(dt + 0.5))
+        timer.scheduleFunction(function()
+            if ok then TRT.addScore(CFG.EAT_PTS, "Commenced on time (" .. sdt .. " vs EAT)")
+            else TRT.addScore(-CFG.EAT_PTS, "Commenced off time (" .. sdt .. " vs EAT, window +/-" .. CFG.EAT_TOL .. " s)") end
+        end, nil, timer.getTime() + 8)
+    end
     local altTxt = c.alt:sub(1, 2) .. "." .. c.alt:sub(3, 4)
     Pilot("MARSHAL",
         Seq(D("p", m), CFG.P, "p_commencing", D("p", c.alt), CFG.P, "p_state", StateTokens(lbs)),

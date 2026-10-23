@@ -1,10 +1,13 @@
--- Departure | v1.0.1
+-- Departure | v1.0.2
 -- CASE-adaptive departure scoring. Replaces CASE_III_Departure.lua and
 -- CASE_IorII_Departure.lua. Case is snapshotted at ARM time (takeoff) -
 -- a departure procedure doesn't switch profile mid-transit in practice,
 -- unlike the approach, which can span a longer window where weather
 -- may actually change.
 --
+-- v1.0.2: CASE I/II heading check uses the carrier's live TRUE heading (BRC) instead
+-- of the hardcoded 355. The old check also compared the jet's TRUE heading with a
+-- MAGNETIC 355 (~5 deg error in Syria). BRC_FALLBACK (true) only if the carrier is gone.
 -- v1.0.1: PLAYER_NAME read from TRT.PLAYER_NAME (see Core_Scoring v1.3.1).
 --
 -- Load order: AFTER Core_Scoring.lua and CaseDeterminator.lua.
@@ -13,7 +16,7 @@ _G.TRT = _G.TRT or {}
 local TRT = _G.TRT
 
 local PLAYER_NAME = TRT.PLAYER_NAME or "Player_01"
-local BRC = 355
+local BRC_FALLBACK = 360   -- true deg (= 355 M); used only without a carrier unit
 
 -- CASE I/II profile (from CASE_IorII_Departure.lua)
 local IORII_ALT_MIN, IORII_ALT_MAX = 400, 650
@@ -62,7 +65,9 @@ end
 local function updateIorII(u, dist)
     local alt, spd = TRT.altFt(u), TRT.spdKts(u)
     local hdg = TRT.getHeading(u)
-    local hdgDiff = math.abs(hdg - BRC)
+    local c = TRT.uCarrier()
+    local brc = (c and c:isExist()) and TRT.getHeading(c) or BRC_FALLBACK   -- v1.0.2: live, true
+    local hdgDiff = math.abs(hdg - brc)
     if hdgDiff > 180 then hdgDiff = 360 - hdgDiff end
 
     local altOK = alt >= IORII_ALT_MIN and alt <= IORII_ALT_MAX
@@ -171,4 +176,4 @@ timer.scheduleFunction(function()
     return timer.getTime() + 1
 end, nil, timer.getTime() + 1)
 
-env.info("[Departure] v1.0.1 loaded. Player unit: " .. PLAYER_NAME)
+env.info("[Departure] v1.0.2 loaded. Player unit: " .. PLAYER_NAME)
