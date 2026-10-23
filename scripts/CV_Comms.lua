@@ -1,8 +1,16 @@
--- CV_Comms | v1.5.3
+-- CV_Comms | v1.5.4
 --[[
   Carrier (CVN) departure / recovery radio — TRT Syria Dynamic Template
   Template-level module (not CAS-1 specific). Plan: project doc
   claude/cv-comms-gap-analysis.md (§5 decisions, §5.4 = this release, "R1").
+
+  v1.5.4 — F10 via Menu_Manager v1.0.0 (TRT.Menu): no own "CV COMMS" root any more.
+           Calls go to F10 > COMMS (provider "CV"), the comm card to INFO > "Show: comm
+           card" (card provider, buttons 1/2/15/16 + notes), "Show: next call" text
+           from NEXT (per phase). Menu phase hint: DEP_* -> DEPARTURE, every other
+           non-IDLE phase -> RECOVERY. Labels unified to "AGENCY: action"
+           (DEPARTURE / MARSHAL / APPROACH / PADDLES). Without TRT.Menu no F10 at all
+           (logged).
 
   v1.5.3 — commencing graded once per pass (CASE II/III): within EAT_TOL (20 s) of the
            EAT -> +EAT_PTS, otherwise -EAT_PTS (TRT.addScore -> flag 1908).
@@ -213,7 +221,7 @@
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "1.5.3",
+    VERSION      = "1.5.4",
     PLAYER_UNIT  = "Player_01",
     CARRIER_UNIT = "CVN",
     MODEX        = "467",       -- fallback if AIRBOSS has no onboard number yet
@@ -463,7 +471,6 @@ local CV = {
     q          = {},        -- transmission queue
     busy       = false,
     txn        = 0,
-    menu       = { gid = nil, root = nil },
     hooked     = false,
     tRadar     = nil,       -- timer.getTime() of Marshal "radar contact"
     tPhase     = 0,         -- timer.getTime() of the last phase change
@@ -634,6 +641,9 @@ local function SetPhase(p)
         Log("phase " .. CV.phase .. " -> " .. p)
         CV.phase = p
         CV.tPhase = timer.getTime()
+        if TRT.Menu then
+            TRT.Menu.SetHint("CV", (p == "IDLE") and nil or ((p:sub(1, 4) == "DEP_") and "DEPARTURE" or "RECOVERY"))
+        end
         if MenuRebuild then MenuRebuild() end
     end
 end
@@ -1200,22 +1210,22 @@ local function Actions()
     if ph:sub(1, 4) == "DEP_" and ph ~= "DEP_AIR" and CV.dep then
         local altFt = u:getPoint().y * 3.28084
         if altFt >= CFG.POPEYE_FT and not CV.dep.popeye and not CV.dep.ontop then
-            a[#a + 1] = { string.format("Departure %.2f: Popeye, angels %d", CFG.CHAN.DEPARTURE.hz / 1e6,
+            a[#a + 1] = { string.format("DEPARTURE: Popeye, angels %d",
                 math.floor(altFt / 1000 + 0.5)), A_Popeye }
         end
         if altFt >= CFG.ONTOP_FT and not CV.dep.ontop then
-            a[#a + 1] = { string.format("Departure %.2f: on top, angels %d", CFG.CHAN.DEPARTURE.hz / 1e6,
+            a[#a + 1] = { string.format("DEPARTURE: on top, angels %d",
                 math.floor(altFt / 1000 + 0.5)), A_OnTop }
         end
         return a
     end
     if ph == "CHECKIN" then
-        a[#a + 1] = { string.format("Marshal %.2f: check in (inbound)", CFG.CHAN.MARSHAL.hz / 1e6), A_CheckIn }
+        a[#a + 1] = { string.format("MARSHAL: check in %.2f", CFG.CHAN.MARSHAL.hz / 1e6), A_CheckIn }
     elseif ph == "READBACK" then
-        a[#a + 1] = { "Marshal: readback", A_Readback }
+        a[#a + 1] = { "MARSHAL: readback", A_Readback }
     elseif ph == "ESTABLISH" or ph == "HOLDING" then
-        if ph == "ESTABLISH" then a[#a + 1] = { "Marshal: established", A_Established } end
-        local c, lbl = CV.clr, "Marshal: commencing"
+        if ph == "ESTABLISH" then a[#a + 1] = { "MARSHAL: established", A_Established } end
+        local c, lbl = CV.clr, "MARSHAL: commencing"
         if c and c.eat and c.eatAbs then
             local r = math.floor(c.eatAbs - timer.getAbsTime() + 0.5)
             local sign = (r >= 0) and "T-" or "T+"
@@ -1224,74 +1234,95 @@ local function Actions()
         end
         a[#a + 1] = { lbl, A_Commencing }
     elseif ph == "SEEYOU" and d <= CFG.SEE_YOU_NM then
-        a[#a + 1] = { "Marshal: see you at 10", A_SeeYou }
+        a[#a + 1] = { "MARSHAL: see you at 10", A_SeeYou }
     elseif ph == "APP_CHECKIN" then
-        a[#a + 1] = { string.format("Approach %.2f: check in", CFG.CHAN.APPROACH.hz / 1e6), A_AppCheckIn }
+        a[#a + 1] = { string.format("APPROACH: check in %.2f", CFG.CHAN.APPROACH.hz / 1e6), A_AppCheckIn }
     elseif ph == "APPROACH" or ph == "APP_SEEYOU" then
         local alt = u:getPoint().y * 3.28084
-        if ph == "APPROACH" and alt <= CFG.PLATFORM_FT then a[#a + 1] = { "Approach: platform", A_Platform } end
-        if CV.case == 2 and d <= CFG.SEE_YOU_NM then a[#a + 1] = { "Approach: see you at 10", A_AppSeeYou } end
+        if ph == "APPROACH" and alt <= CFG.PLATFORM_FT then a[#a + 1] = { "APPROACH: platform", A_Platform } end
+        if CV.case == 2 and d <= CFG.SEE_YOU_NM then a[#a + 1] = { "APPROACH: see you at 10", A_AppSeeYou } end
     elseif ph == "NEEDLES" then
-        a[#a + 1] = { "Needles: up and on", function() A_Needles(true) end }
-        a[#a + 1] = { "Needles: negative", function() A_Needles(false) end }
+        a[#a + 1] = { "APPROACH: needles up and on", function() A_Needles(true) end }
+        a[#a + 1] = { "APPROACH: needles negative", function() A_Needles(false) end }
     elseif ph == "BALL" then
-        a[#a + 1] = { "Ball (Hornet ball, state)", function() A_Ball(false) end }
-        a[#a + 1] = { "Clara", A_Clara }
+        a[#a + 1] = { "PADDLES: ball (Hornet ball, state)", function() A_Ball(false) end }
+        a[#a + 1] = { "PADDLES: Clara", A_Clara }
     end
     return a
 end
 
-local function CommCard()
+--- INFO > "Show: comm card" contribution (Menu_Manager merges all providers).
+local function CardData()
     local c = CFG.CHAN
-    local lines = {
-        "── CV COMM CARD (COMM1, AM) ──────────",
-        string.format("BTN 1   %.2f  TOWER / PADDLES", c.TOWER.hz / 1e6),
-        string.format("BTN 2   %.2f  DEPARTURE", c.DEPARTURE.hz / 1e6),
-        string.format("BTN 15  %.2f  APPROACH", c.APPROACH.hz / 1e6),
-        string.format("BTN 16  %.2f  MARSHAL", c.MARSHAL.hz / 1e6),
-        "CASE I/II: ZIPLIP on button 1 · CASE III: full voice",
-    }
+    local btn = {}
+    for _, k in ipairs({ "TOWER", "DEPARTURE", "APPROACH", "MARSHAL" }) do
+        btn[#btn + 1] = { n = c[k].btn, f = string.format("%.2f AM", c[k].hz / 1e6),
+                          name = (k == "TOWER") and "TOWER / PADDLES" or k }
+    end
+    local lines = { "CASE I/II: ZIPLIP on button 1 · CASE III: full voice" }
     if CV.clr and CV.clr.radial then
         lines[#lines + 1] = string.format("Marshal: %s R / %s DME / angels %s / EAT :%s / FB %s",
             CV.clr.radial, CV.clr.dme, CV.clr.angels, CV.clr.eat, CV.clr.fb)
     elseif CV.clr then
         lines[#lines + 1] = string.format("CASE I: BRC %s, hold angels %s", CV.clr.brc, CV.clr.angels)
     end
-    Msg(table.concat(lines, "\n"), 20)
+    return { buttons = btn, lines = lines }
 end
 
-local lastSig = nil
-MenuRebuild = function()
-    local u = Hero()
-    if not u then return end
-    local gid = u:getGroup():getID()
-    local idleHidden = CV.phase == "IDLE"
-    if idleHidden or (CV.menu.root and CV.menu.gid ~= gid) then
-        if CV.menu.root then pcall(missionCommands.removeItemForGroup, CV.menu.gid, CV.menu.root) end
-        CV.menu.root, CV.menu.items, lastSig = nil, nil, nil
-        if idleHidden then return end
+--- COMMS > "Show: next call" text per CV phase (nil = let another provider answer).
+local function NextText()
+    local ph, c = CV.phase, CFG.CHAN
+    if ph == "IDLE" then return nil end
+    if ph:sub(1, 4) == "DEP_" then
+        return string.format("CASE III departure on DEPARTURE %.2f. Popeye above %d ft, on top above %d ft.",
+            c.DEPARTURE.hz / 1e6, CFG.POPEYE_FT, CFG.ONTOP_FT)
     end
-    local acts = Actions()
-    local labels = {}
-    for i, it in ipairs(acts) do labels[i] = it[1] end
-    local sig = table.concat(labels, "|")
-    if sig == lastSig and CV.menu.root then return end
-    lastSig = sig
-    if not CV.menu.root then
-        CV.menu.gid  = gid
-        CV.menu.root = missionCommands.addSubMenuForGroup(gid, "CV COMMS")
-    end
-    for _, h in ipairs(CV.menu.items or {}) do pcall(missionCommands.removeItemForGroup, gid, h) end
-    CV.menu.items = {}
-    for _, it in ipairs(acts) do
-        CV.menu.items[#CV.menu.items + 1] = missionCommands.addCommandForGroup(gid, it[1], CV.menu.root, function()
+    local eat = CV.clr and CV.clr.eat
+    local T = {
+        CHECKIN      = string.format("Check in with MARSHAL %.2f.", c.MARSHAL.hz / 1e6),
+        CHECKIN_SENT = "Stand by for Marshal.",
+        READBACK     = "Read back the Marshal clearance.",
+        ESTABLISH    = "Report established at the holding fix.",
+        HOLDING      = eat and string.format("Hold. Commence at EAT :%s.", eat) or "Hold, commence at your EAT.",
+        SEEYOU       = string.format("Inside %d NM: \"see you at 10\".", CFG.SEE_YOU_NM),
+        ZIPLIP       = "ZIPLIP: no calls, fly the pattern.",
+        PENETRATION  = "Descend. Marshal switches you to Approach.",
+        APP_CHECKIN  = string.format("Check in with APPROACH %.2f.", c.APPROACH.hz / 1e6),
+        APPROACH     = string.format("Report platform below %d ft.", CFG.PLATFORM_FT),
+        APP_SEEYOU   = string.format("Inside %d NM: \"see you at 10\".", CFG.SEE_YOU_NM),
+        FINAL        = string.format("Approach calls ACLS lock at %.1f DME.", CFG.ACLS_NM),
+        NEEDLES      = "Answer needles: up and on / negative.",
+        BALLWAIT     = "Wait for \"call the ball\".",
+        BALL         = "Call the ball or Clara.",
+        GROOVE       = "Fly the ball.",
+    }
+    if T[ph] then return T[ph] end
+    if ph:sub(1, 2) == "B_" then return "Bolter pattern: upwind, downwind, abeam." end
+    return nil
+end
+
+local function MenuItems()
+    local out = {}
+    for _, it in ipairs(Actions()) do
+        local fn = it[2]
+        out[#out + 1] = { it[1], function()
             if CV.busy and CV.phase ~= "BALL" then return end
-            it[2]()
-            MenuRebuild()
-        end)
+            fn()
+        end }
     end
-    CV.menu.items[#CV.menu.items + 1] =
-        missionCommands.addCommandForGroup(gid, "Show: comm card", CV.menu.root, CommCard)
+    return out
+end
+
+MenuRebuild = function()
+    if TRT.Menu then TRT.Menu.Refresh() end
+end
+
+if TRT.Menu then
+    TRT.Menu.Register("COMMS", "CV", MenuItems, 10)
+    TRT.Menu.RegisterCard("CV", CardData, 10)
+    TRT.Menu.RegisterNext("CV", NextText)
+else
+    Log("TRT.Menu missing (Menu_Manager.lua not loaded before CV_Comms) -> no F10 calls")
 end
 
 -- ══════════════════════════════════════════════════════════════

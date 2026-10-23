@@ -1,3 +1,11 @@
+-- TrapTraining | v7.5.0-TRT.1
+-- Bankler's CASE 1 Recovery Trainer v7.5.0 (third-party) with one TRT patch:
+-- TRT.1 (Menu_Manager v1.0.0): when TRT.Menu is loaded the trainer's own
+--   "Bankler's CASE 1 Training" mission menu is not created; its toggles appear
+--   under F10 > TRAINING, on deck only: in-flight feedback, LSO, break/pattern
+--   mode. Dropped there: public feedback (single player) and Set CASE 1/3
+--   (cases are planned in the ME, flags 100/102). Without TRT.Menu the original
+--   menu is built unchanged.
 deltaTime = 0.5
 abortsActive = true  -- false for straight-in
 startingStep = 1
@@ -380,7 +388,26 @@ MenuItem_Mode_Pattern = nil
 MenuItem_Mode_Case_1 = nil
 MenuItem_Mode_Case_3 = nil
 
+function TT_MenuCmd(...)	-- TRT.1
+	if TRT and TRT.Menu then return nil end
+	return MENU_MISSION_COMMAND:New(...)
+end
+
 function CreateRadioMenu()
+	if TRT and TRT.Menu then	-- TRT.1
+		TRT.Menu.Register("TRAINING", "BANKLER", function(ph)
+			if ph ~= "DECK" then return {} end
+			return {
+				inFlightFeedback and { "Disable in-flight feedback", function() ToggleInFlightFeedback(false) end }
+				                  or { "Enable in-flight feedback",  function() ToggleInFlightFeedback(true) end },
+				lsoActive and { "Disable LSO", function() ToggleLSO(false) end }
+				           or { "Enable LSO",  function() ToggleLSO(true) end },
+				patternMode and { "Enable break mode",   function() SetMode("break") end }
+				             or { "Enable pattern mode", function() SetMode("pattern") end },
+			}
+		end, 10)
+		return
+	end
 	BanklerCase1Menu = MENU_MISSION:New( "Bankler's CASE 1 Training" )
 	--MENU_MISSION_COMMAND:New("End Mission", BanklerCase1Menu, EndMission)	--Disabled in MA custom
 end
@@ -398,14 +425,14 @@ function TogglePublicFeedback(enabled, silentChange)
 			MenuItem_PublicFeedback_On:Remove()
 		end
 		
-		MenuItem_PublicFeedback_Off = MENU_MISSION_COMMAND:New( "Disable Public Feedback", BanklerCase1Menu, TogglePublicFeedback, false)
+		MenuItem_PublicFeedback_Off = TT_MenuCmd( "Disable Public Feedback", BanklerCase1Menu, TogglePublicFeedback, false)
 		message = "Public Feedback: ENABLED"
 	else 
 		if(MenuItem_PublicFeedback_Off ~= nil) then
 			MenuItem_PublicFeedback_Off:Remove()
 		end
 		
-		MenuItem_PublicFeedback_On = MENU_MISSION_COMMAND:New( "Enable Public Feedback", BanklerCase1Menu, TogglePublicFeedback, true)
+		MenuItem_PublicFeedback_On = TT_MenuCmd( "Enable Public Feedback", BanklerCase1Menu, TogglePublicFeedback, true)
 		message = "Public Feedback: DISABLED"
 	end
 	
@@ -422,14 +449,14 @@ function ToggleInFlightFeedback(enabled, silentChange)
 			MenuItem_InFlightFeedback_On:Remove()
 		end
 		
-		MenuItem_InFlightFeedback_Off = MENU_MISSION_COMMAND:New( "Disable In-flight Feedback", BanklerCase1Menu, ToggleInFlightFeedback, false)
+		MenuItem_InFlightFeedback_Off = TT_MenuCmd( "Disable In-flight Feedback", BanklerCase1Menu, ToggleInFlightFeedback, false)
 		message = "In-flight Feedback: ENABLED"
 	else 
 		if(MenuItem_InFlightFeedback_Off ~= nil) then
 			MenuItem_InFlightFeedback_Off:Remove()
 		end
 		
-		MenuItem_InFlightFeedback_On = MENU_MISSION_COMMAND:New( "Enable In-flight Feedback", BanklerCase1Menu, ToggleInFlightFeedback, true)
+		MenuItem_InFlightFeedback_On = TT_MenuCmd( "Enable In-flight Feedback", BanklerCase1Menu, ToggleInFlightFeedback, true)
 		message = "In-flight Feedback: DISABLED"
 	end
 	
@@ -446,14 +473,14 @@ function ToggleLSO(enabled, silentChange)
 			MenuItem_LSO_On:Remove()
 		end
 		
-		MenuItem_LSO_Off = MENU_MISSION_COMMAND:New( "Disable LSO", BanklerCase1Menu, ToggleLSO, false)
+		MenuItem_LSO_Off = TT_MenuCmd( "Disable LSO", BanklerCase1Menu, ToggleLSO, false)
 		message = "LSO: ENABLED"
 	else 
 		if(MenuItem_LSO_Off ~= nil) then
 			MenuItem_LSO_Off:Remove()
 		end
 		
-		MenuItem_LSO_On = MENU_MISSION_COMMAND:New( "Enable LSO", BanklerCase1Menu, ToggleLSO, true)
+		MenuItem_LSO_On = TT_MenuCmd( "Enable LSO", BanklerCase1Menu, ToggleLSO, true)
 		message = "LSO: DISABLED"
 	end
 	
@@ -480,7 +507,7 @@ function SetCase(caseIndex, showMessage)
 			MenuItem_Case_1:Remove()
 		end
 		
-		MenuItem_Case_3 = MENU_MISSION_COMMAND:New( "Set CASE 3", BanklerCase1Menu, SetCase, 3, true)
+		MenuItem_Case_3 = TT_MenuCmd( "Set CASE 3", BanklerCase1Menu, SetCase, 3, true)
 	elseif(case == 3) then
 		message = "CASE 3 activated"
 		startingStep = case3StartingStep
@@ -490,7 +517,7 @@ function SetCase(caseIndex, showMessage)
 			MenuItem_Case_3:Remove()
 		end
 		
-		MenuItem_Case_1 = MENU_MISSION_COMMAND:New( "Set CASE 1", BanklerCase1Menu, SetCase, 1, true)
+		MenuItem_Case_1 = TT_MenuCmd( "Set CASE 1", BanklerCase1Menu, SetCase, 1, true)
 	end
 	
 	if(showMessage) then
@@ -509,7 +536,7 @@ function SetMode(mode, silentChange)
 			MenuItem_Mode_Break:Remove()
 		end
 		
-		MenuItem_Mode_Pattern = MENU_MISSION_COMMAND:New( "Enable Pattern Mode", BanklerCase1Menu, SetMode, "pattern")
+		MenuItem_Mode_Pattern = TT_MenuCmd( "Enable Pattern Mode", BanklerCase1Menu, SetMode, "pattern")
 		
 	elseif(mode == "pattern") then
 		patternMode = true
@@ -520,7 +547,7 @@ function SetMode(mode, silentChange)
 			MenuItem_Mode_Pattern:Remove()
 		end
 		
-		MenuItem_Mode_Break = MENU_MISSION_COMMAND:New( "Enable Break Mode", BanklerCase1Menu, SetMode, "break")
+		MenuItem_Mode_Break = TT_MenuCmd( "Enable Break Mode", BanklerCase1Menu, SetMode, "break")
 	end
 	
 	for i = 1, numberOfPlayers do

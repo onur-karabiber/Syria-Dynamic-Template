@@ -1,4 +1,5 @@
-# make_kneeboard.py | v3.0.0
+# make_kneeboard.py | v3.0.1
+# v3.0.1: 02 COMM LADDER: F10 menu renamed (Menu_Manager v1.0.0) -> "F10 > COMMS".
 # Generates src/KNEEBOARD/images/01..05 *.png (CAS-1 kneeboard, 512x768).
 # v3.0.0: all five cards generated from data below (01/03/04/05 were hand-made
 #         PNGs). Content sits inside a margin (MX/MY) because the F/A-18C
@@ -96,7 +97,7 @@ def comm():
               ("03","265.00 AM","STRIKE","STK",""),("04","333.30 AM","POINTER 11","JTAC-1",""),
               ("05","333.40 AM","EYEBALL 11","JTAC-2",""),("06","251.10 AM","OVERLORD","OVL",""),
               ("07","252.10 AM","TEXACO 11","TKR",""),("15","263.00 AM","APPROACH","APP","+CASE III LSO"),
-              ("16","261.00 AM","MARSHAL","MRS","CV COMMS")]:
+              ("16","261.00 AM","MARSHAL","MRS","")]:
         c.chrow(*r)
     c.rule(); c.band("COMM 2  (UFC → C2)")
     c.chrow("01", "251.10 AM", "OVERLORD mon", "OVL")
@@ -104,7 +105,7 @@ def comm():
     c.rule(); c.head("DISCRETE / GUARD")
     c.kv("GUARD", "243.00 AM (monitor)", "m"); c.kv("ABORT (tac)", 'JTAC: "abort, abort, abort"')
     c.kv("CVN native", "127.60 AM not used (F1)", "m")
-    c.rule(); c.head("COMM FLOW   (F10 CAS-1 COMMS / CV COMMS)")
+    c.rule(); c.head("COMM FLOW   (F10 > COMMS)")
     flow = [("1","Airborne","DEP","C1-02","CASE III dep (I/II zip)"),("2","7 DME/clrd","STK","C1-03","Mode 4 · Kilo"),
             ("3","Strike h/o","OVL","C1-06","check in · picture"),("4","20 NM to CP","PTR","C1-04","native JTAC"),
             ("5","Off Pointer","OVL","C1-06","→ EYE C1-05"),("6","Off Eyeball","OVL","C1-06","INFLTREP → Texaco"),

@@ -1,4 +1,4 @@
--- Airboss_Start.lua | v1.0.5
+-- Airboss_Start.lua | v1.0.6
 -- TRT Syria Recovery Framework - MOOSE AIRBOSS bootstrap
 -- Carrier unit (ME): "CVN"
 -- Recovery ops: CASE II
@@ -6,6 +6,20 @@
 -- LOAD ORDER: after MOOSE / mist / Skynet, before the four TRT scoring scripts.
 -- Loaded via: ME "Do Script File" (ResKey_Action_301), embedded by build.py.
 --
+-- v1.0.6: AIRBOSS's own F10 tree ("Airboss" > Help / Kneeboard / Request ...) is
+--   replaced by F10 > CARRIER (Menu_Manager v1.0.0, provider "AIRBOSS"). Instance
+--   override of _AddF10Commands only records the player unit name; the items are
+--   phase-filtered (TRT.Menu.Phase()):
+--     always     Carrier info, Weather report
+--     DECK       Results > Greenie board / My LSO grades / Last debrief,
+--                Skill level > ..., Subtitles on/off, Trapsheet on/off,
+--                Radio check LSO / Marshal
+--     RECOVERY   My status, Attitude monitor, Spinning, Emergency landing
+--   Dropped: Request Marshal / Request Commence (CV_Comms owns these calls; the
+--   AIRBOSS items bypassed its state machine), Request Refueling (no recovery
+--   tanker set), Set Section, queues, [Reset My Status], Mark Zones.
+--   Re-check the callback names against AIRBOSS:_AddF10Commands when Moose is
+--   updated. Without TRT.Menu the original AIRBOSS menu is kept.
 -- v1.0.5: TACAN / ICLS morse ident CVN -> WSH, same as the ME beacon on the CVN
 --   unit (ActivateBeacon 72X "WSH"). Before, two 72X beacons with different
 --   idents were active and the audible ident depended on which one ran last.
@@ -154,10 +168,57 @@ TRT.Airboss._GetOnboardNumbers = function(self, group, playeronly)
   return numbers
 end
 
+-- F10 > CARRIER (v1.0.6). Callbacks as in AIRBOSS:_AddF10Commands (Moose 2026-06-14).
+if TRT.Menu then
+  TRT.AirbossMenuUnit = "Player_01"
+  TRT.Airboss._AddF10Commands = function(self, unitName)
+    TRT.AirbossMenuUnit = unitName or TRT.AirbossMenuUnit
+    TRT.Menu.Refresh()
+  end
+  local AB = TRT.Airboss
+  local function C(label, method, ...)
+    local args = { ... }
+    return { label, function() AB[method](AB, TRT.AirbossMenuUnit, unpack(args)) end }
+  end
+  TRT.Menu.Register("CARRIER", "AIRBOSS", function(ph)
+    local it = {}
+    if ph == "DECK" then
+      it[#it + 1] = { "Results", sub = {
+        C("Greenie board", "_DisplayScoreBoard"),
+        C("My LSO grades", "_DisplayPlayerGrades"),
+        C("Last debrief",  "_DisplayDebriefing"),
+      } }
+    elseif ph == "RECOVERY" then
+      it[#it + 1] = C("My status",        "_DisplayPlayerStatus")
+      it[#it + 1] = C("Attitude monitor", "_DisplayAttitude")
+    end
+    it[#it + 1] = C("Carrier info",   "_DisplayCarrierInfo")
+    it[#it + 1] = C("Weather report", "_DisplayCarrierWeather")
+    if ph == "DECK" then
+      it[#it + 1] = { "Skill level", sub = {
+        C("Flight Student",  "_SetDifficulty", AIRBOSS.Difficulty.EASY),
+        C("Naval Aviator",   "_SetDifficulty", AIRBOSS.Difficulty.NORMAL),
+        C("TOPGUN Graduate", "_SetDifficulty", AIRBOSS.Difficulty.HARD),
+        C("Hints on/off",    "_SetHintsOnOff"),
+      } }
+      it[#it + 1] = C("Subtitles on/off",    "_SubtitlesOnOff")
+      it[#it + 1] = C("Trapsheet on/off",    "_TrapsheetOnOff")
+      it[#it + 1] = C("Radio check LSO",     "_LSORadioCheck")
+      it[#it + 1] = C("Radio check Marshal", "_MarshalRadioCheck")
+    elseif ph == "RECOVERY" then
+      it[#it + 1] = C("Spinning",          "_RequestSpinning")
+      it[#it + 1] = C("Emergency landing", "_RequestEmergency")
+    end
+    return it
+  end, 10)
+else
+  env.info("Airboss_Start | TRT.Menu missing -> original AIRBOSS F10 menu kept")
+end
+
 -- Start the FSM.
 TRT.Airboss:Start()
 
-env.info(string.format("Airboss_Start | v1.0.5 | TACAN/ICLS WSH | onboard-number fix | HOLD stack1 angels 10 / 25 DME | CVN | CASE %d | TACAN 72X | ICLS 12 | MARSHAL 261.00 AM | LSO 262.00 AM", 2))
+env.info(string.format("Airboss_Start | v1.0.6 | F10 > CARRIER | TACAN/ICLS WSH | onboard-number fix | HOLD stack1 angels 10 / 25 DME | CVN | CASE %d | TACAN 72X | ICLS 12 | MARSHAL 261.00 AM | LSO 262.00 AM", 2))
 
 -- ============================================================================
 -- SYNC NOTE: Airboss_CaseSync.lua (load AFTER this file) listens on flag 100

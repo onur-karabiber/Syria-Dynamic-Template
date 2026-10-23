@@ -1,10 +1,19 @@
--- Comms_Director | v1.4.6
+-- Comms_Director | v1.4.7
 --[[
   CAS-1 Communications State Machine — Syria Dynamic Template
   Scope: Departure→Strike→OVERLORD hand-offs · JTAC hand-offs · INFLTREP · TANKER
          · RTB (OVERLORD→Strike→Marshal) · INJ-1..4
   Out of scope: JTAC comms themselves (native DCS JTAC check-in / 9-line / clearance
                 preserved, do not touch)
+
+  v1.4.7 — F10 via Menu_Manager v1.0.0 (TRT.Menu): no own "CAS-1 COMMS" root any more
+           (it was removed and re-added on every phase change, so its F-key moved).
+           Calls -> F10 > COMMS (provider "CD"), "Show: hard deck" -> INFO (MISSION
+           phase only), comm ladder -> INFO > "Show: comm card" (buttons 3-7 + FLOW),
+           "Show: next call" -> NEXT[phase] (nil in RECOVERY / DONE: CV_Comms answers).
+           Menu phase hint: DEPARTURE -> DEPARTURE, RECOVERY / DONE / IDLE -> none,
+           everything else -> MISSION. Labels "AGENCY: action" (STRIKE / OVERLORD /
+           TEXACO). Hints in messages read "F10 > COMMS".
 
   v1.4.6 — text-only reminders (CASE I/II ZIPLIP departure) show one line; the extra
            "F10 > CAS-1 COMMS - ..." hint is added only after a voiced controller repeat.
@@ -318,7 +327,6 @@ local CD = {
     feetPending   = nil,      -- "DRY" / "WET" — report offered in F10
     awaiting      = false,    -- pilot call made, controller reply pending
     inj           = { i1 = false, i2 = false, i3 = false },
-    menu          = { gid = nil, root = nil },
 }
 
 -- Phases in which the player is (or should be) working OVERLORD
@@ -796,7 +804,7 @@ end
 local NEXT = {
     IDLE       = "Launch. CASE III departure on Departure " .. CFG.FREQ.DEP .. ".",
     DEPARTURE  = "On Departure " .. CFG.FREQ.DEP .. ". CASE III: airborne / 2.5 / arcing / established "
-                 .. "are automatic, Popeye / on top via F10 > CV COMMS. CASE I/II: ZIPLIP, check in with "
+                 .. "are automatic, Popeye / on top via F10 > COMMS. CASE I/II: ZIPLIP, check in with "
                  .. "Strike from " .. CFG.DEP_ZIPLIP_NM .. " DME.",
     STRIKE_OUT = "Check in with STRIKE " .. CFG.FREQ.STRIKE .. " (F10).",
     STRIKE_CHK = "Stand by, Strike working Mode 4.",
@@ -822,17 +830,17 @@ local NEXT = {
 local function PhaseActions()
     local ph, a = CD.phase, {}
     if CD.awaiting then return a end
-    if ph == "STRIKE_OUT" then a[#a+1] = { "Check in: STRIKE " .. CFG.FREQ.STRIKE, A_StrikeCheckInOut } end
-    if ph == "OVL_OUT"    then a[#a+1] = { "Check in: OVERLORD " .. CFG.FREQ.OVL, A_OvlCheckIn } end
+    if ph == "STRIKE_OUT" then a[#a+1] = { "STRIKE: check in " .. CFG.FREQ.STRIKE, A_StrikeCheckInOut } end
+    if ph == "OVL_OUT"    then a[#a+1] = { "OVERLORD: check in " .. CFG.FREQ.OVL, A_OvlCheckIn } end
     if ph == "J1_OFF"     then a[#a+1] = { "OVERLORD: off Pointer 11, ready for retasking", A_OvlOffPointer } end
     if ph == "J2_OFF"     then a[#a+1] = { "OVERLORD: INFLTREP", A_Inflrep } end
     if ph == "REFUEL" and not CD.tkrCheckedIn then
-        a[#a+1] = { "Check in: TEXACO 11 " .. CFG.FREQ.TKR, A_TexacoCheckIn }
+        a[#a+1] = { "TEXACO: check in " .. CFG.FREQ.TKR, A_TexacoCheckIn }
     end
     if ph == "REFUEL" or ph == "TKR_DONE" then
         a[#a+1] = { (ph == "TKR_DONE") and "OVERLORD: RTB" or "OVERLORD: RTB (no tanker)", A_OvlRTB }
     end
-    if ph == "STRIKE_IN"  then a[#a+1] = { "Check in: STRIKE " .. CFG.FREQ.STRIKE .. " inbound", A_StrikeCheckInIn } end
+    if ph == "STRIKE_IN"  then a[#a+1] = { "STRIKE: check in inbound " .. CFG.FREQ.STRIKE, A_StrikeCheckInIn } end
     if ph == "ENROUTE" or ph == "JTAC1" or ph == "J1_OFF" or ph == "JTAC2" or ph == "J2_OFF" then
         a[#a+1] = { "OVERLORD: RTB (mission abort)", A_OvlAbort }
     end
@@ -842,51 +850,59 @@ local function PhaseActions()
     return a
 end
 
-MenuRebuild = function()
-    local p = Player(); if not p then return false end
-    local gid = p:getGroup():getID()
-    if CD.menu.root then pcall(missionCommands.removeItemForGroup, CD.menu.gid, CD.menu.root) end
-    CD.menu.gid  = gid
-    CD.menu.root = missionCommands.addSubMenuForGroup(gid, "CAS-1 COMMS")
-    local root = CD.menu.root
+local function CommsItems()
+    local a = PhaseActions()
+    if OVL_PHASES[CD.phase] then a[#a + 1] = { "OVERLORD: request picture", A_Picture } end
+    return a
+end
 
-    for _, it in ipairs(PhaseActions()) do
-        missionCommands.addCommandForGroup(gid, it[1], root, it[2])
-    end
-
-    if OVL_PHASES[CD.phase] then
-        missionCommands.addCommandForGroup(gid, "OVERLORD: request picture", root, A_Picture)
-    end
-
-    missionCommands.addCommandForGroup(gid, "Show: next call", root, function()
-        Msg("[CAS-1] " .. (NEXT[CD.phase] or CD.phase), CFG.DUR_SHORT)
-    end)
-
-    missionCommands.addCommandForGroup(gid, "Show: hard deck", root, function()
+local function InfoItems(ph)
+    if ph ~= "MISSION" then return {} end
+    return { { "Show: hard deck", function()
         local on = trigger.misc.getUserFlag("200") == 1
         Msg(string.format("[CAS-1] Hard deck %d ft MSL, engagement area — %s",
             CFG.HARD_DECK_FT, on and "IN EFFECT" or "not in effect (transit)"), CFG.DUR_SHORT)
-    end)
+    end } }
+end
 
-    missionCommands.addCommandForGroup(gid, "Show: comm ladder", root, function()
-        Msg(
-            "── CAS-1 COMM LADDER ──────────────────\n"
-         .. "COMM1-01  262.00 AM   TOWER / PADDLES (CASE I/II)\n"
-         .. "COMM1-02  269.00 AM   DEPARTURE\n"
-         .. "COMM1-03  265.00 AM   STRIKE\n"
-         .. "COMM1-04  333.30 AM   POINTER 11  (JTAC-1)\n"
-         .. "COMM1-05  333.40 AM   EYEBALL 11  (JTAC-2)\n"
-         .. "COMM1-06  251.10 AM   OVERLORD\n"
-         .. "COMM1-07  252.10 AM   TEXACO 11\n"
-         .. "COMM1-15  263.00 AM   APPROACH (CASE II/III)\n"
-         .. "COMM1-16  261.00 AM   MARSHAL\n"
-         .. "── FLOW ───────────────────────────────\n"
-         .. "DEP → (20 NM) STRIKE → OVERLORD → (CP-20 NM) POINTER\n"
-         .. "→ OVERLORD → EYEBALL → OVERLORD INFLTREP → TEXACO\n"
-         .. "→ OVERLORD RTB → (90 NM) STRIKE → (50 NM) MARSHAL",
-            CFG.DUR_LONG + 4)
-    end)
+local function CardData()
+    return {
+        buttons = {
+            { n = 1,  f = "262.00 AM", name = "TOWER / PADDLES" },
+            { n = 2,  f = CFG.FREQ.DEP .. " AM",     name = "DEPARTURE" },
+            { n = 3,  f = CFG.FREQ.STRIKE .. " AM",  name = "STRIKE" },
+            { n = 4,  f = CFG.FREQ.J1 .. " AM",      name = "POINTER 11 (JTAC-1)" },
+            { n = 5,  f = CFG.FREQ.J2 .. " AM",      name = "EYEBALL 11 (JTAC-2)" },
+            { n = 6,  f = CFG.FREQ.OVL .. " AM",     name = "OVERLORD" },
+            { n = 7,  f = CFG.FREQ.TKR .. " AM",     name = "TEXACO 11" },
+            { n = 15, f = "263.00 AM", name = "APPROACH" },
+            { n = 16, f = CFG.FREQ.MARSHAL .. " AM", name = "MARSHAL" },
+        },
+        lines = {
+            "CAS-1 FLOW: DEP → (ZIPLIP " .. CFG.DEP_ZIPLIP_NM .. " DME / CASE III cleared) STRIKE → OVERLORD",
+            "→ (CP-20 NM) POINTER → OVERLORD → EYEBALL → OVERLORD INFLTREP → TEXACO",
+            "→ OVERLORD RTB → (90 NM) STRIKE → (50 NM) MARSHAL",
+        },
+    }
+end
+
+local function NextText()
+    if CD.phase == "RECOVERY" or CD.phase == "DONE" then return nil end
+    return NEXT[CD.phase]
+end
+
+MenuRebuild = function()
+    if TRT and TRT.Menu then TRT.Menu.Refresh() end
     return true
+end
+
+if TRT and TRT.Menu then
+    TRT.Menu.Register("COMMS", "CD", CommsItems, 20)
+    TRT.Menu.Register("INFO", "CD", InfoItems, 20)
+    TRT.Menu.RegisterCard("CD", CardData, 20)
+    TRT.Menu.RegisterNext("CD", NextText)
+else
+    env.info("[CD] TRT.Menu missing (Menu_Manager.lua not loaded before Comms_Director) -> no F10 calls")
 end
 
 -- ══════════════════════════════════════════════════════════════
@@ -963,6 +979,12 @@ SetPhase = function(new)
     CD.dueSince, CD.nextRemind = timer.getTime(), nil
     env.info(string.format("[CD] %s → %s", CD.phase, new))
     CD.phase = new
+    if TRT and TRT.Menu then
+        local hint = "MISSION"
+        if new == "DEPARTURE" then hint = "DEPARTURE"
+        elseif new == "IDLE" or new == "RECOVERY" or new == "DONE" then hint = nil end
+        TRT.Menu.SetHint("CD", hint)
+    end
 
     if new == "JTAC1" or new == "JTAC2" or new == "J1_OFF" or new == "J2_OFF" then
         SetFlag(200, 1)
@@ -971,7 +993,7 @@ SetPhase = function(new)
     end
 
     if new == "DEPARTURE" then
-        Msg("[CAS-1] All radio calls: F10 > CAS-1 COMMS. \"Show: next call\" lists the next step.", CFG.DUR_HANDOFF)
+        Msg("[CAS-1] All radio calls: F10 > COMMS. \"Show: next call\" lists the next step.", CFG.DUR_HANDOFF)
     elseif new == "J1_OFF" then
         Msg("[CAS-1] Pointer 11 tasking complete. Check out, then report to OVERLORD (F10).", CFG.DUR_SHORT)
     elseif new == "J2_OFF" then
@@ -1045,7 +1067,7 @@ local function EvalPhase(pUnit, cUnit)
             -- CASE I/II: ZIPLIP departure, no Departure transmission
             if cPos and Dist2D(pPos, cPos) >= CFG.DEP_ZIPLIP_NM then
                 CD.depZiplip = true
-                Msg(string.format("[CAS-1] ZIPLIP departure. Check in with STRIKE %s (F10 > CAS-1 COMMS).",
+                Msg(string.format("[CAS-1] ZIPLIP departure. Check in with STRIKE %s (F10 > COMMS).",
                     CFG.FREQ.STRIKE), CFG.DUR_HANDOFF)
                 SetPhase("STRIKE_OUT")
             end
@@ -1106,7 +1128,7 @@ end
 local REMIND = {
     STRIKE_OUT = function()
         if CD.depZiplip then
-            return string.format("[CAS-1] ZIPLIP departure — check in with STRIKE %s (F10 > CAS-1 COMMS).", CFG.FREQ.STRIKE), nil
+            return string.format("[CAS-1] ZIPLIP departure — check in with STRIKE %s (F10 > COMMS).", CFG.FREQ.STRIKE), nil
         end
         return string.format("[DEPARTURE] %s, Departure. Contact Strike, %s, how copy?", CFG.CS, CFG.FREQ.STRIKE), "dep_contact_strike"
     end,
@@ -1131,7 +1153,7 @@ Remind = function(now)
     if not audio then Msg(txt, CFG.DUR_HANDOFF); return end      -- v1.4.6: hint already says it
     Q(txt, CFG.DUR_HANDOFF, 0, nil, nil, audio)
     QPlay()
-    Msg("[CAS-1] F10 > CAS-1 COMMS - " .. (NEXT[CD.phase] or ""), CFG.DUR_HANDOFF)
+    Msg("[CAS-1] F10 > COMMS - " .. (NEXT[CD.phase] or ""), CFG.DUR_HANDOFF)
 end
 
 local function CD_Tick(_, t)
@@ -1139,7 +1161,6 @@ local function CD_Tick(_, t)
     TrackTargets()
     local p = Player()
     if not p then return t + CFG.TICK end
-    if not CD.menu.root then MenuRebuild() end
     EvalPhase(p, Carrier())
     Remind(t)
     if OVL_PHASES[CD.phase] or CD.phase == "DEPARTURE" then SurfaceCheck(p:getPoint()) end
@@ -1172,7 +1193,7 @@ local function CD_Init()
 
     SetFlag(200, 0)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.4.6 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.4.7 online — CAS-1 Syria")
 end
 
 CD_Init()
