@@ -1,4 +1,5 @@
 # id;agency;spoken text  (only the STATIC part; bearings, ranges, angels, MGRS, TOT stay on-screen)
+# Piper spells "SAM" letter by letter; written "Sam" so it is spoken as the word (v1.4.3).
 dep_switch_strike;DEPARTURE;Hornet five one, Departure. Switch Strike, two six five decimal zero.
 str_switch_marshal;STRIKE;Hornet five one, Strike. Switch Marshal, two six one decimal zero.
 eye_area_clear;EYEBALL;Hornet five one, target area clear. Continue as briefed.
@@ -12,7 +13,7 @@ tkr_done;TEXACO;Hornet five one, Texaco one one, offload complete. Cleared to de
 str_inbound;STRIKE;Hornet five one, Strike, radar contact, Mode four sweet. Continue the zero five zero corridor. Switch Marshal at fifty miles, two six one decimal zero.
 ovl_feet_dry;OVERLORD;Hornet five one, Overlord, copy feet dry.
 ovl_feet_wet;OVERLORD;Hornet five one, Overlord, copy feet wet.
-ovl_picture;OVERLORD;Hornet five one, Overlord, picture clean. SAM activity reported in the target areas.
+ovl_picture;OVERLORD;Hornet five one, Overlord, picture clean. Sam activity reported in the target areas.
 ovl_say_int;OVERLORD;Hornet five one, Overlord. Say intentions.
 ovl_contact_strike;OVERLORD;Hornet five one, Overlord. Contact Strike, two six five decimal zero, how copy?
 dep_contact_strike;DEPARTURE;Hornet five one, Departure. Contact Strike, two six five decimal zero, how copy?
@@ -44,7 +45,7 @@ o_for;OVERLORD;for;tok:0.1
 o_angels;OVERLORD;angels;tok
 o_mother;OVERLORD;Mother;tok
 ovl_checkin_a;OVERLORD;Hornet five one, Overlord, radar contact. Picture clean. Mission as fragged, Pointer one one and Eyeball one one on station. Proceed C P Tiger,;tok:0.1
-ovl_checkin_b;OVERLORD;SAM activity reported in both target areas, hard deck two three thousand M S L in the engagement area. Report feet dry.;tok
+ovl_checkin_b;OVERLORD;Sam activity reported in both target areas, hard deck two three thousand M S L in the engagement area. Report feet dry.;tok
 ovl_contact_pointer_a;OVERLORD;Hornet five one, Overlord. C P Tiger;tok:0.05
 ovl_contact_pointer_b;OVERLORD;Pointer one one is on station. Contact Pointer one one, three three three decimal three. Return to this frequency on check-out.;tok
 ovl_off_pointer_a;OVERLORD;Hornet five one, Overlord, copy. Return to C P Tiger,;tok:0.05
@@ -73,7 +74,7 @@ i_l3;PILOT;Line three,;tok:0.1
 i_l4;PILOT;Line four, time on target,;tok:0.1
 i_l5;PILOT;Line five,;tok:0.1
 i_l5b;PILOT;vehicles destroyed.;tok:0.2
-i_rmk;PILOT;Remarks, SAM activity in both target areas.;tok
+i_rmk;PILOT;Remarks, Sam activity in both target areas.;tok
 # ── v1.4.2: mission abort / RTB from any mission phase
 p_ovl_abort_a;PILOT;Overlord, Hornet five one, mission abort, RTB,;tok:0.1
 ovl_abort_a;OVERLORD;Hornet five one, Overlord, copy abort. RTB approved.;tok:0.15

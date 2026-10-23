@@ -1,8 +1,20 @@
--- CV_Comms | v1.3.1
+-- CV_Comms | v1.4.0
 --[[
   Carrier (CVN) departure / recovery radio — TRT Syria Dynamic Template
   Template-level module (not CAS-1 specific). Plan: project doc
   claude/cv-comms-gap-analysis.md (§5 decisions, §5.4 = this release, "R1").
+
+  v1.4.0 — R4: CASE III bolter / wave-off pattern + modex acknowledgements
+    * After a bolter / wave-off (GROOVE -> AIRBOSS Bolter Pattern / Bullseye / Dirty Up):
+          auto  467: 467, airborne.
+                APP: 467, take angels 1.2, when level, turn left to the downwind,
+                     heading <FB+180>.                          467: 467.
+          auto  abeam (AIRBOSS X <= 0 on the downwind heading +/-45 deg):
+                467: 467, abeam, state X.Y.
+                APP: 467, at 4 DME, turn left to final bearing <FB>.   467: 467.
+          -> BALLWAIT: ¾ mile "call the ball" again on the next pass.
+    * Pilot "467." acknowledgement after Marshal "radar contact, final bearing" and
+      after Approach "final bearing" (ACOP: most readbacks = side number only).
 
   v1.3.1 — groove fixes from the 2026-10-23 test
     * Roger ball / Paddles contact: one subtitle (AIRBOSS "LSO: Roger ball, 23 knots,
@@ -142,7 +154,7 @@
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "1.3.1",
+    VERSION      = "1.4.0",
     PLAYER_UNIT  = "Player_01",
     CARRIER_UNIT = "CVN",
     MODEX        = "467",       -- fallback if AIRBOSS has no onboard number yet
@@ -164,6 +176,7 @@ local CFG = {
     POPEYE_FT      = 17500,     -- "Popeye" offered above this (mandatory at FL180 in IMC)
     ONTOP_FT       = 15000,     -- "on top" offered above this
     DEP_FALLBACK_NM= 30,        -- no "on top" by then -> Departure clears to switch anyway
+    BOLTER_FINAL_DME = 4,       -- R4: "at 4 DME, turn left to final bearing"
     ACLS_NM        = 6.5,       -- "ACLS lock on, say needles" (DME)
     NEEDLES_TIMEOUT= 15,        -- s without a needles answer -> "fly bullseye"
     BALL_NM        = 1.0,       -- Approach starts "...three-quarter mile, call the ball" (NM from stern;
@@ -332,6 +345,11 @@ local CFG = {
         p_l_x                  = { ch = "PILOT", len = 0.48 },
         p_l_y                  = { ch = "PILOT", len = 0.35 },
         p_l_z                  = { ch = "PILOT", len = 0.41 },
+        a_take_12              = { ch = "APPROACH", len = 1.03 },
+        a_downwind             = { ch = "APPROACH", len = 1.40 },
+        a_at                   = { ch = "APPROACH", len = 0.18 },
+        a_dme_final            = { ch = "APPROACH", len = 1.32 },
+        p_abeam                = { ch = "PILOT", len = 0.39 },
     },
 
     -- AIRBOSS calls dropped in every case (CV_Comms makes them)
@@ -664,7 +682,10 @@ local function A_Commencing()
             c.fb = fb
             Ctl("MARSHAL", "MARSHAL", Seq(D("m", m), CFG.P, "m_radar_fb", D("m", fb)),
                 string.format("%s, radar contact, final bearing %s.", m, fb),
-                function() CV.tRadar = timer.getTime() end)
+                function()
+                    CV.tRadar = timer.getTime()
+                    Pilot("MARSHAL", D("p", m), string.format("%s.", m))
+                end)
             -- keep AIRBOSS in step if it has not released the hero from the stack yet
             local pd = HeroPD()
             if pd and pd.step == AIRBOSS.PatternStep.HOLDING then
@@ -696,7 +717,8 @@ local function A_AppCheckIn()
             local fb = Hdg3(ab:GetFinalBearing(true))
             if CV.clr then CV.clr.fb = fb end
             Ctl("APPROACH", "APPROACH", Seq(D("a", m), CFG.P, "a_approach", "a_final_bearing", D("a", fb)),
-                string.format("%s, Approach, final bearing %s.", m, fb))
+                string.format("%s, Approach, final bearing %s.", m, fb),
+                function() Pilot("APPROACH", D("p", m), string.format("%s.", m)) end)
         end)
     SetPhase("APPROACH")
 end
@@ -945,6 +967,41 @@ local function CaseNow()
     return (f == 1 or f == 2 or f == 3) and f or 3
 end
 
+-- ── R4: CASE III bolter / wave-off pattern ─────────────────────
+local function C_BolterStart()
+    local m, ab = Modex(), AB()
+    local fbN = ab and ab:GetFinalBearing(true) or 0
+    local dw  = Hdg3(fbN + 180)
+    CV.bolter = { dw = tonumber(dw), fb = Hdg3(fbN) }
+    SetPhase("B_UPWIND")
+    CV.q = {}
+    Pilot("APPROACH", Seq(D("p", m), CFG.P, "p_airborne"), string.format("%s, airborne.", m), function()
+        Q("APPROACH", "APPROACH",
+            Seq(D("a", m), CFG.P, "a_take_12", "a_downwind", D("a", dw)),
+            string.format("%s, take angels 1.2, when level, turn left to the downwind, heading %s.", m, dw),
+            function()
+                Pilot("APPROACH", D("p", m), string.format("%s.", m))
+                SetPhase("B_DOWNWIND")
+            end, 0.8)
+    end)
+end
+
+local function C_BolterAbeam()
+    local m, lbs = Modex(), FuelLbs()
+    local fb, dme = CV.bolter.fb, tostring(CFG.BOLTER_FINAL_DME)
+    SetPhase("B_ABEAM")
+    Pilot("APPROACH", Seq(D("p", m), CFG.P, "p_abeam", "p_state", StateTokens(lbs)),
+        string.format("%s, abeam, state %s.", m, StateStr(lbs)), function()
+            Q("APPROACH", "APPROACH",
+                Seq(D("a", m), CFG.P, "a_at", D("a", dme), "a_dme_final", D("a", fb)),
+                string.format("%s, at %s DME, turn left to final bearing %s.", m, dme, fb),
+                function()
+                    Pilot("APPROACH", D("p", m), string.format("%s.", m))
+                    SetPhase("BALLWAIT")
+                end, 0.8)
+        end)
+end
+
 --- Marshal reply (from the _MarshalCallArrived override).
 local function MarshalReply(case, brc, altitude, tcharlie, qfe)
     local ab, m = AB(), Modex()
@@ -1182,7 +1239,7 @@ end
 -- ══════════════════════════════════════════════════════════════
 local function Reset(reason)
     CV.q, CV.clr, CV.case, CV.tRadar, CV.tBallAsk = {}, nil, nil, nil, nil
-    CV.dep, CV.depActive, CV.sawGroove = nil, false, false
+    CV.dep, CV.depActive, CV.sawGroove, CV.bolter = nil, false, false, nil
     CV.wasOutside = false
     SetPhase("IDLE")
     Log("reset (" .. reason .. ")")
@@ -1242,9 +1299,12 @@ local function Tick(_, t)
             CV.sawGroove = true
         elseif CV.phase == "GROOVE" and CV.sawGroove and pd and (pd.step == AIRBOSS.PatternStep.BOLTER
                or pd.step == AIRBOSS.PatternStep.BULLSEYE or pd.step == AIRBOSS.PatternStep.DIRTYUP) then
-            Log("bolter / wave-off -> BALLWAIT (AIRBOSS step " .. tostring(pd.step) .. ")")
+            Log("bolter / wave-off (AIRBOSS step " .. tostring(pd.step) .. ")")
             CV.sawGroove = false
-            SetPhase("BALLWAIT")
+            if CV.case == 3 then C_BolterStart() else SetPhase("BALLWAIT") end
+        elseif CV.phase == "B_DOWNWIND" and not CV.busy and pd and CV.bolter then
+            local ok, X = pcall(AB()._GetDistances, AB(), pd.unit)
+            if ok and X and X <= 0 and math.abs(ADiff(MagHdg(u), CV.bolter.dw)) <= 45 then C_BolterAbeam() end
         elseif CV.phase == "BALLWAIT" and SternNM() <= CFG.BALL_NM and Astern() then
             C_CallBall()
         elseif CV.phase == "BALL" and CV.tBallAsk and timer.getTime() - CV.tBallAsk >= CFG.BALL_AUTO then

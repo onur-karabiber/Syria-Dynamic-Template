@@ -1,10 +1,13 @@
--- Comms_Director | v1.4.2
+-- Comms_Director | v1.4.3
 --[[
   CAS-1 Communications State Machine — Syria Dynamic Template
   Scope: Departure→Strike→OVERLORD hand-offs · JTAC hand-offs · INFLTREP · TANKER
          · RTB (OVERLORD→Strike→Marshal) · INJ-1..4
   Out of scope: JTAC comms themselves (native DCS JTAC check-in / 9-line / clearance
                 preserved, do not touch)
+
+  v1.4.3 — "SAM" was spelled letter by letter by Piper (es-ay-em); clips re-rendered
+           with "Sam" (ovl_checkin_b, ovl_picture, i_rmk).
 
   v1.4.2 — F10 "OVERLORD: RTB (mission abort)" in ENROUTE / JTAC1 / J1_OFF / JTAC2 /
            J2_OFF (REFUEL / TKR_DONE keep their normal RTB item):
@@ -196,7 +199,7 @@ local CFG = {
         str_inbound            = { ch = "STRIKE", len = 5.84 },
         ovl_feet_dry           = { ch = "OVERLORD", len = 2.11 },
         ovl_feet_wet           = { ch = "OVERLORD", len = 2.06 },
-        ovl_picture            = { ch = "OVERLORD", len = 3.65 },
+        ovl_picture            = { ch = "OVERLORD", len = 3.56 },
         ovl_say_int            = { ch = "OVERLORD", len = 2.18 },
         ovl_contact_strike     = { ch = "OVERLORD", len = 3.87 },
         dep_contact_strike     = { ch = "DEPARTURE", len = 3.52 },
@@ -225,7 +228,7 @@ local CFG = {
         o_angels               = { ch = "OVERLORD", len = 0.51 },
         o_mother               = { ch = "OVERLORD", len = 0.32 },
         ovl_checkin_a          = { ch = "OVERLORD", len = 5.67 },
-        ovl_checkin_b          = { ch = "OVERLORD", len = 5.00 },
+        ovl_checkin_b          = { ch = "OVERLORD", len = 5.11 },
         ovl_contact_pointer_a  = { ch = "OVERLORD", len = 1.95 },
         ovl_contact_pointer_b  = { ch = "OVERLORD", len = 4.67 },
         ovl_off_pointer_a      = { ch = "OVERLORD", len = 2.36 },
@@ -254,7 +257,7 @@ local CFG = {
         i_l4                   = { ch = "PILOT", len = 1.13 },
         i_l5                   = { ch = "PILOT", len = 0.59 },
         i_l5b                  = { ch = "PILOT", len = 0.93 },
-        i_rmk                  = { ch = "PILOT", len = 2.15 },
+        i_rmk                  = { ch = "PILOT", len = 1.81 },
         p_ovl_abort_a          = { ch = "PILOT", len = 2.19 },
         ovl_abort_a            = { ch = "OVERLORD", len = 2.68 },
     },
@@ -1128,7 +1131,7 @@ local function CD_Init()
 
     SetFlag(200, 0)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.4.2 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.4.3 online — CAS-1 Syria")
 end
 
 CD_Init()

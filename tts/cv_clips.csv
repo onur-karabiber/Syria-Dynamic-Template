@@ -155,3 +155,9 @@ p_l_w;PILOT;whiskey;tok
 p_l_x;PILOT;x-ray;tok
 p_l_y;PILOT;yankee;tok
 p_l_z;PILOT;zulu;tok
+# ── R4 (CV_Comms v1.4.0): CASE III bolter / wave-off pattern
+a_take_12;APPROACH;take angels one point two,;tok:0.08
+a_downwind;APPROACH;when level, turn left to the downwind, heading;tok
+a_at;APPROACH;at;tok
+a_dme_final;APPROACH;D M E, turn left to final bearing;tok
+p_abeam;PILOT;abeam,;tok:0.08

@@ -1,9 +1,15 @@
--- Airboss_CaseSync.lua | v1.0.2
+-- Airboss_CaseSync.lua | v1.0.3
 -- TRT Syria Recovery Framework - syncs TRT.Airboss recovery case to ME flag 100
 --
 -- LOAD ORDER: after Airboss_Start.lua (needs TRT.Airboss to exist already).
 -- Loaded via: ME "Do Script File" (ResKey_Action_302), embedded by build.py.
 --
+-- v1.0.3: Bankler's CASE I trainer (TrapTraining.lua) follows flag 100 too:
+--   active in CASE I and CASE II, OFF in CASE III (its break / downwind / score
+--   messages are meaningless on a CASE III straight-in). Done by wrapping its
+--   global Init() (round start) once it exists, and ending any running round when
+--   the case becomes III. Also feeds Bankler the real TACAN (72X) and live BRC
+--   (its file hard-codes 74X / 353). Bankler's own file is untouched.
 -- v1.0.2: OFFSET CASE II 30 -> 21, CASE III 0 -> 30: both cases hold on the
 --   TRT chart fix R-196 (angels 10 / 25 DME via Airboss_Start v1.0.3). CASE II radial =
 --   BRC(mag 355) - 180 + 21; CASE III radial = FB(mag ~346) - 180 + 30.
@@ -85,7 +91,33 @@ local DEBUG_LOG_CASE_SYNC = true
 -- poll, whenever that trigger fires.
 TRT.CaseSync.lastFlag = nil   -- v1.0.1: first poll applies flag 100 (see header)
 
+-- Bankler gate (v1.0.3) ------------------------------------------------------
+TRT.CaseSync.BANKLER_CASES = { [1] = true, [2] = true }   -- Bankler runs in these
+local banklerWrapped = false
+
+local function BanklerSync(case)
+  if type(_G.Init) ~= "function" or type(_G.SetBRC) ~= "function" then return end  -- not loaded yet
+  if not banklerWrapped then
+    local origInit = _G.Init
+    _G.Init = function(id, patternModeZone)
+      if not TRT.CaseSync.BANKLER_CASES[TRT.CaseSync.lastFlag or 0] then return end
+      return origInit(id, patternModeZone)
+    end
+    banklerWrapped = true
+    env.info("Airboss_CaseSync | Bankler Init gated on flag 100")
+  end
+  _G.carrierTCN = "72X"
+  local ok, brc = pcall(function() return TRT.Airboss:GetBRC() end)
+  if ok and brc then pcall(_G.SetBRC, math.floor(brc + 0.5) % 360) end
+  if not TRT.CaseSync.BANKLER_CASES[case or 0] and type(_G.playerDatas) == "table" then
+    for _, pd in pairs(_G.playerDatas) do
+      if type(pd) == "table" and pd.step and pd.step > 0 then pd.step = 0 end
+    end
+  end
+end
+
 local function CheckFlag100(_, time)
+  pcall(BanklerSync, trigger.misc.getUserFlag(100))
 
   local current = trigger.misc.getUserFlag(100)
 
@@ -118,4 +150,4 @@ end
 
 timer.scheduleFunction(CheckFlag100, nil, timer.getTime() + 5)
 
-env.info("Airboss_CaseSync | v1.0.2 | listening on flag 100")
+env.info("Airboss_CaseSync | v1.0.3 | listening on flag 100")
