@@ -1,6 +1,10 @@
--- Airboss_CaseSync.lua | v1.0.3
+-- Airboss_CaseSync.lua | v1.0.4
 -- TRT Syria Recovery Framework - syncs TRT.Airboss recovery case to ME flag 100
 --
+-- v1.0.4: Bankler identity: its PlayerData uses fixed per-slot tables (Player_01 ->
+--   modex 200, "Chevy11"). Each poll now overwrites pd.modex with the unit's real
+--   onboard number (467) and pd.fixedCallsign with the DCS group callsign
+--   ("Enfield 1-1" style). The player name shown first is the DCS profile name.
 -- LOAD ORDER: after Airboss_Start.lua (needs TRT.Airboss to exist already).
 -- Loaded via: ME "Do Script File" (ResKey_Action_302), embedded by build.py.
 --
@@ -95,6 +99,25 @@ TRT.CaseSync.lastFlag = nil   -- v1.0.1: first poll applies flag 100 (see header
 TRT.CaseSync.BANKLER_CASES = { [1] = true, [2] = true }   -- Bankler runs in these
 local banklerWrapped = false
 
+-- v1.0.4: real onboard number and DCS callsign instead of Bankler's slot tables.
+local function BanklerIdentity(pd)
+  if type(pd) ~= "table" or not pd.unit or pd.trtIdentity then return end
+  local u = pd.unit.GetDCSObject and pd.unit:GetDCSObject()
+  if not (u and u:isExist()) then return end
+  local n = tonumber(pd.unit.onboardnum or "")
+  if not n then
+    local okt, tpl = pcall(function() return pd.unit:GetTemplate() end)
+    n = okt and tpl and tonumber(tpl.onboard_num or "")
+  end
+  if n then pd.modex = n end
+  local okc, cs = pcall(u.getCallsign, u)
+  if okc and type(cs) == "string" and cs ~= "" then
+    local name, a, b = cs:match("^(%a+)%s*(%d)%D?(%d)$")
+    pd.fixedCallsign = name and (name .. " " .. a .. "-" .. b) or cs
+  end
+  pd.trtIdentity = true
+end
+
 local function BanklerSync(case)
   if type(_G.Init) ~= "function" or type(_G.SetBRC) ~= "function" then return end  -- not loaded yet
   if not banklerWrapped then
@@ -103,12 +126,23 @@ local function BanklerSync(case)
       if not TRT.CaseSync.BANKLER_CASES[TRT.CaseSync.lastFlag or 0] then return end
       return origInit(id, patternModeZone)
     end
+    if type(_G.PlayerData) == "table" and type(_G.PlayerData.New) == "function" then
+      local origNew = _G.PlayerData.New
+      _G.PlayerData.New = function(...)
+        local pd = origNew(...)
+        pcall(BanklerIdentity, pd)
+        return pd
+      end
+    end
     banklerWrapped = true
     env.info("Airboss_CaseSync | Bankler Init gated on flag 100")
   end
   _G.carrierTCN = "72X"
   local ok, brc = pcall(function() return TRT.Airboss:GetBRC() end)
   if ok and brc then pcall(_G.SetBRC, math.floor(brc + 0.5) % 360) end
+  if type(_G.playerDatas) == "table" then                -- v1.0.4: real modex / callsign
+    for _, pd in pairs(_G.playerDatas) do pcall(BanklerIdentity, pd) end
+  end
   if not TRT.CaseSync.BANKLER_CASES[case or 0] and type(_G.playerDatas) == "table" then
     for _, pd in pairs(_G.playerDatas) do
       if type(pd) == "table" and pd.step and pd.step > 0 then pd.step = 0 end
@@ -150,4 +184,4 @@ end
 
 timer.scheduleFunction(CheckFlag100, nil, timer.getTime() + 5)
 
-env.info("Airboss_CaseSync | v1.0.3 | listening on flag 100")
+env.info("Airboss_CaseSync | v1.0.4 | listening on flag 100")

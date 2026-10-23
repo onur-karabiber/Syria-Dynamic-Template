@@ -78,3 +78,5 @@ i_rmk;PILOT;Remarks, Sam activity in both target areas.;tok
 # ── v1.4.2: mission abort / RTB from any mission phase
 p_ovl_abort_a;PILOT;Overlord, Hornet five one, mission abort, RTB,;tok:0.1
 ovl_abort_a;OVERLORD;Hornet five one, Overlord, copy abort. RTB approved.;tok:0.15
+p_ovl_checkin_rb;PILOT>OVERLORD;Hornet five one, proceeding C P Tiger, hard deck two three thousand, wilco.;tok
+p_ovl_rtb_rb;PILOT>OVERLORD;Hornet five one, zero five zero corridor, wilco.;tok

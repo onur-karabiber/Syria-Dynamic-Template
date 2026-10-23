@@ -1,8 +1,21 @@
--- CV_Comms | v1.4.0
+-- CV_Comms | v1.4.2
 --[[
   Carrier (CVN) departure / recovery radio — TRT Syria Dynamic Template
   Template-level module (not CAS-1 specific). Plan: project doc
   claude/cv-comms-gap-analysis.md (§5 decisions, §5.4 = this release, "R1").
+
+  v1.4.2 — "established" is graded once per pass (TRT.addScore -> flag 1908):
+           within EST_NM of the assigned fix (radial + DME), EST_FT of the assigned
+           angels and EST_KIAS of HOLD_KIAS -> +EST_PTS, otherwise -EST_PTS with the
+           failed items on screen. KIAS is estimated (3D velocity minus DCS wind = TAS,
+           x sqrt(ISA density ratio)); +/-10 kt is typical, hence the wide window.
+           "Recovery open" text: once per pass; past the EAT it reads "commence now".
+           Clips re-rendered by make_clips v1.4.0 (25 % slower, +30 % level).
+
+  v1.4.1 — test helper: on deck (not airborne, phase IDLE) CV COMMS offers
+           "Set CASE I / II / III (flag 100)" (CFG.CASE_MENU). Airboss_CaseSync,
+           Bankler gate and the scoring scripts follow flag 100 within ~5 s. The ME
+           "CASE SELECTOR" still sets the mission default at start.
 
   v1.4.0 — R4: CASE III bolter / wave-off pattern + modex acknowledgements
     * After a bolter / wave-off (GROOVE -> AIRBOSS Bolter Pattern / Bullseye / Dirty Up):
@@ -12,7 +25,8 @@
           auto  abeam (AIRBOSS X <= 0 on the downwind heading +/-45 deg):
                 467: 467, abeam, state X.Y.
                 APP: 467, at 4 DME, turn left to final bearing <FB>.   467: 467.
-          -> BALLWAIT: ¾ mile "call the ball" again on the next pass.
+          -> BALLWAIT: ¾ mile "call the ball" again on the next pass (now also requires
+             a heading within 45 deg of the final bearing).
     * Pilot "467." acknowledgement after Marshal "radar contact, final bearing" and
       after Approach "final bearing" (ACOP: most readbacks = side number only).
 
@@ -154,11 +168,17 @@
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "1.4.0",
+    VERSION      = "1.4.2",
     PLAYER_UNIT  = "Player_01",
     CARRIER_UNIT = "CVN",
     MODEX        = "467",       -- fallback if AIRBOSS has no onboard number yet
 
+    CASE_MENU    = true,        -- F10 "Set CASE" on deck (test helper; false = hide)
+    EST_NM       = 1.5,         -- v1.4.2 established grading: max distance to the fix (NM)
+    EST_FT       = 300,         -- ... max altitude error (ft)
+    HOLD_KIAS    = 250,         -- ... holding speed and tolerance (estimated KIAS)
+    EST_KIAS     = 30,
+    EST_PTS      = 5,           -- +/- points
     CCA_NM       = 50,          -- Marshal check-in offered inside this range
     ARM_AIRBORNE = 900,         -- s airborne after which check-in is offered even
                                 -- if the player never left the CCA
@@ -203,153 +223,153 @@ local CFG = {
     AUDIO = {
         sq_up                  = { ch = "MARSHAL", len = 0.07 },
         sq_dn                  = { ch = "MARSHAL", len = 0.12 },
-        m_0                    = { ch = "MARSHAL", len = 0.36 },
-        m_1                    = { ch = "MARSHAL", len = 0.29 },
-        m_2                    = { ch = "MARSHAL", len = 0.27 },
-        m_3                    = { ch = "MARSHAL", len = 0.34 },
-        m_4                    = { ch = "MARSHAL", len = 0.25 },
-        m_5                    = { ch = "MARSHAL", len = 0.36 },
-        m_6                    = { ch = "MARSHAL", len = 0.36 },
-        m_7                    = { ch = "MARSHAL", len = 0.35 },
-        m_8                    = { ch = "MARSHAL", len = 0.21 },
-        m_9                    = { ch = "MARSHAL", len = 0.33 },
-        m_vfr                  = { ch = "MARSHAL", len = 0.92 },
-        m_altimeter            = { ch = "MARSHAL", len = 0.41 },
-        m_case1                = { ch = "MARSHAL", len = 0.92 },
-        m_case2                = { ch = "MARSHAL", len = 1.77 },
-        m_case3                = { ch = "MARSHAL", len = 1.58 },
-        m_brc                  = { ch = "MARSHAL", len = 0.55 },
-        m_exp_brc              = { ch = "MARSHAL", len = 0.93 },
-        m_exp_fb               = { ch = "MARSHAL", len = 0.90 },
-        m_hold_angels          = { ch = "MARSHAL", len = 0.62 },
-        m_report_see_me        = { ch = "MARSHAL", len = 0.60 },
-        m_marshal_on           = { ch = "MARSHAL", len = 0.46 },
-        m_radial               = { ch = "MARSHAL", len = 0.38 },
-        m_dme                  = { ch = "MARSHAL", len = 0.51 },
-        m_angels               = { ch = "MARSHAL", len = 0.43 },
-        m_eat                  = { ch = "MARSHAL", len = 0.87 },
-        m_btn15                = { ch = "MARSHAL", len = 0.92 },
-        m_readback             = { ch = "MARSHAL", len = 0.64 },
-        m_roger                = { ch = "MARSHAL", len = 0.35 },
-        m_go1                  = { ch = "MARSHAL", len = 1.10 },
-        p_0                    = { ch = "PILOT", len = 0.35 },
-        p_1                    = { ch = "PILOT", len = 0.31 },
-        p_2                    = { ch = "PILOT", len = 0.33 },
-        p_3                    = { ch = "PILOT", len = 0.27 },
-        p_4                    = { ch = "PILOT", len = 0.36 },
-        p_5                    = { ch = "PILOT", len = 0.33 },
-        p_6                    = { ch = "PILOT", len = 0.37 },
-        p_7                    = { ch = "PILOT", len = 0.37 },
-        p_8                    = { ch = "PILOT", len = 0.25 },
-        p_9                    = { ch = "PILOT", len = 0.35 },
-        p_point                = { ch = "PILOT", len = 0.31 },
-        p_marshal              = { ch = "PILOT", len = 0.46 },
-        p_marking              = { ch = "PILOT", len = 0.63 },
-        p_for                  = { ch = "PILOT", len = 0.32 },
-        p_angels               = { ch = "PILOT", len = 0.47 },
-        p_state                = { ch = "PILOT", len = 0.38 },
-        p_established          = { ch = "PILOT", len = 0.93 },
-        p_see_you              = { ch = "PILOT", len = 0.73 },
-        p_marshal_on           = { ch = "PILOT", len = 0.51 },
-        p_approach_time        = { ch = "PILOT", len = 0.58 },
-        p_btn15                = { ch = "PILOT", len = 0.56 },
-        m_radar_fb             = { ch = "MARSHAL", len = 1.34 },
-        m_switch_app           = { ch = "MARSHAL", len = 1.09 },
-        a_0                    = { ch = "APPROACH", len = 0.31 },
-        a_1                    = { ch = "APPROACH", len = 0.29 },
-        a_2                    = { ch = "APPROACH", len = 0.26 },
-        a_3                    = { ch = "APPROACH", len = 0.27 },
-        a_4                    = { ch = "APPROACH", len = 0.25 },
-        a_5                    = { ch = "APPROACH", len = 0.26 },
-        a_6                    = { ch = "APPROACH", len = 0.34 },
-        a_7                    = { ch = "APPROACH", len = 0.34 },
-        a_8                    = { ch = "APPROACH", len = 0.20 },
-        a_9                    = { ch = "APPROACH", len = 0.31 },
-        a_approach             = { ch = "APPROACH", len = 0.47 },
-        a_radar_contact        = { ch = "APPROACH", len = 0.70 },
-        a_final_bearing        = { ch = "APPROACH", len = 0.52 },
-        a_roger                = { ch = "APPROACH", len = 0.34 },
-        a_go1                  = { ch = "APPROACH", len = 1.13 },
-        p_commencing           = { ch = "PILOT", len = 0.57 },
-        p_approach             = { ch = "PILOT", len = 0.50 },
-        p_checking_in          = { ch = "PILOT", len = 0.63 },
-        p_miles                = { ch = "PILOT", len = 0.42 },
-        p_platform             = { ch = "PILOT", len = 0.48 },
-        a_acls                 = { ch = "APPROACH", len = 0.98 },
-        a_miles                = { ch = "APPROACH", len = 0.44 },
-        a_say_needles          = { ch = "APPROACH", len = 0.57 },
-        a_concur               = { ch = "APPROACH", len = 0.89 },
-        a_bullseye             = { ch = "APPROACH", len = 0.55 },
-        a_gp_on                = { ch = "APPROACH", len = 0.45 },
-        a_gp_sl_above          = { ch = "APPROACH", len = 0.75 },
-        a_gp_above             = { ch = "APPROACH", len = 0.55 },
-        a_gp_sl_below          = { ch = "APPROACH", len = 0.78 },
-        a_gp_below             = { ch = "APPROACH", len = 0.58 },
-        a_crs_on               = { ch = "APPROACH", len = 0.46 },
-        a_crs_sl_left          = { ch = "APPROACH", len = 0.84 },
-        a_crs_left             = { ch = "APPROACH", len = 0.55 },
-        a_crs_sl_right         = { ch = "APPROACH", len = 0.90 },
-        a_crs_right            = { ch = "APPROACH", len = 0.60 },
-        a_3q_ball              = { ch = "APPROACH", len = 1.13 },
-        p_up_on                = { ch = "PILOT", len = 0.78 },
-        p_neg_needles          = { ch = "PILOT", len = 0.83 },
-        p_hornet_ball          = { ch = "PILOT", len = 0.49 },
-        p_clara                = { ch = "PILOT", len = 0.31 },
-        d_0                    = { ch = "DEPARTURE", len = 0.31 },
-        d_1                    = { ch = "DEPARTURE", len = 0.26 },
-        d_2                    = { ch = "DEPARTURE", len = 0.23 },
-        d_3                    = { ch = "DEPARTURE", len = 0.27 },
-        d_4                    = { ch = "DEPARTURE", len = 0.26 },
-        d_5                    = { ch = "DEPARTURE", len = 0.30 },
-        d_6                    = { ch = "DEPARTURE", len = 0.31 },
-        d_7                    = { ch = "DEPARTURE", len = 0.31 },
-        d_8                    = { ch = "DEPARTURE", len = 0.26 },
-        d_9                    = { ch = "DEPARTURE", len = 0.34 },
-        d_radar_alt            = { ch = "DEPARTURE", len = 1.08 },
-        d_roger                = { ch = "DEPARTURE", len = 0.33 },
-        d_cleared              = { ch = "DEPARTURE", len = 0.56 },
-        p_departure            = { ch = "PILOT", len = 0.46 },
-        p_airborne             = { ch = "PILOT", len = 0.44 },
-        p_passing              = { ch = "PILOT", len = 0.37 },
-        p_kilo                 = { ch = "PILOT", len = 0.33 },
-        p_arcing               = { ch = "PILOT", len = 0.38 },
-        p_est_out              = { ch = "PILOT", len = 0.73 },
-        p_popeye               = { ch = "PILOT", len = 0.37 },
-        p_on_top               = { ch = "PILOT", len = 0.40 },
-        p_and                  = { ch = "PILOT", len = 0.28 },
-        p_local                = { ch = "PILOT", len = 0.37 },
-        p_unknown              = { ch = "PILOT", len = 0.44 },
-        p_l_a                  = { ch = "PILOT", len = 0.35 },
+        m_0                    = { ch = "MARSHAL", len = 0.49 },
+        m_1                    = { ch = "MARSHAL", len = 0.36 },
+        m_2                    = { ch = "MARSHAL", len = 0.35 },
+        m_3                    = { ch = "MARSHAL", len = 0.35 },
+        m_4                    = { ch = "MARSHAL", len = 0.35 },
+        m_5                    = { ch = "MARSHAL", len = 0.40 },
+        m_6                    = { ch = "MARSHAL", len = 0.44 },
+        m_7                    = { ch = "MARSHAL", len = 0.51 },
+        m_8                    = { ch = "MARSHAL", len = 0.31 },
+        m_9                    = { ch = "MARSHAL", len = 0.50 },
+        m_vfr                  = { ch = "MARSHAL", len = 1.24 },
+        m_altimeter            = { ch = "MARSHAL", len = 0.56 },
+        m_case1                = { ch = "MARSHAL", len = 1.15 },
+        m_case2                = { ch = "MARSHAL", len = 2.04 },
+        m_case3                = { ch = "MARSHAL", len = 2.17 },
+        m_brc                  = { ch = "MARSHAL", len = 0.71 },
+        m_exp_brc              = { ch = "MARSHAL", len = 1.16 },
+        m_exp_fb               = { ch = "MARSHAL", len = 1.17 },
+        m_hold_angels          = { ch = "MARSHAL", len = 0.75 },
+        m_report_see_me        = { ch = "MARSHAL", len = 0.92 },
+        m_marshal_on           = { ch = "MARSHAL", len = 0.61 },
+        m_radial               = { ch = "MARSHAL", len = 0.49 },
+        m_dme                  = { ch = "MARSHAL", len = 0.67 },
+        m_angels               = { ch = "MARSHAL", len = 0.54 },
+        m_eat                  = { ch = "MARSHAL", len = 1.06 },
+        m_btn15                = { ch = "MARSHAL", len = 1.26 },
+        m_readback             = { ch = "MARSHAL", len = 0.78 },
+        m_roger                = { ch = "MARSHAL", len = 0.47 },
+        m_go1                  = { ch = "MARSHAL", len = 1.46 },
+        p_0                    = { ch = "PILOT", len = 0.54 },
+        p_1                    = { ch = "PILOT", len = 0.43 },
+        p_2                    = { ch = "PILOT", len = 0.42 },
+        p_3                    = { ch = "PILOT", len = 0.31 },
+        p_4                    = { ch = "PILOT", len = 0.49 },
+        p_5                    = { ch = "PILOT", len = 0.44 },
+        p_6                    = { ch = "PILOT", len = 0.49 },
+        p_7                    = { ch = "PILOT", len = 0.50 },
+        p_8                    = { ch = "PILOT", len = 0.31 },
+        p_9                    = { ch = "PILOT", len = 0.45 },
+        p_point                = { ch = "PILOT", len = 0.41 },
+        p_marshal              = { ch = "PILOT", len = 0.51 },
+        p_marking              = { ch = "PILOT", len = 0.76 },
+        p_for                  = { ch = "PILOT", len = 0.35 },
+        p_angels               = { ch = "PILOT", len = 0.64 },
+        p_state                = { ch = "PILOT", len = 0.45 },
+        p_established          = { ch = "PILOT", len = 1.12 },
+        p_see_you              = { ch = "PILOT", len = 0.98 },
+        p_marshal_on           = { ch = "PILOT", len = 0.66 },
+        p_approach_time        = { ch = "PILOT", len = 0.78 },
+        p_btn15                = { ch = "PILOT", len = 0.79 },
+        m_radar_fb             = { ch = "MARSHAL", len = 1.73 },
+        m_switch_app           = { ch = "MARSHAL", len = 1.61 },
+        a_0                    = { ch = "APPROACH", len = 0.43 },
+        a_1                    = { ch = "APPROACH", len = 0.37 },
+        a_2                    = { ch = "APPROACH", len = 0.37 },
+        a_3                    = { ch = "APPROACH", len = 0.36 },
+        a_4                    = { ch = "APPROACH", len = 0.35 },
+        a_5                    = { ch = "APPROACH", len = 0.36 },
+        a_6                    = { ch = "APPROACH", len = 0.45 },
+        a_7                    = { ch = "APPROACH", len = 0.44 },
+        a_8                    = { ch = "APPROACH", len = 0.24 },
+        a_9                    = { ch = "APPROACH", len = 0.43 },
+        a_approach             = { ch = "APPROACH", len = 0.56 },
+        a_radar_contact        = { ch = "APPROACH", len = 0.90 },
+        a_final_bearing        = { ch = "APPROACH", len = 0.66 },
+        a_roger                = { ch = "APPROACH", len = 0.44 },
+        a_go1                  = { ch = "APPROACH", len = 1.37 },
+        p_commencing           = { ch = "PILOT", len = 0.63 },
+        p_approach             = { ch = "PILOT", len = 0.56 },
+        p_checking_in          = { ch = "PILOT", len = 0.83 },
+        p_miles                = { ch = "PILOT", len = 0.57 },
+        p_platform             = { ch = "PILOT", len = 0.60 },
+        a_acls                 = { ch = "APPROACH", len = 1.29 },
+        a_miles                = { ch = "APPROACH", len = 0.57 },
+        a_say_needles          = { ch = "APPROACH", len = 0.73 },
+        a_concur               = { ch = "APPROACH", len = 1.15 },
+        a_bullseye             = { ch = "APPROACH", len = 0.65 },
+        a_gp_on                = { ch = "APPROACH", len = 0.57 },
+        a_gp_sl_above          = { ch = "APPROACH", len = 1.03 },
+        a_gp_above             = { ch = "APPROACH", len = 0.79 },
+        a_gp_sl_below          = { ch = "APPROACH", len = 1.03 },
+        a_gp_below             = { ch = "APPROACH", len = 0.70 },
+        a_crs_on               = { ch = "APPROACH", len = 0.56 },
+        a_crs_sl_left          = { ch = "APPROACH", len = 1.04 },
+        a_crs_left             = { ch = "APPROACH", len = 0.81 },
+        a_crs_sl_right         = { ch = "APPROACH", len = 1.28 },
+        a_crs_right            = { ch = "APPROACH", len = 0.83 },
+        a_3q_ball              = { ch = "APPROACH", len = 1.51 },
+        p_up_on                = { ch = "PILOT", len = 0.99 },
+        p_neg_needles          = { ch = "PILOT", len = 1.10 },
+        p_hornet_ball          = { ch = "PILOT", len = 0.75 },
+        p_clara                = { ch = "PILOT", len = 0.38 },
+        d_0                    = { ch = "DEPARTURE", len = 0.45 },
+        d_1                    = { ch = "DEPARTURE", len = 0.31 },
+        d_2                    = { ch = "DEPARTURE", len = 0.36 },
+        d_3                    = { ch = "DEPARTURE", len = 0.34 },
+        d_4                    = { ch = "DEPARTURE", len = 0.33 },
+        d_5                    = { ch = "DEPARTURE", len = 0.35 },
+        d_6                    = { ch = "DEPARTURE", len = 0.36 },
+        d_7                    = { ch = "DEPARTURE", len = 0.36 },
+        d_8                    = { ch = "DEPARTURE", len = 0.31 },
+        d_9                    = { ch = "DEPARTURE", len = 0.42 },
+        d_radar_alt            = { ch = "DEPARTURE", len = 1.35 },
+        d_roger                = { ch = "DEPARTURE", len = 0.38 },
+        d_cleared              = { ch = "DEPARTURE", len = 0.76 },
+        p_departure            = { ch = "PILOT", len = 0.57 },
+        p_airborne             = { ch = "PILOT", len = 0.54 },
+        p_passing              = { ch = "PILOT", len = 0.43 },
+        p_kilo                 = { ch = "PILOT", len = 0.40 },
+        p_arcing               = { ch = "PILOT", len = 0.50 },
+        p_est_out              = { ch = "PILOT", len = 1.08 },
+        p_popeye               = { ch = "PILOT", len = 0.46 },
+        p_on_top               = { ch = "PILOT", len = 0.56 },
+        p_and                  = { ch = "PILOT", len = 0.32 },
+        p_local                = { ch = "PILOT", len = 0.51 },
+        p_unknown              = { ch = "PILOT", len = 0.58 },
+        p_l_a                  = { ch = "PILOT", len = 0.46 },
         p_l_b                  = { ch = "PILOT", len = 0.42 },
-        p_l_c                  = { ch = "PILOT", len = 0.33 },
-        p_l_d                  = { ch = "PILOT", len = 0.35 },
-        p_l_e                  = { ch = "PILOT", len = 0.36 },
-        p_l_f                  = { ch = "PILOT", len = 0.45 },
-        p_l_g                  = { ch = "PILOT", len = 0.28 },
-        p_l_h                  = { ch = "PILOT", len = 0.38 },
-        p_l_i                  = { ch = "PILOT", len = 0.46 },
-        p_l_j                  = { ch = "PILOT", len = 0.38 },
-        p_l_k                  = { ch = "PILOT", len = 0.28 },
-        p_l_l                  = { ch = "PILOT", len = 0.41 },
-        p_l_m                  = { ch = "PILOT", len = 0.31 },
-        p_l_n                  = { ch = "PILOT", len = 0.51 },
-        p_l_o                  = { ch = "PILOT", len = 0.39 },
-        p_l_p                  = { ch = "PILOT", len = 0.45 },
-        p_l_q                  = { ch = "PILOT", len = 0.37 },
-        p_l_r                  = { ch = "PILOT", len = 0.49 },
-        p_l_s                  = { ch = "PILOT", len = 0.42 },
-        p_l_t                  = { ch = "PILOT", len = 0.39 },
-        p_l_u                  = { ch = "PILOT", len = 0.44 },
-        p_l_v                  = { ch = "PILOT", len = 0.39 },
-        p_l_w                  = { ch = "PILOT", len = 0.28 },
-        p_l_x                  = { ch = "PILOT", len = 0.48 },
-        p_l_y                  = { ch = "PILOT", len = 0.35 },
-        p_l_z                  = { ch = "PILOT", len = 0.41 },
-        a_take_12              = { ch = "APPROACH", len = 1.03 },
-        a_downwind             = { ch = "APPROACH", len = 1.40 },
-        a_at                   = { ch = "APPROACH", len = 0.18 },
-        a_dme_final            = { ch = "APPROACH", len = 1.32 },
-        p_abeam                = { ch = "PILOT", len = 0.39 },
+        p_l_c                  = { ch = "PILOT", len = 0.43 },
+        p_l_d                  = { ch = "PILOT", len = 0.47 },
+        p_l_e                  = { ch = "PILOT", len = 0.47 },
+        p_l_f                  = { ch = "PILOT", len = 0.59 },
+        p_l_g                  = { ch = "PILOT", len = 0.35 },
+        p_l_h                  = { ch = "PILOT", len = 0.63 },
+        p_l_i                  = { ch = "PILOT", len = 0.50 },
+        p_l_j                  = { ch = "PILOT", len = 0.57 },
+        p_l_k                  = { ch = "PILOT", len = 0.41 },
+        p_l_l                  = { ch = "PILOT", len = 0.44 },
+        p_l_m                  = { ch = "PILOT", len = 0.36 },
+        p_l_n                  = { ch = "PILOT", len = 0.57 },
+        p_l_o                  = { ch = "PILOT", len = 0.47 },
+        p_l_p                  = { ch = "PILOT", len = 0.51 },
+        p_l_q                  = { ch = "PILOT", len = 0.47 },
+        p_l_r                  = { ch = "PILOT", len = 0.63 },
+        p_l_s                  = { ch = "PILOT", len = 0.53 },
+        p_l_t                  = { ch = "PILOT", len = 0.46 },
+        p_l_u                  = { ch = "PILOT", len = 0.62 },
+        p_l_v                  = { ch = "PILOT", len = 0.48 },
+        p_l_w                  = { ch = "PILOT", len = 0.39 },
+        p_l_x                  = { ch = "PILOT", len = 0.76 },
+        p_l_y                  = { ch = "PILOT", len = 0.45 },
+        p_l_z                  = { ch = "PILOT", len = 0.58 },
+        a_take_12              = { ch = "APPROACH", len = 1.38 },
+        a_downwind             = { ch = "APPROACH", len = 1.76 },
+        a_at                   = { ch = "APPROACH", len = 0.22 },
+        a_dme_final            = { ch = "APPROACH", len = 1.68 },
+        p_abeam                = { ch = "PILOT", len = 0.49 },
     },
 
     -- AIRBOSS calls dropped in every case (CV_Comms makes them)
@@ -611,14 +631,47 @@ local function FixError()
     return DistNM(up, fx), up.y * 3.28084 - tonumber(c.angels) * 1000
 end
 
+--- Estimated indicated airspeed (kt): TAS from velocity minus wind, ISA density ratio.
+local function EstKIAS(u)
+    if not u or not u:isExist() then return nil end
+    local v, p = u:getVelocity(), u:getPoint()
+    local ok, w = pcall(atmosphere.getWind, p)
+    if not ok or type(w) ~= "table" then w = { x = 0, y = 0, z = 0 } end
+    local tas = math.sqrt((v.x - w.x)^2 + (v.y - (w.y or 0))^2 + (v.z - w.z)^2)
+    local hft = p.y * 3.28084
+    local sigma = math.max(0.1, (1 - 6.8756e-6 * hft)) ^ 4.2559
+    return tas * math.sqrt(sigma) * 1.94384
+end
+
+--- v1.4.2: grade the "established" call once per pass.
+local function GradeEstablished(dn, da, kias)
+    if not (TRT and TRT.addScore) then return end
+    local bad = {}
+    if dn > CFG.EST_NM then bad[#bad + 1] = string.format("%.1f NM off the fix", dn) end
+    if math.abs(da) > CFG.EST_FT then bad[#bad + 1] = string.format("altitude %+d ft", math.floor(da + 0.5)) end
+    if kias and math.abs(kias - CFG.HOLD_KIAS) > CFG.EST_KIAS then
+        bad[#bad + 1] = string.format("~%d KIAS (hold %d)", math.floor(kias + 0.5), CFG.HOLD_KIAS)
+    end
+    if #bad == 0 then
+        TRT.addScore(CFG.EST_PTS, "Established on the marshal fix")
+    else
+        TRT.addScore(-CFG.EST_PTS, "Established call not on the fix: " .. table.concat(bad, ", "))
+    end
+end
+
 local function A_Established()
     local c, m, lbs = CV.clr, Modex(), FuelLbs()
     if not c then return end
     local dn, da = FixError()
     if dn then
-        TRT.CV_ESTABLISHED = { t = timer.getAbsTime(), dNM = dn, dAltFt = da }
-        Log(string.format("established: %.1f NM from assigned fix (%s R / %s DME), alt error %+d ft",
-            dn, c.radial, c.dme, math.floor(da + 0.5)))
+        local kias = EstKIAS(Hero())
+        TRT.CV_ESTABLISHED = { t = timer.getAbsTime(), dNM = dn, dAltFt = da, kias = kias }
+        Log(string.format("established: %.1f NM from assigned fix (%s R / %s DME), alt error %+d ft, ~%d KIAS",
+            dn, c.radial, c.dme, math.floor(da + 0.5), math.floor((kias or 0) + 0.5)))
+        if not c.estScored then
+            c.estScored = true
+            timer.scheduleFunction(function() pcall(GradeEstablished, dn, da, kias) end, nil, timer.getTime() + 6)
+        end
     end
     Pilot("MARSHAL",
         Seq(D("p", m), CFG.P, "p_established", D("p", c.angels), CFG.P, "p_state", StateTokens(lbs)),
@@ -1058,8 +1111,25 @@ end
 -- ══════════════════════════════════════════════════════════════
 --  MENU
 -- ══════════════════════════════════════════════════════════════
+local function A_SetCase(n)
+    trigger.action.setUserFlag("100", n)
+    Log("flag 100 set to " .. n .. " from F10")
+    Msg(string.format("[CV] Flag 100 = %d (CASE %s). AIRBOSS, Bankler and scoring follow within ~5 s.",
+        n, ({ "I", "II", "III" })[n]), 10)
+end
+
 local function Actions()
     local a, u, s = {}, Hero(), Ship()
+    if CV.phase == "IDLE" then
+        if CFG.CASE_MENU and u and not CV.air then
+            local cur = trigger.misc.getUserFlag(100)
+            for n, r in ipairs({ "I", "II", "III" }) do
+                a[#a + 1] = { string.format("Set CASE %s (flag 100)%s", r, (cur == n) and "  < current" or ""),
+                              function() A_SetCase(n) end }
+            end
+        end
+        return a
+    end
     if (CV.busy and CV.phase ~= "BALL") or not (u and s) then return a end
     local d = DistNM(u:getPoint(), s:getPoint())
     local ph = CV.phase
@@ -1131,10 +1201,11 @@ MenuRebuild = function()
     local u = Hero()
     if not u then return end
     local gid = u:getGroup():getID()
-    if CV.phase == "IDLE" or (CV.menu.root and CV.menu.gid ~= gid) then
+    local idleHidden = CV.phase == "IDLE" and (CV.air or not CFG.CASE_MENU)
+    if idleHidden or (CV.menu.root and CV.menu.gid ~= gid) then
         if CV.menu.root then pcall(missionCommands.removeItemForGroup, CV.menu.gid, CV.menu.root) end
         CV.menu.root, CV.menu.items, lastSig = nil, nil, nil
-        if CV.phase == "IDLE" then return end
+        if idleHidden then return end
     end
     local acts = Actions()
     local labels = {}
@@ -1190,8 +1261,14 @@ local function InstallHooks()
         if case == 1 then
             Msg("[CV] Signal Charlie — proceed to the initial (ZIPLIP, no call).", 10)
         else
-            local eat = CV.clr and CV.clr.eat
-            Msg(string.format("[CV] Recovery open%s.", eat and (" — commence at EAT :" .. eat) or ""), 10)
+            local c = CV.clr
+            if c and c.openShown then return end           -- v1.4.2: once per pass
+            if c then c.openShown = true end
+            local eat = c and c.eat
+            local late = c and c.eatAbs and timer.getAbsTime() >= c.eatAbs
+            Msg(string.format("[CV] Recovery open%s.", not eat and ""
+                or late and (" — EAT :" .. eat .. " passed, commence now")
+                or (" — commence at EAT :" .. eat)), 10)
         end
     end
 
@@ -1305,7 +1382,8 @@ local function Tick(_, t)
         elseif CV.phase == "B_DOWNWIND" and not CV.busy and pd and CV.bolter then
             local ok, X = pcall(AB()._GetDistances, AB(), pd.unit)
             if ok and X and X <= 0 and math.abs(ADiff(MagHdg(u), CV.bolter.dw)) <= 45 then C_BolterAbeam() end
-        elseif CV.phase == "BALLWAIT" and SternNM() <= CFG.BALL_NM and Astern() then
+        elseif CV.phase == "BALLWAIT" and SternNM() <= CFG.BALL_NM and Astern()
+               and math.abs(ADiff(MagHdg(u), AB():GetFinalBearing(true))) <= 45 then
             C_CallBall()
         elseif CV.phase == "BALL" and CV.tBallAsk and timer.getTime() - CV.tBallAsk >= CFG.BALL_AUTO then
             A_Ball(true)

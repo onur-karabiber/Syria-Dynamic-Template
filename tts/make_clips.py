@@ -1,4 +1,4 @@
-# make_clips.py | v1.3.1
+# make_clips.py | v1.4.0
 # tts/clips.csv -> src/Sounds/CAS1/<id>.ogg  (Piper TTS + ffmpeg radio chain)
 # CV comms:  python tts/make_clips.py --set cv   (tts/cv_clips.csv -> src/Sounds/CV/,
 #            table tts/cv_audio_table.lua -> paste into CV_Comms CFG.AUDIO)
@@ -7,6 +7,8 @@
 #         python tts/make_clips.py str_m4_sour  (only the listed ids)
 #         python tts/make_clips.py --out DIR id (write to DIR, table untouched; A/B tests)
 #
+# v1.4.0: speech 25% slower (TEMPO 1.40 -> 1.05: 2.0x -> 1.5x net) and +30% level
+#         (GAIN_DB 2.3 before the limiter, limit 0.9 -> 0.97). All sets re-rendered.
 # v1.3.1: table len always 2 decimals (CAS1 set now chains token clips too).
 # v1.3.0: --set cv (CV_Comms clip set). Optional 4th csv field 'tok' = token clip:
 #         no squelch bursts, leading/trailing silence trimmed, short tail pad
@@ -51,10 +53,12 @@ SETS = {   # --set name -> (csv, outdir, table)
 TOK_PAD = 0.06   # s silence after a token clip (default, 'tok:<s>' overrides)
 FALLBACK = None  # model file name used for any agency missing above
 
-# Speed: total speed-up = TEMPO / LENGTH_SCALE  (0.70 / 1.40 -> 2.0x).
+# Speed: total speed-up = TEMPO / LENGTH_SCALE  (1.05 / 0.70 -> 1.5x; v1.4.0, was 2.0x).
 # Piper alone below ~0.6 starts slurring; the rest is done by ffmpeg atempo.
 LENGTH_SCALE = 0.70
-TEMPO        = 1.40
+TEMPO        = 1.05
+GAIN_DB      = 2.3    # +30 % amplitude (v1.4.0)
+LIMIT        = 0.97
 
 # Radio chain
 KEYUP   = 0.07   # s squelch burst before speech
@@ -98,7 +102,7 @@ def radio(wav, raw_len, ogg, pitch=1.0):
           'anoisesrc=d=%.3f:c=white:a=%.3f:r=22050,%s,afade=t=out:d=%.3f,adelay=%d[k2];'
           % (KEYDOWN, BURST, BAND, KEYDOWN, int((total - KEYDOWN) * 1000)) +
           '[s][n][k1][k2]amix=inputs=4:duration=longest:normalize=0,'
-          'atrim=0:%.3f,alimiter=limit=0.9' % total)
+          'atrim=0:%.3f,volume=%.1fdB,alimiter=limit=%.2f' % (total, GAIN_DB, LIMIT))
     subprocess.check_call(['ffmpeg', '-y', '-v', 'error', '-i', wav, '-filter_complex', fc,
                            '-ac', '1', '-ar', '22050', '-c:a', 'libvorbis', '-q:a', '4', ogg])
 
@@ -111,7 +115,7 @@ def radio_token(wav, ogg, pad):
           'asoftclip=type=tanh,acrusher=bits=10:mix=0.35:mode=log,'
           'apad=pad_dur=%.3f,aresample=22050[s];' % pad +
           'anoisesrc=d=30:c=pink:a=%.4f:r=22050,%s[n];' % (HISS, BAND) +
-          '[s][n]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.9')
+          '[s][n]amix=inputs=2:duration=first:normalize=0,volume=%.1fdB,alimiter=limit=%.2f' % (GAIN_DB, LIMIT))
     subprocess.check_call(['ffmpeg', '-y', '-v', 'error', '-i', wav, '-filter_complex', fc,
                            '-ac', '1', '-ar', '22050', '-c:a', 'libvorbis', '-q:a', '4', ogg])
 
@@ -121,7 +125,7 @@ def squelch(ogg, which):
     fc = ('anoisesrc=d=%.3f:c=white:a=%.3f:r=22050,%s,afade=t=out:d=%.3f[k];'
           % (d, BURST, BAND, d) +
           'anoisesrc=d=%.3f:c=pink:a=%.4f:r=22050,%s[n];' % (d, HISS, BAND) +
-          '[k][n]amix=inputs=2:duration=longest:normalize=0,alimiter=limit=0.9')
+          '[k][n]amix=inputs=2:duration=longest:normalize=0,volume=%.1fdB,alimiter=limit=%.2f' % (GAIN_DB, LIMIT))
     subprocess.check_call(['ffmpeg', '-y', '-v', 'error', '-filter_complex', fc,
                            '-ac', '1', '-ar', '22050', '-c:a', 'libvorbis', '-q:a', '4', ogg])
 

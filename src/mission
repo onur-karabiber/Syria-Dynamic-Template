@@ -137912,7 +137912,7 @@ mission =
 			[4] = 47,
 		},
 	},
-	["currentKey"] = 12438054,
+	["currentKey"] = 12454968,
 	["date"] = 
 	{
 		["Day"] = 12,
@@ -163123,7 +163123,7 @@ mission =
 		["total"] = 0,
 	},
 	["sortie"] = "DictKey_sortie_5",
-	["start_time"] = 21600,
+	["start_time"] = 27900,
 	["theatre"] = "Syria",
 	["trig"] = 
 	{
