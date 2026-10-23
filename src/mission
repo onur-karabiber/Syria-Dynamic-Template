@@ -9475,6 +9475,8 @@ mission =
 															["number"] = 1,
 															["params"] = 
 															{
+																["maxDist"] = 111120,
+																["maxDistEnabled"] = true,
 																["priority"] = 0,
 																["targetTypes"] = 
 																{
@@ -9629,6 +9631,20 @@ mission =
 																		["value"] = true,
 																	},
 																},
+															},
+														},
+														[8] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "Orbit",
+															["number"] = 8,
+															["params"] = 
+															{
+																["altitude"] = 7315.2,
+																["pattern"] = "Race-Track",
+																["speed"] = 180,
+																["speedEdited"] = true,
 															},
 														},
 													},
@@ -10285,6 +10301,8 @@ mission =
 															["number"] = 1,
 															["params"] = 
 															{
+																["maxDist"] = 111120,
+																["maxDistEnabled"] = true,
 																["priority"] = 0,
 																["targetTypes"] = 
 																{
@@ -10439,6 +10457,20 @@ mission =
 																		["value"] = true,
 																	},
 																},
+															},
+														},
+														[8] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "Orbit",
+															["number"] = 8,
+															["params"] = 
+															{
+																["altitude"] = 7315.2,
+																["pattern"] = "Race-Track",
+																["speed"] = 180,
+																["speedEdited"] = true,
 															},
 														},
 													},
@@ -97078,6 +97110,8 @@ mission =
 															["number"] = 1,
 															["params"] = 
 															{
+																["maxDist"] = 92600,
+																["maxDistEnabled"] = true,
 																["priority"] = 0,
 																["targetTypes"] = 
 																{
@@ -98567,6 +98601,8 @@ mission =
 															["number"] = 1,
 															["params"] = 
 															{
+																["maxDist"] = 92600,
+																["maxDistEnabled"] = true,
 																["priority"] = 0,
 																["targetTypes"] = 
 																{
@@ -163061,7 +163097,7 @@ mission =
 		["centerY"] = 50000,
 		["zoom"] = 1254980.0796813,
 	},
-	["maxDictId"] = 316,
+	["maxDictId"] = 317,
 	["pictureFileNameB"] = 
 	{
 	},
@@ -163131,7 +163167,7 @@ mission =
 		{
 			[1] = "a_set_flag_value(\"100\", 3);a_set_flag_value(\"102\", 2);",
 			[2] = "a_do_script_file(getValueResourceByKey(\"ResKey_Action_286\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_287\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_316\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_297\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_298\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_299\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_311\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_301\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_302\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_312\"));",
-			[3] = "a_do_script_file(getValueResourceByKey(\"ResKey_Action_279\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_315\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_282\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_283\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_303\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_313\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_314\"));",
+			[3] = "a_do_script_file(getValueResourceByKey(\"ResKey_Action_279\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_315\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_282\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_283\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_303\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_313\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_314\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_317\"));",
 			[4] = "a_do_script_file(getValueResourceByKey(\"ResKey_Action_227\")); mission.trig.func[4]=nil;",
 			[5] = "a_do_script(\"SetSuperCarrier(true)\"); mission.trig.func[5]=nil;",
 			[6] = "a_do_script_file(getValueResourceByKey(\"ResKey_Action_213\")); mission.trig.func[6]=nil;",
@@ -163224,6 +163260,7 @@ mission =
 			[93] = "a_out_text_delay(getValueDictByKey(\"DictKey_ActionText_290\"), 15, true, 0);",
 			[94] = "a_inc_flag(\"1908\", 15); mission.trig.func[94]=nil;",
 			[95] = "a_inc_flag(\"1908\", 15); mission.trig.func[95]=nil;",
+			[96] = "a_activate_group(190);a_activate_group(189); mission.trig.func[96]=nil;",
 		},
 		["conditions"] = 
 		{
@@ -163322,6 +163359,7 @@ mission =
 			[93] = "return(c_flag_equals(\"6550\", 25) and c_flag_less(\"6551\", 197) and c_flag_more(\"6551\", 193) )",
 			[94] = "return(c_dead_zone(3175) )",
 			[95] = "return(c_dead_zone(3327) )",
+			[96] = "return(c_flag_is_true(\"3010\") )",
 		},
 		["custom"] = 
 		{
@@ -163429,6 +163467,7 @@ mission =
 			[93] = true,
 			[94] = true,
 			[95] = true,
+			[96] = true,
 		},
 		["func"] = 
 		{
@@ -163523,6 +163562,7 @@ mission =
 			[93] = "if mission.trig.conditions[93]() then if not mission.trig.flag[93] then mission.trig.actions[93](); mission.trig.flag[93] = true;end; else mission.trig.flag[93] = false; end;",
 			[94] = "if mission.trig.conditions[94]() then mission.trig.actions[94]() end",
 			[95] = "if mission.trig.conditions[95]() then mission.trig.actions[95]() end",
+			[96] = "if mission.trig.conditions[96]() then mission.trig.actions[96]() end",
 		},
 		["funcStartup"] = 
 		{
@@ -165176,6 +165216,11 @@ mission =
 				[7] = 
 				{
 					["file"] = "ResKey_Action_314",
+					["predicate"] = "a_do_script_file",
+				},
+				[8] = 
+				{
+					["file"] = "ResKey_Action_317",
 					["predicate"] = "a_do_script_file",
 				},
 			},
@@ -167720,6 +167765,34 @@ mission =
 				{
 					["predicate"] = "c_dead_zone",
 					["zone"] = 3327,
+				},
+			},
+		},
+		[96] = 
+		{
+			["actions"] = 
+			{
+				[1] = 
+				{
+					["group"] = 190,
+					["predicate"] = "a_activate_group",
+				},
+				[2] = 
+				{
+					["group"] = 189,
+					["predicate"] = "a_activate_group",
+				},
+			},
+			["colorItem"] = "0xff0080ff",
+			["comment"] = "TANKER-1_Guard_CAP_Activate",
+			["eventlist"] = "",
+			["predicate"] = "triggerOnce",
+			["rules"] = 
+			{
+				[1] = 
+				{
+					["flag"] = "3010",
+					["predicate"] = "c_flag_is_true",
 				},
 			},
 		},
