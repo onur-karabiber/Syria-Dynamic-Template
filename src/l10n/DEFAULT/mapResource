@@ -40,6 +40,7 @@ mapResource =
 	["ResKey_Action_312"] = "JTAC_LOS_Audit.lua",
 	["ResKey_Action_313"] = "Comms_Director.lua",
 	["ResKey_Action_314"] = "CV_Comms.lua",
+	["ResKey_Action_315"] = "Deck_Park.lua",
 	["ResKey_Action_69"] = "Red_Flag_Radio_9_2002-4-12.ogg",
 	["ResKey_Action_71"] = "Incirlik_ATIS.ogg",
 	["ResKey_Action_76"] = "Red_Flag_Radio_9_2002-4-12.ogg",
