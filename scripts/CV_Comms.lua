@@ -1,0 +1,1026 @@
+-- CV_Comms | v1.2.1
+--[[
+  Carrier (CVN) departure / recovery radio — TRT Syria Dynamic Template
+  Template-level module (not CAS-1 specific). Plan: project doc
+  claude/cv-comms-gap-analysis.md (§5 decisions, §5.4 = this release, "R1").
+
+  v1.2.1 — commencing item label shows the time to EAT, refreshed every tick (2 s):
+           "Marshal: commencing (EAT :32, T-1:20)" / "(EAT :32, T+0:15)".
+           Menu root is now persistent; only the items are re-created when a label or
+           the action set changes (keeps the player inside CV COMMS where DCS allows).
+
+  v1.2.0 — R3: CASE III final
+    * <= ACLS_NM (after platform): APP: 467, ACLS lock on, 6 miles, say needles.
+        F10 "Needles: up and on"   -> APP: 467, concur, fly mode 2.
+        F10 "Needles: negative"    -> APP: 467, roger, fly bullseye.
+        no answer in NEEDLES_TIMEOUT s -> APP: 467, fly bullseye.
+    * <= BALL_NM from the stern: APP: 467, <glidepath>, <course>, three-quarter mile,
+      call the ball.  Glidepath / course words from AIRBOSS:_Glideslope / _Lineup with
+      AIRBOSS's own LSO thresholds (gle / lue tables).
+        F10 "Ball (Hornet ball, state)" / "Clara"; no answer in BALL_AUTO s -> ball
+        call is made automatically (logged "ball call AUTO").
+        Ball  -> Raynor LSO "Roger ball" + Raynor digits = wind over deck (axial, kt);
+                 subtitle adds cross component. Raynor has no "knots" recording.
+        Clara -> Raynor LSO "Paddles contact".
+    * AIRBOSS calls now dropped: LSO "Call the ball" (all cases; CASE III Approach
+      calls it), Marshal "Say needles" / "Fly your needles" (all cases, CV does it),
+      LSO "Roger ball" unless CV plays it (CASE III after the pilot's ball call).
+
+  v1.1.1 — diagnostics: AIRBOSS step and holding-zone flag of the hero are logged
+           on change ("AIRBOSS step ...", "AIRBOSS holding ...").
+
+  v1.1.0 — R2: commence -> Approach -> platform, CASE II see-you
+    * CASE II/III  F10 "Marshal: commencing (EAT :mm)" (HOLDING / ESTABLISH)
+          467: 467, commencing, 2984, state 5.1
+          MSH: 467, radar contact, final bearing 346
+        Commence time vs EAT is logged, TRT.CV_COMMENCE = { t, dt } (dt s, + = late).
+        If AIRBOSS still has the hero in HOLDING, AIRBOSS:_RequestCommence is called.
+    * Hand-off (controller-initiated, during penetration): first of altitude <=
+      SWITCH_APP_FT MSL or DME <= SWITCH_APP_DME, >= SWITCH_APP_MIN s after radar
+      contact:  MSH: 467, switch approach, button 15.   467: 467.
+    * F10 "Approach 263.00: check in"
+          467: Approach, 467, checking in, 19 miles, state 4.9
+          APP: 467, Approach, final bearing 346
+    * F10 "Approach: platform" (altitude <= PLATFORM_FT MSL)  -> APP: 467, roger.
+    * CASE II  F10 "Approach: see you at 10" (<= SEE_YOU_NM, after Approach check-in)
+          -> APP: 467, update state, go button 1 -> 467: state -> ZIPLIP (button 1)
+    * CASE III after platform: phase FINAL (needles / ¾ mi / ball = R3).
+    * AIRBOSS "cleared for recovery" text for CASE II/III now points to the EAT.
+    * Voice APPROACH = Piper kusal (a_* tokens).
+
+  v1.0.3 — comment only: Airboss_Start v1.0.3 holds stack 1 at angels 10, base 15
+           (25 DME). DME formula unchanged.
+
+  v1.0.2 — Marshal DME = angels + TRT.HOLD_DME_BASE (Airboss_Start v1.0.2: 19 ->
+           25 DME at angels 6), fallback 15.
+
+  v1.0.1 — "Marshal: established" no longer gated on AIRBOSS's holding zone (it was
+           never offered when the player held at a fix other than AIRBOSS's). Offered
+           right after the readback; the pilot decides when he is established. Distance
+           to the assigned fix and altitude error are logged and stored in
+           TRT.CV_ESTABLISHED for scoring.
+
+  v1.0.0 — R1: Marshal
+    * Pilot-initiated calls via F10 "CV COMMS" (only the next valid call is listed).
+    * Voice: pre-rendered Piper token clips (tts/cv_clips.csv, make_clips.py --set cv)
+      chained at runtime -> numbers are spoken (radial, DME, angels, state, altimeter,
+      EAT). Every transmission = sq_up + tokens + sq_dn on the agency frequency.
+    * Flow
+        inbound (<= CCA_NM)  F10 "Marshal: check in"
+          467: Marshal, 467, marking mom's 205 for 48, angels 18, state 7.2
+          -> AIRBOSS:_RequestMarshal (AIRBOSS still owns stack / holding / grading)
+          -> AIRBOSS:_MarshalCallArrived is OVERRIDDEN -> case-correct reply:
+             CASE I : 467, Mother is VFR, altimeter 29.92, CASE I recovery,
+                      BRC 355, hold angels 2, report see me.
+             CASE II: 467, altimeter .., CASE II recovery, CV-1 approach, expected
+                      BRC 355. 467, marshal on the 205 radial, 21 DME, angels 6,
+                      expected approach time 28, approach button 15.
+             CASE III: same, "expected final bearing" instead of BRC.
+        CASE II/III  F10 "Marshal: readback"     -> "readback correct"
+                     F10 "Marshal: established"  -> "roger"
+        CASE I       F10 "Marshal: see you at 10" (<= SEE_YOU_NM)
+                     -> "update state, go button 1" -> pilot state -> ZIPLIP
+    * AIRBOSS instance overrides (MOOSE file untouched; installed when TRT.Airboss
+      exists):
+        _MarshalCallArrived            -> CV Marshal reply (hero only; AI silent)
+        _MarshalCallClearedForRecovery -> text only for the hero (no Raynor voice;
+                                          CASE I/II ZIPLIP, CASE II/III EAT = R2)
+        MessageToPlayer(sender MARSHAL)-> text only (AIRBOSS plays Raynor modex /
+                                          roger / negative via USERSOUND otherwise)
+        RadioTransmission              -> drops LSO "Call the ball", "Roger ball",
+                                          "Paddles contact" while the hero is CASE I/II
+                                          (ZIPLIP on button 1). LSO corrections,
+                                          wave off and bolter stay.
+    * AIRBOSS LSO radio follows the case at Marshal reply: CASE III -> APPROACH
+      (263.00, ball call is made on approach freq), CASE I/II -> TOWER (262.00).
+
+  Not yet (see plan): needles / ¾ mi / ball call / roger ball + wind (R3), CASE III bolter pattern (R4),
+  departure (D1), 99 calls / Delta (R5). AIRBOSS's own 99 calls and needles calls
+  still use the Raynor Marshal voice until then.
+
+  BUTTONS (COMM1, AM): 1 TOWER/PADDLES 262.00 · 2 DEPARTURE 269.00 ·
+                       15 APPROACH 263.00 · 16 MARSHAL 261.00
+
+  LOADING
+    scripts/CV_Comms.lua, ME "Do Script File" ResKey_Action_314 (trigger
+    OWN_SCRIPTS, after Comms_Director). Needs MOOSE + Airboss_Start.lua loaded
+    earlier (MOOSE trigger). Clips: src/Sounds/CV/*.ogg. Regenerate with
+    python tts/make_clips.py --set cv, then paste tts/cv_audio_table.lua into
+    CFG.AUDIO below.
+]]
+
+-- ══════════════════════════════════════════════════════════════
+--  CONFIG
+-- ══════════════════════════════════════════════════════════════
+local CFG = {
+    VERSION      = "1.2.1",
+    PLAYER_UNIT  = "Player_01",
+    CARRIER_UNIT = "CVN",
+    MODEX        = "467",       -- fallback if AIRBOSS has no onboard number yet
+
+    CCA_NM       = 50,          -- Marshal check-in offered inside this range
+    ARM_AIRBORNE = 900,         -- s airborne after which check-in is offered even
+                                -- if the player never left the CCA
+    SEE_YOU_NM   = 12,          -- "see you at 10" offered inside this range (CASE I/II)
+    SWITCH_APP_FT  = 6000,      -- Marshal -> Approach hand-off: altitude (ft MSL) ...
+    SWITCH_APP_DME = 21,        -- ... or DME, whichever first
+    SWITCH_APP_MIN = 10,        -- s after "radar contact" at the earliest
+    PLATFORM_FT    = 5500,      -- "platform" offered below this (ft MSL; ship at sea level)
+    ACLS_NM        = 6.5,       -- "ACLS lock on, say needles" (DME)
+    NEEDLES_TIMEOUT= 15,        -- s without a needles answer -> "fly bullseye"
+    BALL_NM        = 1.0,       -- Approach starts "...three-quarter mile, call the ball" (NM from stern;
+                                -- the call is ~4 s long, so it ends near 0.85 NM at 140 kt)
+    BALL_AUTO      = 2.5,       -- s without a ball/Clara call -> automatic ball call
+
+    SND_DIR      = "Sounds/CV/",
+    TX_POWER     = 1000,        -- W, transmitted 30 m above the player (no LOS loss)
+    GAP          = 0.03,        -- s between chained token clips
+    P            = 0.22,        -- s comma pause inside a transmission
+    REPLY_GAP    = 1.2,         -- s between pilot call end and controller reply
+    TX_GAP       = 0.8,         -- s between consecutive transmissions otherwise
+    DUR_TEXT     = 12,          -- s subtitle on screen
+    TICK         = 2,           -- s
+
+    CHAN = {
+        TOWER     = { hz = 262.00e6, mod = 0, name = "TOWER",     btn = 1  },
+        DEPARTURE = { hz = 269.00e6, mod = 0, name = "DEPARTURE", btn = 2  },
+        APPROACH  = { hz = 263.00e6, mod = 0, name = "APPROACH",  btn = 15 },
+        MARSHAL   = { hz = 261.00e6, mod = 0, name = "MARSHAL",   btn = 16 },
+    },
+
+    -- generated by tts/make_clips.py; len = clip length (s)
+    AUDIO = {
+        sq_up                  = { ch = "MARSHAL", len = 0.07 },
+        sq_dn                  = { ch = "MARSHAL", len = 0.12 },
+        m_0                    = { ch = "MARSHAL", len = 0.41 },
+        m_1                    = { ch = "MARSHAL", len = 0.28 },
+        m_2                    = { ch = "MARSHAL", len = 0.27 },
+        m_3                    = { ch = "MARSHAL", len = 0.34 },
+        m_4                    = { ch = "MARSHAL", len = 0.27 },
+        m_5                    = { ch = "MARSHAL", len = 0.34 },
+        m_6                    = { ch = "MARSHAL", len = 0.34 },
+        m_7                    = { ch = "MARSHAL", len = 0.42 },
+        m_8                    = { ch = "MARSHAL", len = 0.20 },
+        m_9                    = { ch = "MARSHAL", len = 0.34 },
+        m_vfr                  = { ch = "MARSHAL", len = 0.89 },
+        m_altimeter            = { ch = "MARSHAL", len = 0.45 },
+        m_case1                = { ch = "MARSHAL", len = 0.94 },
+        m_case2                = { ch = "MARSHAL", len = 1.69 },
+        m_case3                = { ch = "MARSHAL", len = 1.63 },
+        m_brc                  = { ch = "MARSHAL", len = 0.54 },
+        m_exp_brc              = { ch = "MARSHAL", len = 0.90 },
+        m_exp_fb               = { ch = "MARSHAL", len = 0.99 },
+        m_hold_angels          = { ch = "MARSHAL", len = 0.65 },
+        m_report_see_me        = { ch = "MARSHAL", len = 0.67 },
+        m_marshal_on           = { ch = "MARSHAL", len = 0.45 },
+        m_radial               = { ch = "MARSHAL", len = 0.36 },
+        m_dme                  = { ch = "MARSHAL", len = 0.52 },
+        m_angels               = { ch = "MARSHAL", len = 0.37 },
+        m_eat                  = { ch = "MARSHAL", len = 0.84 },
+        m_btn15                = { ch = "MARSHAL", len = 0.95 },
+        m_readback             = { ch = "MARSHAL", len = 0.61 },
+        m_roger                = { ch = "MARSHAL", len = 0.35 },
+        m_go1                  = { ch = "MARSHAL", len = 1.07 },
+        p_0                    = { ch = "PILOT", len = 0.38 },
+        p_1                    = { ch = "PILOT", len = 0.27 },
+        p_2                    = { ch = "PILOT", len = 0.34 },
+        p_3                    = { ch = "PILOT", len = 0.27 },
+        p_4                    = { ch = "PILOT", len = 0.37 },
+        p_5                    = { ch = "PILOT", len = 0.35 },
+        p_6                    = { ch = "PILOT", len = 0.38 },
+        p_7                    = { ch = "PILOT", len = 0.32 },
+        p_8                    = { ch = "PILOT", len = 0.22 },
+        p_9                    = { ch = "PILOT", len = 0.40 },
+        p_point                = { ch = "PILOT", len = 0.32 },
+        p_marshal              = { ch = "PILOT", len = 0.42 },
+        p_marking              = { ch = "PILOT", len = 0.62 },
+        p_for                  = { ch = "PILOT", len = 0.31 },
+        p_angels               = { ch = "PILOT", len = 0.47 },
+        p_state                = { ch = "PILOT", len = 0.37 },
+        p_established          = { ch = "PILOT", len = 0.85 },
+        p_see_you              = { ch = "PILOT", len = 0.66 },
+        p_marshal_on           = { ch = "PILOT", len = 0.50 },
+        p_approach_time        = { ch = "PILOT", len = 0.55 },
+        p_btn15                = { ch = "PILOT", len = 0.53 },
+        m_radar_fb             = { ch = "MARSHAL", len = 1.20 },
+        m_switch_app           = { ch = "MARSHAL", len = 1.26 },
+        a_0                    = { ch = "APPROACH", len = 0.37 },
+        a_1                    = { ch = "APPROACH", len = 0.31 },
+        a_2                    = { ch = "APPROACH", len = 0.27 },
+        a_3                    = { ch = "APPROACH", len = 0.26 },
+        a_4                    = { ch = "APPROACH", len = 0.28 },
+        a_5                    = { ch = "APPROACH", len = 0.26 },
+        a_6                    = { ch = "APPROACH", len = 0.37 },
+        a_7                    = { ch = "APPROACH", len = 0.38 },
+        a_8                    = { ch = "APPROACH", len = 0.19 },
+        a_9                    = { ch = "APPROACH", len = 0.32 },
+        a_approach             = { ch = "APPROACH", len = 0.45 },
+        a_radar_contact        = { ch = "APPROACH", len = 0.63 },
+        a_final_bearing        = { ch = "APPROACH", len = 0.53 },
+        a_roger                = { ch = "APPROACH", len = 0.37 },
+        a_go1                  = { ch = "APPROACH", len = 1.13 },
+        p_commencing           = { ch = "PILOT", len = 0.46 },
+        p_approach             = { ch = "PILOT", len = 0.48 },
+        p_checking_in          = { ch = "PILOT", len = 0.60 },
+        p_miles                = { ch = "PILOT", len = 0.40 },
+        p_platform             = { ch = "PILOT", len = 0.45 },
+        a_acls                 = { ch = "APPROACH", len = 0.99 },
+        a_miles                = { ch = "APPROACH", len = 0.43 },
+        a_say_needles          = { ch = "APPROACH", len = 0.57 },
+        a_concur               = { ch = "APPROACH", len = 0.89 },
+        a_bullseye             = { ch = "APPROACH", len = 0.53 },
+        a_gp_on                = { ch = "APPROACH", len = 0.51 },
+        a_gp_sl_above          = { ch = "APPROACH", len = 0.85 },
+        a_gp_above             = { ch = "APPROACH", len = 0.56 },
+        a_gp_sl_below          = { ch = "APPROACH", len = 0.82 },
+        a_gp_below             = { ch = "APPROACH", len = 0.56 },
+        a_crs_on               = { ch = "APPROACH", len = 0.45 },
+        a_crs_sl_left          = { ch = "APPROACH", len = 0.82 },
+        a_crs_left             = { ch = "APPROACH", len = 0.62 },
+        a_crs_sl_right         = { ch = "APPROACH", len = 0.87 },
+        a_crs_right            = { ch = "APPROACH", len = 0.62 },
+        a_3q_ball              = { ch = "APPROACH", len = 1.20 },
+        p_up_on                = { ch = "PILOT", len = 0.54 },
+        p_neg_needles          = { ch = "PILOT", len = 0.96 },
+        p_hornet_ball          = { ch = "PILOT", len = 0.62 },
+        p_clara                = { ch = "PILOT", len = 0.29 },
+    },
+
+    -- AIRBOSS calls dropped in every case (CV_Comms makes them)
+    ALWAYS_DROP = {
+        ["LSO-CallTheBall"]        = true,
+        ["MARSHAL-SayNeedles"]     = true,
+        ["MARSHAL-FlyYourNeedles"] = true,
+    },
+    -- LSO calls dropped while the hero flies CASE I/II (ZIPLIP on button 1)
+    ZIPLIP_DROP = {
+        ["LSO-CallTheBall"]    = true,
+        ["LSO-RogerBall"]      = true,
+        ["LSO-PaddlesContact"] = true,
+    },
+}
+
+-- ══════════════════════════════════════════════════════════════
+--  STATE
+-- ══════════════════════════════════════════════════════════════
+--  phase: IDLE -> CHECKIN -> CHECKIN_SENT -> (I) SEEYOU -> ZIPLIP
+--     (II/III) READBACK -> ESTABLISH -> HOLDING -> PENETRATION -> APP_CHECKIN
+--              -> APPROACH -> (II) APP_SEEYOU -> ZIPLIP   (III) FINAL (R3)
+local CV = {
+    phase      = "IDLE",
+    case       = nil,
+    air        = false,     -- hero airborne
+    tAir       = nil,       -- takeoff time (timer.getTime)
+    wasOutside = false,     -- hero has been outside the CCA since takeoff
+    clr        = nil,       -- Marshal clearance { radial, dme, angels, eat, brc, fb, alt }
+    q          = {},        -- transmission queue
+    busy       = false,
+    txn        = 0,
+    menu       = { gid = nil, root = nil },
+    hooked     = false,
+    tRadar     = nil,       -- timer.getTime() of Marshal "radar contact"
+    tPhase     = 0,         -- timer.getTime() of the last phase change
+    allowRB    = false,     -- let one LSO "Roger ball" through (CV plays it)
+    origRT     = nil,       -- AIRBOSS:RadioTransmission before the override
+}
+_G.TRT = _G.TRT or {}
+TRT.CV = CV
+
+-- ══════════════════════════════════════════════════════════════
+--  UTILITIES
+-- ══════════════════════════════════════════════════════════════
+local function Log(s) env.info("CV_Comms | " .. s) end
+local function AB() return TRT.Airboss end
+local function Hero() return Unit.getByName(CFG.PLAYER_UNIT) end
+local function Ship() return Unit.getByName(CFG.CARRIER_UNIT) end
+
+local function DistNM(a, b)
+    local dx, dz = a.x - b.x, a.z - b.z
+    return math.sqrt(dx * dx + dz * dz) / 1852
+end
+
+--- AIRBOSS player record of the hero (nil until AIRBOSS registered the player).
+local function HeroPD()
+    local ab = AB(); if not ab or not ab.players then return nil end
+    for _, pd in pairs(ab.players) do
+        if pd.unitname == CFG.PLAYER_UNIT then return pd end
+    end
+    return nil
+end
+
+local function Modex()
+    local pd = HeroPD()
+    local m = pd and pd.onboard
+    if type(m) ~= "string" or not m:match("^%d+$") then m = CFG.MODEX end
+    return m
+end
+
+local function Msg(text, dur)
+    local u = Hero(); if not u then return end
+    trigger.action.outTextForGroup(u:getGroup():getID(), text, dur or CFG.DUR_TEXT)
+end
+
+--- Token ids for each digit of string/number s, voice prefix "m" / "p".
+local function D(v, s)
+    local t = {}
+    for c in tostring(s):gmatch("%d") do t[#t + 1] = v .. "_" .. c end
+    return t
+end
+
+--- Flatten nested sequence tables.
+local function Seq(...)
+    local out = {}
+    local function add(x)
+        if type(x) == "table" then for _, y in ipairs(x) do add(y) end
+        elseif x ~= nil then out[#out + 1] = x end
+    end
+    for _, x in ipairs({ ... }) do add(x) end
+    return out
+end
+
+local function Hdg3(h) return string.format("%03d", math.floor(h + 0.5) % 360) end
+local function Alt4(inhg) return string.format("%04d", math.floor(inhg * 100 + 0.5)) end
+local function StateStr(lbs) return string.format("%.1f", math.floor(lbs / 100 + 0.5) / 10) end
+
+local function StateTokens(lbs)
+    local s = StateStr(lbs)
+    local i, f = s:match("^(%d+)%.(%d)$")
+    return Seq(D("p", i), "p_point", D("p", f))
+end
+
+local function FuelLbs()
+    local pd, ab = HeroPD(), AB()
+    if pd and ab then
+        local ok, lbs = pcall(ab._GetFuelState, ab, pd.unit)
+        if ok and lbs then return lbs end
+    end
+    local u = Hero()
+    return u and (u:getFuel() or 0) * 10860 or 0
+end
+
+-- ══════════════════════════════════════════════════════════════
+--  TRANSMISSION QUEUE
+-- ══════════════════════════════════════════════════════════════
+--- Play one chained transmission. seq = token ids and numbers (pause, s).
+-- Returns total airtime (s).
+local function Air(chKey, seq)
+    local ch, u = CFG.CHAN[chKey], Hero()
+    if not (ch and u) then return 0 end
+    local full = Seq("sq_up", seq, "sq_dn")
+    local t = 0
+    CV.txn = CV.txn + 1
+    local tag = "CV_" .. CV.txn .. "_"
+    for i, id in ipairs(full) do
+        if type(id) == "number" then
+            t = t + id
+        else
+            local a = CFG.AUDIO[id]
+            if a then
+                local name = tag .. i
+                local file = CFG.SND_DIR .. id .. ".ogg"
+                timer.scheduleFunction(function()
+                    local h = Hero(); if not h then return end
+                    local p = h:getPoint()
+                    trigger.action.radioTransmission(file, { x = p.x, y = p.y + 30, z = p.z },
+                        ch.mod, false, ch.hz, CFG.TX_POWER, name)
+                end, nil, timer.getTime() + t + 0.01)
+                t = t + a.len + ((id == "sq_up") and 0 or CFG.GAP)
+            else
+                Log("missing clip " .. tostring(id))
+            end
+        end
+    end
+    return t
+end
+
+local QNext
+--- Queue a transmission.
+-- @param who   "PILOT" or agency key (subtitle prefix)
+-- @param ch    CFG.CHAN key the transmission is keyed on
+-- @param seq   token sequence
+-- @param text  subtitle
+-- @param fn    optional callback after the transmission ends
+-- @param gap   s before this transmission starts (default TX_GAP)
+local function Q(who, ch, seq, text, fn, gap)
+    CV.q[#CV.q + 1] = { who = who, ch = ch, seq = seq, text = text, fn = fn, gap = gap }
+    if not CV.busy then QNext() end
+end
+
+QNext = function()
+    local x = table.remove(CV.q, 1)
+    if not x then CV.busy = false; return end
+    CV.busy = true
+    local function go()
+        local label = (x.who == "PILOT") and Modex() or x.who
+        Msg(string.format("[%s · %s %.2f] %s", label, CFG.CHAN[x.ch].name,
+            CFG.CHAN[x.ch].hz / 1e6, x.text))
+        local len = Air(x.ch, x.seq)
+        timer.scheduleFunction(function()
+            if x.fn then
+                local ok, err = pcall(x.fn)
+                if not ok then Log("callback error: " .. tostring(err)) end
+            end
+            QNext()
+        end, nil, timer.getTime() + len + 0.05)
+    end
+    local gap = x.gap or CFG.TX_GAP
+    if gap > 0 then timer.scheduleFunction(go, nil, timer.getTime() + gap) else go() end
+end
+
+local function Pilot(ch, seq, text, fn) Q("PILOT", ch, seq, text, fn, 0.2) end
+local function Ctl(who, ch, seq, text, fn) Q(who, ch, seq, text, fn, CFG.REPLY_GAP) end
+
+-- ══════════════════════════════════════════════════════════════
+--  F10 MENU
+-- ══════════════════════════════════════════════════════════════
+local MenuRebuild
+
+local function SetPhase(p)
+    if CV.phase ~= p then
+        Log("phase " .. CV.phase .. " -> " .. p)
+        CV.phase = p
+        CV.tPhase = timer.getTime()
+        if MenuRebuild then MenuRebuild() end
+    end
+end
+
+-- ══════════════════════════════════════════════════════════════
+--  CALLS
+-- ══════════════════════════════════════════════════════════════
+local function A_CheckIn()
+    local u, s, ab = Hero(), Ship(), AB()
+    if not (u and s and ab) then return end
+    local up, sp = u:getPoint(), s:getPoint()
+    local trueBrg = math.deg(math.atan2(up.z - sp.z, up.x - sp.x)) % 360
+    local radial  = Hdg3(trueBrg - (ab.magvar or 0))
+    local dme     = tostring(math.floor(DistNM(up, sp) + 0.5))
+    local angels  = tostring(math.max(1, math.floor(up.y * 3.28084 / 1000 + 0.5)))
+    local lbs     = FuelLbs()
+    local m       = Modex()
+    Pilot("MARSHAL",
+        Seq("p_marshal", D("p", m), CFG.P, "p_marking", D("p", radial), "p_for", D("p", dme),
+            CFG.P, "p_angels", D("p", angels), CFG.P, "p_state", StateTokens(lbs)),
+        string.format("Marshal, %s, marking mom's %s for %s, angels %s, state %s.",
+            m, radial, dme, angels, StateStr(lbs)),
+        function()
+            CV.replied = false
+            -- AIRBOSS validates (CCA, airborne, queues) and assigns the stack;
+            -- the reply comes through the _MarshalCallArrived override.
+            ab:_RequestMarshal(CFG.PLAYER_UNIT)
+            if not CV.replied then
+                Log("Marshal request not accepted by AIRBOSS (see AIRBOSS message)")
+                if MenuRebuild then MenuRebuild() end
+            end
+        end)
+    SetPhase("CHECKIN_SENT")
+end
+
+local function A_Readback()
+    local c, m = CV.clr, Modex()
+    if not c then return end
+    Pilot("MARSHAL",
+        Seq(D("p", m), CFG.P, "p_marshal_on", D("p", c.radial), CFG.P, D("p", c.dme), CFG.P,
+            "p_angels", D("p", c.angels), CFG.P, "p_approach_time", D("p", c.eat), CFG.P, "p_btn15"),
+        string.format("%s, marshal on the %s, %s, angels %s, approach time %s, button 15.",
+            m, c.radial, c.dme, c.angels, c.eat),
+        function()
+            Ctl("MARSHAL", "MARSHAL", Seq(D("m", m), CFG.P, "m_readback"),
+                string.format("%s, readback correct.", m))
+        end)
+    SetPhase("ESTABLISH")
+end
+
+--- Distance (NM) to the assigned marshal fix and altitude error (ft).
+local function FixError()
+    local c, u, s, ab = CV.clr, Hero(), Ship(), AB()
+    if not (c and c.radial and u and s and ab) then return nil end
+    local tr = math.rad(tonumber(c.radial) + (ab.magvar or 0))
+    local d  = tonumber(c.dme) * 1852
+    local sp, up = s:getPoint(), u:getPoint()
+    local fx = { x = sp.x + d * math.cos(tr), z = sp.z + d * math.sin(tr) }
+    return DistNM(up, fx), up.y * 3.28084 - tonumber(c.angels) * 1000
+end
+
+local function A_Established()
+    local c, m, lbs = CV.clr, Modex(), FuelLbs()
+    if not c then return end
+    local dn, da = FixError()
+    if dn then
+        TRT.CV_ESTABLISHED = { t = timer.getAbsTime(), dNM = dn, dAltFt = da }
+        Log(string.format("established: %.1f NM from assigned fix (%s R / %s DME), alt error %+d ft",
+            dn, c.radial, c.dme, math.floor(da + 0.5)))
+    end
+    Pilot("MARSHAL",
+        Seq(D("p", m), CFG.P, "p_established", D("p", c.angels), CFG.P, "p_state", StateTokens(lbs)),
+        string.format("%s, established angels %s, state %s.", m, c.angels, StateStr(lbs)),
+        function()
+            Ctl("MARSHAL", "MARSHAL", Seq(D("m", m), CFG.P, "m_roger"), string.format("%s, roger.", m))
+        end)
+    SetPhase("HOLDING")
+end
+
+local function A_SeeYou()
+    local m = Modex()
+    Pilot("MARSHAL", Seq(D("p", m), CFG.P, "p_see_you"), string.format("%s, see you at 10.", m),
+        function()
+            Ctl("MARSHAL", "MARSHAL", Seq(D("m", m), CFG.P, "m_go1"),
+                string.format("%s, update state, go button 1 (TOWER %.2f).", m, CFG.CHAN.TOWER.hz / 1e6),
+                function()
+                    local lbs = FuelLbs()
+                    Pilot("MARSHAL", Seq(D("p", m), CFG.P, StateTokens(lbs)),
+                        string.format("%s, %s.", m, StateStr(lbs)),
+                        function()
+                            Msg(string.format("[CV] Button 1, TOWER %.2f — ZIPLIP.", CFG.CHAN.TOWER.hz / 1e6), 8)
+                        end)
+                end)
+        end)
+    SetPhase("ZIPLIP")
+end
+
+--- Approach "see you at 10" (CASE II) -> go button 1 -> state -> ZIPLIP.
+local function A_AppSeeYou()
+    local m = Modex()
+    Pilot("APPROACH", Seq(D("p", m), CFG.P, "p_see_you"), string.format("%s, see you at 10.", m),
+        function()
+            Ctl("APPROACH", "APPROACH", Seq(D("a", m), CFG.P, "a_go1"),
+                string.format("%s, update state, go button 1 (TOWER %.2f).", m, CFG.CHAN.TOWER.hz / 1e6),
+                function()
+                    local lbs = FuelLbs()
+                    Pilot("APPROACH", Seq(D("p", m), CFG.P, StateTokens(lbs)),
+                        string.format("%s, %s.", m, StateStr(lbs)),
+                        function()
+                            Msg(string.format("[CV] Button 1, TOWER %.2f — ZIPLIP.", CFG.CHAN.TOWER.hz / 1e6), 8)
+                        end)
+                end)
+        end)
+    SetPhase("ZIPLIP")
+end
+
+local function A_Commencing()
+    local c, m, lbs, ab = CV.clr, Modex(), FuelLbs(), AB()
+    if not c then return end
+    local dt = timer.getAbsTime() - (c.eatAbs or timer.getAbsTime())
+    TRT.CV_COMMENCE = { t = timer.getAbsTime(), dt = dt }
+    Log(string.format("commencing: %+d s vs EAT :%s%s", math.floor(dt + 0.5), c.eat,
+        (math.abs(dt) > 10) and " (outside +/-10 s)" or ""))
+    local altTxt = c.alt:sub(1, 2) .. "." .. c.alt:sub(3, 4)
+    Pilot("MARSHAL",
+        Seq(D("p", m), CFG.P, "p_commencing", D("p", c.alt), CFG.P, "p_state", StateTokens(lbs)),
+        string.format("%s, commencing, %s, state %s.", m, altTxt, StateStr(lbs)),
+        function()
+            local fb = Hdg3(ab:GetFinalBearing(true))
+            c.fb = fb
+            Ctl("MARSHAL", "MARSHAL", Seq(D("m", m), CFG.P, "m_radar_fb", D("m", fb)),
+                string.format("%s, radar contact, final bearing %s.", m, fb),
+                function() CV.tRadar = timer.getTime() end)
+            -- keep AIRBOSS in step if it has not released the hero from the stack yet
+            local pd = HeroPD()
+            if pd and pd.step == AIRBOSS.PatternStep.HOLDING then
+                pcall(ab._RequestCommence, ab, CFG.PLAYER_UNIT)
+            end
+        end)
+    SetPhase("PENETRATION")
+end
+
+local function C_SwitchApproach()
+    local m = Modex()
+    Ctl("MARSHAL", "MARSHAL", Seq(D("m", m), CFG.P, "m_switch_app"),
+        string.format("%s, switch approach, button 15 (%.2f).", m, CFG.CHAN.APPROACH.hz / 1e6),
+        function()
+            Pilot("MARSHAL", D("p", m), string.format("%s.", m))
+        end)
+    SetPhase("APP_CHECKIN")
+end
+
+local function A_AppCheckIn()
+    local u, s, m, lbs, ab = Hero(), Ship(), Modex(), FuelLbs(), AB()
+    if not (u and s) then return end
+    local miles = tostring(math.floor(DistNM(u:getPoint(), s:getPoint()) + 0.5))
+    Pilot("APPROACH",
+        Seq("p_approach", D("p", m), CFG.P, "p_checking_in", D("p", miles), "p_miles", CFG.P,
+            "p_state", StateTokens(lbs)),
+        string.format("Approach, %s, checking in, %s miles, state %s.", m, miles, StateStr(lbs)),
+        function()
+            local fb = Hdg3(ab:GetFinalBearing(true))
+            if CV.clr then CV.clr.fb = fb end
+            Ctl("APPROACH", "APPROACH", Seq(D("a", m), CFG.P, "a_approach", "a_final_bearing", D("a", fb)),
+                string.format("%s, Approach, final bearing %s.", m, fb))
+        end)
+    SetPhase("APPROACH")
+end
+
+local function A_Platform()
+    local m = Modex()
+    Pilot("APPROACH", Seq(D("p", m), CFG.P, "p_platform"), string.format("%s, platform.", m),
+        function()
+            Ctl("APPROACH", "APPROACH", Seq(D("a", m), CFG.P, "a_roger"), string.format("%s, roger.", m))
+        end)
+    SetPhase((CV.case == 2) and "APP_SEEYOU" or "FINAL")
+end
+
+-- ── R3: final ─────────────────────────────────────────────────
+--- NM from the carrier stern (AIRBOSS geometry), fallback ship centre.
+local function SternNM()
+    local pd, ab, u, s = HeroPD(), AB(), Hero(), Ship()
+    if pd and ab then
+        local ok, st = pcall(ab._GetSternCoord, ab)
+        if ok and st then return st:Get2DDistance(pd.unit:GetCoordinate()) / 1852 end
+    end
+    return (u and s) and DistNM(u:getPoint(), s:getPoint()) or 99
+end
+
+local function C_AclsLock()
+    local m = Modex()
+    Q("APPROACH", "APPROACH", Seq(D("a", m), CFG.P, "a_acls", D("a", "6"), "a_miles", "a_say_needles"),
+        string.format("%s, ACLS lock on, 6 miles, say needles.", m), nil, 0.2)
+    SetPhase("NEEDLES")
+end
+
+local function A_Needles(concur)
+    local m = Modex()
+    if concur then
+        Pilot("APPROACH", Seq(D("p", m), CFG.P, "p_up_on"), string.format("%s, up and on.", m), function()
+            Q("APPROACH", "APPROACH", Seq(D("a", m), CFG.P, "a_concur"),
+                string.format("%s, concur, fly mode 2.", m), nil, 0.4)
+        end)
+    else
+        Pilot("APPROACH", Seq(D("p", m), CFG.P, "p_neg_needles"), string.format("%s, negative needles.", m), function()
+            Q("APPROACH", "APPROACH", Seq(D("a", m), CFG.P, "a_roger", "a_bullseye"),
+                string.format("%s, roger, fly bullseye.", m), nil, 0.4)
+        end)
+    end
+    SetPhase("BALLWAIT")
+end
+
+local function C_FlyBullseye()
+    local m = Modex()
+    Q("APPROACH", "APPROACH", Seq(D("a", m), CFG.P, "a_bullseye"), string.format("%s, fly bullseye.", m), nil, 0.2)
+    SetPhase("BALLWAIT")
+end
+
+--- Glidepath / course words from AIRBOSS's LSO error functions and thresholds.
+local function Position()
+    local pd, ab = HeroPD(), AB()
+    local gpT, gpX, crT, crX = "a_gp_on", "on glidepath", "a_crs_on", "on course"
+    if not (pd and ab) then return gpT, gpX, crT, crX end
+    local ok1, gse = pcall(ab._Glideslope, ab, pd.unit)
+    local ok2, lue = pcall(ab._Lineup, ab, pd.unit, true)
+    local g, l = ab.gle or {}, ab.lue or {}
+    if ok1 and gse then
+        if gse > (g.High or 0.8) then gpT, gpX = "a_gp_above", "above glidepath"
+        elseif gse > (g._max or 0.4) then gpT, gpX = "a_gp_sl_above", "slightly above glidepath"
+        elseif gse < (g.Low or -0.6) then gpT, gpX = "a_gp_below", "below glidepath"
+        elseif gse < (g._min or -0.3) then gpT, gpX = "a_gp_sl_below", "slightly below glidepath" end
+    end
+    if ok2 and lue then
+        if lue < (l.Left or -2.8) then crT, crX = "a_crs_left", "left of course"
+        elseif lue < (l._min or -1.8) then crT, crX = "a_crs_sl_left", "slightly left of course"
+        elseif lue > (l.Right or 2.8) then crT, crX = "a_crs_right", "right of course"
+        elseif lue > (l._max or 1.8) then crT, crX = "a_crs_sl_right", "slightly right of course" end
+    end
+    return gpT, gpX, crT, crX
+end
+
+local function C_CallBall()
+    local m = Modex()
+    local gpT, gpX, crT, crX = Position()
+    CV.q = {}                      -- nothing else on the air in the groove
+    Q("APPROACH", "APPROACH", Seq(D("a", m), CFG.P, gpT, crT, "a_3q_ball"),
+        string.format("%s, %s, %s, three-quarter mile, call the ball.", m, gpX, crX),
+        function() CV.tBallAsk = timer.getTime() end, 0)
+    SetPhase("BALL")
+end
+
+--- Raynor LSO transmission that bypasses the drop filter.
+local function LsoRaw(call)
+    local ab = AB()
+    if not (ab and CV.origRT and call) then return end
+    CV.allowRB = true
+    pcall(CV.origRT, ab, ab.LSORadio, call, false)
+    CV.allowRB = false
+end
+
+local function A_Ball(auto)
+    if CV.phase ~= "BALL" then return end
+    local m, lbs, ab = Modex(), FuelLbs(), AB()
+    if auto then Log("ball call AUTO (no pilot call in " .. CFG.BALL_AUTO .. " s)") end
+    SetPhase("GROOVE")
+    Pilot("APPROACH", Seq(D("p", m), CFG.P, "p_hornet_ball", StateTokens(lbs)),
+        string.format("%s, Hornet ball, %s.", m, StateStr(lbs)),
+        function()
+            local kts, cross = nil, 0
+            local ok, ax, cr = pcall(ab.GetWindOnDeck, ab)
+            if ok and ax then kts = math.floor(ax * 1.94384 + 0.5); cross = math.floor(math.abs(cr or 0) * 1.94384 + 0.5) end
+            LsoRaw(ab.LSOCall.ROGERBALL)
+            if kts and kts > 0 then pcall(ab._Number2Radio, ab, ab.LSORadio, tostring(kts)) end
+            Msg(string.format("[PADDLES · APPROACH %.2f] Roger ball%s.", CFG.CHAN.APPROACH.hz / 1e6,
+                kts and string.format(", %d knots%s", kts, (cross > 2) and string.format(" (cross %d kt)", cross) or ", axial") or ""))
+        end)
+end
+
+local function A_Clara()
+    if CV.phase ~= "BALL" then return end
+    local m, ab = Modex(), AB()
+    SetPhase("GROOVE")
+    Pilot("APPROACH", Seq(D("p", m), CFG.P, "p_clara"), string.format("%s, Clara.", m), function()
+        LsoRaw(ab.LSOCall.PADDLESCONTACT)
+        Msg(string.format("[PADDLES · APPROACH %.2f] Paddles contact.", CFG.CHAN.APPROACH.hz / 1e6))
+    end)
+end
+
+--- Marshal reply (from the _MarshalCallArrived override).
+local function MarshalReply(case, brc, altitude, tcharlie, qfe)
+    local ab, m = AB(), Modex()
+    local angels = math.floor(altitude * 3.28084 / 1000 + 0.5)
+    local alt4   = Alt4(qfe or 29.92)
+    local altTxt = alt4:sub(1, 2) .. "." .. alt4:sub(3, 4)
+    local B      = Hdg3(brc)
+    -- EAT: AIRBOSS Charlie time rounded UP to the whole minute; spoken as minutes.
+    local eatAbs = math.ceil((tcharlie or (timer.getAbsTime() + 600)) / 60) * 60
+    local eat    = string.format("%02d", math.floor(eatAbs / 60) % 60)
+    CV.case = case
+    CV.replied = true
+
+    -- LSO radio follows the case (ball call on approach freq in CASE III)
+    local lso = (case == 3) and CFG.CHAN.APPROACH or CFG.CHAN.TOWER
+    pcall(ab.SetLSORadio, ab, lso.hz / 1e6, "AM")
+
+    if case == 1 then
+        CV.clr = { brc = B, angels = tostring(angels), alt = alt4 }
+        Ctl("MARSHAL", "MARSHAL",
+            Seq(D("m", m), CFG.P, "m_vfr", "m_altimeter", D("m", alt4), CFG.P, "m_case1",
+                "m_brc", D("m", B), CFG.P, "m_hold_angels", D("m", angels), CFG.P, "m_report_see_me"),
+            string.format("%s, Mother is VFR, altimeter %s, CASE I recovery, BRC %s, hold angels %d, report see me.",
+                m, altTxt, B, angels))
+        SetPhase("SEEYOU")
+        return
+    end
+
+    local radial = Hdg3(ab:GetRadial(case, true, true, false))
+    local dme    = tostring(angels + (TRT.HOLD_DME_BASE or 15))
+    local fb     = Hdg3(ab:GetFinalBearing(true))
+    CV.clr = { radial = radial, dme = dme, angels = tostring(angels), eat = eat, eatAbs = eatAbs,
+               brc = B, fb = fb, alt = alt4 }
+    TRT.CV_EAT = eatAbs   -- for scoring (R2)
+
+    local head, headTxt
+    if case == 2 then
+        head    = Seq("m_case2", "m_exp_brc", D("m", B))
+        headTxt = string.format("CASE II recovery, CV-1 approach, expected BRC %s.", B)
+    else
+        head    = Seq("m_case3", "m_exp_fb", D("m", fb))
+        headTxt = string.format("CASE III recovery, CV-1 approach, expected final bearing %s.", fb)
+    end
+    Ctl("MARSHAL", "MARSHAL",
+        Seq(D("m", m), CFG.P, "m_altimeter", D("m", alt4), CFG.P, head, CFG.P,
+            D("m", m), CFG.P, "m_marshal_on", D("m", radial), "m_radial", CFG.P, D("m", dme), "m_dme",
+            CFG.P, "m_angels", D("m", angels), CFG.P, "m_eat", D("m", eat), CFG.P, "m_btn15"),
+        string.format("%s, altimeter %s, %s %s, marshal on the %s radial, %s DME, angels %d, "
+            .. "expected approach time %s, approach button 15.",
+            m, altTxt, headTxt, m, radial, dme, angels, eat))
+    SetPhase("READBACK")
+end
+
+-- ══════════════════════════════════════════════════════════════
+--  MENU
+-- ══════════════════════════════════════════════════════════════
+local function Actions()
+    local a, u, s = {}, Hero(), Ship()
+    if (CV.busy and CV.phase ~= "BALL") or not (u and s) then return a end
+    local d = DistNM(u:getPoint(), s:getPoint())
+    local ph = CV.phase
+    if ph == "CHECKIN" then
+        a[#a + 1] = { string.format("Marshal %.2f: check in (inbound)", CFG.CHAN.MARSHAL.hz / 1e6), A_CheckIn }
+    elseif ph == "READBACK" then
+        a[#a + 1] = { "Marshal: readback", A_Readback }
+    elseif ph == "ESTABLISH" or ph == "HOLDING" then
+        if ph == "ESTABLISH" then a[#a + 1] = { "Marshal: established", A_Established } end
+        local c, lbl = CV.clr, "Marshal: commencing"
+        if c and c.eat and c.eatAbs then
+            local r = math.floor(c.eatAbs - timer.getAbsTime() + 0.5)
+            local sign = (r >= 0) and "T-" or "T+"
+            r = math.abs(r)
+            lbl = string.format("%s (EAT :%s, %s%d:%02d)", lbl, c.eat, sign, math.floor(r / 60), r % 60)
+        end
+        a[#a + 1] = { lbl, A_Commencing }
+    elseif ph == "SEEYOU" and d <= CFG.SEE_YOU_NM then
+        a[#a + 1] = { "Marshal: see you at 10", A_SeeYou }
+    elseif ph == "APP_CHECKIN" then
+        a[#a + 1] = { string.format("Approach %.2f: check in", CFG.CHAN.APPROACH.hz / 1e6), A_AppCheckIn }
+    elseif ph == "APPROACH" or ph == "APP_SEEYOU" then
+        local alt = u:getPoint().y * 3.28084
+        if ph == "APPROACH" and alt <= CFG.PLATFORM_FT then a[#a + 1] = { "Approach: platform", A_Platform } end
+        if CV.case == 2 and d <= CFG.SEE_YOU_NM then a[#a + 1] = { "Approach: see you at 10", A_AppSeeYou } end
+    elseif ph == "NEEDLES" then
+        a[#a + 1] = { "Needles: up and on", function() A_Needles(true) end }
+        a[#a + 1] = { "Needles: negative", function() A_Needles(false) end }
+    elseif ph == "BALL" then
+        a[#a + 1] = { "Ball (Hornet ball, state)", function() A_Ball(false) end }
+        a[#a + 1] = { "Clara", A_Clara }
+    end
+    return a
+end
+
+local function CommCard()
+    local c = CFG.CHAN
+    local lines = {
+        "── CV COMM CARD (COMM1, AM) ──────────",
+        string.format("BTN 1   %.2f  TOWER / PADDLES", c.TOWER.hz / 1e6),
+        string.format("BTN 2   %.2f  DEPARTURE", c.DEPARTURE.hz / 1e6),
+        string.format("BTN 15  %.2f  APPROACH", c.APPROACH.hz / 1e6),
+        string.format("BTN 16  %.2f  MARSHAL", c.MARSHAL.hz / 1e6),
+        "CASE I/II: ZIPLIP on button 1 · CASE III: full voice",
+    }
+    if CV.clr and CV.clr.radial then
+        lines[#lines + 1] = string.format("Marshal: %s R / %s DME / angels %s / EAT :%s / FB %s",
+            CV.clr.radial, CV.clr.dme, CV.clr.angels, CV.clr.eat, CV.clr.fb)
+    elseif CV.clr then
+        lines[#lines + 1] = string.format("CASE I: BRC %s, hold angels %s", CV.clr.brc, CV.clr.angels)
+    end
+    Msg(table.concat(lines, "\n"), 20)
+end
+
+local lastSig = nil
+MenuRebuild = function()
+    local u = Hero()
+    if not u then return end
+    local gid = u:getGroup():getID()
+    if CV.phase == "IDLE" or (CV.menu.root and CV.menu.gid ~= gid) then
+        if CV.menu.root then pcall(missionCommands.removeItemForGroup, CV.menu.gid, CV.menu.root) end
+        CV.menu.root, CV.menu.items, lastSig = nil, nil, nil
+        if CV.phase == "IDLE" then return end
+    end
+    local acts = Actions()
+    local labels = {}
+    for i, it in ipairs(acts) do labels[i] = it[1] end
+    local sig = table.concat(labels, "|")
+    if sig == lastSig and CV.menu.root then return end
+    lastSig = sig
+    if not CV.menu.root then
+        CV.menu.gid  = gid
+        CV.menu.root = missionCommands.addSubMenuForGroup(gid, "CV COMMS")
+    end
+    for _, h in ipairs(CV.menu.items or {}) do pcall(missionCommands.removeItemForGroup, gid, h) end
+    CV.menu.items = {}
+    for _, it in ipairs(acts) do
+        CV.menu.items[#CV.menu.items + 1] = missionCommands.addCommandForGroup(gid, it[1], CV.menu.root, function()
+            if CV.busy and CV.phase ~= "BALL" then return end
+            it[2]()
+            MenuRebuild()
+        end)
+    end
+    CV.menu.items[#CV.menu.items + 1] =
+        missionCommands.addCommandForGroup(gid, "Show: comm card", CV.menu.root, CommCard)
+end
+
+-- ══════════════════════════════════════════════════════════════
+--  AIRBOSS OVERRIDES (instance fields; class methods untouched)
+-- ══════════════════════════════════════════════════════════════
+local function IsHeroModex(modex)
+    local pd = HeroPD()
+    return pd and pd.onboard and tostring(modex) == tostring(pd.onboard)
+end
+
+local function InstallHooks()
+    local ab = AB()
+    if not ab or CV.hooked then return CV.hooked end
+
+    -- 1) Marshal reply
+    local origArrived = ab._MarshalCallArrived
+    ab._MarshalCallArrived = function(self, modex, case, brc, altitude, charlie, qfe)
+        if not IsHeroModex(modex) then return end      -- AI flights: silent
+        local pd = HeroPD()
+        local ok, err = pcall(MarshalReply, case, brc, altitude, pd and pd.Tcharlie, qfe)
+        if not ok then
+            Log("MarshalReply error: " .. tostring(err) .. " -> AIRBOSS default call")
+            return origArrived(self, modex, case, brc, altitude, charlie, qfe)
+        end
+    end
+
+    -- 2) "Cleared for Case X recovery" (Charlie) -> text only for the hero
+    local origCleared = ab._MarshalCallClearedForRecovery
+    ab._MarshalCallClearedForRecovery = function(self, modex, case)
+        if not IsHeroModex(modex) then return origCleared(self, modex, case) end
+        if case == 1 then
+            Msg("[CV] Signal Charlie — proceed to the initial (ZIPLIP, no call).", 10)
+        else
+            local eat = CV.clr and CV.clr.eat
+            Msg(string.format("[CV] Recovery open%s.", eat and (" — commence at EAT :" .. eat) or ""), 10)
+        end
+    end
+
+    -- 3) Marshal text messages without Raynor USERSOUND
+    local origMsg = ab.MessageToPlayer
+    ab.MessageToPlayer = function(self, pd, message, sender, receiver, duration, clear, delay)
+        if sender ~= "MARSHAL" or self.SRS or not pd or not message or message == "" then
+            return origMsg(self, pd, message, sender, receiver, duration, clear, delay)
+        end
+        if delay and delay > 0 then
+            timer.scheduleFunction(function()
+                self:MessageToPlayer(pd, message, sender, receiver, duration, clear, 0)
+            end, nil, timer.getTime() + delay)
+            return
+        end
+        local text
+        if receiver == "" then text = message
+        else text = string.format("%s, %s", receiver or pd.onboard, message) end
+        if pd.client then
+            MESSAGE:New(text, duration or self.Tmessage, sender, clear):ToClient(pd.client)
+        end
+    end
+
+    -- 4) ZIPLIP: drop LSO ball / roger ball / paddles contact for the hero in CASE I/II
+    local origRT = ab.RadioTransmission
+    CV.origRT = origRT
+    ab.RadioTransmission = function(self, radio, call, ...)
+        local f = call and call.file
+        if f and not CV.allowRB then
+            if CFG.ALWAYS_DROP[f] then return end
+            local pd = HeroPD()
+            if pd and (pd.case == 1 or pd.case == 2) and CFG.ZIPLIP_DROP[f] then return end
+            if f == "LSO-RogerBall" then return end      -- CASE III: CV plays it after the ball call
+        end
+        return origRT(self, radio, call, ...)
+    end
+
+    CV.hooked = true
+    Log("AIRBOSS hooks installed")
+    return true
+end
+
+-- ══════════════════════════════════════════════════════════════
+--  EVENTS / TICK
+-- ══════════════════════════════════════════════════════════════
+local function Reset(reason)
+    CV.q, CV.clr, CV.case, CV.tRadar, CV.tBallAsk = {}, nil, nil, nil, nil
+    CV.wasOutside = false
+    SetPhase("IDLE")
+    Log("reset (" .. reason .. ")")
+end
+
+local EH = {}
+function EH:onEvent(e)
+    if not e.initiator or not e.initiator.getName then return end
+    local ok, name = pcall(e.initiator.getName, e.initiator)
+    if not ok or name ~= CFG.PLAYER_UNIT then return end
+    if e.id == world.event.S_EVENT_TAKEOFF then
+        CV.air, CV.tAir = true, timer.getTime()
+        Reset("takeoff")
+    elseif e.id == world.event.S_EVENT_LAND then
+        CV.air = false
+        Reset("landed")
+    elseif e.id == world.event.S_EVENT_BIRTH then
+        CV.air = false
+        Reset("birth")
+    end
+end
+world.addEventHandler(EH)
+
+local function Tick(_, t)
+    local ok, err = pcall(function()
+        if not CV.hooked then InstallHooks() end
+        local u, s = Hero(), Ship()
+        if not (u and s) then return end
+        if not CV.air and u:inAir() then CV.air, CV.tAir = true, timer.getTime() end
+        local d = DistNM(u:getPoint(), s:getPoint())
+        if d > CFG.CCA_NM then CV.wasOutside = true end
+        if CV.phase == "IDLE" and CV.air and d <= CFG.CCA_NM then
+            local long = CV.tAir and (timer.getTime() - CV.tAir) >= CFG.ARM_AIRBORNE
+            if CV.wasOutside or long then SetPhase("CHECKIN") end
+        elseif CV.phase == "CHECKIN_SENT" and not CV.busy and not CV.replied then
+            SetPhase("CHECKIN")      -- AIRBOSS refused (message shown) -> offer again
+        elseif CV.phase == "PENETRATION" and CV.tRadar and not CV.busy
+               and timer.getTime() - CV.tRadar >= CFG.SWITCH_APP_MIN then
+            local alt = u:getPoint().y * 3.28084
+            if alt <= CFG.SWITCH_APP_FT or d <= CFG.SWITCH_APP_DME then C_SwitchApproach() end
+        elseif CV.phase == "FINAL" and not CV.busy and d <= CFG.ACLS_NM then
+            C_AclsLock()
+        elseif CV.phase == "NEEDLES" and not CV.busy and timer.getTime() - CV.tPhase >= CFG.NEEDLES_TIMEOUT then
+            C_FlyBullseye()
+        elseif CV.phase == "BALLWAIT" and SternNM() <= CFG.BALL_NM then
+            C_CallBall()
+        elseif CV.phase == "BALL" and CV.tBallAsk and timer.getTime() - CV.tBallAsk >= CFG.BALL_AUTO then
+            A_Ball(true)
+        end
+        local pd = HeroPD()
+        if pd then
+            if pd.step ~= CV.abStep then
+                Log("AIRBOSS step " .. tostring(CV.abStep) .. " -> " .. tostring(pd.step)
+                    .. string.format(" (%.1f NM, %d ft)", d, math.floor(u:getPoint().y * 3.28084)))
+                CV.abStep = pd.step
+            end
+            if pd.holding ~= CV.abHold then
+                Log("AIRBOSS holding " .. tostring(CV.abHold) .. " -> " .. tostring(pd.holding))
+                CV.abHold = pd.holding
+            end
+        end
+        MenuRebuild()
+    end)
+    if not ok then Log("tick error: " .. tostring(err)) end
+    -- fast tick in the last miles (ball call timing)
+    if CV.phase == "BALLWAIT" or CV.phase == "BALL" or CV.phase == "NEEDLES" then return t + 0.5 end
+    return t + CFG.TICK
+end
+timer.scheduleFunction(Tick, nil, timer.getTime() + 3)
+
+Log("v" .. CFG.VERSION .. " loaded")

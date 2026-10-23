@@ -1,8 +1,18 @@
--- Airboss_CaseSync.lua | v1.0.0
+-- Airboss_CaseSync.lua | v1.0.2
 -- TRT Syria Recovery Framework - syncs TRT.Airboss recovery case to ME flag 100
 --
 -- LOAD ORDER: after Airboss_Start.lua (needs TRT.Airboss to exist already).
--- Loaded via: assert(loadfile("<path>/Airboss_CaseSync.lua"))()
+-- Loaded via: ME "Do Script File" (ResKey_Action_302), embedded by build.py.
+--
+-- v1.0.2: OFFSET CASE II 30 -> 21, CASE III 0 -> 30: both cases hold on the
+--   TRT chart fix R-196 (angels 10 / 25 DME via Airboss_Start v1.0.3). CASE II radial =
+--   BRC(mag 355) - 180 + 21; CASE III radial = FB(mag ~346) - 180 + 30.
+-- v1.0.1: FIX — flag 100 set at mission start was never applied. The ME
+--   "CASE SELECTOR" trigger (trigrules[1], triggerStart) sets flag 100 BEFORE
+--   this file loads, so the old baseline read (lastFlag = flag 100) saw no
+--   change and AIRBOSS stayed on Airboss_Start's hardcoded CASE II -- e.g.
+--   CASE II Marshal instructions at night with flag 100 = 3. Baseline is now
+--   nil: the first poll always (re)builds the window from flag 100.
 --
 -- PURPOSE: Core_Scoring.lua grades against ME flag 100. Airboss_Start.lua
 -- sets TRT.Airboss's recovery case independently, once, at load time. This
@@ -56,10 +66,8 @@ TRT.CaseSync = TRT.CaseSync or {}
 -- rather than this specific DME/radial fix).
 TRT.CaseSync.OFFSET = {
   [1] = 0, -- Case I: AddRecoveryWindow forces this to 0 internally regardless.
-  [2] = 30, -- Case II: FB 346 / Hold Fix R-195 @ 25 DME, port-aft. See note above.
-  [3] = 0, -- Case III offset NOT SPECIFIED YET. Fill in before flag 100 is
-           -- ever set to 3, or Case III will hold dead astern (0 offset)
-           -- instead of wherever you actually want it.
+  [2] = 21, -- Case II : BRC 355 - 180 + 21 = R-196 (v1.0.2)
+  [3] = 30, -- Case III: FB ~346 - 180 + 30 = R-196 (v1.0.2)
 }
 
 -- How long the replacement window stays open once (re)opened. Matches
@@ -75,7 +83,7 @@ local DEBUG_LOG_CASE_SYNC = true
 -- your flag-100-setter trigger yet when this script loads, that's fine --
 -- the first real assignment will still be caught as a change on a later
 -- poll, whenever that trigger fires.
-TRT.CaseSync.lastFlag = trigger.misc.getUserFlag(100)
+TRT.CaseSync.lastFlag = nil   -- v1.0.1: first poll applies flag 100 (see header)
 
 local function CheckFlag100(_, time)
 
@@ -110,4 +118,4 @@ end
 
 timer.scheduleFunction(CheckFlag100, nil, timer.getTime() + 5)
 
-env.info("AIRBOSS CaseSync | listening on flag 100")
+env.info("Airboss_CaseSync | v1.0.2 | listening on flag 100")

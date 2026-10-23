@@ -1,10 +1,19 @@
-# make_clips.py | v1.2.1
+# make_clips.py | v1.3.0
 # tts/clips.csv -> src/Sounds/CAS1/<id>.ogg  (Piper TTS + ffmpeg radio chain)
+# CV comms:  python tts/make_clips.py --set cv   (tts/cv_clips.csv -> src/Sounds/CV/,
+#            table tts/cv_audio_table.lua -> paste into CV_Comms CFG.AUDIO)
 # Also writes tts/audio_table.lua: paste into Comms_Director CFG.AUDIO.
 # Usage:  python tts/make_clips.py              (all clips)
 #         python tts/make_clips.py str_m4_sour  (only the listed ids)
 #         python tts/make_clips.py --out DIR id (write to DIR, table untouched; A/B tests)
 #
+# v1.3.0: --set cv (CV_Comms clip set). Optional 4th csv field 'tok' = token clip:
+#         no squelch bursts, leading/trailing silence trimmed, short tail pad
+#         (pad = 4th field 'tok:0.25' for a comma pause). Text <KEYUP>/<KEYDOWN>
+#         renders a squelch-burst-only clip. Clips are chained at runtime.
+#         Table len written with 2 decimals.
+#         voices: MARSHAL hfc_male, APPROACH kusal (CV set; norman rejected:
+#         it emits long noise/breath segments on one-word tokens).
 # v1.2.1: voices: DEPARTURE lessac (f), OVERLORD kristin (f), PILOT john (no pitch shift).
 # v1.2.0: pilot (HORNET 51) voice. clips.csv agency field may be VOICE>CHANNEL
 #         (e.g. PILOT>OVERLORD): voice from VOICE[VOICE], ch in audio_table = CHANNEL.
@@ -28,7 +37,17 @@ VOICE = {
     'EYEBALL':   'en_US-hfc_male-medium.onnx',
     'TEXACO':    'en_US-kusal-medium.onnx',
     'PILOT':     'en_US-john-medium.onnx',
+    'MARSHAL':   'en_US-hfc_male-medium.onnx',   # norman: garbage on 1-word tokens
+    'APPROACH':  'en_US-kusal-medium.onnx',
 }
+
+SETS = {   # --set name -> (csv, outdir, table)
+    'cas1': (CSV, OUTDIR, TABLE),
+    'cv':   (os.path.join(ROOT, 'tts', 'cv_clips.csv'),
+             os.path.join(ROOT, 'src', 'Sounds', 'CV'),
+             os.path.join(ROOT, 'tts', 'cv_audio_table.lua')),
+}
+TOK_PAD = 0.06   # s silence after a token clip (default, 'tok:<s>' overrides)
 FALLBACK = None  # model file name used for any agency missing above
 
 # Speed: total speed-up = TEMPO / LENGTH_SCALE  (0.70 / 1.40 -> 2.0x).
@@ -83,6 +102,29 @@ def radio(wav, raw_len, ogg, pitch=1.0):
                            '-ac', '1', '-ar', '22050', '-c:a', 'libvorbis', '-q:a', '4', ogg])
 
 
+def radio_token(wav, ogg, pad):
+    trim = ('silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.02,'
+            'areverse,silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.03,areverse')
+    fc = ('[0:a]' + trim + ',atempo=%.3f,' % TEMPO + BAND + ','
+          'acompressor=threshold=-24dB:ratio=8:attack=3:release=60:makeup=4,'
+          'asoftclip=type=tanh,acrusher=bits=10:mix=0.35:mode=log,'
+          'apad=pad_dur=%.3f,aresample=22050[s];' % pad +
+          'anoisesrc=d=30:c=pink:a=%.4f:r=22050,%s[n];' % (HISS, BAND) +
+          '[s][n]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.9')
+    subprocess.check_call(['ffmpeg', '-y', '-v', 'error', '-i', wav, '-filter_complex', fc,
+                           '-ac', '1', '-ar', '22050', '-c:a', 'libvorbis', '-q:a', '4', ogg])
+
+
+def squelch(ogg, which):
+    d = KEYUP if which == 'up' else KEYDOWN
+    fc = ('anoisesrc=d=%.3f:c=white:a=%.3f:r=22050,%s,afade=t=out:d=%.3f[k];'
+          % (d, BURST, BAND, d) +
+          'anoisesrc=d=%.3f:c=pink:a=%.4f:r=22050,%s[n];' % (d, HISS, BAND) +
+          '[k][n]amix=inputs=2:duration=longest:normalize=0,alimiter=limit=0.9')
+    subprocess.check_call(['ffmpeg', '-y', '-v', 'error', '-filter_complex', fc,
+                           '-ac', '1', '-ar', '22050', '-c:a', 'libvorbis', '-q:a', '4', ogg])
+
+
 def duration(path):
     out = subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries',
                                    'format=duration', '-of', 'csv=p=0', path])
@@ -93,20 +135,27 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('ids', nargs='*')
     ap.add_argument('--out', help='output folder (A/B test); audio_table.lua not written')
+    ap.add_argument('--set', default='cas1', choices=sorted(SETS))
     a = ap.parse_args()
-    outdir = a.out or OUTDIR
+    csv, outdir0, table_path = SETS[a.set]
+    outdir = a.out or outdir0
     rows = []
-    with open(CSV, encoding='utf-8') as f:
+    with open(csv, encoding='utf-8') as f:
         for ln in f:
             ln = ln.strip()
             if ln and not ln.startswith('#'):
-                cid, agency, text = ln.split(';', 2)
-                rows.append((cid.strip(), agency.strip(), text.strip()))
+                parts = ln.split(';')
+                cid, agency = parts[0].strip(), parts[1].strip()
+                text = parts[2].strip()
+                mode = parts[3].strip() if len(parts) > 3 else ''
+                rows.append((cid, agency, text, mode))
     os.makedirs(outdir, exist_ok=True)
     table, failed = [], []
-    for cid, agency, text in rows:
+    for cid, agency, text, mode in rows:
         ogg = os.path.join(outdir, cid + '.ogg')
-        if not a.ids or cid in a.ids:
+        if (not a.ids or cid in a.ids) and text in ('<KEYUP>', '<KEYDOWN>'):
+            squelch(ogg, 'up' if text == '<KEYUP>' else 'down')
+        elif not a.ids or cid in a.ids:
             vkey, _, _ = agency.partition('>')
             name = VOICE.get(vkey, FALLBACK)
             name, pitch = name if isinstance(name, tuple) else (name, 1.0)
@@ -115,17 +164,24 @@ def main():
                 print('ATLANDI  %-22s ses modeli yok: %s' % (cid, name)); failed.append(cid); continue
             with tempfile.TemporaryDirectory() as td:
                 wav = os.path.join(td, 'raw.wav')
-                radio(wav, synth(model, text, wav), ogg, pitch)
+                raw = synth(model, text, wav)
+                if mode.startswith('tok'):
+                    pad = float(mode.split(':')[1]) if ':' in mode else TOK_PAD
+                    radio_token(wav, ogg, pad)
+                else:
+                    radio(wav, raw, ogg, pitch)
         if os.path.isfile(ogg):
             d = duration(ogg)
             ch = agency.partition('>')[2] or agency
-            table.append('        %-22s = { ch = "%s", len = %.1f },' % (cid, ch, d))
+            fmt = '        %-22s = { ch = "%s", len = %.2f },' if a.set != 'cas1' else \
+                  '        %-22s = { ch = "%s", len = %.1f },'
+            table.append(fmt % (cid, ch, d))
             print('OK       %-22s %5.1f s  %s' % (cid, d, agency))
     if not a.out:
-        with open(TABLE, 'w', encoding='utf-8') as f:
+        with open(table_path, 'w', encoding='utf-8') as f:
             f.write('    -- generated by tts/make_clips.py; len = clip length (s)\n')
             f.write('    AUDIO = {\n' + '\n'.join(table) + '\n    },\n')
-        print('\n%d clip, tablo: %s' % (len(table), TABLE))
+        print('\n%d clip, tablo: %s' % (len(table), table_path))
     return 1 if failed else 0
 
 

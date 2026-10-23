@@ -1,10 +1,16 @@
--- Comms_Director | v1.3.3
+-- Comms_Director | v1.3.5
 --[[
   CAS-1 Communications State Machine — Syria Dynamic Template
   Scope: Departure→Strike→OVERLORD hand-offs · JTAC hand-offs · INFLTREP · TANKER
          · RTB (OVERLORD→Strike→Marshal) · INJ-1..4
   Out of scope: JTAC comms themselves (native DCS JTAC check-in / 9-line / clearance
                 preserved, do not touch)
+
+  v1.3.5 — load log line carried a stale version ("v1.2.1 online"); now matches header.
+
+  v1.3.4 — CV button plan (CV_Comms.lua): DEPARTURE 127.60 -> 269.00 AM (btn 2),
+           MARSHAL 305.00 FM -> 261.00 AM (btn 16). str_switch_marshal / str_inbound
+           re-rendered. Comm ladder lists the real COMM1 buttons.
 
   v1.3.3 — voices re-cast (make_clips v1.2.1): DEPARTURE and OVERLORD female
            (lessac, kristin), HORNET 51 = john. All 41 clips re-rendered, CFG.AUDIO
@@ -127,13 +133,13 @@ local CFG = {
     INTERNAL_FUEL_LB = 10860,
 
     FREQ = {
-        DEP     = "127.60",
+        DEP     = "269.00",
         STRIKE  = "265.00",
         J1      = "333.30",
         J2      = "333.40",
         OVL     = "251.10",
         TKR     = "252.10",
-        MARSHAL = "305.00 FM",
+        MARSHAL = "261.00",
     },
 
     -- Voice (v1.3.0). Transmitted from 30 m above the player → no range/LOS loss.
@@ -141,7 +147,7 @@ local CFG = {
     TX_POWER  = 1000,    -- W
     AUDIO_PAD = 0.5,     -- s after a clip ends before the next clip may start
     CHAN = {             -- Hz, modulation
-        DEPARTURE = { hz = 127.60e6, mod = radio.modulation.AM },
+        DEPARTURE = { hz = 269.00e6, mod = radio.modulation.AM },
         STRIKE    = { hz = 265.00e6, mod = radio.modulation.AM },
         OVERLORD  = { hz = 251.10e6, mod = radio.modulation.AM },
         EYEBALL   = { hz = 333.40e6, mod = radio.modulation.AM },
@@ -152,7 +158,7 @@ local CFG = {
         dep_switch_strike      = { ch = "DEPARTURE", len = 2.8 },
         ovl_contact_pointer    = { ch = "OVERLORD", len = 6.0 },
         ovl_switch_strike      = { ch = "OVERLORD", len = 3.3 },
-        str_switch_marshal     = { ch = "STRIKE", len = 2.9 },
+        str_switch_marshal     = { ch = "STRIKE", len = 2.6 },
         eye_area_clear         = { ch = "EYEBALL", len = 2.4 },
         str_radar_contact      = { ch = "STRIKE", len = 2.4 },
         str_m4_sweet_ovl       = { ch = "STRIKE", len = 3.4 },
@@ -165,7 +171,7 @@ local CFG = {
         tkr_checkin            = { ch = "TEXACO", len = 5.0 },
         tkr_done               = { ch = "TEXACO", len = 4.5 },
         ovl_rtb                = { ch = "OVERLORD", len = 5.1 },
-        str_inbound            = { ch = "STRIKE", len = 6.0 },
+        str_inbound            = { ch = "STRIKE", len = 5.9 },
         ovl_feet_dry           = { ch = "OVERLORD", len = 2.2 },
         ovl_feet_wet           = { ch = "OVERLORD", len = 2.2 },
         ovl_picture            = { ch = "OVERLORD", len = 3.8 },
@@ -633,13 +639,15 @@ MenuRebuild = function()
     missionCommands.addCommandForGroup(gid, "Show: comm ladder", root, function()
         Msg(
             "── CAS-1 COMM LADDER ──────────────────\n"
-         .. "COMM1-01  127.60 AM   DEPARTURE\n"
+         .. "COMM1-01  262.00 AM   TOWER / PADDLES (CASE I/II)\n"
+         .. "COMM1-02  269.00 AM   DEPARTURE\n"
          .. "COMM1-03  265.00 AM   STRIKE\n"
          .. "COMM1-04  333.30 AM   POINTER 11  (JTAC-1)\n"
          .. "COMM1-05  333.40 AM   EYEBALL 11  (JTAC-2)\n"
          .. "COMM1-06  251.10 AM   OVERLORD\n"
          .. "COMM1-07  252.10 AM   TEXACO 11\n"
-         .. "COMM2-01  305.00 FM   MARSHAL\n"
+         .. "COMM1-15  263.00 AM   APPROACH (CASE II/III)\n"
+         .. "COMM1-16  261.00 AM   MARSHAL\n"
          .. "── FLOW ───────────────────────────────\n"
          .. "DEP → (20 NM) STRIKE → OVERLORD → (CP-20 NM) POINTER\n"
          .. "→ OVERLORD → EYEBALL → OVERLORD INFLTREP → TEXACO\n"
@@ -913,7 +921,7 @@ local function CD_Init()
 
     SetFlag(200, 0)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.2.1 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.3.5 online — CAS-1 Syria")
 end
 
 CD_Init()

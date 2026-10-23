@@ -1,0 +1,105 @@
+# tts/cv_clips.csv -> src/Sounds/CV/<id>.ogg   (python tts/make_clips.py --set cv)
+# id;voice;text;mode     mode 'tok' = token clip (chained at runtime by CV_Comms),
+#                        'tok:<s>' = token with <s> s tail pad (comma pause)
+# Voices: MARSHAL = hfc_male, APPROACH = kusal, PILOT = john (modex 467 built from digit tokens).
+# ── squelch bursts (prepended / appended to every chained transmission)
+sq_up;MARSHAL;<KEYUP>
+sq_dn;MARSHAL;<KEYDOWN>
+# ── MARSHAL digits
+m_0;MARSHAL;zero;tok
+m_1;MARSHAL;one;tok
+m_2;MARSHAL;two;tok
+m_3;MARSHAL;three;tok
+m_4;MARSHAL;four;tok
+m_5;MARSHAL;five;tok
+m_6;MARSHAL;six;tok
+m_7;MARSHAL;seven;tok
+m_8;MARSHAL;eight;tok
+m_9;MARSHAL;niner;tok
+# ── MARSHAL phrases
+m_vfr;MARSHAL;Mother is V F R.;tok:0.2
+m_altimeter;MARSHAL;altimeter;tok
+m_case1;MARSHAL;Case one recovery.;tok:0.2
+m_case2;MARSHAL;Case two recovery, C V one approach.;tok:0.2
+m_case3;MARSHAL;Case three recovery, C V one approach.;tok:0.2
+m_brc;MARSHAL;B R C;tok
+m_exp_brc;MARSHAL;expected B R C;tok
+m_exp_fb;MARSHAL;expected final bearing;tok
+m_hold_angels;MARSHAL;hold angels;tok
+m_report_see_me;MARSHAL;report see me.;tok
+m_marshal_on;MARSHAL;marshal on the;tok
+m_radial;MARSHAL;radial;tok
+m_dme;MARSHAL;D M E;tok
+m_angels;MARSHAL;angels;tok
+m_eat;MARSHAL;expected approach time;tok
+m_btn15;MARSHAL;approach button one five.;tok
+m_readback;MARSHAL;readback correct.;tok
+m_roger;MARSHAL;roger.;tok
+m_go1;MARSHAL;update state, go button one.;tok
+# ── PILOT digits
+p_0;PILOT;zero;tok
+p_1;PILOT;one;tok
+p_2;PILOT;two;tok
+p_3;PILOT;three;tok
+p_4;PILOT;four;tok
+p_5;PILOT;five;tok
+p_6;PILOT;six;tok
+p_7;PILOT;seven;tok
+p_8;PILOT;eight;tok
+p_9;PILOT;niner;tok
+# ── PILOT phrases
+p_point;PILOT;point;tok
+p_marshal;PILOT;Marshal,;tok:0.1
+p_marking;PILOT;marking mom's;tok
+p_for;PILOT;for;tok
+p_angels;PILOT;angels;tok
+p_state;PILOT;state;tok
+p_established;PILOT;established angels;tok
+p_see_you;PILOT;see you at ten.;tok
+p_marshal_on;PILOT;marshal on the;tok
+p_approach_time;PILOT;approach time;tok
+p_btn15;PILOT;button one five.;tok
+# ── R2 (CV_Comms v1.1.0): commencing / approach / platform / CASE II see-you
+m_radar_fb;MARSHAL;radar contact, final bearing;tok
+m_switch_app;MARSHAL;switch approach, button one five.;tok
+a_0;APPROACH;zero;tok
+a_1;APPROACH;one;tok
+a_2;APPROACH;two;tok
+a_3;APPROACH;three;tok
+a_4;APPROACH;four;tok
+a_5;APPROACH;five;tok
+a_6;APPROACH;six;tok
+a_7;APPROACH;seven;tok
+a_8;APPROACH;eight;tok
+a_9;APPROACH;niner;tok
+a_approach;APPROACH;Approach,;tok:0.1
+a_radar_contact;APPROACH;radar contact.;tok:0.15
+a_final_bearing;APPROACH;final bearing;tok
+a_roger;APPROACH;roger.;tok
+a_go1;APPROACH;update state, go button one.;tok
+p_commencing;PILOT;commencing;tok:0.1
+p_approach;PILOT;Approach,;tok:0.1
+p_checking_in;PILOT;checking in;tok:0.1
+p_miles;PILOT;miles;tok
+p_platform;PILOT;platform.;tok
+# ── R3 (CV_Comms v1.2.0): ACLS / needles / ¾ mile / ball call
+a_acls;APPROACH;A C L S lock on,;tok:0.1
+a_miles;APPROACH;miles,;tok:0.1
+a_say_needles;APPROACH;say needles.;tok
+a_concur;APPROACH;concur, fly mode two.;tok
+a_bullseye;APPROACH;fly bullseye.;tok
+a_gp_on;APPROACH;on glidepath,;tok:0.08
+a_gp_sl_above;APPROACH;slightly above glidepath,;tok:0.08
+a_gp_above;APPROACH;above glidepath,;tok:0.08
+a_gp_sl_below;APPROACH;slightly below glidepath,;tok:0.08
+a_gp_below;APPROACH;below glidepath,;tok:0.08
+a_crs_on;APPROACH;on course,;tok:0.08
+a_crs_sl_left;APPROACH;slightly left of course,;tok:0.08
+a_crs_left;APPROACH;left of course,;tok:0.08
+a_crs_sl_right;APPROACH;slightly right of course,;tok:0.08
+a_crs_right;APPROACH;right of course,;tok:0.08
+a_3q_ball;APPROACH;three quarter mile, call the ball.;tok
+p_up_on;PILOT;up and on.;tok
+p_neg_needles;PILOT;negative needles.;tok
+p_hornet_ball;PILOT;Hornet ball,;tok:0.08
+p_clara;PILOT;Clara.;tok
