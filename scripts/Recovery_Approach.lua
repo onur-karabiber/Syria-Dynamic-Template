@@ -1,4 +1,7 @@
--- Recovery_Approach | v1.0.2
+-- Recovery_Approach | v1.0.3
+-- v1.0.3: CASE I 10NM speed window 275-320 -> 230-270 kt. No source gives a 10 NM
+-- speed; the CASE I stack is flown at 250 KIAS (masterarms CASE 1), so the check is
+-- centred on the holding speed. Speed is still the 3D velocity (wind-affected).
 -- CASE-adaptive inbound/approach scoring. Replaces the per-file
 -- CASE_I_ENABLED/II/III switches from CASE-I/II/III_v14.lua: reads the
 -- LIVE case (TRT.getCurrentCase) at each checkpoint instead of a value
@@ -58,7 +61,7 @@ local NM12_ALT_MIN, NM12_ALT_MAX = 1100, 1400
 local NM12_SPD_MIN, NM12_SPD_MAX = 220, 270
 
 local CASE1_ALT_MIN, CASE1_ALT_MAX = 1900, 2150
-local CASE1_SPD_MIN, CASE1_SPD_MAX = 275, 320
+local CASE1_SPD_MIN, CASE1_SPD_MAX = 230, 270   -- v1.0.3 (was 275, 320)
 
 ----------------------------------------------------------------
 -- STATE
@@ -208,4 +211,4 @@ local function mainLoop()
 end
 
 timer.scheduleFunction(mainLoop, nil, timer.getTime() + 1)
-env.info("[Recovery_Approach] v1.0.2 loaded.")
+env.info("[Recovery_Approach] v1.0.3 loaded.")
