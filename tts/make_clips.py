@@ -1,4 +1,4 @@
-# make_clips.py | v1.4.0
+# make_clips.py | v1.4.1
 # tts/clips.csv -> src/Sounds/CAS1/<id>.ogg  (Piper TTS + ffmpeg radio chain)
 # CV comms:  python tts/make_clips.py --set cv   (tts/cv_clips.csv -> src/Sounds/CV/,
 #            table tts/cv_audio_table.lua -> paste into CV_Comms CFG.AUDIO)
@@ -7,6 +7,7 @@
 #         python tts/make_clips.py str_m4_sour  (only the listed ids)
 #         python tts/make_clips.py --out DIR id (write to DIR, table untouched; A/B tests)
 #
+# v1.4.1: GAIN_DB 2.3 -> 5.5 (still quiet in test); peaks now limited harder.
 # v1.4.0: speech 25% slower (TEMPO 1.40 -> 1.05: 2.0x -> 1.5x net) and +30% level
 #         (GAIN_DB 2.3 before the limiter, limit 0.9 -> 0.97). All sets re-rendered.
 # v1.3.1: table len always 2 decimals (CAS1 set now chains token clips too).
@@ -57,7 +58,7 @@ FALLBACK = None  # model file name used for any agency missing above
 # Piper alone below ~0.6 starts slurring; the rest is done by ffmpeg atempo.
 LENGTH_SCALE = 0.70
 TEMPO        = 1.05
-GAIN_DB      = 2.3    # +30 % amplitude (v1.4.0)
+GAIN_DB      = 5.5    # v1.4.1 (v1.4.0: 2.3)
 LIMIT        = 0.97
 
 # Radio chain

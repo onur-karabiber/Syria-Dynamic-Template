@@ -161,3 +161,4 @@ a_downwind;APPROACH;when level, turn left to the downwind, heading;tok
 a_at;APPROACH;at;tok
 a_dme_final;APPROACH;D M E, turn left to final bearing;tok
 p_abeam;PILOT;abeam,;tok:0.08
+p_wilco;PILOT;wilco.;tok
