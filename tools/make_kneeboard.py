@@ -1,4 +1,5 @@
-# make_kneeboard.py | v3.0.1
+# make_kneeboard.py | v3.0.2
+# v3.0.2: 03 ROUTE: TEXACO TACAN 21Y note (Hornet needs A/A selected with T/R for range).
 # v3.0.1: 02 COMM LADDER: F10 menu renamed (Menu_Manager v1.0.0) -> "F10 > COMMS".
 # Generates src/KNEEBOARD/images/01..05 *.png (CAS-1 kneeboard, 512x768).
 # v3.0.0: all five cards generated from data below (01/03/04/05 were hand-made
@@ -140,6 +141,7 @@ def route():
         d.text((50, c.y), grid, font=F11, fill=TXT); d.text((190, c.y), note, font=F11, fill=GRY); c.y += 14
     c.rule(); c.head("TANKER / EGRESS")
     c.kv("TEXACO 11", "YE 0694 6582 · angels 15", "g"); c.kv("FREQ", "252.10 · btn 7 (COMM1-07)")
+    c.kv("TACAN", "21Y · TCN: T/R + A/A (range)", "o")
     c.kv("EGRESS", "Feet wet → RTB 043°M rev")
     c.rule(); c.head("RETURN CORRIDOR")
     c.kv("CORRIDOR", "050° radial ±15° (035–065)", "o"); c.kv("MARSHAL", "50 NM → COMM1-16 (261.00 AM)")
