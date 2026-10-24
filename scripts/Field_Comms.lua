@@ -1,5 +1,8 @@
--- Field_Comms.lua | v1.4.0
+-- Field_Comms.lua | v1.4.1
 --[[
+  v1.4.1 — PILOT voice libritts-high 851 (make_clips v1.6.0); clips re-rendered, AUDIO
+           lengths updated.
+
   LTCC (Diyarbakir) -> CVN-73 departure radio module
   TRT Syria Dynamic Template  -  transit scenario (land-to-carrier)
 
@@ -132,44 +135,44 @@ local CFG = {
     -- tts/fc_audio_table.lua over this one after every render.
     -- Empty is valid: every transmission then falls back to text only.
     AUDIO = {
-        atis                   = { ch = "LTCC_INFO", len = 13.77 },
-        p_del_req              = { ch = "LTCC_DEL", len = 5.39 },
-        del_clr                = { ch = "LTCC_DEL", len = 14.90 },
-        p_del_rb               = { ch = "LTCC_DEL", len = 12.00 },
-        del_rb_ok              = { ch = "LTCC_DEL", len = 5.23 },
-        p_del_ack              = { ch = "LTCC_DEL", len = 3.76 },
-        p_gnd_radiochk         = { ch = "LTCC_GND", len = 3.47 },
-        gnd_5x5                = { ch = "LTCC_GND", len = 3.15 },
-        p_gnd_startup          = { ch = "LTCC_GND", len = 5.02 },
-        gnd_startup_ok         = { ch = "LTCC_GND", len = 4.92 },
-        p_gnd_startup_rb       = { ch = "LTCC_GND", len = 4.73 },
-        p_gnd_taxi_req         = { ch = "LTCC_GND", len = 3.83 },
-        gnd_taxi               = { ch = "LTCC_GND", len = 9.53 },
-        p_gnd_taxi_rb          = { ch = "LTCC_GND", len = 7.90 },
-        p_twr_ready            = { ch = "LTCC_TWR", len = 4.07 },
-        twr_clr_to             = { ch = "LTCC_TWR", len = 7.26 },
-        p_twr_rb               = { ch = "LTCC_TWR", len = 5.39 },
-        p_dep_checkin          = { ch = "LTCC_DEP", len = 5.09 },
-        dep_radar_contact      = { ch = "LTCC_DEP", len = 5.58 },
-        p_dep_climb_rb         = { ch = "LTCC_DEP", len = 5.39 },
-        p_dep_level            = { ch = "LTCC_DEP", len = 3.50 },
-        dep_handoff_ank        = { ch = "LTCC_DEP", len = 6.39 },
-        p_dep_ank_ack          = { ch = "LTCC_DEP", len = 4.06 },
-        p_ank_checkin          = { ch = "ANKARA", len = 6.05 },
-        ank_identified         = { ch = "ANKARA", len = 6.42 },
-        p_ank_rb               = { ch = "ANKARA", len = 3.99 },
-        ank_fir_handoff        = { ch = "ANKARA", len = 12.26 },
-        p_ank_fir_ack          = { ch = "ANKARA", len = 6.16 },
-        p_nic_checkin          = { ch = "NICOSIA", len = 4.97 },
-        nic_identified         = { ch = "NICOSIA", len = 6.14 },
-        p_nic_rb               = { ch = "NICOSIA", len = 5.00 },
-        nic_strike_handoff     = { ch = "NICOSIA", len = 7.29 },
-        p_nic_strike_ack       = { ch = "NICOSIA", len = 3.51 },
-        p_str_checkin          = { ch = "STRIKE", len = 3.09 },
-        str_radar_contact      = { ch = "STRIKE", len = 7.53 },
-        p_str_rb               = { ch = "STRIKE", len = 5.19 },
-        str_switch_marshal     = { ch = "STRIKE", len = 5.20 },
-        p_str_marshal_ack      = { ch = "STRIKE", len = 2.60 },
+        atis                   = { ch = "LTCC_INFO", len = 13.80 },
+        p_del_req              = { ch = "LTCC_DEL", len = 5.84 },
+        del_clr                = { ch = "LTCC_DEL", len = 14.76 },
+        p_del_rb               = { ch = "LTCC_DEL", len = 13.18 },
+        del_rb_ok              = { ch = "LTCC_DEL", len = 4.94 },
+        p_del_ack              = { ch = "LTCC_DEL", len = 2.86 },
+        p_gnd_radiochk         = { ch = "LTCC_GND", len = 2.56 },
+        gnd_5x5                = { ch = "LTCC_GND", len = 3.11 },
+        p_gnd_startup          = { ch = "LTCC_GND", len = 4.16 },
+        gnd_startup_ok         = { ch = "LTCC_GND", len = 4.78 },
+        p_gnd_startup_rb       = { ch = "LTCC_GND", len = 4.57 },
+        p_gnd_taxi_req         = { ch = "LTCC_GND", len = 3.46 },
+        gnd_taxi               = { ch = "LTCC_GND", len = 9.44 },
+        p_gnd_taxi_rb          = { ch = "LTCC_GND", len = 7.52 },
+        p_twr_ready            = { ch = "LTCC_TWR", len = 3.99 },
+        twr_clr_to             = { ch = "LTCC_TWR", len = 7.28 },
+        p_twr_rb               = { ch = "LTCC_TWR", len = 5.16 },
+        p_dep_checkin          = { ch = "LTCC_DEP", len = 4.90 },
+        dep_radar_contact      = { ch = "LTCC_DEP", len = 5.63 },
+        p_dep_climb_rb         = { ch = "LTCC_DEP", len = 5.38 },
+        p_dep_level            = { ch = "LTCC_DEP", len = 3.23 },
+        dep_handoff_ank        = { ch = "LTCC_DEP", len = 6.06 },
+        p_dep_ank_ack          = { ch = "LTCC_DEP", len = 3.19 },
+        p_ank_checkin          = { ch = "ANKARA", len = 6.64 },
+        ank_identified         = { ch = "ANKARA", len = 6.46 },
+        p_ank_rb               = { ch = "ANKARA", len = 3.44 },
+        ank_fir_handoff        = { ch = "ANKARA", len = 12.02 },
+        p_ank_fir_ack          = { ch = "ANKARA", len = 5.96 },
+        p_nic_checkin          = { ch = "NICOSIA", len = 4.86 },
+        nic_identified         = { ch = "NICOSIA", len = 5.84 },
+        p_nic_rb               = { ch = "NICOSIA", len = 4.38 },
+        nic_strike_handoff     = { ch = "NICOSIA", len = 7.23 },
+        p_nic_strike_ack       = { ch = "NICOSIA", len = 2.80 },
+        p_str_checkin          = { ch = "STRIKE", len = 2.42 },
+        str_radar_contact      = { ch = "STRIKE", len = 7.56 },
+        p_str_rb               = { ch = "STRIKE", len = 4.32 },
+        str_switch_marshal     = { ch = "STRIKE", len = 5.18 },
+        p_str_marshal_ack      = { ch = "STRIKE", len = 2.56 },
     },
 }
 
@@ -863,7 +866,7 @@ world.addEventHandler(FC_EH)
 -- ==============================================================
 local function Init()
     if not TRT.Menu then
-        env.info("Field_Comms v1.4.0 | ERROR: TRT.Menu not found. "..
+        env.info("Field_Comms v1.4.1 | ERROR: TRT.Menu not found. "..
                  "Load Menu_Manager before Field_Comms. No F10 menus will appear.")
         return
     end
@@ -872,7 +875,7 @@ local function Init()
     TRT.Menu.RegisterCard(CFG.OWNER, CardFn, CFG.ORDER)
     -- Start with no hint: on DECK the hero drives phase = "DECK" regardless.
     -- DEPARTURE hint is set in doTower (tower clearance given) and event handler.
-    env.info("Field_Comms v1.4.0 | loaded  -  LTCC departure module (group: "..CFG.GROUP_NAME..")")
+    env.info("Field_Comms v1.4.1 | loaded  -  LTCC departure module (group: "..CFG.GROUP_NAME..")")
 end
 
 -- Small delay so Menu_Manager is ready

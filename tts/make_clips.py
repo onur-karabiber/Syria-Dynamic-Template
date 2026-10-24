@@ -1,10 +1,17 @@
-# make_clips.py | v1.5.0
+# make_clips.py | v1.6.0
 # tts/clips.csv -> src/Sounds/CAS1/<id>.ogg  (Piper TTS + ffmpeg radio chain)
 # CV comms:  python tts/make_clips.py --set cv   (tts/cv_clips.csv -> src/Sounds/CV/,
 #            table tts/cv_audio_table.lua -> paste into CV_Comms CFG.AUDIO)
 # LTCC transit: python tts/make_clips.py --set fc (tts/fc_clips.csv -> src/Sounds/FC/,
 #            table tts/fc_audio_table.lua -> paste into Field_Comms CFG.AUDIO)
 #
+# v1.6.0: high-quality Piper models on the busiest voices: PILOT libritts-high speaker 851
+#         (all sets; ryan-high rejected: one-syllable tokens collapse to ~0.15-0.2 s,
+#         "two" never exceeds 0.23 s at any length_scale),
+#         MARSHAL / APPROACH libritts-high speakers 736 / 69 (two distinct men),
+#         OVERLORD lessac-high, DEPARTURE ljspeech-high. VOICE entries may be
+#         (model, pitch, speaker_id, length_mult): speaker_id for multi-speaker models,
+#         length_mult scales LENGTH_SCALE per voice. All three sets re-rendered.
 # v1.5.0: --set fc (Field_Comms LTCC->CVN-73 transit). Civil/foreign ATC cast on
 #         en_GB voices, Navy side keeps the CAS1 US voices (STRIKE joe, PILOT john).
 # Also writes tts/audio_table.lua: paste into Comms_Director CFG.AUDIO.
@@ -40,14 +47,14 @@ TABLE  = os.path.join(ROOT, 'tts', 'audio_table.lua')
 
 # agency -> voice model file in tts/voices/
 VOICE = {
-    'DEPARTURE': 'en_US-lessac-medium.onnx',   # female
+    'DEPARTURE': 'en_US-ljspeech-high.onnx',   # female (v1.6.0, was lessac-medium)
     'STRIKE':    'en_US-joe-medium.onnx',
-    'OVERLORD':  'en_US-kristin-medium.onnx',  # female
+    'OVERLORD':  'en_US-lessac-high.onnx',     # female (v1.6.0, was kristin-medium)
     'EYEBALL':   'en_US-hfc_male-medium.onnx',
     'TEXACO':    'en_US-kusal-medium.onnx',
-    'PILOT':     'en_US-john-medium.onnx',
-    'MARSHAL':   'en_US-hfc_male-medium.onnx',   # norman: garbage on 1-word tokens
-    'APPROACH':  'en_US-kusal-medium.onnx',
+    'PILOT':     ('en_US-libritts-high.onnx', 1.0, 851, 1.0),  # v1.6.0, was john-medium (ryan-high rejected, see header)
+    'MARSHAL':   ('en_US-libritts-high.onnx', 1.0, 736, 1.0),  # v1.6.0, was hfc_male (norman: garbage on 1-word tokens)
+    'APPROACH':  ('en_US-libritts-high.onnx', 1.0, 69, 1.0),   # v1.6.0, was kusal
     # Field_Comms (--set fc). Civil / foreign ATC is cast British so the switch
     # to Strike (US Navy, joe) lands as an audible change of world; Cyprus ATC
     # English is British-influenced anyway. No Turkish Piper voice exists.
@@ -98,14 +105,15 @@ def load_voice(path, cache={}):
     return cache[path]
 
 
-def synth(model, text, wav_path):
+def synth(model, text, wav_path, speaker=None, length_mult=1.0):
     voice = load_voice(model)
+    ls = LENGTH_SCALE * length_mult
     with wave.open(wav_path, 'wb') as wf:
         try:                                    # piper-tts >= 1.3
             from piper import SynthesisConfig
-            voice.synthesize_wav(text, wf, syn_config=SynthesisConfig(length_scale=LENGTH_SCALE))
+            voice.synthesize_wav(text, wf, syn_config=SynthesisConfig(length_scale=ls, speaker_id=speaker))
         except ImportError:                     # piper-tts 1.2.x
-            voice.synthesize(text, wf, length_scale=LENGTH_SCALE)
+            voice.synthesize(text, wf, length_scale=ls, speaker_id=speaker)
     with wave.open(wav_path) as wf:
         return wf.getnframes() / float(wf.getframerate())
 
@@ -182,13 +190,14 @@ def main():
         elif not a.ids or cid in a.ids:
             vkey, _, _ = agency.partition('>')
             name = VOICE.get(vkey, FALLBACK)
-            name, pitch = name if isinstance(name, tuple) else (name, 1.0)
+            if not isinstance(name, tuple): name = (name,)
+            name, pitch, spk, lmul = tuple(name) + (None, 1.0, None, 1.0)[len(name):]
             model = name and os.path.join(VOICES, name)
             if not model or not os.path.isfile(model) or not os.path.isfile(model + '.json'):
                 print('ATLANDI  %-22s ses modeli yok: %s' % (cid, name)); failed.append(cid); continue
             with tempfile.TemporaryDirectory() as td:
                 wav = os.path.join(td, 'raw.wav')
-                raw = synth(model, text, wav)
+                raw = synth(model, text, wav, spk, lmul)
                 if mode.startswith('tok'):
                     pad = float(mode.split(':')[1]) if ':' in mode else TOK_PAD
                     radio_token(wav, ogg, pad)
