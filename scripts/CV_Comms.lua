@@ -1,4 +1,4 @@
--- CV_Comms | v1.5.5
+-- CV_Comms | v1.6.0
 --[[
   Carrier (CVN) departure / recovery radio — TRT Syria Dynamic Template
   Template-level module (not CAS-1 specific). Plan: project doc
@@ -221,7 +221,7 @@
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "1.5.4",
+    VERSION      = "1.6.0",
     PLAYER_UNIT  = "Player_01",
     CARRIER_UNIT = "CVN",
     MODEX        = "467",       -- fallback if AIRBOSS has no onboard number yet
@@ -240,6 +240,7 @@ local CFG = {
     SWITCH_APP_FT  = 6000,      -- Marshal -> Approach hand-off: altitude (ft MSL) ...
     SWITCH_APP_DME = 21,        -- ... or DME, whichever first
     SWITCH_APP_MIN = 10,        -- s after "radar contact" at the earliest
+    ZONE_PROBE_EVERY = 10,      -- s between commence-zone diagnostics
     PLATFORM_FT    = 5500,      -- "platform" offered below this (ft MSL; ship at sea level)
     DEP_RADIAL     = 50,        -- CASE III departure radial (magnetic)
     DEP_ARC_MIN    = 6.5,       -- DME window in which the turn onto the arc is detected
@@ -1246,7 +1247,10 @@ local function Actions()
     elseif ph == "APPROACH" or ph == "APP_SEEYOU" then
         local alt = u:getPoint().y * 3.28084
         if ph == "APPROACH" and alt <= CFG.PLATFORM_FT then a[#a + 1] = { "APPROACH: platform", A_Platform } end
-        if CV.case == 2 and d <= CFG.SEE_YOU_NM then a[#a + 1] = { "APPROACH: see you at 10", A_AppSeeYou } end
+        -- CASE II: only after the platform call. Offered from the moment
+        -- APPROACH starts, it let the pilot call "see you at 10" as soon
+        -- as he had the ship in sight, which can be well before platform.
+        if ph == "APP_SEEYOU" and d <= CFG.SEE_YOU_NM then a[#a + 1] = { "APPROACH: see you at 10", A_AppSeeYou } end
     elseif ph == "NEEDLES" then
         a[#a + 1] = { "APPROACH: needles up and on", function() A_Needles(true) end }
         a[#a + 1] = { "APPROACH: needles negative", function() A_Needles(false) end }
@@ -1641,6 +1645,43 @@ function EH:onEvent(e)
 end
 world.addEventHandler(EH)
 
+--- Why AIRBOSS can sit in COMMENCING for a whole approach.
+-- AIRBOSS only leaves COMMENCING when the hero physically enters its commence
+-- zone (AIRBOSS:_Commencing -> _GetZoneCommence): for CASE II/III that is a
+-- box on the LIVE marshal radial, 20+stack to 22.5+stack NM, only 1 NM either
+-- side. The hero is sent to a fix computed from his assigned angels instead
+-- (angels + HOLD_DME_BASE), and the radial moves whenever the carrier turns,
+-- so the two can simply not be the same piece of sky. Nothing in the log says
+-- which it was, so measure it: while AIRBOSS is in COMMENCING, record where
+-- the zone actually is, where the hero actually is, and whether he is inside.
+local function CommenceZoneProbe(pd, u)
+    if not (pd and u and pd.step == AIRBOSS.PatternStep.COMMENCING) then
+        CV.tZoneProbe = nil
+        return
+    end
+    local now = timer.getTime()
+    if CV.tZoneProbe and now - CV.tZoneProbe < CFG.ZONE_PROBE_EVERY then return end
+    CV.tZoneProbe = now
+    local ok, err = pcall(function()
+        local ab, s = AB(), Ship()
+        if not (ab and s) then return end
+        local stack  = pd.flag or 1
+        -- pd.unit is the MOOSE UNIT (IsInZone); Hero() hands back a DCS unit.
+        local inzone = pd.unit and pd.unit:IsInZone(ab:_GetZoneCommence(pd.case or CV.case, stack))
+        local radT   = ab:GetRadial(pd.case or CV.case, false, true)   -- zone is built on this
+        local radM   = ab:GetRadial(pd.case or CV.case, true,  true)   -- what the pilot was given
+        local pc, sc = u:getPoint(), s:getPoint()
+        local brgT   = math.deg(math.atan2(pc.z - sc.z, pc.x - sc.x)) % 360
+        Log(string.format(
+            "commence zone: %s | stack %s -> band %.1f-%.1f NM on radial %.0fT (%.0fM) "..
+            "| hero %.1f NM brg %.0fT, %.1f deg off the radial, %d ft",
+            inzone and "INSIDE" or "outside", tostring(stack),
+            20 + stack, 22.5 + stack, radT, radM,
+            DistNM(pc, sc), brgT, ADiff(brgT, radT), math.floor(pc.y * 3.28084)))
+    end)
+    if not ok then Log("commence zone probe: " .. tostring(err)) end
+end
+
 local function Tick(_, t)
     local ok, err = pcall(function()
         if not CV.hooked then InstallHooks() end
@@ -1685,6 +1726,7 @@ local function Tick(_, t)
             CV.tAltChk = timer.getTime()
             CheckAltimeter()
         end
+        CommenceZoneProbe(pd, u)
         if pd then
             if pd.step ~= CV.abStep then
                 Log("AIRBOSS step " .. tostring(CV.abStep) .. " -> " .. tostring(pd.step)
