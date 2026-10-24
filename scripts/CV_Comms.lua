@@ -1,4 +1,4 @@
--- CV_Comms | v1.5.4
+-- CV_Comms | v1.5.5
 --[[
   Carrier (CVN) departure / recovery radio — TRT Syria Dynamic Template
   Template-level module (not CAS-1 specific). Plan: project doc
@@ -288,6 +288,7 @@ local CFG = {
         m_8                    = { ch = "MARSHAL", len = 0.29 },
         m_9                    = { ch = "MARSHAL", len = 0.44 },
         m_vfr                  = { ch = "MARSHAL", len = 1.17 },
+        m_wx_imc               = { ch = "MARSHAL", len = 1.33 },  -- "Mother's weather IMC,"
         m_altimeter            = { ch = "MARSHAL", len = 0.59 },
         m_case1                = { ch = "MARSHAL", len = 1.08 },
         m_case2                = { ch = "MARSHAL", len = 2.08 },
@@ -540,6 +541,11 @@ local function Hdg3(h) return string.format("%03d", math.floor(h + 0.5) % 360) e
 local function Alt4(inhg) return string.format("%04d", math.floor(inhg * 100 + 0.5)) end
 local function StateStr(lbs) return string.format("%.1f", math.floor(lbs / 100 + 0.5) / 10) end
 
+local function ChanLbl(key)  -- (#btn) label for text-only; never in audio
+    local c = CFG.CHAN[key]
+    return string.format("%.2f (#%d)", c.hz / 1e6, c.btn)
+end
+
 local function StateTokens(lbs)
     local s = StateStr(lbs)
     local i, f = s:match("^(%d+)%.(%d)$")
@@ -612,8 +618,8 @@ QNext = function()
         local label = (x.who == "PILOT") and Modex() or x.who
         local seq  = (type(x.seq) == "function") and x.seq() or x.seq      -- v1.5.0: lazy
         local text = (type(x.text) == "function") and x.text() or x.text
-        Msg(string.format("[%s · %s %.2f] %s", label, CFG.CHAN[x.ch].name,
-            CFG.CHAN[x.ch].hz / 1e6, text))
+        Msg(string.format("[%s · %s %s] %s", label, CFG.CHAN[x.ch].name,
+            ChanLbl(x.ch), text))
         local len = Air(x.ch, seq)
         timer.scheduleFunction(function()
             if x.fn then
@@ -764,13 +770,13 @@ local function A_SeeYou()
     Pilot("MARSHAL", Seq(D("p", m), CFG.P, "p_see_you"), string.format("%s, see you at 10.", m),
         function()
             Ctl("MARSHAL", "MARSHAL", Seq(D("m", m), CFG.P, "m_go1"),
-                string.format("%s, update state, go button 1 (TOWER %.2f).", m, CFG.CHAN.TOWER.hz / 1e6),
+                string.format("%s, update state, go button 1 (TOWER %s).", m, ChanLbl("TOWER")),
                 function()
                     local lbs = FuelLbs()
                     Pilot("MARSHAL", Seq(D("p", m), CFG.P, StateTokens(lbs)),
                         string.format("%s, %s.", m, StateStr(lbs)),
                         function()
-                            Msg(string.format("[CV] Button 1, TOWER %.2f — ZIPLIP.", CFG.CHAN.TOWER.hz / 1e6), 8)
+                            Msg(string.format("[CV] Button 1, TOWER %s — ZIPLIP.", ChanLbl("TOWER")), 8)
                         end)
                 end)
         end)
@@ -783,13 +789,13 @@ local function A_AppSeeYou()
     Pilot("APPROACH", Seq(D("p", m), CFG.P, "p_see_you"), string.format("%s, see you at 10.", m),
         function()
             Ctl("APPROACH", "APPROACH", Seq(D("a", m), CFG.P, "a_go1"),
-                string.format("%s, update state, go button 1 (TOWER %.2f).", m, CFG.CHAN.TOWER.hz / 1e6),
+                string.format("%s, update state, go button 1 (TOWER %s).", m, ChanLbl("TOWER")),
                 function()
                     local lbs = FuelLbs()
                     Pilot("APPROACH", Seq(D("p", m), CFG.P, StateTokens(lbs)),
                         string.format("%s, %s.", m, StateStr(lbs)),
                         function()
-                            Msg(string.format("[CV] Button 1, TOWER %.2f — ZIPLIP.", CFG.CHAN.TOWER.hz / 1e6), 8)
+                            Msg(string.format("[CV] Button 1, TOWER %s — ZIPLIP.", ChanLbl("TOWER")), 8)
                         end)
                 end)
         end)
@@ -837,7 +843,7 @@ end
 local function C_SwitchApproach()
     local m = Modex()
     Ctl("MARSHAL", "MARSHAL", Seq(D("m", m), CFG.P, "m_switch_app"),
-        string.format("%s, switch approach, button 15 (%.2f).", m, CFG.CHAN.APPROACH.hz / 1e6),
+        string.format("%s, switch approach, button 15 (%s).", m, ChanLbl("APPROACH")),
         function()
             Pilot("MARSHAL", D("p", m), string.format("%s.", m))
         end)
@@ -855,8 +861,8 @@ local function A_AppCheckIn()
         function()
             local fb = Hdg3(ab:GetFinalBearing(true))
             if CV.clr then CV.clr.fb = fb end
-            Ctl("APPROACH", "APPROACH", Seq(D("a", m), CFG.P, "a_approach", "a_final_bearing", D("a", fb)),
-                string.format("%s, Approach, final bearing %s.", m, fb),
+            Ctl("APPROACH", "APPROACH", Seq(D("a", m), CFG.P, "a_final_bearing", D("a", fb)),
+                string.format("%s, final bearing %s.", m, fb),
                 function() Pilot("APPROACH", D("p", m), string.format("%s.", m)) end)
         end)
     SetPhase("APPROACH")
@@ -1162,12 +1168,12 @@ local function MarshalReply(case, brc, altitude, tcharlie, qfe)
         CV.clr = { brc = B, angels = tostring(angels), alt = alt4 }
         Ctl("MARSHAL", "MARSHAL",
             Seq(D("m", m), CFG.P, "m_vfr", "m_altimeter", D("m", alt4), CFG.P, "m_case1",
-                "m_brc", D("m", B), CFG.P, "m_hold_angels", D("m", angels), CFG.P, "m_report_see_me"),
-            string.format("%s, Mother is VFR, altimeter %s, CASE I recovery, BRC %s, hold angels %d, report see me.",
-                m, altTxt, B, angels),
+                "m_brc", D("m", B), CFG.P, "m_report_see_me"),
+            string.format("%s, Mother is VFR, altimeter %s, CASE I recovery, BRC %s, report see me.",
+                m, altTxt, B),
             function()
-                Pilot("MARSHAL", Seq(D("p", m), CFG.P, "p_angels", D("p", angels), CFG.P, "p_wilco"),
-                    string.format("%s, angels %d, wilco.", m, angels))
+                Pilot("MARSHAL", Seq(D("p", m), CFG.P, "p_wilco"),
+                    string.format("%s, wilco.", m))
             end)
         SetPhase("SEEYOU")
         return
@@ -1189,10 +1195,10 @@ local function MarshalReply(case, brc, altitude, tcharlie, qfe)
         headTxt = string.format("CASE III recovery, CV-1 approach, expected final bearing %s.", fb)
     end
     Ctl("MARSHAL", "MARSHAL",
-        Seq(D("m", m), CFG.P, "m_altimeter", D("m", alt4), CFG.P, head, CFG.P,
+        Seq(D("m", m), CFG.P, "m_wx_imc", "m_altimeter", D("m", alt4), CFG.P, head, CFG.P,
             D("m", m), CFG.P, "m_marshal_on", D("m", radial), "m_radial", CFG.P, D("m", dme), "m_dme",
             CFG.P, "m_angels", D("m", angels), CFG.P, "m_eat", D("m", eat), CFG.P, "m_btn15"),
-        string.format("%s, altimeter %s, %s %s, marshal on the %s radial, %s DME, angels %d, "
+        string.format("%s, Mother's weather IMC, altimeter %s, %s %s, marshal on the %s radial, %s DME, angels %d, "
             .. "expected approach time %s, approach button 15.",
             m, altTxt, headTxt, m, radial, dme, angels, eat))
     SetPhase("READBACK")
@@ -1220,7 +1226,7 @@ local function Actions()
         return a
     end
     if ph == "CHECKIN" then
-        a[#a + 1] = { string.format("MARSHAL: check in %.2f", CFG.CHAN.MARSHAL.hz / 1e6), A_CheckIn }
+        a[#a + 1] = { string.format("MARSHAL: check in %s", ChanLbl("MARSHAL")), A_CheckIn }
     elseif ph == "READBACK" then
         a[#a + 1] = { "MARSHAL: readback", A_Readback }
     elseif ph == "ESTABLISH" or ph == "HOLDING" then
@@ -1236,7 +1242,7 @@ local function Actions()
     elseif ph == "SEEYOU" and d <= CFG.SEE_YOU_NM then
         a[#a + 1] = { "MARSHAL: see you at 10", A_SeeYou }
     elseif ph == "APP_CHECKIN" then
-        a[#a + 1] = { string.format("APPROACH: check in %.2f", CFG.CHAN.APPROACH.hz / 1e6), A_AppCheckIn }
+        a[#a + 1] = { string.format("APPROACH: check in %s", ChanLbl("APPROACH")), A_AppCheckIn }
     elseif ph == "APPROACH" or ph == "APP_SEEYOU" then
         local alt = u:getPoint().y * 3.28084
         if ph == "APPROACH" and alt <= CFG.PLATFORM_FT then a[#a + 1] = { "APPROACH: platform", A_Platform } end
@@ -1274,12 +1280,12 @@ local function NextText()
     local ph, c = CV.phase, CFG.CHAN
     if ph == "IDLE" then return nil end
     if ph:sub(1, 4) == "DEP_" then
-        return string.format("CASE III departure on DEPARTURE %.2f. Popeye above %d ft, on top above %d ft.",
-            c.DEPARTURE.hz / 1e6, CFG.POPEYE_FT, CFG.ONTOP_FT)
+        return string.format("CASE III departure on DEPARTURE %s. Popeye above %d ft, on top above %d ft.",
+            ChanLbl("DEPARTURE"), CFG.POPEYE_FT, CFG.ONTOP_FT)
     end
     local eat = CV.clr and CV.clr.eat
     local T = {
-        CHECKIN      = string.format("Check in with MARSHAL %.2f.", c.MARSHAL.hz / 1e6),
+        CHECKIN      = string.format("Check in with MARSHAL %s.", ChanLbl("MARSHAL")),
         CHECKIN_SENT = "Stand by for Marshal.",
         READBACK     = "Read back the Marshal clearance.",
         ESTABLISH    = "Report established at the holding fix.",
@@ -1287,7 +1293,7 @@ local function NextText()
         SEEYOU       = string.format("Inside %d NM: \"see you at 10\".", CFG.SEE_YOU_NM),
         ZIPLIP       = "ZIPLIP: no calls, fly the pattern.",
         PENETRATION  = "Descend. Marshal switches you to Approach.",
-        APP_CHECKIN  = string.format("Check in with APPROACH %.2f.", c.APPROACH.hz / 1e6),
+        APP_CHECKIN  = string.format("Check in with APPROACH %s.", ChanLbl("APPROACH")),
         APPROACH     = string.format("Report platform below %d ft.", CFG.PLATFORM_FT),
         APP_SEEYOU   = string.format("Inside %d NM: \"see you at 10\".", CFG.SEE_YOU_NM),
         FINAL        = string.format("Approach calls ACLS lock at %.1f DME.", CFG.ACLS_NM),

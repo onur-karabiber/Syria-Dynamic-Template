@@ -13,6 +13,7 @@
         m_8                    = { ch = "MARSHAL", len = 0.29 },
         m_9                    = { ch = "MARSHAL", len = 0.44 },
         m_vfr                  = { ch = "MARSHAL", len = 1.17 },
+        m_wx_imc               = { ch = "MARSHAL", len = 1.33 },
         m_altimeter            = { ch = "MARSHAL", len = 0.59 },
         m_case1                = { ch = "MARSHAL", len = 1.08 },
         m_case2                = { ch = "MARSHAL", len = 2.08 },

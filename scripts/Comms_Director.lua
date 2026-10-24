@@ -1,4 +1,4 @@
--- Comms_Director | v1.4.7
+-- Comms_Director | v1.4.8
 --[[
   CAS-1 Communications State Machine — Syria Dynamic Template
   Scope: Departure→Strike→OVERLORD hand-offs · JTAC hand-offs · INFLTREP · TANKER
@@ -20,7 +20,7 @@
 
   v1.4.5 — pilot readbacks to Overlord: check-in reply -> "Hornet 51, proceeding CP Tiger,
            hard deck two-three thousand, wilco."; RTB / mission-abort reply -> "Hornet 51,
-           050 corridor, wilco." (ReadBack()). All clips re-rendered by make_clips v1.4.0
+           050, wilco." (ReadBack()). Phraseology: corridor→radial/route. Re-render: make_clips --set cd
            (speech 25 % slower, +30 % level); CFG.AUDIO lengths updated.
 
   v1.4.4 — CASE I/II departure = ZIPLIP (ACOP / CV NATOPS): no Departure voice. At
@@ -35,7 +35,7 @@
            J2_OFF (REFUEL / TKR_DONE keep their normal RTB item):
              HORNET 51: Overlord, Hornet 51, mission abort, RTB, angels N, state X.Y
              OVERLORD:  Hornet 51, Overlord, copy abort. RTB approved. Mother bears
-                        XXX for YY. Recover via the 050 return corridor. Report feet wet.
+                        XXX for YY. Proceed outbound zero five zero. Report feet wet.
            -> phase RTB (normal inbound flow: 90 NM Strike, 50 NM Marshal).
 
   v1.4.1 — ack timing: the hand-off ack waited for the controller's SUBTITLE time
@@ -632,8 +632,7 @@ local function C_Manpads()
 end
 
 local function C_CorridorDev()
-    Msg(string.format("[STRIKE] %s, Strike. You are outside the return corridor. "
-        .. "Turn now for the 050 radial.", CFG.CS), CFG.DUR_URGENT + 1)
+    Msg(string.format("[STRIKE] %s, Strike. You are off route. Turn now to zero five zero.", CFG.CS), CFG.DUR_URGENT + 1)
     Tx("str_corridor", true)
     SetFlag(204, 1)
 end
@@ -745,11 +744,10 @@ local function A_OvlRTB()
     Pilot(string.format("Overlord, %s, %s, RTB, angels %d, state %s.", CFG.CS, from, Angels(p), State(p)),
         S("OVERLORD", (CD.phase == "TKR_DONE") and "p_ovl_rtb_tkr_a" or "p_ovl_rtb_notkr_a", PAS(p)))
     local mother = c and (" Mother " .. BrgRng(p:getPoint(), c:getPoint()) .. ".") or ""
-    Q(string.format("[OVERLORD] %s, Overlord, RTB approved.%s Recover via the 050 return corridor. "
-        .. "Report feet wet.", CFG.CS, mother), CFG.DUR_LONG, CFG.REPLY_GAP,
+    Q(string.format("[OVERLORD] %s, Overlord, RTB approved.%s Proceed outbound zero five zero. Report feet wet.", CFG.CS, mother), CFG.DUR_LONG, CFG.REPLY_GAP,
         function() SetPhase("RTB") end, nil,
         S("OVERLORD", "ovl_rtb_a", c and { "o_mother", OBR(p:getPoint(), c:getPoint()) }, 0.15, "ovl_rtb_b"))
-    ReadBack("OVERLORD", CFG.CS .. ", 050 corridor, wilco.", "p_ovl_rtb_rb")
+    ReadBack("OVERLORD", CFG.CS .. ", zero five zero, wilco.", "p_ovl_rtb_rb")
     QPlay()
 end
 
@@ -760,11 +758,10 @@ local function A_OvlAbort()
     Pilot(string.format("Overlord, %s, mission abort, RTB, angels %d, state %s.", CFG.CS, Angels(p), State(p)),
         S("OVERLORD", "p_ovl_abort_a", PAS(p)))
     local mother = c and (" Mother " .. BrgRng(p:getPoint(), c:getPoint()) .. ".") or ""
-    Q(string.format("[OVERLORD] %s, Overlord, copy abort. RTB approved.%s Recover via the 050 return corridor. "
-        .. "Report feet wet.", CFG.CS, mother), CFG.DUR_LONG, CFG.REPLY_GAP,
+    Q(string.format("[OVERLORD] %s, Overlord, copy abort. RTB approved.%s Proceed outbound zero five zero. Report feet wet.", CFG.CS, mother), CFG.DUR_LONG, CFG.REPLY_GAP,
         function() SetPhase("RTB") end, nil,
         S("OVERLORD", "ovl_abort_a", c and { "o_mother", OBR(p:getPoint(), c:getPoint()) }, 0.15, "ovl_rtb_b"))
-    ReadBack("OVERLORD", CFG.CS .. ", 050 corridor, wilco.", "p_ovl_rtb_rb")
+    ReadBack("OVERLORD", CFG.CS .. ", zero five zero, wilco.", "p_ovl_rtb_rb")
     QPlay()
 end
 
@@ -773,7 +770,7 @@ local function A_StrikeCheckInIn()
     CD.awaiting = true; MenuRebuild()
     Pilot(string.format("Strike, %s, inbound, angels %d, state %s.", CFG.CS, Angels(p), State(p)),
         S("STRIKE", "p_str_inbound_a", PAS(p)))
-    Q(string.format("[STRIKE] %s, Strike, radar contact, Mode 4 sweet. Continue the 050 corridor. "
+    Q(string.format("[STRIKE] %s, Strike, radar contact, Mode 4 sweet. Continue zero five zero. "
         .. "Switch Marshal at 50 miles, %s.", CFG.CS, CFG.FREQ.MARSHAL),
         CFG.DUR_LONG, CFG.REPLY_GAP, function() SetPhase("INBOUND") end, nil, "str_inbound")
     Ack("STRIKE", true)
@@ -817,7 +814,7 @@ local NEXT = {
     J2_OFF     = "Check out with Eyeball 11, pass INFLTREP to OVERLORD (F10).",
     REFUEL     = "Check in with TEXACO 11 " .. CFG.FREQ.TKR .. " (F10), refuel.",
     TKR_DONE   = "Report RTB to OVERLORD (F10).",
-    RTB        = "RTB via 050 corridor. OVERLORD hands you to Strike at "
+    RTB        = "RTB outbound zero five zero. OVERLORD hands you to Strike at "
                  .. CFG.RTB_STRIKE_NM .. " NM.",
     STRIKE_IN  = "Check in with STRIKE " .. CFG.FREQ.STRIKE .. " inbound (F10).",
     INBOUND    = "Switch Marshal " .. CFG.FREQ.MARSHAL .. " at " .. CFG.RECOVERY_NM .. " NM.",

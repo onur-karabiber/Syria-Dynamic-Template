@@ -18,6 +18,7 @@ m_8;MARSHAL;eight;tok
 m_9;MARSHAL;niner;tok
 # ── MARSHAL phrases
 m_vfr;MARSHAL;Mother is V F R.;tok:0.2
+m_wx_imc;MARSHAL;Mother's weather I M C,;tok:0.2
 m_altimeter;MARSHAL;altimeter;tok
 m_case1;MARSHAL;Case one recovery.;tok:0.2
 m_case2;MARSHAL;Case two recovery, C V one approach.;tok:0.2
