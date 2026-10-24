@@ -145,7 +145,7 @@ local CFG = {
         p_gnd_startup_rb       = { ch = "LTCC_GND", len = 4.73 },
         p_gnd_taxi_req         = { ch = "LTCC_GND", len = 3.83 },
         gnd_taxi               = { ch = "LTCC_GND", len = 9.53 },
-        p_gnd_taxi_rb          = { ch = "LTCC_GND", len = 7.20 },
+        p_gnd_taxi_rb          = { ch = "LTCC_GND", len = 7.90 },
         p_twr_ready            = { ch = "LTCC_TWR", len = 4.07 },
         twr_clr_to             = { ch = "LTCC_TWR", len = 7.26 },
         p_twr_rb               = { ch = "LTCC_TWR", len = 5.39 },
