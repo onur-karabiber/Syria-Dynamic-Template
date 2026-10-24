@@ -1,4 +1,4 @@
--- Field_Comms.lua | v1.0.0
+-- Field_Comms.lua | v1.0.1
 --[[
   LTCC (Diyarbakir) → CVN-73 departure radio module
   TRT Syria Dynamic Template  -  transit scenario (land-to-carrier)
