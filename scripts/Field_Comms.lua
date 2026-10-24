@@ -1,4 +1,4 @@
--- Field_Comms.lua | v1.3.0
+-- Field_Comms.lua | v1.3.1
 --[[
   LTCC (Diyarbakir) -> CVN-73 departure radio module
   TRT Syria Dynamic Template  -  transit scenario (land-to-carrier)
@@ -92,8 +92,10 @@ local CFG = {
     MAGVAR           = 5,              -- Syria, east: magnetic = true - MAGVAR
     INTERNAL_FUEL_LB = 10860,          -- F/A-18C, for "state X.Y"
 
-    ATC_DUR        = 20,               -- s, ATC message display
-    PILOT_DUR      = 8,                -- s, pilot read-back display
+    ATC_DUR        = 20,               -- s, ATC subtitle, minimum
+    PILOT_DUR      = 8,                -- s, pilot subtitle, minimum
+    SUB_PAD        = 2,                -- s a subtitle outlives its clip when
+                                       -- the clip is longer than the minimum
 
     -- Radio. Clips live in the .miz at SND_DIR; build.py packs src/Sounds/FC/.
     -- Render them with:  python tts/make_clips.py --set fc
@@ -292,11 +294,16 @@ QNext = function()
         -- text may be a function: evaluated at transmit time, not queue time,
         -- so dynamic numbers (Mother bearing, recovery case) are current.
         local text = (type(x.text) == "function") and x.text() or x.text
+        -- Hold the subtitle at least until the voice stops: the clearance
+        -- read-back runs 12 s against a PILOT_DUR of 8, so a fixed duration
+        -- would wipe the text while the pilot is still speaking.
+        local a    = CFG.AUDIO[x.clip]
+        local base = (x.who == "PILOT") and CFG.PILOT_DUR or CFG.ATC_DUR
+        local dur  = a and math.max(base, (a.len or 0) + CFG.SUB_PAD) or base
         if x.who == "PILOT" then
-            Msg("[PILOT] "..CFG.CALLSIGN..": "..text, CFG.PILOT_DUR)
+            Msg("[PILOT] "..CFG.CALLSIGN..": "..text, dur)
         else
-            Msg("["..(ch and ch.name or x.ch).."  -  "..(ch and ch.f or "").."]\n"..text,
-                CFG.ATC_DUR)
+            Msg("["..(ch and ch.name or x.ch).."  -  "..(ch and ch.f or "").."]\n"..text, dur)
         end
         local len = Air(x.clip, x.ch)
         if len <= 0 then len = CFG.NO_AUDIO_DUR end
@@ -826,7 +833,7 @@ world.addEventHandler(FC_EH)
 -- ==============================================================
 local function Init()
     if not TRT.Menu then
-        env.info("Field_Comms v1.3.0 | ERROR: TRT.Menu not found. "..
+        env.info("Field_Comms v1.3.1 | ERROR: TRT.Menu not found. "..
                  "Load Menu_Manager before Field_Comms. No F10 menus will appear.")
         return
     end
@@ -835,7 +842,7 @@ local function Init()
     TRT.Menu.RegisterCard(CFG.OWNER, CardFn, CFG.ORDER)
     -- Start with no hint: on DECK the hero drives phase = "DECK" regardless.
     -- DEPARTURE hint is set in doTower (tower clearance given) and event handler.
-    env.info("Field_Comms v1.3.0 | loaded  -  LTCC departure module (group: "..CFG.GROUP_NAME..")")
+    env.info("Field_Comms v1.3.1 | loaded  -  LTCC departure module (group: "..CFG.GROUP_NAME..")")
 end
 
 -- Small delay so Menu_Manager is ready
