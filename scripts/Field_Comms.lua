@@ -1,4 +1,4 @@
--- Field_Comms.lua | v1.3.1
+-- Field_Comms.lua | v1.4.0
 --[[
   LTCC (Diyarbakir) -> CVN-73 departure radio module
   TRT Syria Dynamic Template  -  transit scenario (land-to-carrier)
@@ -11,16 +11,20 @@
      "ZIPLIP departure - check in with STRIKE" and hands the pilot to
      OVERLORD. Remove its "Do Script File" action from the transit .miz.
 
-  DEPARTURE FLOW (sequential F10 actions):
-    ATIS [126.600] -> Clearance [121.800] -> Readback
+  WHO TALKS WHEN: a check-in is the pilot's own call and waits on F10, because
+  he has to retune before anyone can hear him. A handoff is the controller
+  calling him, so it fires on its own at the right point on the route.
+
+  DEPARTURE FLOW (F10 actions):
+    ATIS [126.600] broadcast -> Clearance [121.800] -> Readback
     -> Ground [121.900] radio check + startup -> Taxi -> Tower [118.100]
     -> Departure [119.100] -> Report level FL320
 
-  ENROUTE (automatic after FL320 report, no player input):
-    +ANKARA_DELAY s        -> Ankara Control [132.300] check-in
-    near VESAR (WP12)      -> Ankara FIR boundary -> handoff Nicosia
-    +NICOSIA_DELAY s       -> Nicosia Control [127.825] check-in
-    near GENOS (WP15)      -> Nicosia -> handoff Strike -> flag 206
+  ENROUTE:
+    F10                    -> Ankara Control [132.300] check-in
+    near VESAR (WP12)      -> Ankara FIR boundary -> handoff Nicosia  (auto)
+    F10                    -> Nicosia Control [127.825] check-in
+    near GENOS (WP15)      -> Nicosia -> handoff Strike -> flag 206   (auto)
 
   RECOVERY HANDOVER (F10, then automatic):
     Strike [254.000] check-in -> Mother bearing/range, expect CASE N
@@ -118,8 +122,6 @@ local CFG = {
     GENOS_POS  = { x = -14972, y = -360362 },  -- WP15 GENOS, Nicosia/Strike
     GENOS_R_NM = 30,
 
-    ANKARA_DELAY  = 20,                -- s after Departure handoff -> Ankara call
-    NICOSIA_DELAY = 20,                -- s after FIR handoff -> Nicosia call
     POLL_INTERVAL = 10,                -- s, enroute position poll
 
     -- Safety net: if the player never enters the GENOS radius (route
@@ -130,7 +132,6 @@ local CFG = {
     -- tts/fc_audio_table.lua over this one after every render.
     -- Empty is valid: every transmission then falls back to text only.
     AUDIO = {
-        p_atis_req             = { ch = "LTCC_INFO", len = 3.24 },
         atis                   = { ch = "LTCC_INFO", len = 13.77 },
         p_del_req              = { ch = "LTCC_DEL", len = 5.39 },
         del_clr                = { ch = "LTCC_DEL", len = 14.90 },
@@ -429,11 +430,12 @@ local function Done(step, extra)
     end
 end
 
+-- ATIS is a continuous recorded broadcast, not a service you call up: the
+-- pilot tunes 126.600 and listens. No request, no read-back  -  the letter is
+-- acknowledged on first contact with Clearance instead.
 doATIS = function()
     if S.step ~= 0 or S.busy then return end
     Begin()
-    Pilot("LTCC_INFO", "p_atis_req", "Diyarbakir Information, Dodge 11, request ATIS.")
-    -- Information broadcast: acknowledged on next contact, no read-back
     Ctl("LTCC_INFO", "atis",
         "Information ALPHA.\n"..
         "Runway 34 left in use. Wind 340 at 8 knots. QNH 1013.\n"..
@@ -498,7 +500,7 @@ doTaxi = function()
         "Contact Tower 118.1 at holding point.")
     Pilot("LTCC_GND", "p_gnd_taxi_rb",
         "Taxi runway 34 left via Alpha, hold short 34 left,\n"..
-        "Tower 118.1 at the holding point. Dodge 11.",
+        "Tower 118.1 at the holding point. Dodge 11, good day.",
         Done(5))
 end
 
@@ -551,8 +553,9 @@ doLevel = function()
             -- Departure phase done  -  drop hint, back to MISSION
             if TRT.Menu then TRT.Menu.SetHint(CFG.OWNER, nil) end
             StartMonitor()
-            -- Pilot switches and checks in right away, as on the real frequency
-            After(CFG.ANKARA_DELAY, DoAnkara)
+            -- The Ankara check-in is now an F10 item, not a timer: the pilot
+            -- has to retune before he can be heard, and a 20 s countdown had
+            -- him checking in on a frequency he was still dialling.
         end))
 end
 
@@ -582,6 +585,18 @@ PollPosition = function()
         return
     end
 
+    -- Stand down if the pilot went to Marshal without us. He can check in with
+    -- AIRBOSS straight off its own menu, and then this module sat at step 9 for
+    -- the rest of the flight with a stale "check in with Strike" item on F10.
+    if S.step == 9 and DistToCarrier_NM(u) <= CFG.MARSHAL_NM then
+        S.step = 11
+        if TRT.Menu then TRT.Menu.SetHint(CFG.OWNER, nil) end
+        MenuRefresh()
+        env.info("Field_Comms | inside "..CFG.MARSHAL_NM.." NM without a Strike "..
+                 "check-in  -  standing down, the carrier module has the pilot.")
+        return
+    end
+
     if S.step ~= 8 then return end
 
     -- Ankara -> Nicosia at the FIR boundary (VESAR / WP12)
@@ -604,14 +619,16 @@ PollPosition = function()
 end
 
 DoAnkara = function()
-    if S.ankaraFired or S.step ~= 8 then return end
+    if S.ankaraFired or S.step ~= 8 or S.busy then return end
     S.ankaraFired = true
+    Begin()
     Pilot("ANKARA", "p_ank_checkin",
         "Ankara Control, Dodge 11, flight level 3-2-0, DEMEB 1 Juliet, en route CVN-73.")
     Ctl("ANKARA", "ank_identified",
         "Dodge 11, Ankara Control, identified.\n"..
         "Maintain flight level 3-2-0. Route direct VESAR.")
-    Pilot("ANKARA", "p_ank_rb", "Maintain flight level 3-2-0, direct VESAR. Dodge 11.")
+    Pilot("ANKARA", "p_ank_rb", "Maintain flight level 3-2-0, direct VESAR. Dodge 11.",
+        Done(8))
 end
 
 DoFIRHandoff = function()
@@ -619,21 +636,24 @@ DoFIRHandoff = function()
         "Dodge 11, approaching Ankara FIR boundary at VESAR.\n"..
         "Radar service terminated. Squawk 2000 at the boundary.\n"..
         "Contact Nicosia Control 127.825. Good day.")
+    -- Nicosia check-in is the pilot's own next call, once he has retuned (F10)
     Pilot("ANKARA", "p_ank_fir_ack",
         "Squawk 2000, Nicosia Control 127.825. Dodge 11, good day.",
-        function() After(CFG.NICOSIA_DELAY, DoNicosia) end)
+        function() MenuRefresh() end)
 end
 
 DoNicosia = function()
-    if S.nicosFired or S.step ~= 8 then return end
+    if S.nicosFired or S.step ~= 8 or S.busy then return end
     S.nicosFired = true
+    Begin()
     Pilot("NICOSIA", "p_nic_checkin",
         "Nicosia Control, Dodge 11, flight level 3-2-0, VESAR, estimating GIRNE.")
     Ctl("NICOSIA", "nic_identified",
         "Dodge 11, Nicosia Control, identified.\n"..
         "Maintain flight level 3-2-0. Cleared GIRNE, VADUS, GENOS.")
     Pilot("NICOSIA", "p_nic_rb",
-        "Maintain flight level 3-2-0, cleared GIRNE VADUS GENOS. Dodge 11.")
+        "Maintain flight level 3-2-0, cleared GIRNE VADUS GENOS. Dodge 11.",
+        Done(8))
 end
 
 DoStrikeHandoff = function()
@@ -726,7 +746,7 @@ local function MenuFn(phase)
     -- Mid-exchange the item is withdrawn, so a second click cannot queue the
     -- whole dialogue again. Done() puts the next one up.
     if S.busy then return {} end
-    if     S.step == 0 then return { { "LTCC INFO: Get ATIS ["..CFG.FREQ.ATIS.."]",                   doATIS      } }
+    if     S.step == 0 then return { { "LTCC INFO: Monitor ATIS ["..CFG.FREQ.ATIS.."]",                   doATIS      } }
     elseif S.step == 1 then return { { "LTCC DEL: Request IFR clearance ["..CFG.FREQ.CLEARANCE.."]", doClearance } }
     elseif S.step == 2 then return { { "LTCC DEL: Readback clearance",                                doReadback  } }
     elseif S.step == 3 then return { { "LTCC GND: Radio check + startup ["..CFG.FREQ.GROUND.."]",     doGround    } }
@@ -740,14 +760,24 @@ local function MenuFn(phase)
         end
         return {}   -- tower clearance given but still on ground
     elseif S.step == 7 then return { { "LTCC DEP: Report level FL320",                                doLevel     } }
+    elseif S.step == 8 then
+        -- Sector check-ins are the pilot's own calls: he must retune first, so
+        -- they wait on F10. The handoffs between them are controller-initiated
+        -- and stay automatic.
+        if not S.ankaraFired then
+            return { { "ANKARA: Check in ["..CFG.FREQ.ANKARA.."]",  DoAnkara  } }
+        elseif S.ankaraHandoff and not S.nicosFired then
+            return { { "NICOSIA: Check in ["..CFG.FREQ.NICOSIA.."]", DoNicosia } }
+        end
+        return {}                       -- enroute, waiting on the next boundary
     elseif S.step == 9 then return { { "STRIKE: Check in inbound ["..CFG.FREQ.STRIKE.."]",            doStrike    } }
-    else                    return {}   -- enroute / inbound / done, calls are automatic
+    else                    return {}   -- inbound / done, calls are automatic
     end
 end
 
 -- "Show: next call" text
 local NEXT = {
-    [0] = "Get ATIS on "..CFG.FREQ.ATIS,
+    [0] = "Tune "..CFG.FREQ.ATIS.." and listen to the ATIS broadcast",
     [1] = "Request IFR clearance on "..CFG.FREQ.CLEARANCE,
     [2] = "Readback clearance",
     [3] = "Contact Ground "..CFG.FREQ.GROUND.."  -  radio check, then startup",
@@ -766,9 +796,9 @@ local function NextFn(phase)
     if S.busy then return "Transmitting  -  stand by" end
     -- Enroute: name the next event instead of a generic line
     if S.step == 8 then
-        if not S.ankaraFired   then return "Switching Ankara Control "..CFG.FREQ.ANKARA   end
+        if not S.ankaraFired   then return "Tune "..CFG.FREQ.ANKARA..", then check in with Ankara (F10)" end
         if not S.ankaraHandoff then return "Ankara "..CFG.FREQ.ANKARA.."  -  FIR boundary at VESAR (WP12)" end
-        if not S.nicosFired    then return "Switching Nicosia Control "..CFG.FREQ.NICOSIA end
+        if not S.nicosFired    then return "Tune "..CFG.FREQ.NICOSIA..", then check in with Nicosia (F10)" end
         if not S.strikeHanded  then return "Nicosia "..CFG.FREQ.NICOSIA.."  -  Strike handoff at GENOS (WP15)" end
     end
     if S.step == 10 then
@@ -833,7 +863,7 @@ world.addEventHandler(FC_EH)
 -- ==============================================================
 local function Init()
     if not TRT.Menu then
-        env.info("Field_Comms v1.3.1 | ERROR: TRT.Menu not found. "..
+        env.info("Field_Comms v1.4.0 | ERROR: TRT.Menu not found. "..
                  "Load Menu_Manager before Field_Comms. No F10 menus will appear.")
         return
     end
@@ -842,7 +872,7 @@ local function Init()
     TRT.Menu.RegisterCard(CFG.OWNER, CardFn, CFG.ORDER)
     -- Start with no hint: on DECK the hero drives phase = "DECK" regardless.
     -- DEPARTURE hint is set in doTower (tower clearance given) and event handler.
-    env.info("Field_Comms v1.3.1 | loaded  -  LTCC departure module (group: "..CFG.GROUP_NAME..")")
+    env.info("Field_Comms v1.4.0 | loaded  -  LTCC departure module (group: "..CFG.GROUP_NAME..")")
 end
 
 -- Small delay so Menu_Manager is ready

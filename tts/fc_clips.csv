@@ -15,7 +15,8 @@
 # controllers do spell those out.
 
 # ---- LTCC INFORMATION (ATIS 126.600) ----
-p_atis_req;PILOT>LTCC_INFO;Diyarbakir Information, Dodge one one, request Atis.
+# Continuous recorded broadcast: the pilot tunes and listens, he does not
+# request it, so there is no pilot clip here.
 atis;LTCC_INFO;Diyarbakir Information Alpha. Runway three four left in use. Wind three four zero at eight knots. QNH one zero one three. Temperature plus one five, dewpoint plus zero four. Cavok. Transition altitude one zero thousand feet. Advise Alpha on initial contact.
 
 # ---- LTCC CLEARANCE DELIVERY (121.800) ----
@@ -33,7 +34,7 @@ gnd_startup_ok;LTCC_GND;Dodge one one, startup approved. QNH one zero one three.
 p_gnd_startup_rb;PILOT>LTCC_GND;Startup approved, QNH one zero one three, will report ready to taxi. Dodge one one.
 p_gnd_taxi_req;PILOT>LTCC_GND;Ground, Dodge one one, ready to taxi, runway three four left.
 gnd_taxi;LTCC_GND;Dodge one one, taxi runway three four left via Alpha. Hold short runway three four left. QNH one zero one three. Contact Tower one one eight decimal one at holding point.
-p_gnd_taxi_rb;PILOT>LTCC_GND;Taxi runway three four left via Alpha, hold short three four left, Tower one one eight decimal one at the holding point. Dodge one one.
+p_gnd_taxi_rb;PILOT>LTCC_GND;Taxi runway three four left via Alpha, hold short three four left, Tower one one eight decimal one at the holding point. Dodge one one. Good day.
 
 # ---- LTCC TOWER (118.100) ----
 p_twr_ready;PILOT>LTCC_TWR;Tower, Dodge one one, holding short runway three four left, ready for departure.
