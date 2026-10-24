@@ -1,4 +1,4 @@
--- Field_Comms.lua | v1.0.1
+-- Field_Comms.lua | v1.0.2
 --[[
   LTCC (Diyarbakir) → CVN-73 departure radio module
   TRT Syria Dynamic Template  -  transit scenario (land-to-carrier)
@@ -244,6 +244,9 @@ doTaxi = function()
             "Contact Tower 118.1 at holding point.")
         S.step = 5
         MenuRefresh()
+        After(4, function()
+            MsgPilot("Taxi runway 34 left via Alpha, hold short runway 34 left. Dodge 11.")
+        end)
     end)
 end
 
@@ -259,6 +262,9 @@ doTower = function()
         -- Hint DEPARTURE now  -  Tower clearance means departure is imminent
         if TRT.Menu then TRT.Menu.SetHint(CFG.OWNER, "DEPARTURE") end
         MenuRefresh()
+        After(4, function()
+            MsgPilot("Runway 34 left, cleared for takeoff. Dodge 11.")
+        end)
     end)
 end
 
@@ -277,6 +283,9 @@ doDeparture = function()
             "Continue DEMEB 1 Juliet. Report level.")
         S.step = 7
         MenuRefresh()
+        After(4, function()
+            MsgPilot("Climbing flight level 3-2-0, wilco. Dodge 11.")
+        end)
     end)
 end
 
@@ -355,6 +364,9 @@ DoAnkara = function()
                     MsgATC("ANKARA CONTROL  -  "..CFG.FREQ.ANKARA,
                         "Dodge 11, leaving Turkish FIR. Radar service terminated.\n"..
                         "Contact Nicosia Control 127.825. Good day.")
+                    After(4, function()
+                        MsgPilot("Nicosia on 127.825. Dodge 11. Good day.")
+                    end)
                 end
             end)
         end)
@@ -372,6 +384,9 @@ DoNicosia = function()
                 MsgATC("NICOSIA CONTROL  -  "..CFG.FREQ.NICOSIA,
                     "Dodge 11, leaving my airspace.\n"..
                     "Contact Strike, 254 decimal 0. Good day.")
+                After(4, function()
+                    MsgPilot("Strike on 254.0. Dodge 11. Good day.")
+                end)
                 After(8, function()
                     Msg(
                         "-- STRIKE CHECK-IN ---------------------\n"..
@@ -477,7 +492,7 @@ world.addEventHandler(FC_EH)
 -- ══════════════════════════════════════════════════════════════
 local function Init()
     if not TRT.Menu then
-        env.info("Field_Comms v1.0.0 | ERROR: TRT.Menu not found. "..
+        env.info("Field_Comms v1.0.2 | ERROR: TRT.Menu not found. "..
                  "Load Menu_Manager before Field_Comms. No F10 menus will appear.")
         return
     end
@@ -486,7 +501,7 @@ local function Init()
     TRT.Menu.RegisterCard(CFG.OWNER, CardFn, CFG.ORDER)
     -- Start with no hint: on DECK the hero drives phase = "DECK" regardless.
     -- DEPARTURE hint is set in doTower (tower clearance given) and event handler.
-    env.info("Field_Comms v1.0.0 | loaded  -  LTCC departure module (group: "..CFG.GROUP_NAME..")")
+    env.info("Field_Comms v1.0.2 | loaded  -  LTCC departure module (group: "..CFG.GROUP_NAME..")")
 end
 
 -- Small delay so Menu_Manager is ready
