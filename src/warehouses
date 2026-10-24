@@ -8785,7 +8785,7 @@ warehouses =
 			{
 			},
 			["allowHotStart"] = false,
-			["coalition"] = "NEUTRAL",
+			["coalition"] = "BLUE",
 			["diesel"] = 
 			{
 				["InitFuel"] = 100,

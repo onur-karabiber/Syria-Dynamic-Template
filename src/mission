@@ -15097,6 +15097,763 @@ mission =
 								["x"] = 71864.283151569,
 								["y"] = 65510.630600241,
 							},
+							[31] = 
+							{
+								["DTC"] = 
+								{
+								},
+								["communication"] = true,
+								["dynSpawnTemplate"] = false,
+								["frequency"] = 305,
+								["groupId"] = 3149,
+								["hidden"] = false,
+								["modulation"] = 0,
+								["name"] = "HORNET-467",
+								["radioSet"] = false,
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["ETA"] = 0,
+											["ETA_locked"] = true,
+											["action"] = "From Parking Area Hot",
+											["airdromeId"] = 217,
+											["alt"] = 684,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["name"] = "LTCC",
+											["properties"] = 
+											{
+												["addopt"] = 
+												{
+												},
+											},
+											["speed"] = 138.88888888889,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+														[1] = 
+														{
+															["auto"] = true,
+															["enabled"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 1,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "EPLRS",
+																	["params"] = 
+																	{
+																		["groupId"] = 10,
+																		["value"] = true,
+																	},
+																},
+															},
+														},
+														[2] = 
+														{
+															["auto"] = true,
+															["enabled"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 2,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "Option",
+																	["params"] = 
+																	{
+																		["name"] = 35,
+																		["value"] = true,
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+											["type"] = "TakeOffParkingHot",
+											["x"] = 314685.71875,
+											["y"] = 388925.875,
+										},
+										[2] = 
+										{
+											["ETA"] = 507.56679970994,
+											["ETA_locked"] = false,
+											["action"] = "Turning Point",
+											["alt"] = 9753.6,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["properties"] = 
+											{
+												["addopt"] = 
+												{
+												},
+											},
+											["speed"] = 179.86111111111,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 277665.93754046,
+											["y"] = 305477.2142209,
+										},
+										[3] = 
+										{
+											["ETA"] = 697.43544228739,
+											["ETA_locked"] = false,
+											["action"] = "Turning Point",
+											["alt"] = 9753.6,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["name"] = "GAP",
+											["properties"] = 
+											{
+												["addopt"] = 
+												{
+												},
+											},
+											["speed"] = 179.86111111111,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 264570.25152978,
+											["y"] = 273937.96114291,
+										},
+										[4] = 
+										{
+											["ETA"] = 891.07603874602,
+											["ETA_locked"] = false,
+											["action"] = "Turning Point",
+											["alt"] = 9753.6,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["name"] = "LUTAM",
+											["properties"] = 
+											{
+												["addopt"] = 
+												{
+												},
+											},
+											["speed"] = 179.86111111111,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 252820.200284,
+											["y"] = 241151.46031795,
+										},
+										[5] = 
+										{
+											["ETA"] = 1176.6313493853,
+											["ETA_locked"] = false,
+											["action"] = "Turning Point",
+											["alt"] = 9753.6,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["name"] = "ELGEX",
+											["properties"] = 
+											{
+												["addopt"] = 
+												{
+												},
+											},
+											["speed"] = 179.86111111111,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 237444.13865649,
+											["y"] = 192146.80055912,
+										},
+										[6] = 
+										{
+											["ETA"] = 1319.922176058,
+											["ETA_locked"] = false,
+											["action"] = "Turning Point",
+											["alt"] = 9753.6,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["name"] = "SUGAT",
+											["properties"] = 
+											{
+												["addopt"] = 
+												{
+												},
+											},
+											["speed"] = 179.86111111111,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 222055.70737842,
+											["y"] = 171472.77766815,
+										},
+										[7] = 
+										{
+											["ETA"] = 1471.0953831761,
+											["ETA_locked"] = false,
+											["action"] = "Turning Point",
+											["alt"] = 9753.6,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["name"] = "GAZ",
+											["properties"] = 
+											{
+												["addopt"] = 
+												{
+												},
+											},
+											["speed"] = 179.86111111111,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 210356.07030337,
+											["y"] = 146928.44155449,
+										},
+										[8] = 
+										{
+											["ETA"] = 1657.5555727923,
+											["ETA_locked"] = false,
+											["action"] = "Turning Point",
+											["alt"] = 9753.6,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["name"] = "KOZAN",
+											["properties"] = 
+											{
+												["addopt"] = 
+												{
+												},
+											},
+											["speed"] = 179.86111111111,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 210861.41916324,
+											["y"] = 113395.31229429,
+										},
+										[9] = 
+										{
+											["ETA"] = 1827.0420190572,
+											["ETA_locked"] = false,
+											["action"] = "Turning Point",
+											["alt"] = 9753.6,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["name"] = "BABLI",
+											["properties"] = 
+											{
+												["addopt"] = 
+												{
+												},
+											},
+											["speed"] = 179.86111111111,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 214896.88375914,
+											["y"] = 83179.579074823,
+										},
+										[10] = 
+										{
+											["ETA"] = 2010.66473565,
+											["ETA_locked"] = false,
+											["action"] = "Turning Point",
+											["alt"] = 9753.6,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["name"] = "MILBA",
+											["properties"] = 
+											{
+												["addopt"] = 
+												{
+												},
+											},
+											["speed"] = 179.86111111111,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 204954.63322106,
+											["y"] = 51685.023578168,
+										},
+										[11] = 
+										{
+											["ETA"] = 2235.2318914504,
+											["ETA_locked"] = false,
+											["action"] = "Turning Point",
+											["alt"] = 9753.6,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["name"] = "ERCER",
+											["properties"] = 
+											{
+												["addopt"] = 
+												{
+												},
+											},
+											["speed"] = 179.86111111111,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 187809.57397942,
+											["y"] = 15113.56479021,
+										},
+										[12] = 
+										{
+											["ETA"] = 3180.1011883848,
+											["ETA_locked"] = false,
+											["action"] = "Turning Point",
+											["alt"] = 9753.6,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["name"] = "VESAR",
+											["properties"] = 
+											{
+												["addopt"] = 
+												{
+												},
+											},
+											["speed"] = 179.86111111111,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 122028.62314054,
+											["y"] = -141584.3983417,
+										},
+										[13] = 
+										{
+											["ETA"] = 3862.7462166666,
+											["ETA_locked"] = false,
+											["action"] = "Turning Point",
+											["alt"] = 9753.6,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["name"] = "GIRNE",
+											["properties"] = 
+											{
+												["addopt"] = 
+												{
+												},
+											},
+											["speed"] = 179.86111111111,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 95475.121257562,
+											["y"] = -261459.99017574,
+										},
+										[14] = 
+										{
+											["ETA"] = 4410.3039139723,
+											["ETA_locked"] = false,
+											["action"] = "Turning Point",
+											["alt"] = 9753.6,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["name"] = "VADUS",
+											["properties"] = 
+											{
+												["addopt"] = 
+												{
+												},
+											},
+											["speed"] = 179.86111111111,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 44484.700975022,
+											["y"] = -348817.16303715,
+										},
+										[15] = 
+										{
+											["ETA"] = 4761.8685354811,
+											["ETA_locked"] = false,
+											["action"] = "Turning Point",
+											["alt"] = 9753.6,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["name"] = "GENOS",
+											["properties"] = 
+											{
+												["addopt"] = 
+												{
+												},
+											},
+											["speed"] = 179.86111111111,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = -14972.053241222,
+											["y"] = -360362.16385584,
+										},
+									},
+								},
+								["start_time"] = 0,
+								["task"] = "Nothing",
+								["taskSelected"] = true,
+								["tasks"] = 
+								{
+								},
+								["uncontrollable"] = false,
+								["uncontrolled"] = false,
+								["units"] = 
+								{
+									[1] = 
+									{
+										["AddPropAircraft"] = 
+										{
+											["HelmetMountedDevice"] = 1,
+											["InnerBoard"] = 0,
+											["OuterBoard"] = 0,
+											["STN_L16"] = "03061",
+											["VoiceCallsignLabel"] = "DE",
+											["VoiceCallsignNumber"] = "11",
+										},
+										["DTC"] = 
+										{
+										},
+										["Radio"] = 
+										{
+											[1] = 
+											{
+												["channels"] = 
+												{
+													[1] = 305,
+													[2] = 264,
+													[3] = 265,
+													[4] = 256,
+													[5] = 254,
+													[6] = 250,
+													[7] = 270,
+													[8] = 257,
+													[9] = 255,
+													[10] = 262,
+													[11] = 259,
+													[12] = 268,
+													[13] = 269,
+													[14] = 260,
+													[15] = 263,
+													[16] = 261,
+													[17] = 267,
+													[18] = 251,
+													[19] = 253,
+													[20] = 266,
+												},
+												["channelsNames"] = 
+												{
+												},
+												["modulations"] = 
+												{
+													[1] = 0,
+													[2] = 0,
+													[3] = 0,
+													[4] = 0,
+													[5] = 0,
+													[6] = 0,
+													[7] = 0,
+													[8] = 0,
+													[9] = 0,
+													[10] = 0,
+													[11] = 0,
+													[12] = 0,
+													[13] = 0,
+													[14] = 0,
+													[15] = 0,
+													[16] = 0,
+													[17] = 0,
+													[18] = 0,
+													[19] = 0,
+													[20] = 0,
+												},
+											},
+											[2] = 
+											{
+												["channels"] = 
+												{
+													[1] = 305,
+													[2] = 264,
+													[3] = 265,
+													[4] = 256,
+													[5] = 254,
+													[6] = 250,
+													[7] = 270,
+													[8] = 257,
+													[9] = 255,
+													[10] = 262,
+													[11] = 259,
+													[12] = 268,
+													[13] = 269,
+													[14] = 260,
+													[15] = 263,
+													[16] = 261,
+													[17] = 267,
+													[18] = 251,
+													[19] = 253,
+													[20] = 266,
+												},
+												["channelsNames"] = 
+												{
+												},
+												["modulations"] = 
+												{
+													[1] = 0,
+													[2] = 0,
+													[3] = 0,
+													[4] = 0,
+													[5] = 0,
+													[6] = 0,
+													[7] = 0,
+													[8] = 0,
+													[9] = 0,
+													[10] = 0,
+													[11] = 0,
+													[12] = 0,
+													[13] = 0,
+													[14] = 0,
+													[15] = 0,
+													[16] = 0,
+													[17] = 0,
+													[18] = 0,
+													[19] = 0,
+													[20] = 0,
+												},
+											},
+										},
+										["alt"] = 684,
+										["alt_type"] = "BARO",
+										["callsign"] = 
+										{
+											[1] = 5,
+											[2] = 1,
+											[3] = 1,
+											["name"] = "Dodge11",
+										},
+										["datalinks"] = 
+										{
+											["Link16"] = 
+											{
+												["network"] = 
+												{
+													["donors"] = 
+													{
+													},
+													["teamMembers"] = 
+													{
+														[1] = 
+														{
+															["missionUnitId"] = 5553,
+														},
+													},
+												},
+												["settings"] = 
+												{
+													["AIC_Channel"] = 1,
+													["FF1_Channel"] = 2,
+													["FF2_Channel"] = 3,
+													["VOCA_Channel"] = 4,
+													["VOCB_Channel"] = 5,
+													["transmitPower"] = 0,
+												},
+											},
+										},
+										["heading"] = -1.9883348589923,
+										["livery_id"] = "vfa-113",
+										["name"] = "HORNET-4-1",
+										["onboard_num"] = "467",
+										["parking"] = 118,
+										["parking_id"] = "81",
+										["payload"] = 
+										{
+											["ammo_type"] = 1,
+											["chaff"] = 60,
+											["flare"] = 60,
+											["fuel"] = 4900,
+											["gun"] = 100,
+											["pylons"] = 
+											{
+												[1] = 
+												{
+													["CLSID"] = "{5CE2FF2A-645A-4197-B48D-8720AC69394F}",
+													["settings"] = 
+													{
+														["NFP_PRESID"] = "MDRN_M_A_AIM9",
+														["NFP_VIS_DrawArgNo_57"] = 0.1,
+													},
+												},
+												[3] = 
+												{
+													["CLSID"] = "{FPU_8A_FUEL_TANK}",
+												},
+												[4] = 
+												{
+													["CLSID"] = "{AAQ-28_LEFT}",
+												},
+												[5] = 
+												{
+													["CLSID"] = "{AWW-13}",
+												},
+												[6] = 
+												{
+													["CLSID"] = "{40EF17B7-F508-45de-8566-6FFECC0C1AB8}",
+												},
+												[7] = 
+												{
+													["CLSID"] = "{FPU_8A_FUEL_TANK}",
+												},
+												[9] = 
+												{
+													["CLSID"] = "{5CE2FF2A-645A-4197-B48D-8720AC69394F}",
+													["settings"] = 
+													{
+														["NFP_PRESID"] = "MDRN_M_A_AIM9",
+														["NFP_VIS_DrawArgNo_57"] = 0.1,
+													},
+												},
+											},
+										},
+										["psi"] = 1.9883348589923,
+										["skill"] = "Client",
+										["speed"] = 138.88888888889,
+										["type"] = "FA-18C_hornet",
+										["unitId"] = 5553,
+										["x"] = 314685.71875,
+										["y"] = 388925.875,
+									},
+								},
+								["x"] = 314685.71875,
+								["y"] = 388925.875,
+							},
 						},
 					},
 					["ship"] = 
@@ -19885,6 +20642,53 @@ mission =
 								},
 								["x"] = -216708.14829956,
 								["y"] = -363032.54781185,
+							},
+							[93] = 
+							{
+								["dead"] = false,
+								["groupId"] = 3161,
+								["heading"] = 1.1170107212764,
+								["hidden"] = true,
+								["name"] = "ATC LTCC (Ammo)-1",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["action"] = "",
+											["alt"] = 0,
+											["formation_template"] = "",
+											["name"] = "",
+											["speed"] = 0,
+											["type"] = "",
+											["x"] = 314676.54907685,
+											["y"] = 388912.06327585,
+										},
+									},
+								},
+								["units"] = 
+								{
+									[1] = 
+									{
+										["canCargo"] = true,
+										["category"] = "Cargos",
+										["heading"] = 1.1170107212764,
+										["mass"] = 1500,
+										["name"] = "ATC LTCC (Ammo)-2",
+										["rate"] = 100,
+										["shape_name"] = "ammo_box_cargo",
+										["tasks"] = 
+										{
+										},
+										["type"] = "ammo_cargo",
+										["unitId"] = 5567,
+										["x"] = 314676.54907685,
+										["y"] = 388912.06327585,
+									},
+								},
+								["x"] = 314676.54907685,
+								["y"] = 388912.06327585,
 							},
 						},
 					},
@@ -32566,6 +33370,9 @@ mission =
 										["name"] = "Static M92 NF-2 LightOn-3-1",
 										["rate"] = 1,
 										["shape_name"] = "M92_NF-2_LightOn",
+										["tasks"] = 
+										{
+										},
 										["type"] = "NF-2_LightOn",
 										["unitId"] = 507,
 										["x"] = 220762.26792896,
@@ -33140,6 +33947,9 @@ mission =
 										["name"] = "Static M92_Personnel_stand4-3-1",
 										["rate"] = 1,
 										["shape_name"] = "M92_Personnel07_PBR",
+										["tasks"] = 
+										{
+										},
 										["type"] = "M92_Personnel07_PBR",
 										["unitId"] = 520,
 										["x"] = 220793.99490077,
@@ -33496,6 +34306,9 @@ mission =
 										["name"] = "Static M92 M32-10C 03-4-1",
 										["rate"] = 1,
 										["shape_name"] = "M92_M32-10C_03",
+										["tasks"] = 
+										{
+										},
 										["type"] = "M32-10C_03",
 										["unitId"] = 528,
 										["x"] = 220774.98203421,
@@ -34204,6 +35017,9 @@ mission =
 										["name"] = "Static M92 Barrier D-13-1",
 										["rate"] = 1,
 										["shape_name"] = "M92_BarrierD",
+										["tasks"] = 
+										{
+										},
 										["type"] = "Barrier D",
 										["unitId"] = 544,
 										["x"] = 220768.1634896,
@@ -47386,6 +48202,954 @@ mission =
 								["x"] = 220484.22522477,
 								["y"] = -36627.961849865,
 							},
+							[393] = 
+							{
+								["dead"] = false,
+								["groupId"] = 3152,
+								["heading"] = 1.8151424220741,
+								["hidden"] = true,
+								["name"] = "ATC LTCC (Cone)-1",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["action"] = "",
+											["alt"] = 0,
+											["formation_template"] = "",
+											["name"] = "",
+											["speed"] = 0,
+											["type"] = "",
+											["x"] = 314670.53768013,
+											["y"] = 388923.00696194,
+										},
+									},
+								},
+								["units"] = 
+								{
+									[1] = 
+									{
+										["category"] = "Fortifications",
+										["heading"] = 1.8151424220741,
+										["name"] = "ATC LTCC (Cone)-2",
+										["rate"] = 1,
+										["shape_name"] = "M92_Cone01",
+										["tasks"] = 
+										{
+										},
+										["type"] = "Cone01",
+										["unitId"] = 5558,
+										["x"] = 314670.53768013,
+										["y"] = 388923.00696194,
+									},
+								},
+								["x"] = 314670.53768013,
+								["y"] = 388923.00696194,
+							},
+							[394] = 
+							{
+								["dead"] = false,
+								["groupId"] = 3153,
+								["heading"] = 1.3613568165556,
+								["hidden"] = true,
+								["name"] = "ATC LTCC (Cargo)-1",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["action"] = "",
+											["alt"] = 0,
+											["formation_template"] = "",
+											["name"] = "",
+											["speed"] = 0,
+											["type"] = "",
+											["x"] = 314684.68482945,
+											["y"] = 388941.42628986,
+										},
+									},
+								},
+								["units"] = 
+								{
+									[1] = 
+									{
+										["category"] = "Fortifications",
+										["heading"] = 1.3613568165556,
+										["name"] = "ATC LTCC (Cargo)-2",
+										["rate"] = 1,
+										["shape_name"] = "M92_Cargo06",
+										["tasks"] = 
+										{
+										},
+										["type"] = "Cargo06",
+										["unitId"] = 5559,
+										["x"] = 314684.68482945,
+										["y"] = 388941.42628986,
+									},
+								},
+								["x"] = 314684.68482945,
+								["y"] = 388941.42628986,
+							},
+							[395] = 
+							{
+								["dead"] = false,
+								["groupId"] = 3154,
+								["heading"] = 1.2566370614359,
+								["hidden"] = true,
+								["name"] = "ATC LTCC (Generator)-3",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["action"] = "",
+											["alt"] = 0,
+											["formation_template"] = "",
+											["name"] = "",
+											["speed"] = 0,
+											["type"] = "",
+											["x"] = 314679.08169523,
+											["y"] = 388909.91865639,
+										},
+									},
+								},
+								["units"] = 
+								{
+									[1] = 
+									{
+										["category"] = "Fortifications",
+										["heading"] = 1.2566370614359,
+										["name"] = "ATC LTCC (Generator)-2",
+										["rate"] = 1,
+										["shape_name"] = "M92_M32-10C_03",
+										["tasks"] = 
+										{
+										},
+										["type"] = "M32-10C_03",
+										["unitId"] = 5560,
+										["x"] = 314679.08169523,
+										["y"] = 388909.91865639,
+									},
+								},
+								["x"] = 314679.08169523,
+								["y"] = 388909.91865639,
+							},
+							[396] = 
+							{
+								["dead"] = false,
+								["groupId"] = 3155,
+								["heading"] = 2.8972465583106,
+								["hidden"] = true,
+								["name"] = "ATC LTCC (Barrier_D)-1",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["action"] = "",
+											["alt"] = 0,
+											["formation_template"] = "",
+											["name"] = "",
+											["speed"] = 0,
+											["type"] = "",
+											["x"] = 314687.6718249,
+											["y"] = 388907.15784815,
+										},
+									},
+								},
+								["units"] = 
+								{
+									[1] = 
+									{
+										["category"] = "Fortifications",
+										["heading"] = 2.8972465583106,
+										["name"] = "ATC LTCC (Barrier_D)-1",
+										["rate"] = 1,
+										["shape_name"] = "M92_BarrierD",
+										["tasks"] = 
+										{
+										},
+										["type"] = "Barrier D",
+										["unitId"] = 5561,
+										["x"] = 314687.6718249,
+										["y"] = 388907.15784815,
+									},
+								},
+								["x"] = 314687.6718249,
+								["y"] = 388907.15784815,
+							},
+							[397] = 
+							{
+								["dead"] = false,
+								["groupId"] = 3156,
+								["heading"] = 1.0821041362365,
+								["hidden"] = true,
+								["name"] = "ATC LTCC (Personal)-1",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["action"] = "",
+											["alt"] = 0,
+											["formation_template"] = "",
+											["name"] = "",
+											["speed"] = 0,
+											["type"] = "",
+											["x"] = 314696.90059649,
+											["y"] = 388934.98191563,
+										},
+									},
+								},
+								["units"] = 
+								{
+									[1] = 
+									{
+										["category"] = "Personnel",
+										["heading"] = 1.0821041362365,
+										["livery_id"] = "variation 5",
+										["name"] = "ATC LTCC (Personal)-1",
+										["rate"] = 1,
+										["shape_name"] = "M92_Personnel07_PBR",
+										["tasks"] = 
+										{
+										},
+										["type"] = "M92_Personnel07_PBR",
+										["unitId"] = 5562,
+										["x"] = 314696.90059649,
+										["y"] = 388934.98191563,
+									},
+								},
+								["x"] = 314696.90059649,
+								["y"] = 388934.98191563,
+							},
+							[398] = 
+							{
+								["dead"] = false,
+								["groupId"] = 3157,
+								["heading"] = 1.8151424220741,
+								["hidden"] = true,
+								["name"] = "ATC LTCC (FireExtinguisher)-2",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["action"] = "",
+											["alt"] = 0,
+											["formation_template"] = "",
+											["name"] = "",
+											["speed"] = 0,
+											["type"] = "",
+											["x"] = 314691.10682717,
+											["y"] = 388908.44062715,
+										},
+									},
+								},
+								["units"] = 
+								{
+									[1] = 
+									{
+										["category"] = "Fortifications",
+										["heading"] = 1.8151424220741,
+										["name"] = "ATC LTCC (FireExtinguisher)-2",
+										["rate"] = 1,
+										["shape_name"] = "M92_FireExtinguisher03",
+										["tasks"] = 
+										{
+										},
+										["type"] = "FireExtinguisher03",
+										["unitId"] = 5563,
+										["x"] = 314691.10682717,
+										["y"] = 388908.44062715,
+									},
+								},
+								["x"] = 314691.10682717,
+								["y"] = 388908.44062715,
+							},
+							[399] = 
+							{
+								["dead"] = false,
+								["groupId"] = 3158,
+								["heading"] = 1.8151424220741,
+								["hidden"] = true,
+								["name"] = "ATC LTCC (FireExtinguisher)-1",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["action"] = "",
+											["alt"] = 0,
+											["formation_template"] = "",
+											["name"] = "",
+											["speed"] = 0,
+											["type"] = "",
+											["x"] = 314698.11098474,
+											["y"] = 388934.44709291,
+										},
+									},
+								},
+								["units"] = 
+								{
+									[1] = 
+									{
+										["category"] = "Fortifications",
+										["heading"] = 1.8151424220741,
+										["name"] = "ATC LTCC (FireExtinguisher)-1",
+										["rate"] = 1,
+										["shape_name"] = "M92_FireExtinguisher02",
+										["tasks"] = 
+										{
+										},
+										["type"] = "FireExtinguisher02",
+										["unitId"] = 5564,
+										["x"] = 314698.11098474,
+										["y"] = 388934.44709291,
+									},
+								},
+								["x"] = 314698.11098474,
+								["y"] = 388934.44709291,
+							},
+							[400] = 
+							{
+								["dead"] = false,
+								["groupId"] = 3159,
+								["heading"] = 5.3407075111026,
+								["hidden"] = true,
+								["name"] = "ATC LTCC (Generator)-1",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["action"] = "",
+											["alt"] = 0,
+											["formation_template"] = "",
+											["name"] = "",
+											["speed"] = 0,
+											["type"] = "",
+											["x"] = 314693.27537807,
+											["y"] = 388936.50630167,
+										},
+									},
+								},
+								["units"] = 
+								{
+									[1] = 
+									{
+										["category"] = "Fortifications",
+										["heading"] = 5.3407075111026,
+										["name"] = "ATC LTCC (Generator)-1",
+										["rate"] = 1,
+										["shape_name"] = "M92_AM32a-60_01",
+										["tasks"] = 
+										{
+										},
+										["type"] = "AM32a-60_01",
+										["unitId"] = 5565,
+										["x"] = 314693.27537807,
+										["y"] = 388936.50630167,
+									},
+								},
+								["x"] = 314693.27537807,
+								["y"] = 388936.50630167,
+							},
+							[401] = 
+							{
+								["dead"] = false,
+								["groupId"] = 3160,
+								["heading"] = 2.2863813201126,
+								["hidden"] = true,
+								["name"] = "ATC LTCC NF-2_LightOn-1",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["action"] = "",
+											["alt"] = 0,
+											["formation_template"] = "",
+											["name"] = "",
+											["speed"] = 0,
+											["type"] = "",
+											["x"] = 314673.73568202,
+											["y"] = 388913.07650834,
+										},
+									},
+								},
+								["units"] = 
+								{
+									[1] = 
+									{
+										["category"] = "Fortifications",
+										["heading"] = 2.2863813201126,
+										["name"] = "ATC LTCC NF-2_LightOn-2",
+										["rate"] = 1,
+										["shape_name"] = "M92_NF-2_LightOn",
+										["tasks"] = 
+										{
+										},
+										["type"] = "NF-2_LightOn",
+										["unitId"] = 5566,
+										["x"] = 314673.73568202,
+										["y"] = 388913.07650834,
+									},
+								},
+								["x"] = 314673.73568202,
+								["y"] = 388913.07650834,
+							},
+							[402] = 
+							{
+								["dead"] = false,
+								["groupId"] = 3162,
+								["heading"] = 2.4958208303519,
+								["hidden"] = true,
+								["name"] = "ATC LTCC (Platform)-1",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["action"] = "",
+											["alt"] = 0,
+											["formation_template"] = "",
+											["name"] = "",
+											["speed"] = 0,
+											["type"] = "",
+											["x"] = 314702.92438918,
+											["y"] = 388933.22263038,
+										},
+									},
+								},
+								["units"] = 
+								{
+									[1] = 
+									{
+										["category"] = "Fortifications",
+										["heading"] = 2.4958208303519,
+										["name"] = "ATC LTCC (Platform)-1",
+										["rate"] = 1,
+										["shape_name"] = "M92_ElevatedPlatform_up",
+										["tasks"] = 
+										{
+										},
+										["type"] = "ElevatedPlatform_up",
+										["unitId"] = 5568,
+										["x"] = 314702.92438918,
+										["y"] = 388933.22263038,
+									},
+								},
+								["x"] = 314702.92438918,
+								["y"] = 388933.22263038,
+							},
+							[403] = 
+							{
+								["dead"] = false,
+								["groupId"] = 3163,
+								["heading"] = 1.1693705988362,
+								["hidden"] = true,
+								["name"] = "ATC LTCC (Ladder)-1",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["action"] = "",
+											["alt"] = 0,
+											["formation_template"] = "",
+											["name"] = "",
+											["speed"] = 0,
+											["type"] = "",
+											["x"] = 314683.14454409,
+											["y"] = 388909.0420205,
+										},
+									},
+								},
+								["units"] = 
+								{
+									[1] = 
+									{
+										["category"] = "Fortifications",
+										["heading"] = 1.1693705988362,
+										["name"] = "ATC LTCC (Ladder)-1",
+										["rate"] = 1,
+										["shape_name"] = "M92_Ladder",
+										["tasks"] = 
+										{
+										},
+										["type"] = "Ladder",
+										["unitId"] = 5569,
+										["x"] = 314683.14454409,
+										["y"] = 388909.0420205,
+									},
+								},
+								["x"] = 314683.14454409,
+								["y"] = 388909.0420205,
+							},
+							[404] = 
+							{
+								["dead"] = false,
+								["groupId"] = 3164,
+								["heading"] = 0.38397243543875,
+								["hidden"] = true,
+								["name"] = "ATC LTCC NF-2_LightOn-2",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["action"] = "",
+											["alt"] = 0,
+											["formation_template"] = "",
+											["name"] = "",
+											["speed"] = 0,
+											["type"] = "",
+											["x"] = 314680.92221991,
+											["y"] = 388941.13044084,
+										},
+									},
+								},
+								["units"] = 
+								{
+									[1] = 
+									{
+										["category"] = "Fortifications",
+										["heading"] = 0.38397243543875,
+										["name"] = "ATC LTCC NF-2_LightOn-2-1",
+										["rate"] = 1,
+										["shape_name"] = "M92_NF-2_LightOn",
+										["tasks"] = 
+										{
+										},
+										["type"] = "NF-2_LightOn",
+										["unitId"] = 5570,
+										["x"] = 314680.92221991,
+										["y"] = 388941.13044084,
+									},
+								},
+								["x"] = 314680.92221991,
+								["y"] = 388941.13044084,
+							},
+							[405] = 
+							{
+								["dead"] = false,
+								["groupId"] = 3165,
+								["heading"] = 1.8151424220741,
+								["hidden"] = true,
+								["name"] = "ATC LTCC (Cone)-2",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["action"] = "",
+											["alt"] = 0,
+											["formation_template"] = "",
+											["name"] = "",
+											["speed"] = 0,
+											["type"] = "",
+											["x"] = 314671.93281909,
+											["y"] = 388928.67122614,
+										},
+									},
+								},
+								["units"] = 
+								{
+									[1] = 
+									{
+										["category"] = "Fortifications",
+										["heading"] = 1.8151424220741,
+										["name"] = "ATC LTCC (Cone)-2-1",
+										["rate"] = 1,
+										["shape_name"] = "M92_Cone01",
+										["tasks"] = 
+										{
+										},
+										["type"] = "Cone01",
+										["unitId"] = 5571,
+										["x"] = 314671.93281909,
+										["y"] = 388928.67122614,
+									},
+								},
+								["x"] = 314671.93281909,
+								["y"] = 388928.67122614,
+							},
+							[406] = 
+							{
+								["dead"] = false,
+								["groupId"] = 3166,
+								["heading"] = 1.8151424220741,
+								["hidden"] = true,
+								["name"] = "ATC LTCC (Cone)-3",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["action"] = "",
+											["alt"] = 0,
+											["formation_template"] = "",
+											["name"] = "",
+											["speed"] = 0,
+											["type"] = "",
+											["x"] = 314673.2721525,
+											["y"] = 388935.14467094,
+										},
+									},
+								},
+								["units"] = 
+								{
+									[1] = 
+									{
+										["category"] = "Fortifications",
+										["heading"] = 1.8151424220741,
+										["name"] = "ATC LTCC (Cone)-3-1",
+										["rate"] = 1,
+										["shape_name"] = "M92_Cone01",
+										["tasks"] = 
+										{
+										},
+										["type"] = "Cone01",
+										["unitId"] = 5572,
+										["x"] = 314673.2721525,
+										["y"] = 388935.14467094,
+									},
+								},
+								["x"] = 314673.2721525,
+								["y"] = 388935.14467094,
+							},
+							[407] = 
+							{
+								["dead"] = false,
+								["groupId"] = 3167,
+								["heading"] = 2.8972465583106,
+								["hidden"] = true,
+								["name"] = "ATC LTCC (Barrier_D)-2",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["action"] = "",
+											["alt"] = 0,
+											["formation_template"] = "",
+											["name"] = "",
+											["speed"] = 0,
+											["type"] = "",
+											["x"] = 314690.4942498,
+											["y"] = 388906.36350928,
+										},
+									},
+								},
+								["units"] = 
+								{
+									[1] = 
+									{
+										["category"] = "Fortifications",
+										["heading"] = 2.8972465583106,
+										["name"] = "ATC LTCC (Barrier_D)-2-1",
+										["rate"] = 1,
+										["shape_name"] = "M92_BarrierD",
+										["tasks"] = 
+										{
+										},
+										["type"] = "Barrier D",
+										["unitId"] = 5573,
+										["x"] = 314690.4942498,
+										["y"] = 388906.36350928,
+									},
+								},
+								["x"] = 314690.4942498,
+								["y"] = 388906.36350928,
+							},
+							[408] = 
+							{
+								["dead"] = false,
+								["groupId"] = 3168,
+								["heading"] = 2.8972465583106,
+								["hidden"] = true,
+								["name"] = "ATC LTCC (Barrier_D)-3",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["action"] = "",
+											["alt"] = 0,
+											["formation_template"] = "",
+											["name"] = "",
+											["speed"] = 0,
+											["type"] = "",
+											["x"] = 314693.27767494,
+											["y"] = 388905.69705537,
+										},
+									},
+								},
+								["units"] = 
+								{
+									[1] = 
+									{
+										["category"] = "Fortifications",
+										["heading"] = 2.8972465583106,
+										["name"] = "ATC LTCC (Barrier_D)-3-1",
+										["rate"] = 1,
+										["shape_name"] = "M92_BarrierD",
+										["tasks"] = 
+										{
+										},
+										["type"] = "Barrier D",
+										["unitId"] = 5574,
+										["x"] = 314693.27767494,
+										["y"] = 388905.69705537,
+									},
+								},
+								["x"] = 314693.27767494,
+								["y"] = 388905.69705537,
+							},
+							[409] = 
+							{
+								["dead"] = false,
+								["groupId"] = 3169,
+								["heading"] = 2.8972465583106,
+								["hidden"] = true,
+								["name"] = "ATC LTCC (Barrier_D)-4",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["action"] = "",
+											["alt"] = 0,
+											["formation_template"] = "",
+											["name"] = "",
+											["speed"] = 0,
+											["type"] = "",
+											["x"] = 314697.54839308,
+											["y"] = 388938.13280416,
+										},
+									},
+								},
+								["units"] = 
+								{
+									[1] = 
+									{
+										["category"] = "Fortifications",
+										["heading"] = 2.8972465583106,
+										["name"] = "ATC LTCC (Barrier_D)-4-1",
+										["rate"] = 1,
+										["shape_name"] = "M92_BarrierD",
+										["tasks"] = 
+										{
+										},
+										["type"] = "Barrier D",
+										["unitId"] = 5575,
+										["x"] = 314697.54839308,
+										["y"] = 388938.13280416,
+									},
+								},
+								["x"] = 314697.54839308,
+								["y"] = 388938.13280416,
+							},
+							[410] = 
+							{
+								["dead"] = false,
+								["groupId"] = 3170,
+								["heading"] = 2.8972465583106,
+								["hidden"] = true,
+								["name"] = "ATC LTCC (Barrier_D)-5",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["action"] = "",
+											["alt"] = 0,
+											["formation_template"] = "",
+											["name"] = "",
+											["speed"] = 0,
+											["type"] = "",
+											["x"] = 314694.59863433,
+											["y"] = 388938.90470364,
+										},
+									},
+								},
+								["units"] = 
+								{
+									[1] = 
+									{
+										["category"] = "Fortifications",
+										["heading"] = 2.8972465583106,
+										["name"] = "ATC LTCC (Barrier_D)-5-1",
+										["rate"] = 1,
+										["shape_name"] = "M92_BarrierD",
+										["tasks"] = 
+										{
+										},
+										["type"] = "Barrier D",
+										["unitId"] = 5576,
+										["x"] = 314694.59863433,
+										["y"] = 388938.90470364,
+									},
+								},
+								["x"] = 314694.59863433,
+								["y"] = 388938.90470364,
+							},
+							[411] = 
+							{
+								["dead"] = false,
+								["groupId"] = 3171,
+								["heading"] = 2.8972465583106,
+								["hidden"] = true,
+								["name"] = "ATC LTCC (Barrier_D)-6",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["action"] = "",
+											["alt"] = 0,
+											["formation_template"] = "",
+											["name"] = "",
+											["speed"] = 0,
+											["type"] = "",
+											["x"] = 314691.81428262,
+											["y"] = 388939.64903529,
+										},
+									},
+								},
+								["units"] = 
+								{
+									[1] = 
+									{
+										["category"] = "Fortifications",
+										["heading"] = 2.8972465583106,
+										["name"] = "ATC LTCC (Barrier_D)-6-1",
+										["rate"] = 1,
+										["shape_name"] = "M92_BarrierD",
+										["tasks"] = 
+										{
+										},
+										["type"] = "Barrier D",
+										["unitId"] = 5577,
+										["x"] = 314691.81428262,
+										["y"] = 388939.64903529,
+									},
+								},
+								["x"] = 314691.81428262,
+								["y"] = 388939.64903529,
+							},
+							[412] = 
+							{
+								["dead"] = false,
+								["groupId"] = 3172,
+								["heading"] = 3.8920842319474,
+								["hidden"] = true,
+								["name"] = "ATC LTCC (Personal)-2",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["action"] = "",
+											["alt"] = 0,
+											["formation_template"] = "",
+											["name"] = "",
+											["speed"] = 0,
+											["type"] = "",
+											["x"] = 314689.20182748,
+											["y"] = 388908.35224413,
+										},
+									},
+								},
+								["units"] = 
+								{
+									[1] = 
+									{
+										["category"] = "Personnel",
+										["heading"] = 3.8920842319474,
+										["livery_id"] = "variation 1",
+										["name"] = "ATC LTCC (Personal)-2-1",
+										["rate"] = 1,
+										["shape_name"] = "M92_Personnel07_PBR",
+										["tasks"] = 
+										{
+										},
+										["type"] = "M92_Personnel07_PBR",
+										["unitId"] = 5578,
+										["x"] = 314689.20182748,
+										["y"] = 388908.35224413,
+									},
+								},
+								["x"] = 314689.20182748,
+								["y"] = 388908.35224413,
+							},
+							[413] = 
+							{
+								["dead"] = false,
+								["groupId"] = 3173,
+								["heading"] = 3.8571776469075,
+								["hidden"] = true,
+								["name"] = "ATC LTCC (Personal)-3",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["action"] = "",
+											["alt"] = 0,
+											["formation_template"] = "",
+											["name"] = "",
+											["speed"] = 0,
+											["type"] = "",
+											["x"] = 314678.15699374,
+											["y"] = 388912.16824479,
+										},
+									},
+								},
+								["units"] = 
+								{
+									[1] = 
+									{
+										["category"] = "Personnel",
+										["heading"] = 3.8571776469075,
+										["livery_id"] = "variation 5",
+										["name"] = "ATC LTCC (Personal)-3-1",
+										["rate"] = 1,
+										["shape_name"] = "M92_Personnel07_PBR",
+										["tasks"] = 
+										{
+										},
+										["type"] = "M92_Personnel07_PBR",
+										["unitId"] = 5579,
+										["x"] = 314678.15699374,
+										["y"] = 388912.16824479,
+									},
+								},
+								["x"] = 314678.15699374,
+								["y"] = 388912.16824479,
+							},
 						},
 					},
 					["vehicle"] = 
@@ -47792,7 +49556,7 @@ mission =
 									[1] = 
 									{
 										["coldAtStart"] = false,
-										["heading"] = 2.6878070480713,
+										["heading"] = 1.0489428804486,
 										["name"] = "ATC DAN (Ground)-23-1",
 										["playerCanDrive"] = false,
 										["skill"] = "Excellent",
@@ -49109,6 +50873,298 @@ mission =
 								["visible"] = false,
 								["x"] = 221207.38828359,
 								["y"] = -36193.831249837,
+							},
+							[11] = 
+							{
+								["groupId"] = 3150,
+								["hidden"] = false,
+								["lateActivation"] = false,
+								["name"] = "Salute-6",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["ETA"] = 0,
+											["ETA_locked"] = true,
+											["action"] = "Off Road",
+											["alt"] = 674,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["speed"] = 0,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+														[1] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "ControlledTask",
+															["number"] = 1,
+															["params"] = 
+															{
+																["condition"] = 
+																{
+																	["userFlag"] = "1112",
+																},
+																["task"] = 
+																{
+																	["id"] = "WrappedAction",
+																	["params"] = 
+																	{
+																		["action"] = 
+																		{
+																			["id"] = "Option",
+																			["params"] = 
+																			{
+																				["name"] = 9,
+																				["value"] = 2,
+																			},
+																		},
+																	},
+																},
+															},
+														},
+														[2] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "ControlledTask",
+															["number"] = 2,
+															["params"] = 
+															{
+																["condition"] = 
+																{
+																	["userFlag"] = "1113",
+																},
+																["task"] = 
+																{
+																	["id"] = "WrappedAction",
+																	["params"] = 
+																	{
+																		["action"] = 
+																		{
+																			["id"] = "Option",
+																			["params"] = 
+																			{
+																				["name"] = 9,
+																				["value"] = 1,
+																			},
+																		},
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 314716.16180668,
+											["y"] = 388931.953183,
+										},
+									},
+									["routeRelativeTOT"] = false,
+									["spans"] = 
+									{
+										[1] = 
+										{
+											[1] = 
+											{
+												["x"] = 314716.16180668,
+												["y"] = 388931.953183,
+											},
+											[2] = 
+											{
+												["x"] = 314716.16180668,
+												["y"] = 388931.953183,
+											},
+										},
+									},
+								},
+								["start_time"] = 0,
+								["task"] = "Ground Nothing",
+								["taskSelected"] = true,
+								["tasks"] = 
+								{
+								},
+								["uncontrollable"] = false,
+								["units"] = 
+								{
+									[1] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 3.4505159311928,
+										["livery_id"] = "variation 2",
+										["name"] = "Salute-1-1",
+										["playerCanDrive"] = false,
+										["skill"] = "Excellent",
+										["type"] = "M92_Personnel01_anim",
+										["unitId"] = 5554,
+										["x"] = 314716.16180668,
+										["y"] = 388931.953183,
+									},
+									[2] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 2.2148228207808,
+										["livery_id"] = "variation 2",
+										["name"] = "Salute-6-1",
+										["playerCanDrive"] = false,
+										["skill"] = "Excellent",
+										["type"] = "M92_Personnel01_anim",
+										["unitId"] = 5555,
+										["x"] = 314704.75753817,
+										["y"] = 388907.47757684,
+									},
+								},
+								["visible"] = false,
+								["x"] = 314716.16180668,
+								["y"] = 388931.953183,
+							},
+							[12] = 
+							{
+								["groupId"] = 3151,
+								["hidden"] = false,
+								["lateActivation"] = false,
+								["name"] = "Salute-1",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["ETA"] = 0,
+											["ETA_locked"] = true,
+											["action"] = "Off Road",
+											["alt"] = 674,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["speed"] = 0,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+														[1] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "ControlledTask",
+															["number"] = 1,
+															["params"] = 
+															{
+																["condition"] = 
+																{
+																	["userFlag"] = "1120",
+																},
+																["task"] = 
+																{
+																	["id"] = "WrappedAction",
+																	["params"] = 
+																	{
+																		["action"] = 
+																		{
+																			["id"] = "Option",
+																			["params"] = 
+																			{
+																				["name"] = 9,
+																				["value"] = 2,
+																			},
+																		},
+																	},
+																},
+															},
+														},
+														[2] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "ControlledTask",
+															["number"] = 2,
+															["params"] = 
+															{
+																["condition"] = 
+																{
+																	["userFlag"] = "1121",
+																},
+																["task"] = 
+																{
+																	["id"] = "WrappedAction",
+																	["params"] = 
+																	{
+																		["action"] = 
+																		{
+																			["id"] = "Option",
+																			["params"] = 
+																			{
+																				["name"] = 9,
+																				["value"] = 1,
+																			},
+																		},
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 314724.3263547,
+											["y"] = 388927.74547505,
+										},
+									},
+									["routeRelativeTOT"] = false,
+									["spans"] = 
+									{
+										[1] = 
+										{
+											[1] = 
+											{
+												["x"] = 314724.3263547,
+												["y"] = 388927.74547505,
+											},
+											[2] = 
+											{
+												["x"] = 314724.3263547,
+												["y"] = 388927.74547505,
+											},
+										},
+									},
+								},
+								["start_time"] = 0,
+								["task"] = "Ground Nothing",
+								["taskSelected"] = true,
+								["tasks"] = 
+								{
+								},
+								["uncontrollable"] = false,
+								["units"] = 
+								{
+									[1] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 3.5220744305246,
+										["name"] = "Salute-1-2",
+										["playerCanDrive"] = false,
+										["skill"] = "Excellent",
+										["type"] = "M92_Personnel03R_anim",
+										["unitId"] = 5556,
+										["x"] = 314724.3263547,
+										["y"] = 388927.74547505,
+									},
+								},
+								["visible"] = false,
+								["x"] = 314724.3263547,
+								["y"] = 388927.74547505,
 							},
 						},
 					},
@@ -132112,6 +134168,215 @@ mission =
 				},
 				[3] = 
 				{
+					["id"] = 17,
+					["name"] = "Insurgents",
+					["vehicle"] = 
+					{
+						["group"] = 
+						{
+							[1] = 
+							{
+								["groupId"] = 2283,
+								["hidden"] = true,
+								["hiddenOnMFD"] = true,
+								["hiddenOnPlanner"] = true,
+								["name"] = "PYD BV77 (Scout)-1",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["ETA"] = 0,
+											["ETA_locked"] = true,
+											["action"] = "Off Road",
+											["alt"] = 213,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["speed"] = 0,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 92337.460862397,
+											["y"] = 56438.794458832,
+										},
+									},
+									["spans"] = 
+									{
+									},
+								},
+								["start_time"] = 0,
+								["task"] = "Ground Nothing",
+								["taskSelected"] = true,
+								["tasks"] = 
+								{
+								},
+								["uncontrollable"] = false,
+								["units"] = 
+								{
+									[1] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 3.5220744305246,
+										["name"] = "PYD BV77 (Scout)-1-1",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "UAZ-469",
+										["unitId"] = 2737,
+										["x"] = 92337.460862397,
+										["y"] = 56438.794458832,
+									},
+									[2] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 1.9896753472735,
+										["name"] = "PYD BV77 (Scout)-1-2",
+										["playerCanDrive"] = true,
+										["skill"] = "Average",
+										["type"] = "HL_KORD",
+										["unitId"] = 2747,
+										["x"] = 92337.30573302,
+										["y"] = 56422.402454664,
+									},
+									[3] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 5.1382493178713,
+										["name"] = "PYD BV77 (Scout)-1-3",
+										["playerCanDrive"] = true,
+										["skill"] = "Average",
+										["type"] = "tt_DSHK",
+										["unitId"] = 2748,
+										["x"] = 92341.28738703,
+										["y"] = 56423.746909265,
+									},
+									[4] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 5.1679199151552,
+										["name"] = "PYD BV77 (Scout)-1-4",
+										["playerCanDrive"] = true,
+										["skill"] = "Average",
+										["type"] = "tt_KORD",
+										["unitId"] = 2749,
+										["x"] = 92328.877036871,
+										["y"] = 56416.145569793,
+									},
+									[5] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 0.85172067497323,
+										["name"] = "PYD BV77 (Scout)-1-5",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "Infantry AK Ins",
+										["unitId"] = 2750,
+										["x"] = 92326.514371687,
+										["y"] = 56428.741254031,
+									},
+									[6] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 4.3528511544739,
+										["name"] = "PYD BV77 (Scout)-1-6",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "Infantry AK Ins",
+										["unitId"] = 2751,
+										["x"] = 92326.808645178,
+										["y"] = 56432.020476037,
+									},
+									[7] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 4.7123889803847,
+										["name"] = "PYD BV77 (Scout)-1-7",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "Infantry AK Ins",
+										["unitId"] = 2752,
+										["x"] = 92336.685215512,
+										["y"] = 56415.4216327,
+									},
+									[8] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 5.6950093492575,
+										["name"] = "PYD BV77 (Scout)-1-8",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "Infantry AK Ins",
+										["unitId"] = 2753,
+										["x"] = 92333.604211769,
+										["y"] = 56442.019562993,
+									},
+									[9] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 5.1766465614152,
+										["name"] = "PYD BV77 (Scout)-1-9",
+										["playerCanDrive"] = false,
+										["skill"] = "High",
+										["type"] = "Ural-375 ZU-23 Insurgent",
+										["unitId"] = 2754,
+										["x"] = 92323.292379299,
+										["y"] = 56413.973758515,
+									},
+									[10] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 4.3528511544739,
+										["name"] = "PYD BV77 (Scout)-1-10",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "Igla manpad INS",
+										["unitId"] = 4051,
+										["x"] = 92308.363524182,
+										["y"] = 56434.381030824,
+									},
+									[11] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 2.2654373690886,
+										["name"] = "PYD BV77 (Scout)-1-11",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "Infantry AK Ins",
+										["unitId"] = 4052,
+										["x"] = 92309.846355946,
+										["y"] = 56432.512968868,
+									},
+									[12] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 2.6162485487395,
+										["name"] = "PYD BV77 (Scout)-1-12",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "Infantry AK Ins",
+										["unitId"] = 4053,
+										["x"] = 92328.92924731,
+										["y"] = 56429.454740011,
+									},
+								},
+								["visible"] = false,
+								["x"] = 92337.460862397,
+								["y"] = 56438.794458832,
+							},
+						},
+					},
+				},
+				[4] = 
+				{
 					["id"] = 47,
 					["name"] = "Syria",
 					["static"] = 
@@ -137628,215 +139893,6 @@ mission =
 						},
 					},
 				},
-				[4] = 
-				{
-					["id"] = 17,
-					["name"] = "Insurgents",
-					["vehicle"] = 
-					{
-						["group"] = 
-						{
-							[1] = 
-							{
-								["groupId"] = 2283,
-								["hidden"] = true,
-								["hiddenOnMFD"] = true,
-								["hiddenOnPlanner"] = true,
-								["name"] = "PYD BV77 (Scout)-1",
-								["route"] = 
-								{
-									["points"] = 
-									{
-										[1] = 
-										{
-											["ETA"] = 0,
-											["ETA_locked"] = true,
-											["action"] = "Off Road",
-											["alt"] = 213,
-											["alt_type"] = "BARO",
-											["formation_template"] = "",
-											["speed"] = 0,
-											["speed_locked"] = true,
-											["task"] = 
-											{
-												["id"] = "ComboTask",
-												["params"] = 
-												{
-													["tasks"] = 
-													{
-													},
-												},
-											},
-											["type"] = "Turning Point",
-											["x"] = 92337.460862397,
-											["y"] = 56438.794458832,
-										},
-									},
-									["spans"] = 
-									{
-									},
-								},
-								["start_time"] = 0,
-								["task"] = "Ground Nothing",
-								["taskSelected"] = true,
-								["tasks"] = 
-								{
-								},
-								["uncontrollable"] = false,
-								["units"] = 
-								{
-									[1] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 3.5220744305246,
-										["name"] = "PYD BV77 (Scout)-1-1",
-										["playerCanDrive"] = false,
-										["skill"] = "Average",
-										["type"] = "UAZ-469",
-										["unitId"] = 2737,
-										["x"] = 92337.460862397,
-										["y"] = 56438.794458832,
-									},
-									[2] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 1.9896753472735,
-										["name"] = "PYD BV77 (Scout)-1-2",
-										["playerCanDrive"] = true,
-										["skill"] = "Average",
-										["type"] = "HL_KORD",
-										["unitId"] = 2747,
-										["x"] = 92337.30573302,
-										["y"] = 56422.402454664,
-									},
-									[3] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 5.1382493178713,
-										["name"] = "PYD BV77 (Scout)-1-3",
-										["playerCanDrive"] = true,
-										["skill"] = "Average",
-										["type"] = "tt_DSHK",
-										["unitId"] = 2748,
-										["x"] = 92341.28738703,
-										["y"] = 56423.746909265,
-									},
-									[4] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 5.1679199151552,
-										["name"] = "PYD BV77 (Scout)-1-4",
-										["playerCanDrive"] = true,
-										["skill"] = "Average",
-										["type"] = "tt_KORD",
-										["unitId"] = 2749,
-										["x"] = 92328.877036871,
-										["y"] = 56416.145569793,
-									},
-									[5] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 0.85172067497323,
-										["name"] = "PYD BV77 (Scout)-1-5",
-										["playerCanDrive"] = false,
-										["skill"] = "Average",
-										["type"] = "Infantry AK Ins",
-										["unitId"] = 2750,
-										["x"] = 92326.514371687,
-										["y"] = 56428.741254031,
-									},
-									[6] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 4.3528511544739,
-										["name"] = "PYD BV77 (Scout)-1-6",
-										["playerCanDrive"] = false,
-										["skill"] = "Average",
-										["type"] = "Infantry AK Ins",
-										["unitId"] = 2751,
-										["x"] = 92326.808645178,
-										["y"] = 56432.020476037,
-									},
-									[7] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 4.7123889803847,
-										["name"] = "PYD BV77 (Scout)-1-7",
-										["playerCanDrive"] = false,
-										["skill"] = "Average",
-										["type"] = "Infantry AK Ins",
-										["unitId"] = 2752,
-										["x"] = 92336.685215512,
-										["y"] = 56415.4216327,
-									},
-									[8] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 5.6950093492575,
-										["name"] = "PYD BV77 (Scout)-1-8",
-										["playerCanDrive"] = false,
-										["skill"] = "Average",
-										["type"] = "Infantry AK Ins",
-										["unitId"] = 2753,
-										["x"] = 92333.604211769,
-										["y"] = 56442.019562993,
-									},
-									[9] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 5.1766465614152,
-										["name"] = "PYD BV77 (Scout)-1-9",
-										["playerCanDrive"] = false,
-										["skill"] = "High",
-										["type"] = "Ural-375 ZU-23 Insurgent",
-										["unitId"] = 2754,
-										["x"] = 92323.292379299,
-										["y"] = 56413.973758515,
-									},
-									[10] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 4.3528511544739,
-										["name"] = "PYD BV77 (Scout)-1-10",
-										["playerCanDrive"] = false,
-										["skill"] = "Average",
-										["type"] = "Igla manpad INS",
-										["unitId"] = 4051,
-										["x"] = 92308.363524182,
-										["y"] = 56434.381030824,
-									},
-									[11] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 2.2654373690886,
-										["name"] = "PYD BV77 (Scout)-1-11",
-										["playerCanDrive"] = false,
-										["skill"] = "Average",
-										["type"] = "Infantry AK Ins",
-										["unitId"] = 4052,
-										["x"] = 92309.846355946,
-										["y"] = 56432.512968868,
-									},
-									[12] = 
-									{
-										["coldAtStart"] = false,
-										["heading"] = 2.6162485487395,
-										["name"] = "PYD BV77 (Scout)-1-12",
-										["playerCanDrive"] = false,
-										["skill"] = "Average",
-										["type"] = "Infantry AK Ins",
-										["unitId"] = 4053,
-										["x"] = 92328.92924731,
-										["y"] = 56429.454740011,
-									},
-								},
-								["visible"] = false,
-								["x"] = 92337.460862397,
-								["y"] = 56438.794458832,
-							},
-						},
-					},
-				},
 			},
 			["name"] = "red",
 			["nav_points"] = 
@@ -137948,7 +140004,7 @@ mission =
 			[4] = 47,
 		},
 	},
-	["currentKey"] = 12545266,
+	["currentKey"] = 12593673,
 	["date"] = 
 	{
 		["Day"] = 12,
@@ -163093,9 +165149,9 @@ mission =
 	},
 	["map"] = 
 	{
-		["centerX"] = -52146.326062058,
-		["centerY"] = 50000,
-		["zoom"] = 1254980.0796813,
+		["centerX"] = 314670.98389494,
+		["centerY"] = 388845.90713071,
+		["zoom"] = 506.27875390823,
 	},
 	["maxDictId"] = 317,
 	["pictureFileNameB"] = 
@@ -163216,51 +165272,55 @@ mission =
 			[49] = "a_set_flag(\"1105\"); mission.trig.func[49]=nil;",
 			[50] = "a_set_flag(\"1112\"); mission.trig.func[50]=nil;",
 			[51] = "a_set_flag(\"1113\"); mission.trig.func[51]=nil;",
-			[52] = "a_set_flag(\"1118\"); mission.trig.func[52]=nil;",
-			[53] = "a_set_flag(\"1119\"); mission.trig.func[53]=nil;",
-			[54] = "a_set_flag(\"1120\"); mission.trig.func[54]=nil;",
-			[55] = "a_set_flag(\"1121\"); mission.trig.func[55]=nil;",
-			[56] = "a_ai_task(330, 2);a_set_flag(\"1122\");a_activate_group(878);",
-			[57] = "a_ai_task(330, 1);",
-			[58] = "a_ai_task(330, 3);a_clear_flag(\"1123\");",
-			[59] = "a_activate_group(877);",
-			[60] = "a_ai_task(324, 2);a_set_flag(\"1108\");",
-			[61] = "a_ai_task(324, 1);",
-			[62] = "a_ai_task(324, 3);a_clear_flag(\"1109\");",
-			[63] = "a_set_flag(\"1106\");",
-			[64] = "a_ai_task(324, 3);a_clear_flag(\"1107\");",
-			[65] = "a_set_flag(\"1124\");",
-			[66] = "a_ai_task(331, 2);a_set_flag(\"1126\");",
-			[67] = "a_ai_task(331, 1);",
-			[68] = "a_clear_flag(\"1125\");",
-			[69] = "a_ai_task(331, 3);a_clear_flag(\"1127\");",
-			[70] = "a_activate_group(172); mission.trig.func[70]=nil;",
-			[71] = "a_ai_task(185, 1);a_set_flag(\"5001\"); mission.trig.func[71]=nil;",
-			[72] = "a_ai_task(186, 1);a_set_flag(\"5001\"); mission.trig.func[72]=nil;",
-			[73] = "a_ai_task(187, 1);a_set_flag(\"5001\"); mission.trig.func[73]=nil;",
-			[74] = "a_set_flag(\"5211\"); mission.trig.func[74]=nil;",
-			[75] = "a_set_flag(\"5201\"); mission.trig.func[75]=nil;",
-			[76] = "a_set_flag_random(\"5201\", 1, 60);",
-			[77] = "a_activate_group(2078); mission.trig.func[77]=nil;",
-			[78] = "a_activate_group(1045); mission.trig.func[78]=nil;",
-			[79] = "a_activate_group(1046); mission.trig.func[79]=nil;",
-			[80] = "a_activate_group(1051); mission.trig.func[80]=nil;",
-			[81] = "a_activate_group(1053); mission.trig.func[81]=nil;",
-			[82] = "a_activate_group(1047); mission.trig.func[82]=nil;",
-			[83] = "a_activate_group(1048); mission.trig.func[83]=nil;",
-			[84] = "a_activate_group(1052); mission.trig.func[84]=nil;",
-			[85] = "a_activate_group(1049); mission.trig.func[85]=nil;",
-			[86] = "a_activate_group(1050); mission.trig.func[86]=nil;",
-			[87] = "a_cockpit_perform_clickable_action(9, 3001, 0.05, \"\");a_cockpit_perform_clickable_action(9, 3002, 0.05, \"\");a_cockpit_perform_clickable_action(9, 3003, 0.05, \"\");a_cockpit_perform_clickable_action(9, 3005, 0.05, \"\"); mission.trig.func[87]=nil;",
-			[88] = "a_set_flag_value(\"250\", 1); mission.trig.func[88]=nil;",
-			[89] = "a_set_flag_value(\"251\", 1); mission.trig.func[89]=nil;",
-			[90] = "a_do_script(\"Init(1, false)\"); mission.trig.func[90]=nil;",
-			[91] = "a_do_script(\"Init(1, true)\"); mission.trig.func[91]=nil;",
-			[92] = "a_do_script(\"brc = 355\"); mission.trig.func[92]=nil;",
-			[93] = "a_out_text_delay(getValueDictByKey(\"DictKey_ActionText_290\"), 15, true, 0);",
-			[94] = "a_inc_flag(\"1908\", 15); mission.trig.func[94]=nil;",
-			[95] = "a_inc_flag(\"1908\", 15); mission.trig.func[95]=nil;",
-			[96] = "a_activate_group(190);a_activate_group(189); mission.trig.func[96]=nil;",
+			[52] = "a_set_flag(\"1112\"); mission.trig.func[52]=nil;",
+			[53] = "a_set_flag(\"1113\"); mission.trig.func[53]=nil;",
+			[54] = "a_set_flag(\"1118\"); mission.trig.func[54]=nil;",
+			[55] = "a_set_flag(\"1119\"); mission.trig.func[55]=nil;",
+			[56] = "a_set_flag(\"1120\"); mission.trig.func[56]=nil;",
+			[57] = "a_set_flag(\"1121\"); mission.trig.func[57]=nil;",
+			[58] = "a_set_flag(\"1120\"); mission.trig.func[58]=nil;",
+			[59] = "a_set_flag(\"1121\"); mission.trig.func[59]=nil;",
+			[60] = "a_ai_task(330, 2);a_set_flag(\"1122\");a_activate_group(878);",
+			[61] = "a_ai_task(330, 1);",
+			[62] = "a_ai_task(330, 3);a_clear_flag(\"1123\");",
+			[63] = "a_activate_group(877);",
+			[64] = "a_ai_task(324, 2);a_set_flag(\"1108\");",
+			[65] = "a_ai_task(324, 1);",
+			[66] = "a_ai_task(324, 3);a_clear_flag(\"1109\");",
+			[67] = "a_set_flag(\"1106\");",
+			[68] = "a_ai_task(324, 3);a_clear_flag(\"1107\");",
+			[69] = "a_set_flag(\"1124\");",
+			[70] = "a_ai_task(331, 2);a_set_flag(\"1126\");",
+			[71] = "a_ai_task(331, 1);",
+			[72] = "a_clear_flag(\"1125\");",
+			[73] = "a_ai_task(331, 3);a_clear_flag(\"1127\");",
+			[74] = "a_activate_group(172); mission.trig.func[74]=nil;",
+			[75] = "a_ai_task(185, 1);a_set_flag(\"5001\"); mission.trig.func[75]=nil;",
+			[76] = "a_ai_task(186, 1);a_set_flag(\"5001\"); mission.trig.func[76]=nil;",
+			[77] = "a_ai_task(187, 1);a_set_flag(\"5001\"); mission.trig.func[77]=nil;",
+			[78] = "a_set_flag(\"5211\"); mission.trig.func[78]=nil;",
+			[79] = "a_set_flag(\"5201\"); mission.trig.func[79]=nil;",
+			[80] = "a_set_flag_random(\"5201\", 1, 60);",
+			[81] = "a_activate_group(2078); mission.trig.func[81]=nil;",
+			[82] = "a_activate_group(1045); mission.trig.func[82]=nil;",
+			[83] = "a_activate_group(1046); mission.trig.func[83]=nil;",
+			[84] = "a_activate_group(1051); mission.trig.func[84]=nil;",
+			[85] = "a_activate_group(1053); mission.trig.func[85]=nil;",
+			[86] = "a_activate_group(1047); mission.trig.func[86]=nil;",
+			[87] = "a_activate_group(1048); mission.trig.func[87]=nil;",
+			[88] = "a_activate_group(1052); mission.trig.func[88]=nil;",
+			[89] = "a_activate_group(1049); mission.trig.func[89]=nil;",
+			[90] = "a_activate_group(1050); mission.trig.func[90]=nil;",
+			[91] = "a_cockpit_perform_clickable_action(9, 3001, 0.05, \"\");a_cockpit_perform_clickable_action(9, 3002, 0.05, \"\");a_cockpit_perform_clickable_action(9, 3003, 0.05, \"\");a_cockpit_perform_clickable_action(9, 3005, 0.05, \"\"); mission.trig.func[91]=nil;",
+			[92] = "a_set_flag_value(\"250\", 1); mission.trig.func[92]=nil;",
+			[93] = "a_set_flag_value(\"251\", 1); mission.trig.func[93]=nil;",
+			[94] = "a_do_script(\"Init(1, false)\"); mission.trig.func[94]=nil;",
+			[95] = "a_do_script(\"Init(1, true)\"); mission.trig.func[95]=nil;",
+			[96] = "a_do_script(\"brc = 355\"); mission.trig.func[96]=nil;",
+			[97] = "a_out_text_delay(getValueDictByKey(\"DictKey_ActionText_290\"), 15, true, 0);",
+			[98] = "a_inc_flag(\"1908\", 15); mission.trig.func[98]=nil;",
+			[99] = "a_inc_flag(\"1908\", 15); mission.trig.func[99]=nil;",
+			[100] = "a_activate_group(190);a_activate_group(189); mission.trig.func[100]=nil;",
 		},
 		["conditions"] = 
 		{
@@ -163315,51 +165375,55 @@ mission =
 			[49] = "return(c_time_since_flag(\"1104\", 10) )",
 			[50] = "return(c_part_of_coalition_in_zone(\"blue\", 754, \"AIRPLANE\") )",
 			[51] = "return(c_time_since_flag(\"1112\", 10) )",
-			[52] = "return(c_part_of_coalition_in_zone(\"blue\", 995, \"AIRPLANE\") )",
-			[53] = "return(c_time_since_flag(\"1118\", 10) )",
-			[54] = "return(c_part_of_coalition_in_zone(\"blue\", 996, \"AIRPLANE\") )",
-			[55] = "return(c_time_since_flag(\"1120\", 10) )",
-			[56] = "return(c_part_of_coalition_in_zone(\"blue\", 267, \"AIRPLANE\") )",
-			[57] = "return(c_time_since_flag(\"1122\", 10) )",
-			[58] = "return(c_all_of_coalition_out_zone(\"blue\", 267, \"ALL\") )",
-			[59] = "return(c_all_of_coalition_out_zone(\"blue\", 268, \"ALL\") )",
-			[60] = "return(c_part_of_coalition_in_zone(\"blue\", 509, \"AIRPLANE\") )",
-			[61] = "return(c_time_since_flag(\"1108\", 10) )",
-			[62] = "return(c_all_of_coalition_out_zone(\"red\", 509, \"ALL\") )",
-			[63] = "return(c_part_of_coalition_in_zone(\"blue\", 510, \"AIRPLANE\") )",
-			[64] = "return(c_all_of_coalition_out_zone(\"red\", 510, \"ALL\") )",
-			[65] = "return(c_part_of_coalition_in_zone(\"blue\", 874, \"AIRPLANE\") )",
-			[66] = "return(c_part_of_coalition_in_zone(\"blue\", 875, \"AIRPLANE\") )",
-			[67] = "return(c_time_since_flag(\"1126\", 10) )",
-			[68] = "return(c_all_of_coalition_out_zone(\"red\", 874, \"ALL\") )",
-			[69] = "return(c_all_of_coalition_out_zone(\"red\", 875, \"ALL\") )",
-			[70] = "return(c_part_of_coalition_in_zone(\"red\", 2320, \"ALL\") )",
-			[71] = "return(c_time_after(15) and c_flag_is_false(\"5001\") and c_random_less(5) )",
-			[72] = "return(c_time_after(15) and c_flag_is_false(\"5001\") and c_random_less(5) )",
-			[73] = "return(c_time_after(15) and c_flag_is_false(\"5001\") and c_random_less(5) )",
-			[74] = "return(c_unit_fuel_less(242, 12) and c_unit_fuel_less(244, 12) and c_unit_fuel_less(246, 12) )",
-			[75] = "return(c_part_of_coalition_in_zone(\"blue\", 2320, \"ALL\") )",
-			[76] = "return(c_time_since_flag(\"5201\", 60) )",
-			[77] = "return(c_flag_equals(\"5201\", 6) )",
-			[78] = "return(c_flag_equals(\"5201\", 10) )",
-			[79] = "return(c_flag_equals(\"5201\", 24) )",
-			[80] = "return(c_flag_equals(\"5201\", 19) )",
-			[81] = "return(c_flag_equals(\"5201\", 59) )",
-			[82] = "return(c_flag_equals(\"5201\", 46) )",
-			[83] = "return(c_flag_equals(\"5201\", 52) )",
-			[84] = "return(c_flag_equals(\"5201\", 29) )",
-			[85] = "return(c_flag_equals(\"5201\", 27) )",
-			[86] = "return(c_flag_equals(\"5201\", 33) )",
-			[87] = "return(true)",
-			[88] = "return(c_unit_alive(2804) )",
-			[89] = "return(c_unit_alive(2804) )",
-			[90] = "return(c_unit_in_zone_unit(2804, 1357, 2604) and c_unit_altitude_lower(2804, 400) )",
-			[91] = "return(c_unit_in_zone_unit(2804, 1358, 2610) and c_unit_altitude_lower(2804, 400) )",
-			[92] = "return(true)",
-			[93] = "return(c_flag_equals(\"6550\", 25) and c_flag_less(\"6551\", 197) and c_flag_more(\"6551\", 193) )",
-			[94] = "return(c_dead_zone(3175) )",
-			[95] = "return(c_dead_zone(3327) )",
-			[96] = "return(c_flag_is_true(\"3010\") )",
+			[52] = "return(c_part_of_coalition_in_zone(\"blue\", 3631, \"AIRPLANE\") )",
+			[53] = "return(c_time_since_flag(\"1112\", 10) )",
+			[54] = "return(c_part_of_coalition_in_zone(\"blue\", 995, \"AIRPLANE\") )",
+			[55] = "return(c_time_since_flag(\"1118\", 10) )",
+			[56] = "return(c_part_of_coalition_in_zone(\"blue\", 996, \"AIRPLANE\") )",
+			[57] = "return(c_time_since_flag(\"1120\", 10) )",
+			[58] = "return(c_part_of_coalition_in_zone(\"blue\", 3632, \"AIRPLANE\") )",
+			[59] = "return(c_time_since_flag(\"1120\", 10) )",
+			[60] = "return(c_part_of_coalition_in_zone(\"blue\", 267, \"AIRPLANE\") )",
+			[61] = "return(c_time_since_flag(\"1122\", 10) )",
+			[62] = "return(c_all_of_coalition_out_zone(\"blue\", 267, \"ALL\") )",
+			[63] = "return(c_all_of_coalition_out_zone(\"blue\", 268, \"ALL\") )",
+			[64] = "return(c_part_of_coalition_in_zone(\"blue\", 509, \"AIRPLANE\") )",
+			[65] = "return(c_time_since_flag(\"1108\", 10) )",
+			[66] = "return(c_all_of_coalition_out_zone(\"red\", 509, \"ALL\") )",
+			[67] = "return(c_part_of_coalition_in_zone(\"blue\", 510, \"AIRPLANE\") )",
+			[68] = "return(c_all_of_coalition_out_zone(\"red\", 510, \"ALL\") )",
+			[69] = "return(c_part_of_coalition_in_zone(\"blue\", 874, \"AIRPLANE\") )",
+			[70] = "return(c_part_of_coalition_in_zone(\"blue\", 875, \"AIRPLANE\") )",
+			[71] = "return(c_time_since_flag(\"1126\", 10) )",
+			[72] = "return(c_all_of_coalition_out_zone(\"red\", 874, \"ALL\") )",
+			[73] = "return(c_all_of_coalition_out_zone(\"red\", 875, \"ALL\") )",
+			[74] = "return(c_part_of_coalition_in_zone(\"red\", 2320, \"ALL\") )",
+			[75] = "return(c_time_after(15) and c_flag_is_false(\"5001\") and c_random_less(5) )",
+			[76] = "return(c_time_after(15) and c_flag_is_false(\"5001\") and c_random_less(5) )",
+			[77] = "return(c_time_after(15) and c_flag_is_false(\"5001\") and c_random_less(5) )",
+			[78] = "return(c_unit_fuel_less(242, 12) and c_unit_fuel_less(244, 12) and c_unit_fuel_less(246, 12) )",
+			[79] = "return(c_part_of_coalition_in_zone(\"blue\", 2320, \"ALL\") )",
+			[80] = "return(c_time_since_flag(\"5201\", 60) )",
+			[81] = "return(c_flag_equals(\"5201\", 6) )",
+			[82] = "return(c_flag_equals(\"5201\", 10) )",
+			[83] = "return(c_flag_equals(\"5201\", 24) )",
+			[84] = "return(c_flag_equals(\"5201\", 19) )",
+			[85] = "return(c_flag_equals(\"5201\", 59) )",
+			[86] = "return(c_flag_equals(\"5201\", 46) )",
+			[87] = "return(c_flag_equals(\"5201\", 52) )",
+			[88] = "return(c_flag_equals(\"5201\", 29) )",
+			[89] = "return(c_flag_equals(\"5201\", 27) )",
+			[90] = "return(c_flag_equals(\"5201\", 33) )",
+			[91] = "return(true)",
+			[92] = "return(c_unit_alive(2804) )",
+			[93] = "return(c_unit_alive(2804) )",
+			[94] = "return(c_unit_in_zone_unit(2804, 1357, 2604) and c_unit_altitude_lower(2804, 400) )",
+			[95] = "return(c_unit_in_zone_unit(2804, 1358, 2610) and c_unit_altitude_lower(2804, 400) )",
+			[96] = "return(true)",
+			[97] = "return(c_flag_equals(\"6550\", 25) and c_flag_less(\"6551\", 197) and c_flag_more(\"6551\", 193) )",
+			[98] = "return(c_dead_zone(3175) )",
+			[99] = "return(c_dead_zone(3327) )",
+			[100] = "return(c_flag_is_true(\"3010\") )",
 		},
 		["custom"] = 
 		{
@@ -163468,6 +165532,10 @@ mission =
 			[94] = true,
 			[95] = true,
 			[96] = true,
+			[97] = true,
+			[98] = true,
+			[99] = true,
+			[100] = true,
 		},
 		["func"] = 
 		{
@@ -163522,10 +165590,10 @@ mission =
 			[53] = "if mission.trig.conditions[53]() then mission.trig.actions[53]() end",
 			[54] = "if mission.trig.conditions[54]() then mission.trig.actions[54]() end",
 			[55] = "if mission.trig.conditions[55]() then mission.trig.actions[55]() end",
-			[56] = "if mission.trig.conditions[56]() then if not mission.trig.flag[56] then mission.trig.actions[56](); mission.trig.flag[56] = true;end; else mission.trig.flag[56] = false; end;",
-			[57] = "if mission.trig.conditions[57]() then if not mission.trig.flag[57] then mission.trig.actions[57](); mission.trig.flag[57] = true;end; else mission.trig.flag[57] = false; end;",
-			[58] = "if mission.trig.conditions[58]() then if not mission.trig.flag[58] then mission.trig.actions[58](); mission.trig.flag[58] = true;end; else mission.trig.flag[58] = false; end;",
-			[59] = "if mission.trig.conditions[59]() then if not mission.trig.flag[59] then mission.trig.actions[59](); mission.trig.flag[59] = true;end; else mission.trig.flag[59] = false; end;",
+			[56] = "if mission.trig.conditions[56]() then mission.trig.actions[56]() end",
+			[57] = "if mission.trig.conditions[57]() then mission.trig.actions[57]() end",
+			[58] = "if mission.trig.conditions[58]() then mission.trig.actions[58]() end",
+			[59] = "if mission.trig.conditions[59]() then mission.trig.actions[59]() end",
 			[60] = "if mission.trig.conditions[60]() then if not mission.trig.flag[60] then mission.trig.actions[60](); mission.trig.flag[60] = true;end; else mission.trig.flag[60] = false; end;",
 			[61] = "if mission.trig.conditions[61]() then if not mission.trig.flag[61] then mission.trig.actions[61](); mission.trig.flag[61] = true;end; else mission.trig.flag[61] = false; end;",
 			[62] = "if mission.trig.conditions[62]() then if not mission.trig.flag[62] then mission.trig.actions[62](); mission.trig.flag[62] = true;end; else mission.trig.flag[62] = false; end;",
@@ -163536,17 +165604,17 @@ mission =
 			[67] = "if mission.trig.conditions[67]() then if not mission.trig.flag[67] then mission.trig.actions[67](); mission.trig.flag[67] = true;end; else mission.trig.flag[67] = false; end;",
 			[68] = "if mission.trig.conditions[68]() then if not mission.trig.flag[68] then mission.trig.actions[68](); mission.trig.flag[68] = true;end; else mission.trig.flag[68] = false; end;",
 			[69] = "if mission.trig.conditions[69]() then if not mission.trig.flag[69] then mission.trig.actions[69](); mission.trig.flag[69] = true;end; else mission.trig.flag[69] = false; end;",
-			[70] = "if mission.trig.conditions[70]() then mission.trig.actions[70]() end",
-			[71] = "if mission.trig.conditions[71]() then mission.trig.actions[71]() end",
-			[72] = "if mission.trig.conditions[72]() then mission.trig.actions[72]() end",
-			[73] = "if mission.trig.conditions[73]() then mission.trig.actions[73]() end",
+			[70] = "if mission.trig.conditions[70]() then if not mission.trig.flag[70] then mission.trig.actions[70](); mission.trig.flag[70] = true;end; else mission.trig.flag[70] = false; end;",
+			[71] = "if mission.trig.conditions[71]() then if not mission.trig.flag[71] then mission.trig.actions[71](); mission.trig.flag[71] = true;end; else mission.trig.flag[71] = false; end;",
+			[72] = "if mission.trig.conditions[72]() then if not mission.trig.flag[72] then mission.trig.actions[72](); mission.trig.flag[72] = true;end; else mission.trig.flag[72] = false; end;",
+			[73] = "if mission.trig.conditions[73]() then if not mission.trig.flag[73] then mission.trig.actions[73](); mission.trig.flag[73] = true;end; else mission.trig.flag[73] = false; end;",
 			[74] = "if mission.trig.conditions[74]() then mission.trig.actions[74]() end",
 			[75] = "if mission.trig.conditions[75]() then mission.trig.actions[75]() end",
-			[76] = "if mission.trig.conditions[76]() then if not mission.trig.flag[76] then mission.trig.actions[76](); mission.trig.flag[76] = true;end; else mission.trig.flag[76] = false; end;",
+			[76] = "if mission.trig.conditions[76]() then mission.trig.actions[76]() end",
 			[77] = "if mission.trig.conditions[77]() then mission.trig.actions[77]() end",
 			[78] = "if mission.trig.conditions[78]() then mission.trig.actions[78]() end",
 			[79] = "if mission.trig.conditions[79]() then mission.trig.actions[79]() end",
-			[80] = "if mission.trig.conditions[80]() then mission.trig.actions[80]() end",
+			[80] = "if mission.trig.conditions[80]() then if not mission.trig.flag[80] then mission.trig.actions[80](); mission.trig.flag[80] = true;end; else mission.trig.flag[80] = false; end;",
 			[81] = "if mission.trig.conditions[81]() then mission.trig.actions[81]() end",
 			[82] = "if mission.trig.conditions[82]() then mission.trig.actions[82]() end",
 			[83] = "if mission.trig.conditions[83]() then mission.trig.actions[83]() end",
@@ -163559,10 +165627,14 @@ mission =
 			[90] = "if mission.trig.conditions[90]() then mission.trig.actions[90]() end",
 			[91] = "if mission.trig.conditions[91]() then mission.trig.actions[91]() end",
 			[92] = "if mission.trig.conditions[92]() then mission.trig.actions[92]() end",
-			[93] = "if mission.trig.conditions[93]() then if not mission.trig.flag[93] then mission.trig.actions[93](); mission.trig.flag[93] = true;end; else mission.trig.flag[93] = false; end;",
+			[93] = "if mission.trig.conditions[93]() then mission.trig.actions[93]() end",
 			[94] = "if mission.trig.conditions[94]() then mission.trig.actions[94]() end",
 			[95] = "if mission.trig.conditions[95]() then mission.trig.actions[95]() end",
 			[96] = "if mission.trig.conditions[96]() then mission.trig.actions[96]() end",
+			[97] = "if mission.trig.conditions[97]() then if not mission.trig.flag[97] then mission.trig.actions[97](); mission.trig.flag[97] = true;end; else mission.trig.flag[97] = false; end;",
+			[98] = "if mission.trig.conditions[98]() then mission.trig.actions[98]() end",
+			[99] = "if mission.trig.conditions[99]() then mission.trig.actions[99]() end",
+			[100] = "if mission.trig.conditions[100]() then mission.trig.actions[100]() end",
 		},
 		["funcStartup"] = 
 		{
@@ -165087,6 +167159,48 @@ mission =
 				["y"] = -363035.79657428,
 				["zoneId"] = 3479,
 			},
+			[63] = 
+			{
+				["color"] = 
+				{
+					[1] = 1,
+					[2] = 1,
+					[3] = 1,
+					[4] = 0.15,
+				},
+				["heading"] = 0,
+				["hidden"] = false,
+				["name"] = "Salute-29",
+				["properties"] = 
+				{
+				},
+				["radius"] = 12.192,
+				["type"] = 0,
+				["x"] = 314709.32844412,
+				["y"] = 388919.95197691,
+				["zoneId"] = 3631,
+			},
+			[64] = 
+			{
+				["color"] = 
+				{
+					[1] = 1,
+					[2] = 1,
+					[3] = 1,
+					[4] = 0.15,
+				},
+				["heading"] = 0,
+				["hidden"] = false,
+				["name"] = "Salute-30",
+				["properties"] = 
+				{
+				},
+				["radius"] = 12.192,
+				["type"] = 0,
+				["x"] = 314719.67594725,
+				["y"] = 388916.99140783,
+				["zoneId"] = 3632,
+			},
 		},
 	},
 	["trigrules"] = 
@@ -166512,6 +168626,55 @@ mission =
 			{
 				[1] = 
 				{
+					["flag"] = "1112",
+					["predicate"] = "a_set_flag",
+				},
+			},
+			["colorItem"] = "0x0080ffff",
+			["comment"] = "Salute_29a",
+			["eventlist"] = "",
+			["predicate"] = "triggerOnce",
+			["rules"] = 
+			{
+				[1] = 
+				{
+					["coalitionlist"] = "blue",
+					["predicate"] = "c_part_of_coalition_in_zone",
+					["unitType"] = "AIRPLANE",
+					["zone"] = 3631,
+				},
+			},
+		},
+		[53] = 
+		{
+			["actions"] = 
+			{
+				[1] = 
+				{
+					["flag"] = "1113",
+					["predicate"] = "a_set_flag",
+				},
+			},
+			["colorItem"] = "0x0080ffff",
+			["comment"] = "Salute_29b",
+			["eventlist"] = "",
+			["predicate"] = "triggerOnce",
+			["rules"] = 
+			{
+				[1] = 
+				{
+					["flag"] = "1112",
+					["predicate"] = "c_time_since_flag",
+					["seconds"] = 10,
+				},
+			},
+		},
+		[54] = 
+		{
+			["actions"] = 
+			{
+				[1] = 
+				{
 					["flag"] = "1118",
 					["predicate"] = "a_set_flag",
 				},
@@ -166531,7 +168694,7 @@ mission =
 				},
 			},
 		},
-		[53] = 
+		[55] = 
 		{
 			["actions"] = 
 			{
@@ -166555,7 +168718,7 @@ mission =
 				},
 			},
 		},
-		[54] = 
+		[56] = 
 		{
 			["actions"] = 
 			{
@@ -166580,7 +168743,7 @@ mission =
 				},
 			},
 		},
-		[55] = 
+		[57] = 
 		{
 			["actions"] = 
 			{
@@ -166604,7 +168767,56 @@ mission =
 				},
 			},
 		},
-		[56] = 
+		[58] = 
+		{
+			["actions"] = 
+			{
+				[1] = 
+				{
+					["flag"] = "1120",
+					["predicate"] = "a_set_flag",
+				},
+			},
+			["colorItem"] = "0x0080ffff",
+			["comment"] = "Directives_49a",
+			["eventlist"] = "",
+			["predicate"] = "triggerOnce",
+			["rules"] = 
+			{
+				[1] = 
+				{
+					["coalitionlist"] = "blue",
+					["predicate"] = "c_part_of_coalition_in_zone",
+					["unitType"] = "AIRPLANE",
+					["zone"] = 3632,
+				},
+			},
+		},
+		[59] = 
+		{
+			["actions"] = 
+			{
+				[1] = 
+				{
+					["flag"] = "1121",
+					["predicate"] = "a_set_flag",
+				},
+			},
+			["colorItem"] = "0x0080ffff",
+			["comment"] = "Directives_49b",
+			["eventlist"] = "",
+			["predicate"] = "triggerOnce",
+			["rules"] = 
+			{
+				[1] = 
+				{
+					["flag"] = "1120",
+					["predicate"] = "c_time_since_flag",
+					["seconds"] = 10,
+				},
+			},
+		},
+		[60] = 
 		{
 			["actions"] = 
 			{
@@ -166643,7 +168855,7 @@ mission =
 				},
 			},
 		},
-		[57] = 
+		[61] = 
 		{
 			["actions"] = 
 			{
@@ -166671,7 +168883,7 @@ mission =
 				},
 			},
 		},
-		[58] = 
+		[62] = 
 		{
 			["actions"] = 
 			{
@@ -166705,7 +168917,7 @@ mission =
 				},
 			},
 		},
-		[59] = 
+		[63] = 
 		{
 			["actions"] = 
 			{
@@ -166730,7 +168942,7 @@ mission =
 				},
 			},
 		},
-		[60] = 
+		[64] = 
 		{
 			["actions"] = 
 			{
@@ -166764,7 +168976,7 @@ mission =
 				},
 			},
 		},
-		[61] = 
+		[65] = 
 		{
 			["actions"] = 
 			{
@@ -166792,7 +169004,7 @@ mission =
 				},
 			},
 		},
-		[62] = 
+		[66] = 
 		{
 			["actions"] = 
 			{
@@ -166826,7 +169038,7 @@ mission =
 				},
 			},
 		},
-		[63] = 
+		[67] = 
 		{
 			["actions"] = 
 			{
@@ -166851,7 +169063,7 @@ mission =
 				},
 			},
 		},
-		[64] = 
+		[68] = 
 		{
 			["actions"] = 
 			{
@@ -166885,7 +169097,7 @@ mission =
 				},
 			},
 		},
-		[65] = 
+		[69] = 
 		{
 			["actions"] = 
 			{
@@ -166910,7 +169122,7 @@ mission =
 				},
 			},
 		},
-		[66] = 
+		[70] = 
 		{
 			["actions"] = 
 			{
@@ -166944,7 +169156,7 @@ mission =
 				},
 			},
 		},
-		[67] = 
+		[71] = 
 		{
 			["actions"] = 
 			{
@@ -166972,7 +169184,7 @@ mission =
 				},
 			},
 		},
-		[68] = 
+		[72] = 
 		{
 			["actions"] = 
 			{
@@ -166997,7 +169209,7 @@ mission =
 				},
 			},
 		},
-		[69] = 
+		[73] = 
 		{
 			["actions"] = 
 			{
@@ -167031,7 +169243,7 @@ mission =
 				},
 			},
 		},
-		[70] = 
+		[74] = 
 		{
 			["actions"] = 
 			{
@@ -167056,7 +169268,7 @@ mission =
 				},
 			},
 		},
-		[71] = 
+		[75] = 
 		{
 			["actions"] = 
 			{
@@ -167098,7 +169310,7 @@ mission =
 				},
 			},
 		},
-		[72] = 
+		[76] = 
 		{
 			["actions"] = 
 			{
@@ -167140,7 +169352,7 @@ mission =
 				},
 			},
 		},
-		[73] = 
+		[77] = 
 		{
 			["actions"] = 
 			{
@@ -167182,7 +169394,7 @@ mission =
 				},
 			},
 		},
-		[74] = 
+		[78] = 
 		{
 			["actions"] = 
 			{
@@ -167218,7 +169430,7 @@ mission =
 				},
 			},
 		},
-		[75] = 
+		[79] = 
 		{
 			["actions"] = 
 			{
@@ -167243,7 +169455,7 @@ mission =
 				},
 			},
 		},
-		[76] = 
+		[80] = 
 		{
 			["actions"] = 
 			{
@@ -167269,7 +169481,7 @@ mission =
 				},
 			},
 		},
-		[77] = 
+		[81] = 
 		{
 			["actions"] = 
 			{
@@ -167293,7 +169505,7 @@ mission =
 				},
 			},
 		},
-		[78] = 
+		[82] = 
 		{
 			["actions"] = 
 			{
@@ -167317,7 +169529,7 @@ mission =
 				},
 			},
 		},
-		[79] = 
+		[83] = 
 		{
 			["actions"] = 
 			{
@@ -167341,7 +169553,7 @@ mission =
 				},
 			},
 		},
-		[80] = 
+		[84] = 
 		{
 			["actions"] = 
 			{
@@ -167365,7 +169577,7 @@ mission =
 				},
 			},
 		},
-		[81] = 
+		[85] = 
 		{
 			["actions"] = 
 			{
@@ -167389,7 +169601,7 @@ mission =
 				},
 			},
 		},
-		[82] = 
+		[86] = 
 		{
 			["actions"] = 
 			{
@@ -167413,7 +169625,7 @@ mission =
 				},
 			},
 		},
-		[83] = 
+		[87] = 
 		{
 			["actions"] = 
 			{
@@ -167437,7 +169649,7 @@ mission =
 				},
 			},
 		},
-		[84] = 
+		[88] = 
 		{
 			["actions"] = 
 			{
@@ -167461,7 +169673,7 @@ mission =
 				},
 			},
 		},
-		[85] = 
+		[89] = 
 		{
 			["actions"] = 
 			{
@@ -167485,7 +169697,7 @@ mission =
 				},
 			},
 		},
-		[86] = 
+		[90] = 
 		{
 			["actions"] = 
 			{
@@ -167509,7 +169721,7 @@ mission =
 				},
 			},
 		},
-		[87] = 
+		[91] = 
 		{
 			["actions"] = 
 			{
@@ -167553,7 +169765,7 @@ mission =
 			{
 			},
 		},
-		[88] = 
+		[92] = 
 		{
 			["actions"] = 
 			{
@@ -167577,7 +169789,7 @@ mission =
 				},
 			},
 		},
-		[89] = 
+		[93] = 
 		{
 			["actions"] = 
 			{
@@ -167601,7 +169813,7 @@ mission =
 				},
 			},
 		},
-		[90] = 
+		[94] = 
 		{
 			["actions"] = 
 			{
@@ -167632,7 +169844,7 @@ mission =
 				},
 			},
 		},
-		[91] = 
+		[95] = 
 		{
 			["actions"] = 
 			{
@@ -167663,7 +169875,7 @@ mission =
 				},
 			},
 		},
-		[92] = 
+		[96] = 
 		{
 			["actions"] = 
 			{
@@ -167681,7 +169893,7 @@ mission =
 			{
 			},
 		},
-		[93] = 
+		[97] = 
 		{
 			["actions"] = 
 			{
@@ -167720,7 +169932,7 @@ mission =
 				},
 			},
 		},
-		[94] = 
+		[98] = 
 		{
 			["actions"] = 
 			{
@@ -167744,7 +169956,7 @@ mission =
 				},
 			},
 		},
-		[95] = 
+		[99] = 
 		{
 			["actions"] = 
 			{
@@ -167768,7 +169980,7 @@ mission =
 				},
 			},
 		},
-		[96] = 
+		[100] = 
 		{
 			["actions"] = 
 			{
