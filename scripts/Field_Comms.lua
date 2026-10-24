@@ -1,11 +1,11 @@
 -- Field_Comms.lua | v1.0.0
 --[[
-  LTCC (Diyarbakır) → CVN-73 departure radio module
-  TRT Syria Dynamic Template — transit scenario (land-to-carrier)
+  LTCC (Diyarbakir) → CVN-73 departure radio module
+  TRT Syria Dynamic Template  -  transit scenario (land-to-carrier)
 
   !! PREREQUISITE: Hero unit in ME must be named "Player_01" for
      Menu_Manager (TRT.Menu) integration to function.
-     Current unit name is "HORNET-4-1" — rename it in ME:
+     Current unit name is "HORNET-4-1"  -  rename it in ME:
        Mission Editor → select HORNET-467 group → unit properties
        → name: "Player_01" → save → extract.py → build.py
 
@@ -30,7 +30,7 @@
     DYB NDB: 109.4 MHz
 
   LOADING ORDER: after MOOSE, MIST, Menu_Manager (TRT.Menu must exist)
-  MENU SECTION: COMMS (F1) via TRT.Menu.Register — no own F10 root
+  MENU SECTION: COMMS (F1) via TRT.Menu.Register  -  no own F10 root
 ]]
 
 _G.TRT = _G.TRT or {}
@@ -67,7 +67,7 @@ local CFG = {
 
     CARRIER_UNIT = "CVN-73",
 
-    -- Ambient position triggers — DCS mission-file coords {x=north, y=east}
+    -- Ambient position triggers  -  DCS mission-file coords {x=north, y=east}
     -- (These map to unit:getPoint().x and .z respectively in DCS vec3)
     ANKARA_POS  = { x = 187810, y = 15114  },  -- WP11 ERCER
     ANKARA_R_NM = 20,
@@ -120,7 +120,7 @@ local function MsgATC(header, body)
 end
 
 local function MsgPilot(text)
-    Msg("» "..CFG.CALLSIGN..": "..text, CFG.PILOT_DUR)
+    Msg("[PILOT] "..CFG.CALLSIGN..": "..text, CFG.PILOT_DUR)
 end
 
 local function After(sec, fn)
@@ -174,14 +174,14 @@ local doATIS, doClearance, doReadback, doGround,
 local StartMonitor, PollPosition, DoAnkara, DoNicosia
 
 -- ══════════════════════════════════════════════════════════════
--- PHASE CALLBACKS — F10-triggered, sequential
+-- PHASE CALLBACKS  -  F10-triggered, sequential
 -- ══════════════════════════════════════════════════════════════
 
 doATIS = function()
     if S.step ~= 0 then return end
-    MsgPilot("Diyarbakır Information, Dodge 11, request ATIS.")
+    MsgPilot("Diyarbakir Information, Dodge 11, request ATIS.")
     After(2.5, function()
-        MsgATC("DIYARBAKIR INFORMATION ALPHA — "..CFG.FREQ.ATIS,
+        MsgATC("DIYARBAKIR INFORMATION ALPHA  -  "..CFG.FREQ.ATIS,
             "Information ALPHA.\n"..
             "Runway 34 left in use. Wind 340 at 8 knots. QNH 1013.\n"..
             "Temperature plus 15, dewpoint plus 04. CAVOK.\n"..
@@ -196,7 +196,7 @@ doClearance = function()
     if S.step ~= 1 then return end
     MsgPilot("Clearance, Dodge 11, F/A-18, IFR to CVN-73, DEMEB 1 Juliet. Information ALPHA.")
     After(3, function()
-        MsgATC("DIYARBAKIR CLEARANCE DELIVERY — "..CFG.FREQ.CLEARANCE,
+        MsgATC("DIYARBAKIR CLEARANCE DELIVERY  -  "..CFG.FREQ.CLEARANCE,
             "Dodge 11, cleared to CVN-73 via DEMEB 1 Juliet departure.\n"..
             "Runway 34 left. Climb 4,000 feet on SID.\n"..
             "Expect flight level 3-2-0 ten minutes after departure.\n"..
@@ -214,7 +214,7 @@ doReadback = function()
         "climb 4,000, expect FL320, squawk 3472,\n"..
         "departure 119.1, information ALPHA. Dodge 11.")
     After(2, function()
-        MsgATC("DIYARBAKIR CLEARANCE DELIVERY — "..CFG.FREQ.CLEARANCE,
+        MsgATC("DIYARBAKIR CLEARANCE DELIVERY  -  "..CFG.FREQ.CLEARANCE,
             "Dodge 11, readback correct.\n"..
             "Contact Ground 121.9 when ready. Good day.")
         S.step = 3
@@ -226,7 +226,7 @@ doGround = function()
     if S.step ~= 3 then return end
     MsgPilot("Ground, Dodge 11, requesting startup. Information ALPHA.")
     After(3, function()
-        MsgATC("DIYARBAKIR GROUND — "..CFG.FREQ.GROUND,
+        MsgATC("DIYARBAKIR GROUND  -  "..CFG.FREQ.GROUND,
             "Dodge 11, startup approved. QNH 1013.\n"..
             "Report ready to taxi.")
         S.step = 4
@@ -238,7 +238,7 @@ doTaxi = function()
     if S.step ~= 4 then return end
     MsgPilot("Ready to taxi, runway 34 left, Dodge 11.")
     After(3, function()
-        MsgATC("DIYARBAKIR GROUND — "..CFG.FREQ.GROUND,
+        MsgATC("DIYARBAKIR GROUND  -  "..CFG.FREQ.GROUND,
             "Dodge 11, taxi runway 34 left via Alpha.\n"..
             "Hold short runway 34 left. QNH 1013.\n"..
             "Contact Tower 118.1 at holding point.")
@@ -251,12 +251,12 @@ doTower = function()
     if S.step ~= 5 then return end
     MsgPilot("Tower, Dodge 11, holding short runway 34 left, ready.")
     After(3, function()
-        MsgATC("DIYARBAKIR TOWER — "..CFG.FREQ.TOWER,
+        MsgATC("DIYARBAKIR TOWER  -  "..CFG.FREQ.TOWER,
             "Dodge 11, wind 340 at 8.\n"..
             "Runway 34 left, cleared for takeoff.\n"..
             "After airborne contact Departure 119.1. Good day.")
         S.step = 6
-        -- Hint DEPARTURE now — Tower clearance means departure is imminent
+        -- Hint DEPARTURE now  -  Tower clearance means departure is imminent
         if TRT.Menu then TRT.Menu.SetHint(CFG.OWNER, "DEPARTURE") end
         MenuRefresh()
     end)
@@ -266,13 +266,13 @@ doDeparture = function()
     if S.step ~= 6 then return end
     local u = Hero()
     if not (u and u:inAir()) then
-        Msg("Not airborne yet — wheels must be up first.", 5)
+        Msg("Not airborne yet  -  wheels must be up first.", 5)
         return
     end
     MsgPilot("Departure, Dodge 11, airborne runway 34 left, passing 2,000, DEMEB 1 Juliet.")
     SetFlag(CFG.FLAG_AIRBORNE)
     After(3, function()
-        MsgATC("DIYARBAKIR DEPARTURE — "..CFG.FREQ.DEPARTURE,
+        MsgATC("DIYARBAKIR DEPARTURE  -  "..CFG.FREQ.DEPARTURE,
             "Dodge 11, radar contact. Climb and maintain flight level 3-2-0.\n"..
             "Continue DEMEB 1 Juliet. Report level.")
         S.step = 7
@@ -284,13 +284,13 @@ doLevel = function()
     if S.step ~= 7 then return end
     MsgPilot("Level flight level 3-2-0, Dodge 11.")
     After(3, function()
-        MsgATC("DIYARBAKIR DEPARTURE — "..CFG.FREQ.DEPARTURE,
+        MsgATC("DIYARBAKIR DEPARTURE  -  "..CFG.FREQ.DEPARTURE,
             "Dodge 11, maintain flight level 3-2-0. Leaving my frequency.\n"..
             "Contact Ankara Control 132.3. Good day.")
         -- Remind pilot of the upcoming freq chain (stays up long)
         After(4, function()
             Msg(
-                "── ENROUTE FREQ CHAIN ──────────────────\n"..
+                "-- ENROUTE FREQ CHAIN ------------------\n"..
                 "Ankara Control   "..CFG.FREQ.ANKARA.."  (manual)\n"..
                 "Nicosia Control  "..CFG.FREQ.NICOSIA.."  (manual)\n"..
                 "Strike           "..CFG.FREQ.STRIKE.."   COMM1 CH"..CFG.STRIKE_CH.."\n"..
@@ -298,7 +298,7 @@ doLevel = function()
                 25)
         end)
         S.step = 8
-        -- Departure phase done — drop hint, back to MISSION
+        -- Departure phase done  -  drop hint, back to MISSION
         if TRT.Menu then TRT.Menu.SetHint(CFG.OWNER, nil) end
         MenuRefresh()
         StartMonitor()
@@ -323,7 +323,7 @@ PollPosition = function()
     local u = Hero()
     if not (u and u:isExist() and u:inAir()) then return end
 
-    -- Ankara trigger — once, when within ANKARA_R_NM of ERCER
+    -- Ankara trigger  -  once, when within ANKARA_R_NM of ERCER
     if not S.ankaraFired then
         if Dist2D_NM(u, CFG.ANKARA_POS) <= CFG.ANKARA_R_NM then
             S.ankaraFired = true
@@ -332,7 +332,7 @@ PollPosition = function()
         return   -- no Nicosia check until Ankara FIR boundary announced
     end
 
-    -- Nicosia trigger — once, after Ankara FIR handoff, within NICOSIA_R_NM of GIRNE
+    -- Nicosia trigger  -  once, after Ankara FIR handoff, within NICOSIA_R_NM of GIRNE
     if S.ankaraHandoff and not S.nicosFired then
         if Dist2D_NM(u, CFG.NICOSIA_POS) <= CFG.NICOSIA_R_NM then
             S.nicosFired = true
@@ -345,14 +345,14 @@ DoAnkara = function()
     After(2, function()
         MsgPilot("Ankara Control, Dodge 11, flight level 3-2-0, ERCER.")
         After(3, function()
-            MsgATC("ANKARA CONTROL — "..CFG.FREQ.ANKARA,
+            MsgATC("ANKARA CONTROL  -  "..CFG.FREQ.ANKARA,
                 "Dodge 11, Ankara Control, identified.\n"..
                 "Maintain flight level 3-2-0.")
             -- FIR boundary handoff after delay (position-agnostic safety net)
             After(CFG.ANKARA_HANDOFF_DELAY, function()
                 if not S.ankaraHandoff then
                     S.ankaraHandoff = true
-                    MsgATC("ANKARA CONTROL — "..CFG.FREQ.ANKARA,
+                    MsgATC("ANKARA CONTROL  -  "..CFG.FREQ.ANKARA,
                         "Dodge 11, leaving Turkish FIR. Radar service terminated.\n"..
                         "Contact Nicosia Control 127.825. Good day.")
                 end
@@ -365,23 +365,23 @@ DoNicosia = function()
     After(2, function()
         MsgPilot("Nicosia Control, Dodge 11, flight level 3-2-0.")
         After(3, function()
-            MsgATC("NICOSIA CONTROL — "..CFG.FREQ.NICOSIA,
+            MsgATC("NICOSIA CONTROL  -  "..CFG.FREQ.NICOSIA,
                 "Dodge 11, Nicosia Control, identified.\n"..
                 "Maintain flight level 3-2-0.")
             After(35, function()
-                MsgATC("NICOSIA CONTROL — "..CFG.FREQ.NICOSIA,
+                MsgATC("NICOSIA CONTROL  -  "..CFG.FREQ.NICOSIA,
                     "Dodge 11, leaving my airspace.\n"..
                     "Contact Strike, 254 decimal 0. Good day.")
                 After(8, function()
                     Msg(
-                        "── STRIKE CHECK-IN ─────────────────────\n"..
+                        "-- STRIKE CHECK-IN ---------------------\n"..
                         "Strike: "..CFG.FREQ.STRIKE.." MHz\n"..
                         "COMM1 CH"..CFG.STRIKE_CH.."\n"..
                         "Check in when ready.",
                         20)
                     SetFlag(CFG.FLAG_STRIKE_RDY)
                     S.step = 9
-                    env.info("Field_Comms | flag "..CFG.FLAG_STRIKE_RDY.." set — Strike ready.")
+                    env.info("Field_Comms | flag "..CFG.FLAG_STRIKE_RDY.." set  -  Strike ready.")
                 end)
             end)
         end)
@@ -389,7 +389,7 @@ DoNicosia = function()
 end
 
 -- ══════════════════════════════════════════════════════════════
--- MENU PROVIDER — TRT.Menu.Register
+-- MENU PROVIDER  -  TRT.Menu.Register
 -- ══════════════════════════════════════════════════════════════
 
 -- Main item list: one active item per step (or empty in ambient phase)
@@ -404,7 +404,7 @@ local function MenuFn(phase)
         -- Step 6 unlocks only once airborne
         local u = Hero()
         if u and u:inAir() then
-            return { { "LTCC DEP: Airborne — contact Departure ["..CFG.FREQ.DEPARTURE.."]", doDeparture } }
+            return { { "LTCC DEP: Airborne  -  contact Departure ["..CFG.FREQ.DEPARTURE.."]", doDeparture } }
         end
         return {}   -- tower clearance given but still on ground
     elseif S.step == 7 then return { { "LTCC DEP: Report level FL320",                                doLevel     } }
@@ -419,10 +419,10 @@ local NEXT = {
     [2] = "Readback clearance",
     [3] = "Contact Ground "..CFG.FREQ.GROUND.." for startup",
     [4] = "Request taxi",
-    [5] = "Report ready at holding point — Tower "..CFG.FREQ.TOWER,
+    [5] = "Report ready at holding point  -  Tower "..CFG.FREQ.TOWER,
     [6] = "Get airborne, then contact Departure "..CFG.FREQ.DEPARTURE,
     [7] = "Report level FL320 to Departure",
-    [8] = "Monitor "..CFG.FREQ.ANKARA.." — Ankara will trigger automatically near ERCER",
+    [8] = "Monitor "..CFG.FREQ.ANKARA.."  -  Ankara will trigger automatically near ERCER",
     [9] = "Field Comms complete. Strike: "..CFG.FREQ.STRIKE.." (COMM1 CH5)",
 }
 
@@ -430,7 +430,7 @@ local function NextFn(phase)
     return NEXT[S.step] or nil
 end
 
--- Comm card — LTCC departure frequencies
+-- Comm card  -  LTCC departure frequencies
 local function CardFn()
     return {
         buttons = {
@@ -438,7 +438,7 @@ local function CardFn()
             { n = CFG.STRIKE_CH, f = CFG.FREQ.STRIKE, name = "Strike" },
         },
         lines = {
-            "── LTCC DEPARTURE FREQS ───────────",
+            "-- LTCC DEPARTURE FREQS -----------",
             "ATIS         "..CFG.FREQ.ATIS.."   manual",
             "Clearance    "..CFG.FREQ.CLEARANCE.."   manual",
             "Ground       "..CFG.FREQ.GROUND.."   manual",
@@ -453,7 +453,7 @@ local function CardFn()
 end
 
 -- ══════════════════════════════════════════════════════════════
--- EVENT HANDLER — TAKEOFF / LAND for DEPARTURE hint
+-- EVENT HANDLER  -  TAKEOFF / LAND for DEPARTURE hint
 -- ══════════════════════════════════════════════════════════════
 local FC_EH = {}
 function FC_EH:onEvent(e)
@@ -462,7 +462,7 @@ function FC_EH:onEvent(e)
     if not ok or name ~= CFG.HERO_NAME then return end
 
     if e.id == world.event.S_EVENT_TAKEOFF then
-        -- Hero now airborne; DEPARTURE hint active while step 6–7
+        -- Hero now airborne; DEPARTURE hint active while step 6-7
         if TRT.Menu and S.step >= 5 and S.step <= 7 then
             TRT.Menu.SetHint(CFG.OWNER, "DEPARTURE")
         end
@@ -486,7 +486,7 @@ local function Init()
     TRT.Menu.RegisterCard(CFG.OWNER, CardFn, CFG.ORDER)
     -- Start with no hint: on DECK the hero drives phase = "DECK" regardless.
     -- DEPARTURE hint is set in doTower (tower clearance given) and event handler.
-    env.info("Field_Comms v1.0.0 | loaded — LTCC departure module (group: "..CFG.GROUP_NAME..")")
+    env.info("Field_Comms v1.0.0 | loaded  -  LTCC departure module (group: "..CFG.GROUP_NAME..")")
 end
 
 -- Small delay so Menu_Manager is ready
