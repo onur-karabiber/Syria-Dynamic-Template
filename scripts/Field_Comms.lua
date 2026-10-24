@@ -1,4 +1,4 @@
--- Field_Comms.lua | v1.2.0
+-- Field_Comms.lua | v1.3.0
 --[[
   LTCC (Diyarbakir) -> CVN-73 departure radio module
   TRT Syria Dynamic Template  -  transit scenario (land-to-carrier)
@@ -27,9 +27,15 @@
     <= MARSHAL_NM from Mother -> switch Marshal 261.0 button 16
     From there CV_Comms / AIRBOSS owns the recovery  -  Field_Comms is done.
 
-  READBACKS: every ATC transmission that carries an instruction is followed
-  by an automatic pilot read-back (MsgATC's 3rd argument), READBACK_DELAY s
-  after the controller.
+  READBACKS: every controller instruction is followed by a pilot read-back,
+  queued as its own transmission. The queue starts each one only after the
+  previous clip finishes, so a read-back can never talk over the controller.
+
+  VOICE: clips are rendered with  python tts/make_clips.py --set fc
+  (tts/fc_clips.csv -> src/Sounds/FC/, lengths -> tts/fc_audio_table.lua,
+  whose AUDIO = { ... } block is pasted over CFG.AUDIO below). build.py packs
+  src/Sounds/ into the .miz. With CFG.AUDIO empty the module runs text-only,
+  assuming CFG.NO_AUDIO_DUR of airtime per transmission.
 
   FLAGS (200-range reserved for Field_Comms):
     203 = airborne / Departure contacted
@@ -88,7 +94,15 @@ local CFG = {
 
     ATC_DUR        = 20,               -- s, ATC message display
     PILOT_DUR      = 8,                -- s, pilot read-back display
-    READBACK_DELAY = 4,                -- s, controller -> pilot read-back gap
+
+    -- Radio. Clips live in the .miz at SND_DIR; build.py packs src/Sounds/FC/.
+    -- Render them with:  python tts/make_clips.py --set fc
+    SND_DIR   = "Sounds/FC/",
+    TX_POWER  = 100,
+    TX_GAP    = 0.5,                   -- s before a queued transmission starts
+    REPLY_GAP = 1.2,                   -- s before a controller answers the pilot
+    NO_AUDIO_DUR = 4,                  -- s assumed airtime when a clip is missing
+                                       -- (keeps the text-only flow readable)
 
     FLAG_AIRBORNE   = 203,
     FLAG_STRIKE_RDY = 206,
@@ -109,7 +123,29 @@ local CFG = {
     -- Safety net: if the player never enters the GENOS radius (route
     -- deviation), hand to Strike once this close to the boat anyway.
     STRIKE_FALLBACK_NM = 120,
+
+    -- Clip lengths. GENERATED  -  paste the AUDIO = { ... } block from
+    -- tts/fc_audio_table.lua over this one after every render.
+    -- Empty is valid: every transmission then falls back to text only.
+    AUDIO = {
+    },
 }
+
+-- Radio channels. One source of truth for the frequencies is CFG.FREQ above.
+local CHAN = {
+    LTCC_INFO = { f = CFG.FREQ.ATIS,      name = "DIYARBAKIR INFORMATION ALPHA" },
+    LTCC_DEL  = { f = CFG.FREQ.CLEARANCE, name = "DIYARBAKIR CLEARANCE DELIVERY" },
+    LTCC_GND  = { f = CFG.FREQ.GROUND,    name = "DIYARBAKIR GROUND" },
+    LTCC_TWR  = { f = CFG.FREQ.TOWER,     name = "DIYARBAKIR TOWER" },
+    LTCC_DEP  = { f = CFG.FREQ.DEPARTURE, name = "DIYARBAKIR DEPARTURE" },
+    ANKARA    = { f = CFG.FREQ.ANKARA,    name = "ANKARA CONTROL" },
+    NICOSIA   = { f = CFG.FREQ.NICOSIA,   name = "NICOSIA CONTROL" },
+    STRIKE    = { f = CFG.FREQ.STRIKE,    name = "STRIKE" },
+}
+for _, c in pairs(CHAN) do
+    c.hz  = tonumber(c.f) * 1e6
+    c.mod = 0                          -- 0 = AM (both the VHF civil chain and Strike)
+end
 
 -- ==============================================================
 -- STATE
@@ -121,6 +157,7 @@ local S = {
     nicosFired    = false, -- Nicosia check-in done
     strikeHanded  = false, -- Nicosia released us to Strike
     marshalHanded = false, -- Strike released us to Marshal
+    busy          = false, -- an F10 exchange is mid-queue, see Begin/Done
 }
 --[[
   step 0  pre-ATIS                    (DECK)
@@ -160,27 +197,100 @@ local function After(sec, fn)
     end, nil, timer.getTime() + sec)
 end
 
-local function MsgPilot(text)
-    Msg("[PILOT] "..CFG.CALLSIGN..": "..text, CFG.PILOT_DUR)
-end
-
--- Controller transmission. If 'readback' is given, the pilot answers it
--- automatically READBACK_DELAY seconds later.
-local function MsgATC(header, body, readback)
-    Msg("["..header.."]\n"..body, CFG.ATC_DUR)
-    if readback then
-        After(CFG.READBACK_DELAY, function() MsgPilot(readback) end)
-    end
-end
-
-local function SetFlag(n)
-    trigger.action.setUserFlag(n, true)
-end
-
 local function Hero()
     local u = Unit.getByName(CFG.HERO_NAME)
     if u and u:isExist() then return u end
     return nil
+end
+
+-- ==============================================================
+-- TRANSMISSION QUEUE
+-- ==============================================================
+-- Transmissions are serialised: the next one starts only after the previous
+-- clip has finished playing. That is what keeps a read-back from talking over
+-- the controller  -  a fixed delay cannot, because the clips differ in length
+-- (the ATIS runs ~15 s, an acknowledgement ~2 s).
+--
+-- With no clip for an id the queue still runs, assuming NO_AUDIO_DUR of
+-- airtime, so the module degrades to exactly the old text-only behaviour.
+
+local RX = { q = {}, busy = false, n = 0 }
+
+--- Key one clip on a channel. Returns its airtime (s), or 0 if there is none.
+local function Air(clip, chKey)
+    local a, ch, u = CFG.AUDIO[clip], CHAN[chKey], Hero()
+    if not (a and ch and u) then return 0 end
+    RX.n = RX.n + 1
+    local p = u:getPoint()
+    -- Transmitted 30 m above the player, as CV_Comms does: no range / LOS loss.
+    trigger.action.radioTransmission(CFG.SND_DIR..clip..".ogg",
+        { x = p.x, y = p.y + 30, z = p.z },
+        ch.mod, false, ch.hz, CFG.TX_POWER, "FC_"..RX.n)
+    return a.len or 0
+end
+
+local QNext
+
+--- Queue a transmission.
+-- @param who   "PILOT" or a channel key (decides the subtitle label)
+-- @param chKey channel the transmission is keyed on
+-- @param clip  clip id in CFG.AUDIO / SND_DIR (nil = subtitle only)
+-- @param text  subtitle
+-- @param fn    optional callback, fires when the transmission ends
+-- @param gap   s before this transmission starts
+local function Q(who, chKey, clip, text, fn, gap)
+    RX.q[#RX.q + 1] = { who = who, ch = chKey, clip = clip, text = text, fn = fn, gap = gap }
+    if not RX.busy then QNext() end
+end
+
+QNext = function()
+    local x = table.remove(RX.q, 1)
+    if not x then RX.busy = false; return end
+    RX.busy = true
+
+    local function go()
+        local ch = CHAN[x.ch]
+        -- text may be a function: evaluated at transmit time, not queue time,
+        -- so dynamic numbers (Mother bearing, recovery case) are current.
+        local text = (type(x.text) == "function") and x.text() or x.text
+        if x.who == "PILOT" then
+            Msg("[PILOT] "..CFG.CALLSIGN..": "..text, CFG.PILOT_DUR)
+        else
+            Msg("["..(ch and ch.name or x.ch).."  -  "..(ch and ch.f or "").."]\n"..text,
+                CFG.ATC_DUR)
+        end
+        local len = Air(x.clip, x.ch)
+        if len <= 0 then len = CFG.NO_AUDIO_DUR end
+        timer.scheduleFunction(function()
+            if x.fn then
+                local ok, err = pcall(x.fn)
+                if not ok then env.info("Field_Comms | callback error: "..tostring(err)) end
+            end
+            QNext()
+            return nil
+        end, nil, timer.getTime() + len + 0.05)
+    end
+
+    local gap = x.gap or CFG.TX_GAP
+    if gap > 0 then
+        timer.scheduleFunction(function() go() return nil end, nil, timer.getTime() + gap)
+    else
+        go()
+    end
+end
+
+--- Pilot transmission on chKey.
+local function Pilot(chKey, clip, text, fn)
+    Q("PILOT", chKey, clip, text, fn, 0.3)
+end
+
+--- Controller transmission on chKey.
+local function Ctl(chKey, clip, text, fn)
+    Q(chKey, chKey, clip, text, fn, CFG.REPLY_GAP)
+end
+
+local function SetFlag(n)
+    trigger.action.setUserFlag(n, true)
 end
 
 -- Distance in NM from unit to a mission-file coord {x, y}
@@ -249,143 +359,155 @@ local doStrike, DoMarshalHandoff
 -- ==============================================================
 -- PHASE CALLBACKS  -  F10-triggered, sequential
 -- ==============================================================
+-- Each exchange is queued, so a read-back always follows the controller's
+-- clip instead of racing it. Step changes ride the callback of the last
+-- transmission in the exchange.
+--
+-- An exchange now spans the whole radio dialogue (up to ~40 s with voice),
+-- and the step only advances at its end. Begin/Done bracket it so the F10
+-- item cannot be clicked again mid-exchange and queue the whole thing twice.
+
+--- Open an exchange: hides the F10 item until Done() runs.
+local function Begin()
+    S.busy = true
+    MenuRefresh()
+end
+
+--- Close an exchange, advancing to 'step'. 'extra' runs before the refresh.
+local function Done(step, extra)
+    return function()
+        S.step = step
+        S.busy = false
+        if extra then extra() end
+        MenuRefresh()
+    end
+end
 
 doATIS = function()
-    if S.step ~= 0 then return end
-    MsgPilot("Diyarbakir Information, Dodge 11, request ATIS.")
-    After(2.5, function()
-        -- Information broadcast: acknowledged on next contact, no read-back
-        MsgATC("DIYARBAKIR INFORMATION ALPHA  -  "..CFG.FREQ.ATIS,
-            "Information ALPHA.\n"..
-            "Runway 34 left in use. Wind 340 at 8 knots. QNH 1013.\n"..
-            "Temperature plus 15, dewpoint plus 04. CAVOK.\n"..
-            "Transition altitude 10,000 feet.\n"..
-            "Advise ALPHA on initial contact.")
-        S.step = 1
-        MenuRefresh()
-    end)
+    if S.step ~= 0 or S.busy then return end
+    Begin()
+    Pilot("LTCC_INFO", "p_atis_req", "Diyarbakir Information, Dodge 11, request ATIS.")
+    -- Information broadcast: acknowledged on next contact, no read-back
+    Ctl("LTCC_INFO", "atis",
+        "Information ALPHA.\n"..
+        "Runway 34 left in use. Wind 340 at 8 knots. QNH 1013.\n"..
+        "Temperature plus 15, dewpoint plus 04. CAVOK.\n"..
+        "Transition altitude 10,000 feet.\n"..
+        "Advise ALPHA on initial contact.",
+        Done(1))
 end
 
 doClearance = function()
-    if S.step ~= 1 then return end
-    MsgPilot("Clearance, Dodge 11, F/A-18, IFR to CVN-73, DEMEB 1 Juliet. Information ALPHA.")
-    After(3, function()
-        -- Read-back is the player's own next action (step 2), not automatic
-        MsgATC("DIYARBAKIR CLEARANCE DELIVERY  -  "..CFG.FREQ.CLEARANCE,
-            "Dodge 11, cleared to CVN-73 via DEMEB 1 Juliet departure.\n"..
-            "Runway 34 left. Climb 4,000 feet on SID.\n"..
-            "Expect flight level 3-2-0 ten minutes after departure.\n"..
-            "Squawk 3-4-7-2. Departure frequency 119.1.\n"..
-            "Information ALPHA. Readback.")
-        S.step = 2
-        MenuRefresh()
-    end)
+    if S.step ~= 1 or S.busy then return end
+    Begin()
+    Pilot("LTCC_DEL", "p_del_req",
+        "Clearance, Dodge 11, Hornet, IFR to CVN-73, DEMEB 1 Juliet. Information ALPHA.")
+    -- Read-back is the player's own next action (step 2), not automatic
+    Ctl("LTCC_DEL", "del_clr",
+        "Dodge 11, cleared to CVN-73 via DEMEB 1 Juliet departure.\n"..
+        "Runway 34 left. Climb 4,000 feet on SID.\n"..
+        "Expect flight level 3-2-0 ten minutes after departure.\n"..
+        "Squawk 3-4-7-2. Departure frequency 119.1.\n"..
+        "Information ALPHA. Readback.",
+        Done(2))
 end
 
 doReadback = function()
-    if S.step ~= 2 then return end
-    MsgPilot(
+    if S.step ~= 2 or S.busy then return end
+    Begin()
+    Pilot("LTCC_DEL", "p_del_rb",
         "Cleared CVN-73, DEMEB 1 Juliet, runway 34 left,\n"..
         "climb 4,000, expect FL320, squawk 3472,\n"..
         "departure 119.1, information ALPHA. Dodge 11.")
-    After(2, function()
-        MsgATC("DIYARBAKIR CLEARANCE DELIVERY  -  "..CFG.FREQ.CLEARANCE,
-            "Dodge 11, readback correct.\n"..
-            "Contact Ground 121.9 when ready. Good day.",
-            "Ground 121.9. Dodge 11, good day.")
-        S.step = 3
-        MenuRefresh()
-    end)
+    Ctl("LTCC_DEL", "del_rb_ok",
+        "Dodge 11, readback correct.\n"..
+        "Contact Ground 121.9 when ready. Good day.")
+    Pilot("LTCC_DEL", "p_del_ack", "Ground 121.9. Dodge 11, good day.",
+        Done(3))
 end
 
 -- Ground: radio check -> five by five -> startup request -> approval -> read-back
 doGround = function()
-    if S.step ~= 3 then return end
-    MsgPilot("Diyarbakir Ground, Dodge 11, radio check.")
-    After(3, function()
-        MsgATC("DIYARBAKIR GROUND  -  "..CFG.FREQ.GROUND,
-            "Dodge 11, Diyarbakir Ground, read you five by five.")
-        After(4, function()
-            MsgPilot("Read you five by five also. Dodge 11, request startup, information ALPHA.")
-            After(3, function()
-                MsgATC("DIYARBAKIR GROUND  -  "..CFG.FREQ.GROUND,
-                    "Dodge 11, startup approved. QNH 1013.\n"..
-                    "Report ready to taxi.",
-                    "Startup approved, QNH 1013, will report ready to taxi. Dodge 11.")
-                S.step = 4
-                MenuRefresh()
-            end)
-        end)
-    end)
+    if S.step ~= 3 or S.busy then return end
+    Begin()
+    Pilot("LTCC_GND", "p_gnd_radiochk", "Diyarbakir Ground, Dodge 11, radio check.")
+    Ctl("LTCC_GND", "gnd_5x5", "Dodge 11, Diyarbakir Ground, read you five by five.")
+    Pilot("LTCC_GND", "p_gnd_startup",
+        "Read you five by five also. Dodge 11, request startup, information ALPHA.")
+    Ctl("LTCC_GND", "gnd_startup_ok",
+        "Dodge 11, startup approved. QNH 1013.\n"..
+        "Report ready to taxi.")
+    Pilot("LTCC_GND", "p_gnd_startup_rb",
+        "Startup approved, QNH 1013, will report ready to taxi. Dodge 11.",
+        Done(4))
 end
 
 doTaxi = function()
-    if S.step ~= 4 then return end
-    MsgPilot("Ground, Dodge 11, ready to taxi, runway 34 left.")
-    After(3, function()
-        MsgATC("DIYARBAKIR GROUND  -  "..CFG.FREQ.GROUND,
-            "Dodge 11, taxi runway 34 left via Alpha.\n"..
-            "Hold short runway 34 left. QNH 1013.\n"..
-            "Contact Tower 118.1 at holding point.",
-            "Taxi runway 34 left via Alpha, hold short 34 left,\n"..
-            "Tower 118.1 at the holding point. Dodge 11.")
-        S.step = 5
-        MenuRefresh()
-    end)
+    if S.step ~= 4 or S.busy then return end
+    Begin()
+    Pilot("LTCC_GND", "p_gnd_taxi_req", "Ground, Dodge 11, ready to taxi, runway 34 left.")
+    Ctl("LTCC_GND", "gnd_taxi",
+        "Dodge 11, taxi runway 34 left via Alpha.\n"..
+        "Hold short runway 34 left. QNH 1013.\n"..
+        "Contact Tower 118.1 at holding point.")
+    Pilot("LTCC_GND", "p_gnd_taxi_rb",
+        "Taxi runway 34 left via Alpha, hold short 34 left,\n"..
+        "Tower 118.1 at the holding point. Dodge 11.",
+        Done(5))
 end
 
 doTower = function()
-    if S.step ~= 5 then return end
-    MsgPilot("Tower, Dodge 11, holding short runway 34 left, ready for departure.")
-    After(3, function()
-        MsgATC("DIYARBAKIR TOWER  -  "..CFG.FREQ.TOWER,
-            "Dodge 11, wind 340 at 8.\n"..
-            "Runway 34 left, cleared for takeoff.\n"..
-            "After airborne contact Departure 119.1. Good day.",
-            "Runway 34 left cleared for takeoff, Departure 119.1 airborne. Dodge 11.")
-        S.step = 6
-        -- Hint DEPARTURE now  -  Tower clearance means departure is imminent
-        if TRT.Menu then TRT.Menu.SetHint(CFG.OWNER, "DEPARTURE") end
-        MenuRefresh()
-    end)
+    if S.step ~= 5 or S.busy then return end
+    Begin()
+    Pilot("LTCC_TWR", "p_twr_ready",
+        "Tower, Dodge 11, holding short runway 34 left, ready for departure.")
+    Ctl("LTCC_TWR", "twr_clr_to",
+        "Dodge 11, wind 340 at 8.\n"..
+        "Runway 34 left, cleared for takeoff.\n"..
+        "After airborne contact Departure 119.1. Good day.")
+    Pilot("LTCC_TWR", "p_twr_rb",
+        "Runway 34 left cleared for takeoff, Departure 119.1 airborne. Dodge 11.",
+        -- Tower clearance means departure is imminent
+        Done(6, function()
+            if TRT.Menu then TRT.Menu.SetHint(CFG.OWNER, "DEPARTURE") end
+        end))
 end
 
 doDeparture = function()
-    if S.step ~= 6 then return end
+    if S.step ~= 6 or S.busy then return end
+    Begin()
     local u = Hero()
     if not (u and u:inAir()) then
         Msg("Not airborne yet  -  wheels must be up first.", 5)
         return
     end
-    MsgPilot("Departure, Dodge 11, airborne runway 34 left, passing 2,000, DEMEB 1 Juliet.")
+    Pilot("LTCC_DEP", "p_dep_checkin",
+        "Departure, Dodge 11, airborne runway 34 left, passing 2,000, DEMEB 1 Juliet.")
     SetFlag(CFG.FLAG_AIRBORNE)
-    After(3, function()
-        MsgATC("DIYARBAKIR DEPARTURE  -  "..CFG.FREQ.DEPARTURE,
-            "Dodge 11, radar contact. Climb and maintain flight level 3-2-0.\n"..
-            "Continue DEMEB 1 Juliet. Report level.",
-            "Climb and maintain flight level 3-2-0, DEMEB 1 Juliet,\n"..
-            "will report level. Dodge 11.")
-        S.step = 7
-        MenuRefresh()
-    end)
+    Ctl("LTCC_DEP", "dep_radar_contact",
+        "Dodge 11, radar contact. Climb and maintain flight level 3-2-0.\n"..
+        "Continue DEMEB 1 Juliet. Report level.")
+    Pilot("LTCC_DEP", "p_dep_climb_rb",
+        "Climb and maintain flight level 3-2-0, DEMEB 1 Juliet,\n"..
+        "will report level. Dodge 11.",
+        Done(7))
 end
 
 doLevel = function()
-    if S.step ~= 7 then return end
-    MsgPilot("Departure, Dodge 11, level flight level 3-2-0.")
-    After(3, function()
-        MsgATC("DIYARBAKIR DEPARTURE  -  "..CFG.FREQ.DEPARTURE,
-            "Dodge 11, maintain flight level 3-2-0. Leaving my frequency.\n"..
-            "Contact Ankara Control 132.3. Good day.",
-            "Ankara Control 132.3. Dodge 11, good day.")
-        S.step = 8
-        -- Departure phase done  -  drop hint, back to MISSION
-        if TRT.Menu then TRT.Menu.SetHint(CFG.OWNER, nil) end
-        MenuRefresh()
-        StartMonitor()
-        -- Pilot switches and checks in right away, as on the real frequency
-        After(CFG.ANKARA_DELAY, DoAnkara)
-    end)
+    if S.step ~= 7 or S.busy then return end
+    Begin()
+    Pilot("LTCC_DEP", "p_dep_level", "Departure, Dodge 11, level flight level 3-2-0.")
+    Ctl("LTCC_DEP", "dep_handoff_ank",
+        "Dodge 11, maintain flight level 3-2-0. Leaving my frequency.\n"..
+        "Contact Ankara Control 132.3. Good day.")
+    Pilot("LTCC_DEP", "p_dep_ank_ack", "Ankara Control 132.3. Dodge 11, good day.",
+        Done(8, function()
+            -- Departure phase done  -  drop hint, back to MISSION
+            if TRT.Menu then TRT.Menu.SetHint(CFG.OWNER, nil) end
+            StartMonitor()
+            -- Pilot switches and checks in right away, as on the real frequency
+            After(CFG.ANKARA_DELAY, DoAnkara)
+        end))
 end
 
 -- ==============================================================
@@ -438,77 +560,80 @@ end
 DoAnkara = function()
     if S.ankaraFired or S.step ~= 8 then return end
     S.ankaraFired = true
-    MsgPilot("Ankara Control, Dodge 11, flight level 3-2-0, DEMEB 1 Juliet, en route CVN-73.")
-    After(3, function()
-        MsgATC("ANKARA CONTROL  -  "..CFG.FREQ.ANKARA,
-            "Dodge 11, Ankara Control, identified.\n"..
-            "Maintain flight level 3-2-0. Route direct VESAR.",
-            "Maintain flight level 3-2-0, direct VESAR. Dodge 11.")
-    end)
+    Pilot("ANKARA", "p_ank_checkin",
+        "Ankara Control, Dodge 11, flight level 3-2-0, DEMEB 1 Juliet, en route CVN-73.")
+    Ctl("ANKARA", "ank_identified",
+        "Dodge 11, Ankara Control, identified.\n"..
+        "Maintain flight level 3-2-0. Route direct VESAR.")
+    Pilot("ANKARA", "p_ank_rb", "Maintain flight level 3-2-0, direct VESAR. Dodge 11.")
 end
 
 DoFIRHandoff = function()
-    MsgATC("ANKARA CONTROL  -  "..CFG.FREQ.ANKARA,
+    Ctl("ANKARA", "ank_fir_handoff",
         "Dodge 11, approaching Ankara FIR boundary at VESAR.\n"..
         "Radar service terminated. Squawk 2000 at the boundary.\n"..
-        "Contact Nicosia Control 127.825. Good day.",
-        "Squawk 2000, Nicosia Control 127.825. Dodge 11, good day.")
-    After(CFG.NICOSIA_DELAY, DoNicosia)
+        "Contact Nicosia Control 127.825. Good day.")
+    Pilot("ANKARA", "p_ank_fir_ack",
+        "Squawk 2000, Nicosia Control 127.825. Dodge 11, good day.",
+        function() After(CFG.NICOSIA_DELAY, DoNicosia) end)
 end
 
 DoNicosia = function()
     if S.nicosFired or S.step ~= 8 then return end
     S.nicosFired = true
-    MsgPilot("Nicosia Control, Dodge 11, flight level 3-2-0, VESAR, estimating GIRNE.")
-    After(3, function()
-        MsgATC("NICOSIA CONTROL  -  "..CFG.FREQ.NICOSIA,
-            "Dodge 11, Nicosia Control, identified.\n"..
-            "Maintain flight level 3-2-0. Cleared GIRNE, VADUS, GENOS.",
-            "Maintain flight level 3-2-0, cleared GIRNE VADUS GENOS. Dodge 11.")
-    end)
+    Pilot("NICOSIA", "p_nic_checkin",
+        "Nicosia Control, Dodge 11, flight level 3-2-0, VESAR, estimating GIRNE.")
+    Ctl("NICOSIA", "nic_identified",
+        "Dodge 11, Nicosia Control, identified.\n"..
+        "Maintain flight level 3-2-0. Cleared GIRNE, VADUS, GENOS.")
+    Pilot("NICOSIA", "p_nic_rb",
+        "Maintain flight level 3-2-0, cleared GIRNE VADUS GENOS. Dodge 11.")
 end
 
 DoStrikeHandoff = function()
-    MsgATC("NICOSIA CONTROL  -  "..CFG.FREQ.NICOSIA,
+    Ctl("NICOSIA", "nic_strike_handoff",
         "Dodge 11, approaching GENOS, leaving controlled airspace.\n"..
-        "Radar service terminated. Contact Strike, 254 decimal 0. Good day.",
-        "Strike 254.0. Dodge 11, good day.")
-    After(10, function()
-        Msg(
-            "-- STRIKE CHECK-IN ---------------------\n"..
-            "Strike: "..CFG.FREQ.STRIKE.." MHz\n"..
-            "COMM1 CH"..CFG.STRIKE_CH.."\n"..
-            "Check in via F10 > COMMS when ready.",
-            20)
-        SetFlag(CFG.FLAG_STRIKE_RDY)
-        S.step = 9
-        MenuRefresh()
-        env.info("Field_Comms | flag "..CFG.FLAG_STRIKE_RDY.." set  -  Strike ready.")
-    end)
+        "Radar service terminated. Contact Strike, 254 decimal 0. Good day.")
+    Pilot("NICOSIA", "p_nic_strike_ack", "Strike 254.0. Dodge 11, good day.",
+        function()
+            Msg(
+                "-- STRIKE CHECK-IN ---------------------\n"..
+                "Strike: "..CFG.FREQ.STRIKE.." MHz\n"..
+                "COMM1 CH"..CFG.STRIKE_CH.."\n"..
+                "Check in via F10 > COMMS when ready.",
+                20)
+            SetFlag(CFG.FLAG_STRIKE_RDY)
+            S.step = 9
+            MenuRefresh()
+            env.info("Field_Comms | flag "..CFG.FLAG_STRIKE_RDY.." set  -  Strike ready.")
+        end)
 end
 
 -- ==============================================================
 -- RECOVERY HANDOVER  -  Strike -> Marshal, then CV_Comms owns it
 -- ==============================================================
+-- Mother bearing / range, angels and state are dynamic, so they live in the
+-- subtitle only; the clip carries the static frame (same convention as the
+-- CAS1 / CV sets).
 
 doStrike = function()
-    if S.step ~= 9 then return end
+    if S.step ~= 9 or S.busy then return end
     local u = Hero()
     if not u then return end
+    Begin()
 
     local brg, nm = MotherBrgRng(u)
+    local txt
     if brg then
-        MsgPilot(string.format("Strike, Dodge 11, Mother %s for %d, angels %d, state %s.",
-            brg, nm, Angels(u), State(u)))
+        txt = string.format("Strike, Dodge 11, Mother %s for %d, angels %d, state %s.",
+            brg, nm, Angels(u), State(u))
     else
-        MsgPilot(string.format("Strike, Dodge 11, inbound Mother, angels %d, state %s.",
-            Angels(u), State(u)))
+        txt = string.format("Strike, Dodge 11, inbound Mother, angels %d, state %s.",
+            Angels(u), State(u))
     end
+    Pilot("STRIKE", "p_str_checkin", txt)
 
-    S.step = 10
-    MenuRefresh()
-
-    After(3, function()
+    Ctl("STRIKE", "str_radar_contact", function()
         local hu = Hero()
         local bb, bn
         if hu then bb, bn = MotherBrgRng(hu) end
@@ -516,33 +641,34 @@ doStrike = function()
         local case   = RecoveryCase()
         local caseTxt = case and string.format("Expect CASE %s recovery.\n",
             (case == 1 and "one") or (case == 2 and "two") or "three") or ""
-
-        MsgATC("STRIKE  -  "..CFG.FREQ.STRIKE,
-            "Dodge 11, Strike, radar contact. Squawk "..CFG.STRIKE_SQUAWK..".\n"..
-            mother..caseTxt..
-            "Switch Marshal, button "..CFG.MARSHAL_BTN..", "..CFG.MARSHAL_FREQ..
-            ", at "..CFG.MARSHAL_NM.." miles.",
-            "Squawk "..CFG.STRIKE_SQUAWK..", Marshal button "..CFG.MARSHAL_BTN..
-            " at "..CFG.MARSHAL_NM.." miles. Dodge 11.")
+        return "Dodge 11, Strike, radar contact. Squawk "..CFG.STRIKE_SQUAWK..".\n"..
+               mother..caseTxt..
+               "Switch Marshal, button "..CFG.MARSHAL_BTN..", "..CFG.MARSHAL_FREQ..
+               ", at "..CFG.MARSHAL_NM.." miles."
     end)
+    Pilot("STRIKE", "p_str_rb",
+        "Squawk "..CFG.STRIKE_SQUAWK..", Marshal button "..CFG.MARSHAL_BTN..
+        " at "..CFG.MARSHAL_NM.." miles. Dodge 11.",
+        Done(10))
 end
 
 DoMarshalHandoff = function()
-    MsgATC("STRIKE  -  "..CFG.FREQ.STRIKE,
+    Ctl("STRIKE", "str_switch_marshal",
         "Dodge 11, "..CFG.MARSHAL_NM.." miles. Switch Marshal,\n"..
-        "button "..CFG.MARSHAL_BTN..", "..CFG.MARSHAL_FREQ..". Good day.",
-        "Marshal button "..CFG.MARSHAL_BTN..". Dodge 11, good day.")
-    After(10, function()
-        Msg(
-            "-- MARSHAL ----------------------------\n"..
-            "Marshal: "..CFG.MARSHAL_FREQ.."  button "..CFG.MARSHAL_BTN.."\n"..
-            "Recovery comms from here: F10 > COMMS (carrier module).\n"..
-            "LTCC departure module complete.",
-            20)
-        S.step = 11
-        MenuRefresh()
-        env.info("Field_Comms | handed to Marshal  -  module complete.")
-    end)
+        "button "..CFG.MARSHAL_BTN..", "..CFG.MARSHAL_FREQ..". Good day.")
+    Pilot("STRIKE", "p_str_marshal_ack",
+        "Marshal button "..CFG.MARSHAL_BTN..". Dodge 11, good day.",
+        function()
+            Msg(
+                "-- MARSHAL ----------------------------\n"..
+                "Marshal: "..CFG.MARSHAL_FREQ.."  button "..CFG.MARSHAL_BTN.."\n"..
+                "Recovery comms from here: F10 > COMMS (carrier module).\n"..
+                "LTCC departure module complete.",
+                20)
+            S.step = 11
+            MenuRefresh()
+            env.info("Field_Comms | handed to Marshal  -  module complete.")
+        end)
 end
 
 -- ==============================================================
@@ -551,6 +677,9 @@ end
 
 -- Main item list: one active item per step (empty while enroute)
 local function MenuFn(phase)
+    -- Mid-exchange the item is withdrawn, so a second click cannot queue the
+    -- whole dialogue again. Done() puts the next one up.
+    if S.busy then return {} end
     if     S.step == 0 then return { { "LTCC INFO: Get ATIS ["..CFG.FREQ.ATIS.."]",                   doATIS      } }
     elseif S.step == 1 then return { { "LTCC DEL: Request IFR clearance ["..CFG.FREQ.CLEARANCE.."]", doClearance } }
     elseif S.step == 2 then return { { "LTCC DEL: Readback clearance",                                doReadback  } }
@@ -588,6 +717,7 @@ local NEXT = {
 }
 
 local function NextFn(phase)
+    if S.busy then return "Transmitting  -  stand by" end
     -- Enroute: name the next event instead of a generic line
     if S.step == 8 then
         if not S.ankaraFired   then return "Switching Ankara Control "..CFG.FREQ.ANKARA   end
@@ -657,7 +787,7 @@ world.addEventHandler(FC_EH)
 -- ==============================================================
 local function Init()
     if not TRT.Menu then
-        env.info("Field_Comms v1.2.0 | ERROR: TRT.Menu not found. "..
+        env.info("Field_Comms v1.3.0 | ERROR: TRT.Menu not found. "..
                  "Load Menu_Manager before Field_Comms. No F10 menus will appear.")
         return
     end
@@ -666,7 +796,7 @@ local function Init()
     TRT.Menu.RegisterCard(CFG.OWNER, CardFn, CFG.ORDER)
     -- Start with no hint: on DECK the hero drives phase = "DECK" regardless.
     -- DEPARTURE hint is set in doTower (tower clearance given) and event handler.
-    env.info("Field_Comms v1.2.0 | loaded  -  LTCC departure module (group: "..CFG.GROUP_NAME..")")
+    env.info("Field_Comms v1.3.0 | loaded  -  LTCC departure module (group: "..CFG.GROUP_NAME..")")
 end
 
 -- Small delay so Menu_Manager is ready

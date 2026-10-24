@@ -1,0 +1,71 @@
+# fc_clips.csv | Field_Comms (LTCC -> CVN-73 transit) clip set
+# id;agency;spoken text
+#
+# Render:  python tts/make_clips.py --set fc
+#   -> src/Sounds/FC/<id>.ogg  +  tts/fc_audio_table.lua (paste into Field_Comms CFG.AUDIO)
+#
+# Each clip is a COMPLETE transmission: make_clips' radio() chain already bakes
+# the key-up / key-down squelch bursts in, so no sq_up / sq_dn chaining here.
+#
+# Only the STATIC part is voiced. Mother bearing/range, angels and state stay
+# on-screen (same convention as clips.csv / cv_clips.csv).
+#
+# Piper spells ALL-CAPS letter by letter. So fix names are Title case (Vesar,
+# Girne, Genos, Demeb, Vadus) while QNH / IFR / CVN stay capitals on purpose --
+# controllers do spell those out.
+
+# ---- LTCC INFORMATION (ATIS 126.600) ----
+p_atis_req;PILOT>LTCC_INFO;Diyarbakir Information, Dodge one one, request Atis.
+atis;LTCC_INFO;Diyarbakir Information Alpha. Runway three four left in use. Wind three four zero at eight knots. QNH one zero one three. Temperature plus one five, dewpoint plus zero four. Cavok. Transition altitude one zero thousand feet. Advise Alpha on initial contact.
+
+# ---- LTCC CLEARANCE DELIVERY (121.800) ----
+p_del_req;PILOT>LTCC_DEL;Clearance, Dodge one one, Hornet, IFR to CVN seven three, Demeb one Juliet. Information Alpha.
+del_clr;LTCC_DEL;Dodge one one, cleared to CVN seven three via Demeb one Juliet departure. Runway three four left. Climb four thousand feet on Sid. Expect flight level three two zero one zero minutes after departure. Squawk three four seven two. Departure frequency one one niner decimal one. Information Alpha. Readback.
+p_del_rb;PILOT>LTCC_DEL;Cleared CVN seven three, Demeb one Juliet, runway three four left, climb four thousand, expect flight level three two zero, squawk three four seven two, departure one one niner decimal one, information Alpha. Dodge one one.
+del_rb_ok;LTCC_DEL;Dodge one one, readback correct. Contact Ground one two one decimal niner when ready. Good day.
+p_del_ack;PILOT>LTCC_DEL;Ground one two one decimal niner. Dodge one one, good day.
+
+# ---- LTCC GROUND (121.900) ----
+p_gnd_radiochk;PILOT>LTCC_GND;Diyarbakir Ground, Dodge one one, radio check.
+gnd_5x5;LTCC_GND;Dodge one one, Diyarbakir Ground, read you five by five.
+p_gnd_startup;PILOT>LTCC_GND;Read you five by five also. Dodge one one, request startup, information Alpha.
+gnd_startup_ok;LTCC_GND;Dodge one one, startup approved. QNH one zero one three. Report ready to taxi.
+p_gnd_startup_rb;PILOT>LTCC_GND;Startup approved, QNH one zero one three, will report ready to taxi. Dodge one one.
+p_gnd_taxi_req;PILOT>LTCC_GND;Ground, Dodge one one, ready to taxi, runway three four left.
+gnd_taxi;LTCC_GND;Dodge one one, taxi runway three four left via Alpha. Hold short runway three four left. QNH one zero one three. Contact Tower one one eight decimal one at holding point.
+p_gnd_taxi_rb;PILOT>LTCC_GND;Taxi runway three four left via Alpha, hold short three four left, Tower one one eight decimal one at the holding point. Dodge one one.
+
+# ---- LTCC TOWER (118.100) ----
+p_twr_ready;PILOT>LTCC_TWR;Tower, Dodge one one, holding short runway three four left, ready for departure.
+twr_clr_to;LTCC_TWR;Dodge one one, wind three four zero at eight. Runway three four left, cleared for takeoff. After airborne contact Departure one one niner decimal one. Good day.
+p_twr_rb;PILOT>LTCC_TWR;Runway three four left cleared for takeoff, Departure one one niner decimal one airborne. Dodge one one.
+
+# ---- LTCC DEPARTURE (119.100) ----
+p_dep_checkin;PILOT>LTCC_DEP;Departure, Dodge one one, airborne runway three four left, passing two thousand, Demeb one Juliet.
+dep_radar_contact;LTCC_DEP;Dodge one one, radar contact. Climb and maintain flight level three two zero. Continue Demeb one Juliet. Report level.
+p_dep_climb_rb;PILOT>LTCC_DEP;Climb and maintain flight level three two zero, Demeb one Juliet, will report level. Dodge one one.
+p_dep_level;PILOT>LTCC_DEP;Departure, Dodge one one, level flight level three two zero.
+dep_handoff_ank;LTCC_DEP;Dodge one one, maintain flight level three two zero. Leaving my frequency. Contact Ankara Control one three two decimal three. Good day.
+p_dep_ank_ack;PILOT>LTCC_DEP;Ankara Control one three two decimal three. Dodge one one, good day.
+
+# ---- ANKARA CONTROL (132.300) ----
+p_ank_checkin;PILOT>ANKARA;Ankara Control, Dodge one one, flight level three two zero, Demeb one Juliet, en route CVN seven three.
+ank_identified;ANKARA;Dodge one one, Ankara Control, identified. Maintain flight level three two zero. Route direct Vesar.
+p_ank_rb;PILOT>ANKARA;Maintain flight level three two zero, direct Vesar. Dodge one one.
+ank_fir_handoff;ANKARA;Dodge one one, approaching Ankara FIR boundary at Vesar. Radar service terminated. Squawk two zero zero zero at the boundary. Contact Nicosia Control one two seven decimal eight two five. Good day.
+p_ank_fir_ack;PILOT>ANKARA;Squawk two zero zero zero, Nicosia Control one two seven decimal eight two five. Dodge one one, good day.
+
+# ---- NICOSIA CONTROL (127.825) ----
+p_nic_checkin;PILOT>NICOSIA;Nicosia Control, Dodge one one, flight level three two zero, Vesar, estimating Girne.
+nic_identified;NICOSIA;Dodge one one, Nicosia Control, identified. Maintain flight level three two zero. Cleared Girne, Vadus, Genos.
+p_nic_rb;PILOT>NICOSIA;Maintain flight level three two zero, cleared Girne, Vadus, Genos. Dodge one one.
+nic_strike_handoff;NICOSIA;Dodge one one, approaching Genos, leaving controlled airspace. Radar service terminated. Contact Strike, two five four decimal zero. Good day.
+p_nic_strike_ack;PILOT>NICOSIA;Strike two five four decimal zero. Dodge one one, good day.
+
+# ---- STRIKE (254.000) ----
+# Mother bearing / range, angels and state stay on-screen.
+p_str_checkin;PILOT>STRIKE;Strike, Dodge one one, checking in inbound Mother.
+str_radar_contact;STRIKE;Dodge one one, Strike, radar contact. Squawk five two zero zero. Switch Marshal, button one six, two six one decimal zero, at five zero miles.
+p_str_rb;PILOT>STRIKE;Squawk five two zero zero, Marshal button one six at five zero miles. Dodge one one.
+str_switch_marshal;STRIKE;Dodge one one, five zero miles. Switch Marshal, button one six, two six one decimal zero. Good day.
+p_str_marshal_ack;PILOT>STRIKE;Marshal button one six. Dodge one one, good day.

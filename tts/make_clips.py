@@ -1,7 +1,12 @@
-# make_clips.py | v1.4.1
+# make_clips.py | v1.5.0
 # tts/clips.csv -> src/Sounds/CAS1/<id>.ogg  (Piper TTS + ffmpeg radio chain)
 # CV comms:  python tts/make_clips.py --set cv   (tts/cv_clips.csv -> src/Sounds/CV/,
 #            table tts/cv_audio_table.lua -> paste into CV_Comms CFG.AUDIO)
+# LTCC transit: python tts/make_clips.py --set fc (tts/fc_clips.csv -> src/Sounds/FC/,
+#            table tts/fc_audio_table.lua -> paste into Field_Comms CFG.AUDIO)
+#
+# v1.5.0: --set fc (Field_Comms LTCC->CVN-73 transit). Civil/foreign ATC cast on
+#         en_GB voices, Navy side keeps the CAS1 US voices (STRIKE joe, PILOT john).
 # Also writes tts/audio_table.lua: paste into Comms_Director CFG.AUDIO.
 # Usage:  python tts/make_clips.py              (all clips)
 #         python tts/make_clips.py str_m4_sour  (only the listed ids)
@@ -43,6 +48,16 @@ VOICE = {
     'PILOT':     'en_US-john-medium.onnx',
     'MARSHAL':   'en_US-hfc_male-medium.onnx',   # norman: garbage on 1-word tokens
     'APPROACH':  'en_US-kusal-medium.onnx',
+    # Field_Comms (--set fc). Civil / foreign ATC is cast British so the switch
+    # to Strike (US Navy, joe) lands as an audible change of world; Cyprus ATC
+    # English is British-influenced anyway. No Turkish Piper voice exists.
+    'LTCC_INFO': 'en_US-ljspeech-high.onnx',               # ATIS: recorded-broadcast timbre
+    'LTCC_DEL':  'en_GB-cori-high.onnx',                   # female
+    'LTCC_GND':  'en_GB-alan-medium.onnx',                 # male, RP
+    'LTCC_TWR':  'en_GB-northern_english_male-medium.onnx',# male, clearly not alan
+    'LTCC_DEP':  'en_GB-jenny_dioco-medium.onnx',          # female
+    'ANKARA':    'en_US-bryce-medium.onnx',                # male
+    'NICOSIA':   'en_GB-southern_english_female-medium.onnx',
 }
 
 SETS = {   # --set name -> (csv, outdir, table)
@@ -50,6 +65,9 @@ SETS = {   # --set name -> (csv, outdir, table)
     'cv':   (os.path.join(ROOT, 'tts', 'cv_clips.csv'),
              os.path.join(ROOT, 'src', 'Sounds', 'CV'),
              os.path.join(ROOT, 'tts', 'cv_audio_table.lua')),
+    'fc':   (os.path.join(ROOT, 'tts', 'fc_clips.csv'),
+             os.path.join(ROOT, 'src', 'Sounds', 'FC'),
+             os.path.join(ROOT, 'tts', 'fc_audio_table.lua')),
 }
 TOK_PAD = 0.06   # s silence after a token clip (default, 'tok:<s>' overrides)
 FALLBACK = None  # model file name used for any agency missing above
