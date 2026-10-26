@@ -1,11 +1,19 @@
--- Asset_Guard | v1.0.0
+-- Asset_Guard | v1.1.0
 --[[
   High-value air asset guard — TRT Syria Dynamic Template (template-level module)
 
   Measures, does not act: when a hostile FIGHTER is airborne within radius_nm of a
-  guarded unit, the guard's flag is set to 1 (latched, once). The ME decides what
-  happens (e.g. activate an escort CAP) — same flag-based split as the scoring
-  scripts.
+  guarded unit, or inside a guarded trigger zone, the guard's flag is set to 1
+  (latched, once). The ME decides what happens (e.g. activate an escort CAP) — same
+  flag-based split as the scoring scripts.
+
+  Guard kinds:
+    { unit = "NAME", radius_nm = N, flag = F }   circle around a unit (moves with it)
+    { zone = "NAME", flag = F }                  ME trigger zone (circle); radius_nm
+                                                 optional, default = the zone's radius
+  v1.1.0: zone guards. An ME "part of coalition in zone" condition counts parked /
+  uncontrolled aircraft and ground units too; a zone guard counts only airborne
+  fighters.
 
   Counted: units of coalition `hostile` (default RED), group category AIRPLANE,
   active (late activation done), airborne, with attribute "Fighters",
@@ -14,7 +22,8 @@
   after the unit has existed once and then dies, the guard stops (logged).
 
   Flags (Oct 2026): 3010 = TANKER-1 threatened (ME "TANKER-1_Guard_CAP_Activate"
-  activates CAP-1 + CAP-2).
+  activates CAP-1 + CAP-2); 3011 = hostile fighter airborne in TANKER_DEFENDERS_ZONE
+  (ME "Tanker_Defenders_Activate" activates INTER-2).
 
   Add a guard: one line in CFG.GUARDS. Pick a free flag first (flag scheme).
 ]]
@@ -22,11 +31,12 @@
 _G.TRT = _G.TRT or {}
 
 local CFG = {
-    VERSION = "1.0.0",
+    VERSION = "1.1.0",
     TICK    = 10,     -- s
     ATTRS   = { "Fighters", "Interceptors", "Multirole fighters" },
     GUARDS  = {
         { unit = "TANKER-1-1", radius_nm = 60, flag = 3010, hostile = coalition.side.RED },
+        { zone = "TANKER_DEFENDERS_ZONE", flag = 3011, hostile = coalition.side.RED },
     },
 }
 
@@ -64,7 +74,26 @@ for _, g in ipairs(CFG.GUARDS) do g.state = "WAIT" end   -- WAIT -> WATCH -> FIR
 local function Tick(_, t)
     local ok, err = pcall(function()
         for _, g in ipairs(CFG.GUARDS) do
-            if g.state == "WAIT" or g.state == "WATCH" then
+            if g.zone and (g.state == "WAIT" or g.state == "WATCH") then
+                local z = trigger.misc.getZone(g.zone)
+                if not z or not z.point then
+                    g.state = "LOST"
+                    Log("zone " .. g.zone .. " not found -> guard stopped (flag " .. g.flag .. " untouched)")
+                else
+                    local radius = g.radius_nm or (z.radius / 1852)
+                    if g.state == "WAIT" then
+                        g.state = "WATCH"
+                        Log(string.format("watching zone %s (%.1f NM)", g.zone, radius))
+                    end
+                    local name, d = Threat(g.hostile or coalition.side.RED, z.point, radius)
+                    if name then
+                        trigger.action.setUserFlag(g.flag, 1)
+                        g.state = "FIRED"
+                        Log(string.format("zone %s entered: %s at %.1f NM from centre (<= %.1f) -> flag %d = 1",
+                            g.zone, name, d, radius, g.flag))
+                    end
+                end
+            elseif g.state == "WAIT" or g.state == "WATCH" then
                 local u = Unit.getByName(g.unit)
                 if u and u:isExist() and u:getLife() > 0 then
                     if g.state == "WAIT" then g.state = "WATCH"; Log("watching " .. g.unit) end
