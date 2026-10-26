@@ -1,26 +1,38 @@
--- PlaneCaptain_Carrier | v1.1.0
+-- PlaneCaptain_Carrier | v1.2.0
 --[[
   Plane captain ground checks on the carrier - text only (no units, no statics, no pictures).
   Carrier version of the Animated Ground Crew flow, for group "CAS-1", unit "Player_01" (F/A-18C).
 
-  Two phases, each opened by the pilot from the F10 menu:
-    Ready to start   -> OK; APU (3 fingers); engine 2 (2 fingers); engine 1 (1 finger)
-    Ready for checks -> spread wings, lower flaps, controls, rudder, probe out/in, speedbrake
-                        open/close, hook down/up, raise flaps, fold wings, all clear
+  Sources (v1.2.0): F/A-18 NATOPS pocket checklist A1-F18AC-NFM-500 (BEFORE TAXI), hand signals
+  from NAVAIR 00-80T-113 Aircraft Signals NATOPS (Fig. 2-1, launch bar Fig. 4-1), deck flow from
+  Speed & Angels "Aircraft Carrier Operating Procedures for DCS" v01.8.
 
-  How a step advances (v1.1.0):
-    * action steps (wings, flaps, controls, rudder, probe, speedbrake, hook): only when the
-      aircraft does it (external-model draw arguments), or on "Skip step". No timeout.
-    * engine steps: engine RPM >= idle (export environment). "Done" is accepted only when
-      RPM cannot be read.
-    * pilot-signal steps (your APU / engine 2 / engine 1 start signal): "Done (pilot signal)".
-    * plane-captain-only signals (OK, START APU, ALL CLEAR): a short timer.
-  APU start itself is not verified (no readable APU state); your "ready for engine 2" signal
-  (APU READY) closes it.
+  Two phases, each opened by the pilot from the F10 menu:
+    Ready to start   -> OK; APU; engine 2; engine 1
+    Ready for checks -> BEFORE TAXI order:
+                        spread wings (item 4) -> Controls - CHECK: control stick - CYCLE (13a),
+                        flaps - HALF (13b, plane captain signal), rudder pedals - CYCLE (13c)
+                        -> probe, speed brake, launch bar, hook - CYCLE (15) -> fold wings for
+                        taxi (spread again at the catapult on the director's signal)
+                        -> your thumbs-up to the plane captain: ready, wait for the director.
+    Stick and rudder are pilot checklist items (values read on the FCS page); 00-80T-113 has no
+    per-direction signal for them, so they are shown as checklist items, not as signals, and
+    close when every movement has been seen, in any order. Flaps stay HALF.
+    FCS RESET / IBIT / trim are cockpit-only and are not part of this flow.
+
+  How a step advances:
+    * action steps: only when the aircraft does it (external-model draw arguments), or on
+      "Skip step". No timeout.
+    * engine steps: engine RPM >= idle (export environment). "Done" only if RPM cannot be read.
+    * pilot-signal steps: "Done (pilot signal)".
+    * plane-captain-only signals (OK, START APU): a short timer.
+  Launch bar: the F/A-18C external-model argument is not known yet. With CFG.LAUNCHBAR_ARG = nil
+  the two launch bar steps run in calibration mode: they close on "Done (pilot signal)" and the
+  script logs every argument that moved ("LBAR calibration" lines in dcs.log). Put the number
+  into CFG.LAUNCHBAR_ARG to make the steps automatic.
 
   Messages: one message per step, held on screen until the step changes; the next step replaces
-  it (clearview). No repeats. Short refusals ("not available", "Done not accepted") are added
-  without clearview so the step message stays.
+  it (clearview). No repeats. Short notes are added without clearview.
 
   Abort: F10 "Abort checks" while a phase is running or waiting; automatic abort when the
   aircraft moves more than MOVE_DIST on the deck (measured in the carrier's frame, so the
@@ -38,7 +50,7 @@ if TRT.PlaneCaptain then
 end
 
 local CFG = {
-  VERSION       = "1.1.0",
+  VERSION       = "1.2.0",
   PLAYER_UNIT   = "Player_01",
   PLAYER_GROUP  = "CAS-1",
   CARRIER_UNIT  = "CVN",       -- movement is measured relative to this unit (deck is moving)
@@ -49,6 +61,8 @@ local CFG = {
   MSG_HOLD      = 600,         -- step message stays this long unless replaced (s)
   MSG_END       = 15,          -- final / abort message (s)
   MSG_NOTE      = 6,           -- short notes, added without clearview (s)
+  LAUNCHBAR_ARG = nil,         -- F/A-18C external-model launch bar argument; nil = calibration mode
+  SCAN_MAX      = 999,         -- calibration: arguments 0..SCAN_MAX are watched
   MOVE_DIST     = 3.0,         -- m moved on the deck (carrier frame) since the phase opened -> auto abort
   OPTIONAL = {
     extpower = false,          -- connect/disconnect external power
@@ -61,45 +75,43 @@ local CFG = {
 -- Engine/APU finger counts follow the project convention: 3 = APU, 2 = engine 2, 1 = engine 1.
 ----------------------------------------------------------------------
 local SIGNALS = {
-  EXT_POWER_ON  = { "CONNECT EXTERNAL POWER", "Two fingers put into a ring made by the other hand, above the head" },
-  EXT_POWER_OFF = { "DISCONNECT EXTERNAL POWER", "Two fingers taken out of the ring made by the other hand" },
-  ACK           = { "ACKNOWLEDGED (OK)", "Thumbs up" },
-  APU_START     = { "START APU", "Three fingers up, other hand circling at head level" },
-  ENG2_START    = { "START ENGINE 2 (RIGHT)", "Two fingers up overhead, other hand circling at head level" },
-  ENG1_START    = { "START ENGINE 1 (LEFT)", "One finger up overhead, other hand circling at head level" },
-  APU_STOP      = { "STOP APU", "Throat-cut with one hand, other hand circling, two fingers pointing down" },
+  EXT_POWER_ON  = { "CONNECT EXTERNAL POWER", "Two fingers of the right hand inserted into a circle made by the left hand" },
+  EXT_POWER_OFF = { "DISCONNECT EXTERNAL POWER", "Two fingers of the right hand withdrawn from the circle made by the left hand" },
+  ACK           = { "ACKNOWLEDGED (OK)", "Hand raised, thumb up" },
+  APU_START     = { "START APU", "Left hand points to the APU; right hand moves in a horizontal circle, index and middle finger pointing down" },
+  ENG2_START    = { "START ENGINE 2 (RIGHT)", "Left hand overhead, two fingers extended; right hand circling at head level" },
+  ENG1_START    = { "START ENGINE 1 (LEFT)", "Left hand overhead, one finger extended; right hand circling at head level" },
+  APU_STOP      = { "STOP APU", "Throat-cutting action with the left hand; right hand moves in a horizontal circle" },
   WINGS_SPREAD  = { "SPREAD WINGS", "Arms hugged around the shoulders, then swept straight out to the sides" },
-  WINGS_FOLD    = { "FOLD WINGS", "Arms straight out to the sides, then swept in and hugged around the shoulders" },
-  FLAPS_LOWER   = { "LOWER FLAPS", "Hands in front, palms together horizontally, then opened from the wrists" },
-  FLAPS_RAISE   = { "RAISE FLAPS", "Hands in front horizontally, palms open, then suddenly closed" },
-  CONTROLS      = { "CONTROLS CHECK (STICK)", "Wipe out the controls: stick fully forward, aft, left and right" },
-  RUDDER        = { "RUDDER CHECK", "Full left and full right rudder pedal" },
+  WINGS_FOLD    = { "FOLD WINGS", "Arms straight out at the sides, then swept forward and hugged around the shoulders" },
+  FLAPS_LOWER   = { "LOWER FLAPS", "Hands in front, palms together horizontally, then opened from the wrists crocodile-mouth fashion" },
   PROBE_EXT     = { "EXTEND REFUELING PROBE", "Arm straight ahead, fist clenched, swung 90 degrees to the side" },
   PROBE_RET     = { "RETRACT REFUELING PROBE", "Arm out to the side, fist clenched, swung back to straight ahead" },
-  SB_OPEN       = { "OPEN SPEEDBRAKE", "Hands in front, palms together vertically, then opened from the wrists" },
-  SB_CLOSE      = { "CLOSE SPEEDBRAKE", "Hands in front vertically, palms open, then suddenly closed" },
-  HOOK_DOWN     = { "LOWER HOOK", "Right fist, thumb down, lowered suddenly onto the flat left palm" },
-  HOOK_UP       = { "RAISE HOOK", "Right fist, thumb up, raised suddenly to the flat left palm" },
-  AFFIRM        = { "AFFIRMATIVE / ALL CLEAR", "Thumbs up" },
+  SB_OPEN       = { "OPEN SPEEDBRAKE", "Hands in front, palms together vertically, then opened from the wrists crocodile-mouth fashion" },
+  SB_CLOSE      = { "CLOSE SPEEDBRAKE", "Hands in front vertically, palms open from the wrists, then suddenly closed" },
+  LBAR_LOWER    = { "LOWER LAUNCH BAR", "Right elbow resting in the left palm at waist level, right hand brought down to horizontal" },
+  LBAR_RAISE    = { "RAISE LAUNCH BAR", "Right elbow resting in the left palm at waist level, right forearm horizontal, right hand brought up to shoulder level" },
+  HOOK_DOWN     = { "LOWER HOOK", "Right fist, thumb down, lowered suddenly to meet the horizontal palm of the left hand" },
+  HOOK_UP       = { "RAISE HOOK", "Right fist, thumb up, raised suddenly to meet the horizontal palm of the left hand" },
   -- pilot's own signals (sent with "Done (pilot signal)")
   P_OK          = { "READY TO START (OK)", "Thumbs up" },
   P_READY_START = { "READY FOR START (APU)", "Three fingers up" },
   P_READY_ENG2  = { "READY FOR ENGINE 2", "Two fingers up" },
   P_READY_ENG1  = { "READY FOR ENGINE 1", "One finger up" },
+  P_READY_GO    = { "READY TO GO FLYING", "Thumbs up to the plane captain" },
 }
 
 -- what the pilot is asked to do, shown under the plane captain's signal
 local ASK = {
   WINGS_SPREAD = "Spread the wings.",
-  WINGS_FOLD   = "Fold the wings for taxi.",
-  FLAPS_LOWER  = "Lower the flaps (HALF or FULL).",
-  FLAPS_RAISE  = "Raise the flaps (AUTO).",
-  CONTROLS     = "Stick fully forward, aft, left and right.",
-  RUDDER       = "Full left and full right rudder.",
+  WINGS_FOLD   = "Fold the wings for taxi (spread again at the catapult on the director's signal).",
+  FLAPS_LOWER  = "13b. Flaps - HALF (they stay HALF).",
   PROBE_EXT    = "Extend the refueling probe.",
   PROBE_RET    = "Retract the refueling probe.",
   SB_OPEN      = "Open the speedbrake.",
   SB_CLOSE     = "Close the speedbrake.",
+  LBAR_LOWER   = "Launch bar switch - EXTEND.",
+  LBAR_RAISE   = "Launch bar switch - RETRACT.",
   HOOK_DOWN    = "Lower the hook.",
   HOOK_UP      = "Raise the hook.",
 }
@@ -127,29 +139,51 @@ local STEPS = {
   { id = "S4", phase = "START", signal = "ENG1_START", wait = { type = "engineIdle", eng = "left", rpm = 60 } },
   { id = "S5", phase = "START", signal = "EXT_POWER_OFF", opt = "extpower", wait = { type = "timer", t = 8 } },
   { id = "S6", phase = "START", signal = "APU_STOP", opt = "apustop", wait = { type = "timer", t = 8 } },
-  -- CHECKS (F/A-18C draw arguments: wings 8 (0 spread, 1 folded), flaps 9, stick 395/396,
-  -- rudders 17/18, probe 22, speedbrake 21, hook 25)
+  -- CHECKS, NATOPS BEFORE TAXI order. F/A-18C draw arguments: wings 8 (0 spread, 1 folded),
+  -- flaps 9, control stick 395 (pitch) / 396 (roll) (Cockpit/Scripts/mainpanel_init.lua), rudders
+  -- 17/18, probe 22, speedbrake 21, hook 25, launch bar CFG.LAUNCHBAR_ARG
   { id = "C1", phase = "CHECKS", signal = "WINGS_SPREAD", wait = { type = "arg", arg = 8, op = "<", v = 0.05 },
     skipIf = { type = "arg", arg = 8, op = "<", v = 0.05 } },
-  { id = "C2", phase = "CHECKS", signal = "FLAPS_LOWER", wait = { type = "argDelta", arg = 9, d = 0.1 },
-    remember = { key = "flapsUp", arg = 9 } },
-  { id = "C3", phase = "CHECKS", signal = "CONTROLS", wait = { type = "range", args = { { 395, 0.7, -0.5 }, { 396, 0.7, -0.7 } } } },
-  { id = "C4", phase = "CHECKS", signal = "RUDDER", wait = { type = "span", args = { 17, 18 }, d = 0.8 } },
+  { id = "C2", phase = "CHECKS", check = { "13. Controls - CHECK",
+      "a. Control stick - CYCLE: full aft, full forward, full left, full right (any order)" },
+    wait = { type = "range", args = { { 395, 0.7, -0.5 }, { 396, 0.7, -0.7 } } } },
+  { id = "C3", phase = "CHECKS", signal = "FLAPS_LOWER", wait = { type = "argDelta", arg = 9, d = 0.1 } },
+  { id = "C4", phase = "CHECKS", check = { "13. Controls - CHECK",
+      "c. Rudder pedals - CYCLE 30 degrees left and right (any order)" },
+    wait = { type = "span", args = { 17, 18 }, d = 0.8 } },
   { id = "C5", phase = "CHECKS", signal = "PROBE_EXT", wait = { type = "arg", arg = 22, op = ">", v = 0.9 } },
   { id = "C6", phase = "CHECKS", signal = "PROBE_RET", wait = { type = "arg", arg = 22, op = "<", v = 0.1 },
     skipIf = { type = "arg", arg = 22, op = "<", v = 0.1 } },
   { id = "C7", phase = "CHECKS", signal = "SB_OPEN", wait = { type = "arg", arg = 21, op = ">", v = 0.9 } },
   { id = "C8", phase = "CHECKS", signal = "SB_CLOSE", wait = { type = "arg", arg = 21, op = "<", v = 0.1 },
     skipIf = { type = "arg", arg = 21, op = "<", v = 0.1 } },
-  { id = "C9", phase = "CHECKS", signal = "HOOK_DOWN", wait = { type = "arg", arg = 25, op = ">", v = 0.6 } },
-  { id = "C10", phase = "CHECKS", signal = "HOOK_UP", wait = { type = "arg", arg = 25, op = "<", v = 0.1 },
+  { id = "C9", phase = "CHECKS", signal = "LBAR_LOWER", lbar = "lower" },
+  { id = "C10", phase = "CHECKS", signal = "LBAR_RAISE", lbar = "raise" },
+  { id = "C11", phase = "CHECKS", signal = "HOOK_DOWN", wait = { type = "arg", arg = 25, op = ">", v = 0.6 } },
+  { id = "C12", phase = "CHECKS", signal = "HOOK_UP", wait = { type = "arg", arg = 25, op = "<", v = 0.1 },
     skipIf = { type = "arg", arg = 25, op = "<", v = 0.1 } },
-  { id = "C11", phase = "CHECKS", signal = "FLAPS_RAISE", wait = { type = "argNear", arg = 9, key = "flapsUp", tol = 0.05, fallback = 0.05 },
-    skipIf = { type = "argNear", arg = 9, key = "flapsUp", tol = 0.05, fallback = 0.05 } },
-  { id = "C12", phase = "CHECKS", signal = "WINGS_FOLD", wait = { type = "arg", arg = 8, op = ">", v = 0.95 },
+  { id = "C13", phase = "CHECKS", signal = "WINGS_FOLD", wait = { type = "arg", arg = 8, op = ">", v = 0.95 },
     skipIf = { type = "arg", arg = 8, op = ">", v = 0.95 } },
-  { id = "C13", phase = "CHECKS", signal = "AFFIRM", wait = { type = "timer", t = 4 } },
+  { id = "C14", phase = "CHECKS", wait = { type = "ack" }, pilotOnDone = "P_READY_GO",
+    hint = "Checks complete. When ready to go flying, give the plane captain a thumbs up: Plane captain > Done (pilot signal)" },
 }
+
+-- launch bar: automatic with a known argument, calibration (Done + logging) without one
+for _, st in ipairs(STEPS) do
+  if st.lbar then
+    if CFG.LAUNCHBAR_ARG then
+      if st.lbar == "lower" then
+        st.wait = { type = "argDelta", arg = CFG.LAUNCHBAR_ARG, d = 0.5 }
+        st.remember = { key = "lbarUp", arg = CFG.LAUNCHBAR_ARG }
+      else
+        st.wait = { type = "argNear", arg = CFG.LAUNCHBAR_ARG, key = "lbarUp", tol = 0.1, fallback = 0.1 }
+      end
+    else
+      st.wait = { type = "calib" }
+      st.hint = "Calibration: when the launch bar has moved, Plane captain > Done (pilot signal)"
+    end
+  end
+end
 
 ----------------------------------------------------------------------
 -- STATE / HELPERS
@@ -158,6 +192,7 @@ local PC = {
   flow = { phase = "IDLE", step = nil, idx = nil, t0 = 0, base = {}, seen = {}, mem = {}, ending = false, gen = 0 },
   rpm = { available = nil, left = nil, right = nil, t = 0 },
   move = { anchor = nil },
+  calib = nil,                 -- launch bar calibration: { base = {}, mn = {}, mx = {}, cur = {} }
   gid = nil,
   ownMenu = nil,
 }
@@ -248,6 +283,42 @@ local function deckMoved(u)
   return math.sqrt(da * da + db * db)
 end
 
+-- launch bar calibration: arguments that are already explained are not reported
+local CALIB_SKIP = { [8] = true, [9] = true, [10] = true, [17] = true, [18] = true, [21] = true, [22] = true,
+  [25] = true, [38] = true, [39] = true, [99] = true, [395] = true, [396] = true }
+for a = 499, 536 do CALIB_SKIP[a] = true end      -- pilot body / stick / throttle / rudder animation
+
+local function calibScan(u)
+  local C = PC.calib
+  if not C then return end
+  for a = 0, CFG.SCAN_MAX do
+    local v = argValue(u, a)
+    if v then
+      if C.base[a] == nil then C.base[a] = v end
+      if not C.mn[a] or v < C.mn[a] then C.mn[a] = v end
+      if not C.mx[a] or v > C.mx[a] then C.mx[a] = v end
+      C.cur[a] = v
+    end
+  end
+end
+
+local function calibReport()
+  local C = PC.calib
+  if not C then return end
+  local found = 0
+  for a = 0, CFG.SCAN_MAX do
+    local b, mn, mx, cur = C.base[a], C.mn[a], C.mx[a], C.cur[a]
+    if b and mn and mx and not CALIB_SKIP[a] and (mx - mn) >= 0.3 then
+      local back = math.abs(cur - b) <= 0.1
+      log(string.format("LBAR calibration: arg %d base=%.3f min=%.3f max=%.3f now=%.3f %s",
+        a, b, mn, mx, cur, back and "<- moved and came back" or "(did not come back)"))
+      found = found + 1
+    end
+  end
+  if found == 0 then log("LBAR calibration: no argument moved >= 0.3 (launch bar not cycled?)") end
+  PC.calib = nil
+end
+
 ----------------------------------------------------------------------
 -- MESSAGES
 ----------------------------------------------------------------------
@@ -260,11 +331,12 @@ end
 -- one message per step: pilot's signal (optional), plane captain's signal, what to do; held on
 -- screen until the next step replaces it
 local function showStep(s, pilotKey)
-  local lines = { "[PLANE CAPTAIN]" }
+  local lines = { s.check and "[BEFORE TAXI CHECK]" or "[PLANE CAPTAIN]" }
   local pl = pilotKey and sigLine("You", pilotKey)
   if pl then lines[#lines + 1] = pl end
   local cl = s.signal and sigLine("Plane captain", s.signal)
   if cl then lines[#lines + 1] = cl end
+  if s.check then for _, l in ipairs(s.check) do lines[#lines + 1] = l end end
   if s.signal and ASK[s.signal] then lines[#lines + 1] = ">> " .. ASK[s.signal] end
   if s.wait and s.wait.type == "engineIdle" then
     local n = (s.wait.eng == "left") and "1" or "2"
@@ -300,7 +372,7 @@ local function evalCond(c, u, F)
   if not c then return false end
   local t = c.type
   if t == "timer" then return (now() - F.t0) >= c.t
-  elseif t == "ack" then return false
+  elseif t == "ack" or t == "calib" then return false
   elseif t == "engineIdle" then
     local l, r = PC.readRPM()
     if not l then return false end
@@ -359,7 +431,7 @@ end
 -- state cannot be read
 local function doneAccepted(s)
   if not s or not s.wait then return false end
-  if s.wait.type == "ack" then return true end
+  if s.wait.type == "ack" or s.wait.type == "calib" then return true end
   if s.wait.type == "engineIdle" then return PC.rpm.available ~= true end
   return false
 end
@@ -376,6 +448,7 @@ local function completeStep(reason)
   if not s or F.ending then return end
   F.ending = true
   log(string.format("step %s done (%s) after %.1f s", s.id, reason, now() - F.t0))
+  if s.lbar == "raise" and PC.calib then calibReport() end
   if reason ~= "condition" then
     for a, sn in pairs(F.seen) do
       log(string.format("  arg %s seen: min=%s max=%s hi=%s lo=%s base=%s", tostring(a), tostring(sn.mn), tostring(sn.mx),
@@ -399,7 +472,11 @@ local function completeStep(reason)
         say("[PLANE CAPTAIN] Engines running.\n>> When ready: Plane captain > Ready for checks", CFG.MSG_HOLD, true)
       else
         F.phase = "DONE"
-        say("[PLANE CAPTAIN] Ground checks complete. Follow the director for taxi.", CFG.MSG_END, true)
+        local lines = { "[PLANE CAPTAIN]" }
+        local pl = pilotNext and sigLine("You", pilotNext)
+        if pl then lines[#lines + 1] = pl end
+        lines[#lines + 1] = ">> Plane captain stands by with you until the director (yellow shirt) takes the aircraft."
+        say(table.concat(lines, "\n"), CFG.MSG_END, true)
       end
       log("phase -> " .. F.phase)
       refreshMenu()
@@ -414,6 +491,10 @@ enterStep = function(i, pilotKey)
   F.idx, F.step, F.t0, F.base, F.seen, F.ending = i, s, now(), {}, {}, false
   F.phase = s.phase
   log(string.format("step %s enter (%s) t=%.2f", s.id, s.signal or "-", F.t0))
+  if s.lbar == "lower" and s.wait.type == "calib" then
+    PC.calib = { base = {}, mn = {}, mx = {}, cur = {} }
+    log("LBAR calibration: scanning arguments 0.." .. CFG.SCAN_MAX)
+  end
   if u then
     local args = {}
     condArgs(s.wait, args); condArgs(s.skipIf, args)
@@ -480,6 +561,7 @@ function PC.abort(reason, why)
   F.step, F.idx, F.ending = nil, nil, false
   F.phase = "IDLE"
   PC.move.anchor = nil
+  PC.calib = nil
   log("flow aborted: " .. reason)
   if why then say("[PLANE CAPTAIN] " .. why, CFG.MSG_END, true) end
   refreshMenu()
@@ -500,6 +582,7 @@ function PC.reset()
   F.gen = F.gen + 1
   F.phase, F.step, F.idx, F.ending, F.mem = "IDLE", nil, nil, false, {}
   PC.move.anchor = nil
+  PC.calib = nil
   log("flow reset")
 end
 
@@ -518,6 +601,7 @@ local function flowTick(u)
     return
   end
   local s = F.step
+  if PC.calib then calibScan(u) end
   if not s or F.ending then return end
   if evalCond(s.wait, u, F) then completeStep("condition"); return end
   if s.timeout and (now() - F.t0) >= s.timeout then completeStep("timeout") end
