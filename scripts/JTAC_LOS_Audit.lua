@@ -1,4 +1,4 @@
--- JTAC_LOS_Audit | v1.1.0
+-- JTAC_LOS_Audit | v1.1.1
 -- Mission baslangicinda her AI JTAC (route icinde FAC_AttackGroup gorevi olan grup)
 -- ile hedef grubu arasindaki ARAZI gorus hattini (LOS) kontrol eder ve dcs.log'a yazar.
 -- Sadece log: oyuna mudahale etmez, birim tasimaz, menu eklemez.
@@ -27,6 +27,10 @@
 -- CFG.RANGE_M araliginda mesafe. Siralama: once tum birimlerde clearance >= MARGINAL olanlar,
 -- sonra mevcut konuma en yakin olan. En iyi CFG.TOP_N aday "CANDIDATE" satiri olarak yazilir
 -- (ME koordinati x / y, MGRS, LL). Sadece log; JTAC'i tasimaz - konum ME'de degistirilir.
+-- v1.1.1 - arama 1500 m'ye genisletildi (AI JTAC'lar SetInvisible + SetImmortal + weapon hold
+-- oldugu icin hedefe yakinlik sinirlari gevsetildi). Ek: engelli her HEDEF birimi icin, birimin
+-- 10..200 m cevresinde JTAC'in mevcut konumundan gorulen noktalar "TARGET_MOVE" satiri olarak
+-- yazilir (hedef birimini ME'de kaydirma secenegi).
 
 local CFG = {
     delaySec             = 15,    -- mission basladiktan sonra kontrol gecikmesi
@@ -39,10 +43,12 @@ local CFG = {
     -- v1.1.0 konum arama
     SEARCH               = true,
     RING_STEP_M          = 25,    -- halka araligi
-    RING_MAX_M           = 400,   -- mevcut konumdan en fazla bu kadar uzak aday
+    RING_MAX_M           = 1500,  -- mevcut konumdan en fazla bu kadar uzak aday
     ANGLE_STEP_DEG       = 10,
-    RANGE_M              = { 300, 1500 }, -- aday ile hedef merkezi arasi mesafe araligi
-    MIN_TARGET_M         = 250,   -- her hedef birimine en az bu kadar uzak
+    RANGE_M              = { 200, 2500 }, -- aday ile hedef merkezi arasi mesafe araligi
+    MIN_TARGET_M         = 150,   -- her hedef birimine en az bu kadar uzak
+    TGT_RING_STEP_M      = 10,    -- hedef kaydirma aramasi: halka araligi
+    TGT_RING_MAX_M       = 200,   -- hedef kaydirma aramasi: birimden en fazla bu kadar uzak
     MAX_SLOPE_M          = 1.5,   -- 5 m mesafedeki dort komsu noktayla yukseklik farki siniri
     TOP_N                = 3,
 }
@@ -211,6 +217,41 @@ local function searchPositions(j, tName, jp, tus)
     end
 end
 
+-- engelli bir hedef birimi icin: JTAC'in mevcut konumundan gorulen yakin noktalar
+local function searchTargetMoves(j, jp, tu)
+    local tp0 = tu:getPoint()
+    local found, tested = {}, 0
+    for r = CFG.TGT_RING_STEP_M, CFG.TGT_RING_MAX_M, CFG.TGT_RING_STEP_M do
+        for a = 0, 359, CFG.ANGLE_STEP_DEG do
+            local rad = math.rad(a)
+            local x, z = tp0.x + math.cos(rad) * r, tp0.z + math.sin(rad) * r
+            local ok, h = groundOK(x, z)
+            if ok and math.sqrt((x - jp.x) ^ 2 + (z - jp.z) ^ 2) >= CFG.MIN_TARGET_M then
+                tested = tested + 1
+                local tp = { x = x, y = h, z = z }
+                if losAt(jp, tp, CFG.EYE_OBSERVER_M) then
+                    local c = minClearance(jp, tp)
+                    found[#found + 1] = { x = x, y = h, z = z, r = r, brg = a, c = c, good = c >= CFG.MARGINAL_CLEARANCE_M }
+                end
+            end
+        end
+    end
+    table.sort(found, function(p, q)
+        if p.good ~= q.good then return p.good end
+        if p.r ~= q.r then return p.r < q.r end
+        return p.c > q.c
+    end)
+    if #found == 0 then
+        logWarn(string.format("TARGET_MOVE %s / %s: %d nokta denendi, JTAC'tan gorulen yok (<= %d m)", j.name, tu:getName(), tested, CFG.TGT_RING_MAX_M))
+        return
+    end
+    for i = 1, math.min(CFG.TOP_N, #found) do
+        local f = found[i]
+        logInfo(string.format("TARGET_MOVE %s / %s #%d: ME x=%.0f y=%.0f alt=%.0f m | birimin konumundan %d m, yon %03d (grid) | JTAC'a %.0f m | min clearance %+.1f m%s",
+            j.name, tu:getName(), i, f.x, f.z, f.y, f.r, f.brg, math.sqrt((f.x - jp.x) ^ 2 + (f.z - jp.z) ^ 2), f.c, f.good and "" or " (MARGINAL)"))
+    end
+end
+
 local function auditOne(j, idToName)
     local tName = idToName[j.targetGroupId]
     if not tName then
@@ -250,7 +291,14 @@ local function auditOne(j, idToName)
             or  string.format(" | gozlemci +%s m'de bile LOS yok", tostring(CFG.SWEEP_M[#CFG.SWEEP_M]))
         logWarn("BLOCKED " .. summary .. extra .. " | engelli birimler: " .. table.concat(blocked, ", "))
         if CFG.OUT_TEXT then trigger.action.outText("[JTAC_LOS] BLOCKED " .. j.name .. " -> " .. tName, 15) end
-        if CFG.SEARCH then searchPositions(j, tName, jp, tus) end
+        if CFG.SEARCH then
+            searchPositions(j, tName, jp, tus)
+            for _, tu in ipairs(tus) do
+                for _, bn in ipairs(blocked) do
+                    if tu:getName() == bn then searchTargetMoves(j, jp, tu) end
+                end
+            end
+        end
     elseif worstC < CFG.MARGINAL_CLEARANCE_M then
         logWarn("MARGINAL " .. summary)
         if CFG.OUT_TEXT then trigger.action.outText("[JTAC_LOS] MARGINAL " .. j.name .. " -> " .. tName, 15) end
@@ -263,7 +311,7 @@ end
 local function run()
     local ok, err = pcall(function()
         local jtacs, idToName = scanMission()
-        logInfo(string.format("v1.1.0 | %d JTAC grubu bulundu (FAC_AttackGroup) | eye obs=%.1f m tgt=%.1f m marginal<%.1f m",
+        logInfo(string.format("v1.1.1 | %d JTAC grubu bulundu (FAC_AttackGroup) | eye obs=%.1f m tgt=%.1f m marginal<%.1f m",
             #jtacs, CFG.EYE_OBSERVER_M, CFG.EYE_TARGET_M, CFG.MARGINAL_CLEARANCE_M))
         for _, j in ipairs(jtacs) do
             local ok2, e2 = pcall(auditOne, j, idToName)
