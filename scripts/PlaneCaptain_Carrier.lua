@@ -1,4 +1,4 @@
--- PlaneCaptain_Carrier | v1.2.0
+-- PlaneCaptain_Carrier | v1.2.1
 --[[
   Plane captain ground checks on the carrier - text only (no units, no statics, no pictures).
   Carrier version of the Animated Ground Crew flow, for group "CAS-1", unit "Player_01" (F/A-18C).
@@ -26,10 +26,10 @@
     * engine steps: engine RPM >= idle (export environment). "Done" only if RPM cannot be read.
     * pilot-signal steps: "Done (pilot signal)".
     * plane-captain-only signals (OK, START APU): a short timer.
-  Launch bar: the F/A-18C external-model argument is not known yet. With CFG.LAUNCHBAR_ARG = nil
-  the two launch bar steps run in calibration mode: they close on "Done (pilot signal)" and the
-  script logs every argument that moved ("LBAR calibration" lines in dcs.log). Put the number
-  into CFG.LAUNCHBAR_ARG to make the steps automatic.
+  Launch bar: F/A-18C external-model argument 85 (v1.2.1, found with the calibration mode in
+  the 2026-10-26 test flight: 0 up, max 0.837 down). The two launch bar steps close on the
+  argument. With CFG.LAUNCHBAR_ARG = nil they run in calibration mode again: they close on
+  "Done (pilot signal)" and the script logs every argument that moved ("LBAR calibration").
 
   Messages: one message per step, held on screen until the step changes; the next step replaces
   it (clearview). No repeats. Short notes are added without clearview.
@@ -50,7 +50,7 @@ if TRT.PlaneCaptain then
 end
 
 local CFG = {
-  VERSION       = "1.2.0",
+  VERSION       = "1.2.1",
   PLAYER_UNIT   = "Player_01",
   PLAYER_GROUP  = "CAS-1",
   CARRIER_UNIT  = "CVN",       -- movement is measured relative to this unit (deck is moving)
@@ -61,7 +61,8 @@ local CFG = {
   MSG_HOLD      = 600,         -- step message stays this long unless replaced (s)
   MSG_END       = 15,          -- final / abort message (s)
   MSG_NOTE      = 6,           -- short notes, added without clearview (s)
-  LAUNCHBAR_ARG = nil,         -- F/A-18C external-model launch bar argument; nil = calibration mode
+  LAUNCHBAR_ARG = 85,          -- F/A-18C external-model launch bar argument (calibrated 2026-10-26:
+                               -- 0 up, ~0.84 down); nil = calibration mode
   SCAN_MAX      = 999,         -- calibration: arguments 0..SCAN_MAX are watched
   MOVE_DIST     = 3.0,         -- m moved on the deck (carrier frame) since the phase opened -> auto abort
   OPTIONAL = {
