@@ -1,4 +1,4 @@
--- Score_Display_Test | v0.1.0
+-- Score_Display_Test | v0.1.1
 --[[
   Feasibility test for picture-based score cards (CAS (L) only, test copy).
   NOT part of the template build: build.py only embeds scripts named in
@@ -26,8 +26,12 @@
   Only callers that go through TRT.addScore(...) are seen (all current
   modules do; a module caching `local f = TRT.addScore` would bypass it).
 
-  outPicture* signature used:
-    (..., file, duration, clearView, startDelay, hAlign, vAlign, size, sizeUnits)
+  v0.1.1: pictures go through net.dostring_in("mission", "a_out_picture_s(...)")
+  (same route as MOOSE UTILS.ShowPictureToCoalition); trigger.action.outPicture*
+  does not exist. Layers are packed both as l10n/DEFAULT/<name> and
+  ScoreCards/<name>; Layout > "toggle file path" switches between them.
+  a_out_picture* argument order:
+    ([coalition,] file, duration, clearView, startDelay, "hAlign", "vAlign", size, "sizeUnits")
     hAlign 0 left 1 centre 2 right | vAlign 0 top 1 centre 2 bottom
     sizeUnits 0 = % of original image, 1 = % of window
   Every layer has the frame's pixel size, so identical align/size arguments
@@ -37,10 +41,10 @@
 _G.TRT = _G.TRT or {}
 local TRT = _G.TRT
 
-local VERSION = "0.1.0"
+local VERSION = "0.1.1"
 
 local CFG = {
-    DIR        = "ScoreCards/",
+    DIR        = "",                    -- "" = bare name (l10n/DEFAULT, as ME does) | "ScoreCards/"
     SND_DIR    = "Sounds/SCORE/",
     FLAG_SCORE = 1908,                  -- Core_Scoring FLAG_SCORE
     SIDE       = coalition.side.BLUE,
@@ -64,17 +68,34 @@ local function msg(s, d) A.outTextForCoalition(CFG.SIDE, s, d or 10, false) end
 ----------------------------------------------------------------
 -- LOW LEVEL
 ----------------------------------------------------------------
-local function picAll(file, lay, clear)
-    local ok, err = pcall(A.outPicture, file, lay.dur, clear, 0, lay.h, lay.v, lay.size, lay.units)
-    if not ok then log("outPicture '" .. file .. "': " .. tostring(err)) end
-    return ok
+-- v0.1.1: DCS has no trigger.action.outPicture* (v0.1.0 log: nil). The ME
+-- "PICTURE TO ..." actions are a_out_picture / a_out_picture_s(coalition name)
+-- in the "mission" (trigger) Lua state; reached like MOOSE UTILS.ShowPicture*:
+-- net.dostring_in("mission", "<call>"). fileExpr is a Lua expression in that
+-- state: a quoted file name, or getValueResourceByKey("<key>").
+local function q(s) return string.format("%q", s) end
+
+local function inMission(code)
+    if not (net and net.dostring_in) then
+        log("net.dostring_in not available -> cannot show pictures")
+        return false
+    end
+    local ok, res, okd = pcall(net.dostring_in, "mission", code)
+    if not ok then log("dostring_in error: " .. tostring(res) .. " | " .. code) return false end
+    if okd == false then log("mission-state error: " .. tostring(res) .. " | " .. code) return false end
+    return true
 end
 
+local function picCall(fn, prefix, fileExpr, lay, clear)
+    return inMission(string.format('%s(%s%s, %d, %s, 0, "%d", "%d", %d, "%d")',
+        fn, prefix, fileExpr, lay.dur, clear and "true" or "false", lay.h, lay.v, lay.size, lay.units))
+end
+
+local function picAllExpr(fileExpr, lay, clear) return picCall("a_out_picture", "", fileExpr, lay, clear) end
+local function picAll(file, lay, clear) return picAllExpr(q(file), lay, clear) end
+
 local function pic(file, lay, clear)
-    local ok, err = pcall(A.outPictureForCoalition, CFG.SIDE, file, lay.dur, clear, 0,
-        lay.h, lay.v, lay.size, lay.units)
-    if not ok then log("outPictureForCoalition '" .. file .. "': " .. tostring(err)) end
-    return ok
+    return picCall("a_out_picture_s", '"blue", ', q(file), lay, clear)
 end
 
 local function sound(name)
@@ -174,11 +195,11 @@ end
 ----------------------------------------------------------------
 local demo = 0
 
-local function probe(tag, file)
-    msg(string.format("%s sent: \"%s\"\nCard visible = this form works. Wait %ds before the next probe.",
-        tag, file, CFG.PROBE.dur), CFG.PROBE.dur)
-    local ok = picAll(file, CFG.PROBE, true)
-    log(string.format("%s file=%s call_ok=%s", tag, file, tostring(ok)))
+local function probe(tag, fileExpr)
+    msg(string.format("%s sent: %s\nCard visible = this form works. Wait %ds before the next probe.",
+        tag, fileExpr, CFG.PROBE.dur), CFG.PROBE.dur)
+    local ok = picAllExpr(fileExpr, CFG.PROBE, true)
+    log(string.format("%s file=%s call_ok=%s", tag, fileExpr, tostring(ok)))
 end
 
 local function stack(text, dtext, reversed)
@@ -202,9 +223,13 @@ local function apiReport()
     for _, n in ipairs(names) do
         lines[#lines + 1] = string.format("  %-24s %s", n, type(A[n]) == "function" and "yes" or "NO")
     end
-    lines[#lines + 1] = string.format("Layout: %s, size %d%%, units %s | live hook %s",
+    lines[#lines + 1] = string.format("  %-24s %s", "net.dostring_in",
+        (net and type(net.dostring_in) == "function") and "yes" or "NO")
+    lines[#lines + 1] = string.format("  %-24s %s", "global a_out_picture_s",
+        type(rawget(_G, "a_out_picture_s")) == "function" and "yes" or "no")
+    lines[#lines + 1] = string.format("Layout: %s, size %d%%, units %s | live hook %s | path '%s'",
         POS[L.pos][1], CFG.CRT.size, CFG.CRT.units == 1 and "window" or "image",
-        CFG.LIVE and "ON" or "OFF")
+        CFG.LIVE and "ON" or "OFF", CFG.DIR == "" and "l10n (bare)" or CFG.DIR)
     local s = table.concat(lines, "\n")
     msg(s, 15)
     log(s)
@@ -213,10 +238,10 @@ end
 local ITEMS = {
     { "Score card test", sub = {
         { "Paths", sub = {
-            { "P1 root ScoreCards/", function() probe("P1", CFG.DIR .. "sc_test_root.png") end },
-            { "P2 l10n/DEFAULT/ path", function() probe("P2", "l10n/DEFAULT/sc_test_l10n.png") end },
-            { "P3 bare file name", function() probe("P3", "sc_test_l10n.png") end },
-            { "P4 ResKey", function() probe("P4", "ResKey_SCT_Pic") end },
+            { "P1 root ScoreCards/", function() probe("P1", q("ScoreCards/sc_test_root.png")) end },
+            { "P2 l10n/DEFAULT/ path", function() probe("P2", q("l10n/DEFAULT/sc_test_l10n.png")) end },
+            { "P3 bare file name", function() probe("P3", q("sc_test_l10n.png")) end },
+            { "P4 ResKey (as ME)", function() probe("P4", 'getValueResourceByKey("ResKey_SCT_Pic")') end },
         } },
         { "Stack", sub = {
             { "S1 frame + 2 layers", function() stack("42", nil, false) end },
@@ -266,6 +291,10 @@ local ITEMS = {
                 CFG.CRT.units = 1 - CFG.CRT.units; showCrt(demo, nil); apiReport()
             end },
             { "toggle live hook", function() CFG.LIVE = not CFG.LIVE; apiReport() end },
+            { "toggle file path", function()
+                CFG.DIR = (CFG.DIR == "") and "ScoreCards/" or ""
+                showCrt(demo, nil); apiReport()
+            end },
             { "API report", apiReport },
         } },
     } },

@@ -1,12 +1,14 @@
-# make_test_miz.py | v0.1.0
+# make_test_miz.py | v0.1.1
 # Builds a throwaway test copy of a mission with the score-card assets and
 # Score_Display_Test.lua. The source .miz is only read, never written.
 #
 #   python tools/score_cards/make_test_miz.py "<path>/Close Air Support (L).miz"
-#   -> "<path>/Close Air Support (L)_ScoreCardTest.miz"
+#   -> "<path>/Close Air Support (L)_ScoreCardTest.miz"   (optional 2nd arg: output path)
 #
 # Packs:
 #   ScoreCards/*.png              (out/ScoreCards + out/test/sc_test_root.png)
+#   l10n/DEFAULT/<same names>     (v0.1.1: second copy - ME picture actions use
+#                                  bare l10n names; the test decides which works)
 #   Sounds/SCORE/*.ogg            (out/Sounds/SCORE)
 #   l10n/DEFAULT/sc_test_l10n.png (path probes P2..P4), mapResource ResKey_SCT_Pic
 #   l10n/DEFAULT/Score_Display_Test.lua + one a_do_script_file action appended
@@ -27,10 +29,10 @@ PIC_KEY = b"ResKey_SCT_Pic"
 PIC_FILE = b"sc_test_l10n.png"
 
 
-def main(src):
+def main(src, dst=None):
     if not os.path.isfile(src):
         sys.exit("not found: " + src)
-    dst = os.path.splitext(src)[0] + "_ScoreCardTest.miz"
+    dst = dst or os.path.splitext(src)[0] + "_ScoreCardTest.miz"
     zin = zipfile.ZipFile(src)
     names = zin.namelist()
 
@@ -71,6 +73,8 @@ def main(src):
         d = os.path.join(HERE, "out", sub)
         for f in sorted(os.listdir(d)):
             add[arc + "/" + f] = os.path.join(d, f)
+            if arc == "ScoreCards":
+                add["l10n/DEFAULT/" + f] = os.path.join(d, f)
     for p in add.values():
         if not os.path.isfile(p):
             sys.exit("missing asset (run make_cards.py / make_sfx.py first): " + p)
@@ -93,6 +97,6 @@ def main(src):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        sys.exit(__doc__ or "usage: make_test_miz.py <mission.miz>")
-    main(sys.argv[1])
+    if len(sys.argv) not in (2, 3):
+        sys.exit("usage: make_test_miz.py <mission.miz> [out.miz]")
+    main(*sys.argv[1:])
