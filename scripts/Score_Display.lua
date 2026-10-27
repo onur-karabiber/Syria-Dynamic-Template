@@ -1,12 +1,15 @@
--- Score_Display | v1.1.0
+-- Score_Display | v1.1.1
 --[[
   Picture score cards (CAS (L) only; not part of the template build).
 
+  v1.1.1: plane captain cards top-left, 24 % (Onur, test 2026-10-28). They share the corner
+          with the CRT score card; the two do not overlap in time in CAS-1 (cards: deck only).
+          Verified 2026-10-28: clearView=true removes earlier pictures (blank.png clears S4).
+
   v1.1.0: plane captain step cards for PlaneCaptain_Carrier v1.3.0+:
           pcHas(id) / pcCard(id) / pcClear(). Cards PlaneCaptain/<id>.png (CFG.PC.IDS),
-          bottom-left, shown with clearView=true so each card replaces the previous one;
+          shown with clearView=true so each card replaces the previous one;
           pcClear() shows PlaneCaptain/blank.png with clearView=true to remove the last card.
-          Untested at release: whether clearView=true also removes earlier pictures.
 
   CRT card    every score change: frame + total (orange) + delta (green / red),
               top-left, CFG.CRT. Deltas arriving within CFG.AGG s are summed
@@ -48,7 +51,7 @@
 _G.TRT = _G.TRT or {}
 local TRT = _G.TRT
 
-local VERSION = "1.1.0"
+local VERSION = "1.1.1"
 
 local CFG = {
     DIR         = "ScoreCards/",
@@ -63,7 +66,7 @@ local CFG = {
     SOUND       = true,
     CRT         = { dur = 6,  h = 0, v = 0, size = 22, units = 1 },
     MED         = { dur = 12, h = 1, v = 1, size = 50, units = 1 },
-    PC          = { dir = "PlaneCaptain/", dur = 600, h = 0, v = 2, size = 30, units = 1,
+    PC          = { dir = "PlaneCaptain/", dur = 600, h = 0, v = 0, size = 24, units = 1,
                     -- must match tools/score_cards/out/PlaneCaptain (make_pc_cards.py IDS present)
                     IDS = { "S00", "S0P", "S2", "S2W", "S3", "S3W", "S4",
                             "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10",

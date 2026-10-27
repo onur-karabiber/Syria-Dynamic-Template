@@ -1,4 +1,4 @@
-# make_pc_cards.py | v1.0.0
+# make_pc_cards.py | v1.0.1
 # Plane captain step cards for PlaneCaptain_Carrier (via Score_Display, CAS (L) only).
 #
 #   python tools/score_cards/make_pc_cards.py "<Saved Games>/DCS/Missions/The Routine Things (With RAT)/Pics"
@@ -23,7 +23,7 @@ OUT = os.path.join(HERE, "out", "PlaneCaptain")
 IDS = ["S00", "S0P", "S2", "S2W", "S3", "S3W", "S4",
        "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10", "C11", "C12", "C13", "C14"]
 WIDTH = 1000
-ANCHOR = ("left", "bottom")          # matches Score_Display CFG.PC h = 0, v = 2
+ANCHOR = ("left", "top")             # v1.0.1: matches Score_Display CFG.PC h = 0, v = 0
 
 
 def main(src):
