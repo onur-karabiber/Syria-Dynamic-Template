@@ -1,5 +1,8 @@
--- PlaneCaptain_Carrier | v1.2.1
+-- PlaneCaptain_Carrier | v1.2.2
 --[[
+  v1.2.2: PC.milestones = { START = t, CHECKS = t } (timer.getTime() when each phase first completes),
+          read by Flight_Timeline v1.0.0 (M1 engines running, M2 checks done). No behaviour change.
+
   Plane captain ground checks on the carrier - text only (no units, no statics, no pictures).
   Carrier version of the Animated Ground Crew flow, for group "CAS-1", unit "Player_01" (F/A-18C).
 
@@ -50,7 +53,7 @@ if TRT.PlaneCaptain then
 end
 
 local CFG = {
-  VERSION       = "1.2.1",
+  VERSION       = "1.2.2",
   PLAYER_UNIT   = "Player_01",
   PLAYER_GROUP  = "CAS-1",
   CARRIER_UNIT  = "CVN",       -- movement is measured relative to this unit (deck is moving)
@@ -196,6 +199,7 @@ local PC = {
   calib = nil,                 -- launch bar calibration: { base = {}, mn = {}, mx = {}, cur = {} }
   gid = nil,
   ownMenu = nil,
+  milestones = {},            -- v1.2.2: phase -> first completion time (Flight_Timeline)
 }
 TRT.PlaneCaptain = PC
 
@@ -468,6 +472,10 @@ local function completeStep(reason)
     else
       F.step, F.idx = nil, nil
       local np = PHASES[(phaseIndex(curPhase) or 0) + 1]
+      if not PC.milestones[curPhase] then                      -- v1.2.2
+        PC.milestones[curPhase] = now()
+        log(string.format("milestone %s complete t=%.1f", curPhase, PC.milestones[curPhase]))
+      end
       if np then
         F.phase = "WAIT_" .. np
         say("[PLANE CAPTAIN] Engines running.\n>> When ready: Plane captain > Ready for checks", CFG.MSG_HOLD, true)

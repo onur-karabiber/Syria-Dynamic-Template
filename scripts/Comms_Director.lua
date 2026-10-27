@@ -1,5 +1,9 @@
--- Comms_Director | v1.5.0
+-- Comms_Director | v1.5.1
 --[[
+  v1.5.1 — read-only state view for Flight_Timeline v1.0.0: _G.TRT.CD = CD (phase, deadJ2,
+           j2.tot, inj, ...) and CD.aborted = true when the pilot calls OVERLORD "mission abort".
+           No behaviour change; nothing else in this file reads TRT.CD.
+
   v1.5.0 — air picture, threat calls and CAP net (OVERLORD frequency):
     * Picture is computed, no longer hard-coded "picture clean": OVERLORD check-in and
       F10 "request picture" report airborne RED fighter groups within PIC_RANGE_NM of
@@ -411,7 +415,10 @@ local CD = {
     chat          = {},       -- v1.5.0 deferred unsolicited calls { t0, fn }
     cap           = {},       -- v1.5.0 per CAP key { state = off|station|commit, clean }
     threat        = {},       -- v1.5.0 per RED group name { far, close } (calls made)
+    aborted       = false,    -- v1.5.1 OVERLORD mission abort called (read by Flight_Timeline)
 }
+_G.TRT = _G.TRT or {}
+_G.TRT.CD = CD   -- v1.5.1: read-only view for Flight_Timeline; do not write from outside
 
 -- Phases in which the player is (or should be) working OVERLORD
 local OVL_PHASES = {
@@ -990,6 +997,7 @@ end
 
 local function A_OvlAbort()
     local p = Player(); if not p then return end
+    CD.aborted = true   -- v1.5.1
     CD.awaiting = true; MenuRebuild()
     local c = Carrier()
     Pilot(string.format("Overlord, %s, mission abort, RTB, angels %d, state %s.", CFG.CS, Angels(p), State(p)),
@@ -1513,7 +1521,7 @@ local function CD_Init()
     SetFlag(200, 0)
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.5.0 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.5.1 online — CAS-1 Syria")
 end
 
 CD_Init()

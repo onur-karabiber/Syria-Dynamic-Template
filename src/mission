@@ -165153,7 +165153,7 @@ mission =
 		["centerY"] = 50000,
 		["zoom"] = 1254980.0796813,
 	},
-	["maxDictId"] = 317,
+	["maxDictId"] = 319,
 	["pictureFileNameB"] = 
 	{
 	},
@@ -165223,7 +165223,7 @@ mission =
 		{
 			[1] = "a_set_flag_value(\"100\", 3);a_set_flag_value(\"102\", 2);",
 			[2] = "a_do_script_file(getValueResourceByKey(\"ResKey_Action_286\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_287\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_316\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_297\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_298\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_299\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_311\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_301\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_302\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_312\"));",
-			[3] = "a_do_script_file(getValueResourceByKey(\"ResKey_Action_279\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_315\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_282\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_283\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_303\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_313\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_314\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_317\"));",
+			[3] = "a_do_script_file(getValueResourceByKey(\"ResKey_Action_279\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_315\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_282\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_283\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_303\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_313\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_314\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_317\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_319\"));",
 			[4] = "a_do_script_file(getValueResourceByKey(\"ResKey_Action_227\")); mission.trig.func[4]=nil;",
 			[5] = "a_do_script(\"SetSuperCarrier(true)\"); mission.trig.func[5]=nil;",
 			[6] = "a_do_script_file(getValueResourceByKey(\"ResKey_Action_213\")); mission.trig.func[6]=nil;",
@@ -167335,6 +167335,11 @@ mission =
 				[8] = 
 				{
 					["file"] = "ResKey_Action_317",
+					["predicate"] = "a_do_script_file",
+				},
+				[9] = 
+				{
+					["file"] = "ResKey_Action_319",
 					["predicate"] = "a_do_script_file",
 				},
 			},
