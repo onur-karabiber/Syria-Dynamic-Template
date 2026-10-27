@@ -1,11 +1,13 @@
 # score_cards — picture score cards for CAS (L)
 
-Status: **feasibility test** (v0.1.0). Not used by the template build.
+Status: `Score_Display.lua` v1.0.0 installed in CAS (L) only. Not used by the template build.
+Test kit (`Score_Display_Test.lua`, `make_test_miz.py`) kept for re-verification.
 
 | File | Role |
 |---|---|
 | `make_cards.py` | Frames + full-canvas digit layers → `out/ScoreCards/`, previews → `out/preview/` (ignored), path-probe images → `out/test/` |
 | `make_sfx.py` | Synthesised `reward` / `penalty` / `mission_end` → `out/Sounds/SCORE/*.ogg` (needs ffmpeg) |
+| `install_score_display.py` | Installs/updates `scripts/Score_Display.lua` + assets in a `.miz` in place (backup to `BackUps/<name>_before-SD-<ver>.miz`) |
 | `make_test_miz.py` | Reads a `.miz`, writes `<name>_ScoreCardTest.miz` with the assets and `scripts/Score_Display_Test.lua` |
 | `src_art/` | Source card art (Onur) |
 | `fonts/` | Black Ops One (used), plus Stardos Stencil, Share Tech Mono, Orbitron — all SIL OFL, licences alongside |
@@ -18,6 +20,21 @@ Character *i* (1-based) of a string of length *L* uses slot `2(i−1) − (L−1
 so 1–4 characters stay centred with 7 positions per glyph.
 
 Sets: `crt_t` (CRT total, orange), `crt_dp` / `crt_dn` (CRT delta, green / red, under the total), `med_t` (medal total).
+
+## Install / update (CAS (L))
+
+```
+python tools/score_cards/install_score_display.py "<Saved Games>/DCS/Missions/The Routine Things (With RAT)/Close Air Support (L).miz"
+```
+
+Close the mission in DCS / ME first. Placement, sizes, durations: `CFG` at the top of `scripts/Score_Display.lua`, then re-run the installer.
+
+## Verified mechanics (2026-10-27)
+
+- `trigger.action.outPicture*` does not exist; pictures go through `net.dostring_in("mission", 'a_out_picture_s(...)')`.
+- Paths: `ScoreCards/x.png` and `l10n/DEFAULT/x.png` resolve, bare `x.png` does not.
+- Same-size layers overlay exactly; later calls draw on top.
+- `ScoreCards/` and `Sounds/SCORE/` survive a Mission Editor save.
 
 ## Test run
 
