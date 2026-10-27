@@ -80,3 +80,39 @@ p_ovl_abort_a;PILOT;Overlord, Hornet five one, mission abort, RTB,;tok:0.1
 ovl_abort_a;OVERLORD;Hornet five one, Overlord, copy abort. RTB approved.;tok:0.15
 p_ovl_checkin_rb;PILOT>OVERLORD;Hornet five one, proceeding C P Tiger, hard deck two three thousand, wilco.;tok
 p_ovl_rtb_rb;PILOT>OVERLORD;Hornet five one, zero five zero, wilco.;tok
+# v1.5.0 (Comms_Director): computed picture, threat calls, CAP net on the OVERLORD channel
+ovl_ci_rc;OVERLORD;Hornet five one, Overlord, radar contact.;tok:0.15
+ovl_ci_frag;OVERLORD;Mission as fragged, Pointer one one and Eyeball one one on station. Proceed C P Tiger,;tok:0.1
+o_pic;OVERLORD;Picture,;tok:0.1
+o_pic_clean;OVERLORD;Picture clean.;tok:0.15
+o_single;OVERLORD;single group,;tok:0.1
+o_two;OVERLORD;two groups,;tok:0.1
+o_three;OVERLORD;three groups,;tok:0.1
+o_many;OVERLORD;multiple groups,;tok:0.1
+o_nearest;OVERLORD;nearest group,;tok:0.05
+o_bullseye;OVERLORD;bullseye;tok
+o_braa;OVERLORD;Bra;tok
+o_thousand;OVERLORD;thousand,;tok:0.1
+o_hot;OVERLORD;hot,;tok:0.1
+o_flank;OVERLORD;flank,;tok:0.1
+o_beam;OVERLORD;beam,;tok:0.1
+o_cold;OVERLORD;cold,;tok:0.1
+o_hostile;OVERLORD;hostile.;tok
+o_sam_rmk;OVERLORD;Sam activity reported in the target areas.;tok
+ovl_threat_head;OVERLORD;Hornet five one, Overlord, threat,;tok:0.1
+p_ovl_copy;PILOT>OVERLORD;Hornet five one, copy.;tok
+ovl_c31_commit;OVERLORD;Check three one, Overlord, commit, group,;tok:0.05
+ovl_c21_commit;OVERLORD;Check two one, Overlord, commit, group,;tok:0.05
+ovl_v21_commit;OVERLORD;Viper two one, Overlord, commit, group,;tok:0.05
+ovl_c31_copy;OVERLORD;Check three one, Overlord, copy splash.;tok
+ovl_c21_copy;OVERLORD;Check two one, Overlord, copy splash.;tok
+ovl_v21_copy;OVERLORD;Viper two one, Overlord, copy splash.;tok
+cap_c31_commit;CHECK31>OVERLORD;Check three one, committing.;tok
+cap_c21_commit;CHECK21>OVERLORD;Check two one, committing.;tok
+cap_v21_commit;VIPER21>OVERLORD;Viper two one, committing.;tok
+cap_c31_splash;CHECK31>OVERLORD;Overlord, Check three one, splash one.;tok
+cap_c21_splash;CHECK21>OVERLORD;Overlord, Check two one, splash one.;tok
+cap_v21_splash;VIPER21>OVERLORD;Overlord, Viper two one, splash one.;tok
+cap_c31_station;CHECK31>OVERLORD;Overlord, Check three one, picture clean, back to station.;tok
+cap_c21_station;CHECK21>OVERLORD;Overlord, Check two one, picture clean, back to station.;tok
+cap_v21_station;VIPER21>OVERLORD;Overlord, Viper two one, picture clean, back to station.;tok

@@ -1,10 +1,14 @@
-# make_clips.py | v1.6.0
+# make_clips.py | v1.7.0
 # tts/clips.csv -> src/Sounds/CAS1/<id>.ogg  (Piper TTS + ffmpeg radio chain)
 # CV comms:  python tts/make_clips.py --set cv   (tts/cv_clips.csv -> src/Sounds/CV/,
 #            table tts/cv_audio_table.lua -> paste into CV_Comms CFG.AUDIO)
 # LTCC transit: python tts/make_clips.py --set fc (tts/fc_clips.csv -> src/Sounds/FC/,
 #            table tts/fc_audio_table.lua -> paste into Field_Comms CFG.AUDIO)
 #
+# v1.7.0: CAP net voices for Comms_Director v1.5.0 (all '>OVERLORD' channel):
+#         CHECK31 ryan-high, CHECK21 john-medium, VIPER21 bryce-medium (three distinct men,
+#         none of them already on the CAS1 net). ryan-high is used for full sentences only
+#         (its one-syllable token problem, below, does not apply).
 # v1.6.0: high-quality Piper models on the busiest voices: PILOT libritts-high speaker 851
 #         (all sets; ryan-high rejected: one-syllable tokens collapse to ~0.15-0.2 s,
 #         "two" never exceeds 0.23 s at any length_scale),
@@ -55,6 +59,9 @@ VOICE = {
     'PILOT':     ('en_US-libritts-high.onnx', 1.0, 851, 1.0),  # v1.6.0, was john-medium (ryan-high rejected, see header)
     'MARSHAL':   ('en_US-libritts-high.onnx', 1.0, 736, 1.0),  # v1.6.0, was hfc_male (norman: garbage on 1-word tokens)
     'APPROACH':  ('en_US-libritts-high.onnx', 1.0, 69, 1.0),   # v1.6.0, was kusal
+    'CHECK31':   'en_US-ryan-high.onnx',      # v1.7.0 CAP-1 lead (Comms_Director CAP net)
+    'CHECK21':   'en_US-john-medium.onnx',    # v1.7.0 CAP-2 lead
+    'VIPER21':   'en_US-bryce-medium.onnx',   # v1.7.0 INTER-2 lead
     # Field_Comms (--set fc). Civil / foreign ATC is cast British so the switch
     # to Strike (US Navy, joe) lands as an audible change of world; Cyprus ATC
     # English is British-influenced anyway. No Turkish Piper voice exists.

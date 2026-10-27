@@ -1,5 +1,29 @@
--- Comms_Director | v1.4.10
+-- Comms_Director | v1.5.0
 --[[
+  v1.5.0 — air picture, threat calls and CAP net (OVERLORD frequency):
+    * Picture is computed, no longer hard-coded "picture clean": OVERLORD check-in and
+      F10 "request picture" report airborne RED fighter groups within PIC_RANGE_NM of
+      the player (count + nearest group, bullseye-referenced; BRAA fallback if the
+      blue bullseye cannot be read). "Picture clean" only when there is none.
+    * Threat call (OVERLORD → HORNET 51, BRAA from the player, pilot "copy"):
+      per RED fighter group, once when HOT/FLANK inside THREAT_NM and once inside
+      THREAT_CLOSE_NM (any aspect). Only in OVL_PHASES (player checked in).
+    * CAP net: CFG.CAP groups (CAP-1 Check 31, CAP-2 Check 21, INTER-2 Viper 21).
+      Narration of what the AI actually does, it does not task the AI:
+        airborne + bandit ≤ CAP_COMMIT_NM of the lead → OVERLORD "commit, group BRAA…",
+                                                        CAP "committing"
+        S_EVENT_KILL, killer in a CAP group, victim RED airplane → CAP "splash one",
+                                                        OVERLORD "copy splash"
+        committed, no bandit ≤ CAP_COMMIT_NM + 10 for CAP_CLEAN_TICKS ticks
+                                                     → CAP "picture clean, back to station"
+      Transmitted on the OVERLORD channel; subtitles only in OVL_PHASES / OVL_OUT
+      (outside them the radio still transmits, it is just not captioned).
+    * Unsolicited calls wait in CD.chat until the clip queue is idle (CHAT_TTL s,
+      then dropped); BRAA/bullseye are computed when the call is made, not when queued.
+    * Ground truth, no radar model: E-2C detection / coverage is not simulated.
+    * 35 new clips (make_clips v1.7.0: voices CHECK31 ryan-high, CHECK21 john-medium,
+      VIPER21 bryce-medium). QFire accepts clips without subtitle text.
+
   v1.4.10 — pilot acknowledgement of Strike's Mode 4 instructions (STRIKE_CHK):
            "Check Mode 4" and "Mode 4 sour. Recycle." now get "<callsign>, wilco."
            (Ack, existing p_wilco clip — no new clips). The 16 s gap before
@@ -293,6 +317,55 @@ local CFG = {
         ovl_abort_a            = { ch = "OVERLORD", len = 3.24 },
         p_ovl_checkin_rb       = { ch = "OVERLORD", len = 3.72 },
         p_ovl_rtb_rb           = { ch = "OVERLORD", len = 2.06 },
+        ovl_ci_rc              = { ch = "OVERLORD", len = 2.39 },
+        ovl_ci_frag            = { ch = "OVERLORD", len = 3.95 },
+        o_pic                  = { ch = "OVERLORD", len = 0.47 },
+        o_pic_clean            = { ch = "OVERLORD", len = 0.77 },
+        o_single               = { ch = "OVERLORD", len = 0.67 },
+        o_two                  = { ch = "OVERLORD", len = 0.61 },
+        o_three                = { ch = "OVERLORD", len = 0.66 },
+        o_many                 = { ch = "OVERLORD", len = 0.81 },
+        o_nearest              = { ch = "OVERLORD", len = 0.60 },
+        o_bullseye             = { ch = "OVERLORD", len = 0.49 },
+        o_braa                 = { ch = "OVERLORD", len = 0.35 },
+        o_thousand             = { ch = "OVERLORD", len = 0.51 },
+        o_hot                  = { ch = "OVERLORD", len = 0.36 },
+        o_flank                = { ch = "OVERLORD", len = 0.40 },
+        o_beam                 = { ch = "OVERLORD", len = 0.43 },
+        o_cold                 = { ch = "OVERLORD", len = 0.40 },
+        o_hostile              = { ch = "OVERLORD", len = 0.46 },
+        o_sam_rmk              = { ch = "OVERLORD", len = 1.98 },
+        ovl_threat_head        = { ch = "OVERLORD", len = 1.99 },
+        p_ovl_copy             = { ch = "OVERLORD", len = 1.22 },
+        ovl_c31_commit         = { ch = "OVERLORD", len = 2.09 },
+        ovl_c21_commit         = { ch = "OVERLORD", len = 2.04 },
+        ovl_v21_commit         = { ch = "OVERLORD", len = 2.20 },
+        ovl_c31_copy           = { ch = "OVERLORD", len = 2.11 },
+        ovl_c21_copy           = { ch = "OVERLORD", len = 2.21 },
+        ovl_v21_copy           = { ch = "OVERLORD", len = 2.09 },
+        cap_c31_commit         = { ch = "OVERLORD", len = 1.30 },
+        cap_c21_commit         = { ch = "OVERLORD", len = 1.48 },
+        cap_v21_commit         = { ch = "OVERLORD", len = 1.55 },
+        cap_c31_splash         = { ch = "OVERLORD", len = 2.00 },
+        cap_c21_splash         = { ch = "OVERLORD", len = 2.39 },
+        cap_v21_splash         = { ch = "OVERLORD", len = 2.31 },
+        cap_c31_station        = { ch = "OVERLORD", len = 2.95 },
+        cap_c21_station        = { ch = "OVERLORD", len = 3.84 },
+        cap_v21_station        = { ch = "OVERLORD", len = 3.21 },
+    },
+
+    -- Air picture / threat / CAP net (v1.5.0)
+    PIC_RANGE_NM    = 120,   -- picture: RED fighter groups within this range of the player
+    THREAT_NM       = 35,    -- threat call: HOT/FLANK group inside this range
+    THREAT_CLOSE_NM = 20,    -- second threat call: any aspect inside this range
+    CAP_COMMIT_NM   = 60,    -- CAP lead ↔ nearest RED fighter: committed
+    CAP_CLEAN_TICKS = 6,     -- ticks (× TICK s) with no bandit ≤ CAP_COMMIT_NM + 10 → back to station
+    CHAT_TTL        = 45,    -- s an unsolicited call may wait for an idle queue
+    FIGHTER_ATTRS   = { "Fighters", "Interceptors", "Multirole fighters" },
+    CAP = {                  -- ME group, clip key, spoken callsign
+        { group = "CAP-1",   key = "c31", cs = "Check 31" },
+        { group = "CAP-2",   key = "c21", cs = "Check 21" },
+        { group = "INTER-2", key = "v21", cs = "Viper 21" },
     },
 
     -- Inject probabilities (integer 0–100)
@@ -335,6 +408,9 @@ local CD = {
     feetPending   = nil,      -- "DRY" / "WET" — report offered in F10
     awaiting      = false,    -- pilot call made, controller reply pending
     inj           = { i1 = false, i2 = false, i3 = false },
+    chat          = {},       -- v1.5.0 deferred unsolicited calls { t0, fn }
+    cap           = {},       -- v1.5.0 per CAP key { state = off|station|commit, clean }
+    threat        = {},       -- v1.5.0 per RED group name { far, close } (calls made)
 }
 
 -- Phases in which the player is (or should be) working OVERLORD
@@ -496,7 +572,7 @@ local function QFire()
         timer.scheduleFunction(function() QFire() end, nil, timer.getTime() + clip.after)
         return
     end
-    Msg(clip.text, clip.dur)
+    if clip.text then Msg(clip.text, clip.dur) end
     local len = Tx(clip.audio)
     if clip.fn then pcall(clip.fn) end
     CD.qPlaying = true
@@ -580,6 +656,156 @@ local function ReadBack(ch, text, clip)
     local prev = CD.queue[#CD.queue]
     if prev then prev.hold = 0.1 end
     Q("[" .. CFG.CS .. "] " .. text, CFG.DUR_PILOT + 2, 0.8, nil, CFG.PILOT_HOLD, S(ch, clip))
+end
+
+-- ══════════════════════════════════════════════════════════════
+--  AIR PICTURE / THREAT / CAP NET  (v1.5.0)
+-- ══════════════════════════════════════════════════════════════
+local function IsFighter(u)
+    for _, a in ipairs(CFG.FIGHTER_ATTRS) do
+        local ok, has = pcall(u.hasAttribute, u, a)
+        if ok and has then return true end
+    end
+    return false
+end
+
+--- First active, airborne, alive unit of a group (fighters only if asked) + count.
+local function AirLead(g, fightersOnly)
+    local lead, n = nil, 0
+    for _, u in ipairs(g:getUnits() or {}) do
+        if u and u:isExist() and u:isActive() and u:inAir() and u:getLife() > 0
+            and (not fightersOnly or IsFighter(u)) then
+            n = n + 1; lead = lead or u
+        end
+    end
+    return lead, n
+end
+
+--- Airborne RED fighter groups within rangeNM of ref, nearest first: { name, unit, pos, n, d }.
+local function Bandits(ref, rangeNM)
+    local out = {}
+    local ok, groups = pcall(coalition.getGroups, coalition.side.RED, Group.Category.AIRPLANE)
+    if not ok or not groups then return out end
+    for _, g in ipairs(groups) do
+        if g and g:isExist() then
+            local lead, n = AirLead(g, true)
+            if lead then
+                local pos = lead:getPoint()
+                local d = Dist2D(ref, pos)
+                if d <= rangeNM then
+                    out[#out + 1] = { name = g:getName(), unit = lead, pos = pos, n = n, d = d }
+                end
+            end
+        end
+    end
+    table.sort(out, function(a, b) return a.d < b.d end)
+    return out
+end
+
+--- Target aspect relative to ref: HOT ≤30°, FLANK ≤70°, BEAM ≤110°, else COLD. nil if slow.
+local function Aspect(u, ref)
+    local v = u:getVelocity()
+    if math.sqrt(v.x * v.x + v.z * v.z) < 30 then return nil end
+    local hdg = math.deg(math.atan2(v.z, v.x)) % 360
+    local a = math.abs(ADiff(hdg, Bearing(u:getPoint(), ref)))
+    if a <= 30 then return "HOT" elseif a <= 70 then return "FLANK" elseif a <= 110 then return "BEAM" end
+    return "COLD"
+end
+
+local function Bullseye()
+    local ok, p = pcall(coalition.getMainRefPoint, coalition.side.BLUE)
+    return (ok and p and p.x) and p or nil
+end
+
+--- Group description: "bullseye|BRAA BRG/RNG, NN thousand[, aspect], hostile" + tokens.
+-- kind = "BULL" (from the bullseye) or "BRAA" (from the reference aircraft).
+local function GroupDesc(b, from, kind, aspectRef)
+    local brg = string.format("%03d", math.floor(BrgMag(from, b.pos) + 0.5) % 360)
+    local rng = math.floor(Dist2D(from, b.pos) + 0.5)
+    local alt = math.max(1, Angels(b.unit))
+    local asp = aspectRef and Aspect(b.unit, aspectRef)
+    local txt = string.format("%s %s/%d, %d thousand%s, hostile", (kind == "BULL") and "bullseye" or "BRAA",
+        brg, rng, alt, asp and (", " .. asp:lower()) or "")
+    local seq = { (kind == "BULL") and "o_bullseye" or "o_braa", OD(brg), 0.12, OD(rng), 0.12, OD(alt), "o_thousand" }
+    if asp then seq[#seq + 1] = "o_" .. asp:lower() end
+    seq[#seq + 1] = "o_hostile"
+    return txt, seq
+end
+
+local COUNT_TXT = { "single group", "two groups", "three groups" }
+local COUNT_TOK = { "o_single", "o_two", "o_three" }
+
+--- Picture for the player: text + tokens. "Picture clean." only when no RED fighter is airborne in range.
+local function PictureParts(pPos)
+    local bs = Bandits(pPos, CFG.PIC_RANGE_NM)
+    if #bs == 0 then return "Picture clean.", { "o_pic_clean" } end
+    local from, kind = Bullseye(), "BULL"
+    if not from then from, kind = pPos, "BRAA" end
+    local n = #bs
+    local gt, gs = GroupDesc(bs[1], from, kind)
+    local txt = "Picture, " .. (COUNT_TXT[n] or "multiple groups")
+    local seq = { "o_pic", COUNT_TOK[n] or "o_many" }
+    if n > 1 then txt = txt .. ", nearest group"; seq[#seq + 1] = "o_nearest" end
+    return txt .. ", " .. gt .. ".", { seq, gs }
+end
+
+--- Unsolicited traffic on the OVERLORD net. Captioned only while the player works OVERLORD;
+-- otherwise the transmission still goes out on the OVERLORD frequency, without subtitle.
+local function QNet(text, audio, after)
+    local captioned = OVL_PHASES[CD.phase] or CD.phase == "OVL_OUT"
+    Q(captioned and text or nil, CFG.DUR_SHORT, after or 0, nil, 0.1, audio)
+end
+
+--- Deferred call: fn builds the exchange when the queue is idle (positions taken then).
+local function Chat(fn, prio)
+    local it = { t0 = timer.getTime(), fn = fn }
+    if prio then table.insert(CD.chat, 1, it) else CD.chat[#CD.chat + 1] = it end
+end
+
+local function ThreatCall(name, close)
+    Chat(function()
+        local p = Player(); if not p then return end
+        local g = Group.getByName(name); if not g then return end
+        local lead = AirLead(g, true); if not lead then return end
+        local pPos = p:getPoint()
+        local gt, gs = GroupDesc({ unit = lead, pos = lead:getPoint() }, pPos, "BRAA", pPos)
+        Q(string.format("[OVERLORD] %s, Overlord, threat, %s.", CFG.CS, gt), CFG.DUR_URGENT, 0, nil, nil,
+            S("OVERLORD", "ovl_threat_head", gs))
+        ReadBack("OVERLORD", CFG.CS .. ", copy.", "p_ovl_copy")
+        env.info(string.format("[CD] threat call %s (%s): %s", name, close and "close" or "first", gt))
+    end, true)
+end
+
+local function CapCommit(c)
+    Chat(function()
+        local g = Group.getByName(c.group); if not g then return end
+        local lead = AirLead(g, false); if not lead then return end
+        local lp = lead:getPoint()
+        local bs = Bandits(lp, CFG.CAP_COMMIT_NM)
+        if #bs == 0 then return end
+        local gt, gs = GroupDesc(bs[1], lp, "BRAA", lp)
+        QNet(string.format("[OVERLORD] %s, Overlord, commit, group %s.", c.cs, gt),
+            S("OVERLORD", "ovl_" .. c.key .. "_commit", gs))
+        QNet(string.format("[%s] %s, committing.", c.cs:upper(), c.cs),
+            S("OVERLORD", "cap_" .. c.key .. "_commit"), 0.8)
+        env.info(string.format("[CD] %s committed on %s: %s", c.group, bs[1].name, gt))
+    end)
+end
+
+local function CapSplash(c)
+    Chat(function()
+        QNet(string.format("[%s] Overlord, %s, splash one.", c.cs:upper(), c.cs),
+            S("OVERLORD", "cap_" .. c.key .. "_splash"))
+        QNet(string.format("[OVERLORD] %s, Overlord, copy splash.", c.cs),
+            S("OVERLORD", "ovl_" .. c.key .. "_copy"), 0.8)
+    end)
+end
+
+local function CapStation(c)
+    Chat(function()
+        QNet(string.format("[%s] Overlord, %s, picture clean, back to station.", c.cs:upper(), c.cs),
+            S("OVERLORD", "cap_" .. c.key .. "_station"))
+    end)
 end
 
 -- forward declarations
@@ -680,12 +906,13 @@ local function A_OvlCheckIn()
     CD.awaiting = true; MenuRebuild()
     Pilot(string.format("Overlord, %s, checking in as fragged, mission %s and %s, angels %d, state %s.",
         CFG.CS, CFG.MSN_J1, CFG.MSN_J2, Angels(p), State(p)), S("OVERLORD", "p_ovl_checkin_a", PAS(p)))
-    Q(string.format("[OVERLORD] %s, Overlord, radar contact. Picture clean. "
+    local picTxt, picSeq = PictureParts(p:getPoint())
+    Q(string.format("[OVERLORD] %s, Overlord, radar contact. %s "
         .. "Mission as fragged, Pointer 11 and Eyeball 11 on station. Proceed %s, %s. "
         .. "SAM activity reported in both target areas, %s. Report feet dry.",
-        CFG.CS, CFG.CP_NAME, BrgRng(p:getPoint(), CFG.CP_POS), HD_TEXT),
+        CFG.CS, picTxt, CFG.CP_NAME, BrgRng(p:getPoint(), CFG.CP_POS), HD_TEXT),
         CFG.DUR_LONG + 4, CFG.REPLY_GAP, function() SetPhase("ENROUTE") end, nil,
-        S("OVERLORD", "ovl_checkin_a", OBR(p:getPoint(), CFG.CP_POS), 0.15, "ovl_checkin_b"))
+        S("OVERLORD", "ovl_ci_rc", picSeq, 0.1, "ovl_ci_frag", OBR(p:getPoint(), CFG.CP_POS), 0.15, "ovl_checkin_b"))
     ReadBack("OVERLORD", string.format("%s, proceeding %s, hard deck two-three thousand, wilco.", CFG.CS, CFG.CP_NAME),
         "p_ovl_checkin_rb")
     QPlay()
@@ -801,9 +1028,13 @@ local function A_Picture()
     if not OVL_PHASES[CD.phase] then
         Msg("[CAS-1] Not checked in with OVERLORD.", 7); return
     end
+    local p = Player(); if not p then return end
     Pilot(string.format("Overlord, %s, request picture.", CFG.CS), "p_ovl_picture")
-    Q(string.format("[OVERLORD] %s, Overlord, picture clean. SAM activity reported in the target areas.",
-        CFG.CS), CFG.DUR_SHORT + 2, CFG.REPLY_GAP, nil, nil, "ovl_picture")
+    local picTxt, picSeq = PictureParts(p:getPoint())
+    picTxt = (picTxt:gsub("^Picture", "picture"))
+    Q(string.format("[OVERLORD] %s, Overlord, %s SAM activity reported in the target areas.",
+        CFG.CS, picTxt), CFG.DUR_SHORT + 4, CFG.REPLY_GAP, nil, nil,
+        S("OVERLORD", "ovl_switch_strike_a", picSeq, 0.1, "o_sam_rmk"))
     QPlay()
 end
 
@@ -1129,6 +1360,84 @@ local function EvalPhase(pUnit, cUnit)
 end
 
 -- ══════════════════════════════════════════════════════════════
+--  THREAT / CAP MONITORS + CHAT PUMP  (v1.5.0)
+-- ══════════════════════════════════════════════════════════════
+local function ThreatMonitor(pPos)
+    if not OVL_PHASES[CD.phase] then return end
+    for _, b in ipairs(Bandits(pPos, CFG.THREAT_NM)) do
+        local r = CD.threat[b.name] or {}
+        CD.threat[b.name] = r
+        if b.d <= CFG.THREAT_CLOSE_NM and not r.close then
+            r.close, r.far = true, true
+            ThreatCall(b.name, true)
+        elseif not r.far then
+            local asp = Aspect(b.unit, pPos)
+            if asp == "HOT" or asp == "FLANK" then r.far = true; ThreatCall(b.name, false) end
+        end
+    end
+end
+
+local function CapMonitor()
+    for _, c in ipairs(CFG.CAP) do
+        local st = CD.cap[c.key] or { state = "off", clean = 0 }
+        CD.cap[c.key] = st
+        local g = Group.getByName(c.group)
+        local lead = (g and g:isExist()) and AirLead(g, false) or nil
+        if lead then
+            local lp = lead:getPoint()
+            local near = #Bandits(lp, CFG.CAP_COMMIT_NM) > 0
+            if near and st.state ~= "commit" then
+                st.state, st.clean = "commit", 0
+                CapCommit(c)
+            elseif st.state == "commit" then
+                if #Bandits(lp, CFG.CAP_COMMIT_NM + 10) > 0 then
+                    st.clean = 0
+                else
+                    st.clean = st.clean + 1
+                    if st.clean >= CFG.CAP_CLEAN_TICKS then st.state = "station"; CapStation(c) end
+                end
+            elseif st.state == "off" then
+                st.state = "station"
+                env.info("[CD] " .. c.group .. " airborne, no bandit inside " .. CFG.CAP_COMMIT_NM .. " NM")
+            end
+        end
+    end
+end
+
+local function ChatPump(now)
+    if CD.qPlaying or #CD.queue > 0 then return end
+    while #CD.chat > 0 do
+        local it = table.remove(CD.chat, 1)
+        if now - it.t0 <= CFG.CHAT_TTL then
+            local ok, err = pcall(it.fn)
+            if not ok then env.info("[CD] chatter error: " .. tostring(err)) end
+            if #CD.queue > 0 then QPlay(); return end
+        end
+    end
+end
+
+local function CapGroupCfg(gname)
+    for _, c in ipairs(CFG.CAP) do if c.group == gname then return c end end
+end
+
+local CD_EVENTS = {}
+function CD_EVENTS:onEvent(e)
+    if not e or e.id ~= world.event.S_EVENT_KILL then return end
+    local ok, err = pcall(function()
+        local k, v = e.initiator, e.target
+        if not (k and v and k.getGroup and v.getCoalition and v.getDesc) then return end
+        if v:getCoalition() ~= coalition.side.RED then return end
+        local d = v:getDesc()
+        if not d or d.category ~= Unit.Category.AIRPLANE then return end
+        local g = k:getGroup(); if not g then return end
+        local c = CapGroupCfg(g:getName()); if not c then return end
+        env.info(string.format("[CD] %s splash: %s", c.group, tostring(v:getName())))
+        CapSplash(c)
+    end)
+    if not ok then env.info("[CD] kill handler error: " .. tostring(err)) end
+end
+
+-- ══════════════════════════════════════════════════════════════
 --  MAIN TICK
 -- ══════════════════════════════════════════════════════════════
 -- Pending pilot call → repeated controller call (+ F10 hint)
@@ -1170,6 +1479,9 @@ local function CD_Tick(_, t)
     if not p then return t + CFG.TICK end
     EvalPhase(p, Carrier())
     Remind(t)
+    CapMonitor()
+    ThreatMonitor(p:getPoint())
+    ChatPump(t)
     if OVL_PHASES[CD.phase] or CD.phase == "DEPARTURE" then SurfaceCheck(p:getPoint()) end
     return t + CFG.TICK
 end
@@ -1199,8 +1511,9 @@ local function CD_Init()
     timer.scheduleFunction(HookRefuel, nil, timer.getTime() + 2)
 
     SetFlag(200, 0)
+    world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.4.10 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.5.0 online — CAS-1 Syria")
 end
 
 CD_Init()
