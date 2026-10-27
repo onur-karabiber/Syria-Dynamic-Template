@@ -1,5 +1,10 @@
--- Comms_Director | v1.4.9
+-- Comms_Director | v1.4.10
 --[[
+  v1.4.10 — pilot acknowledgement of Strike's Mode 4 instructions (STRIKE_CHK):
+           "Check Mode 4" and "Mode 4 sour. Recycle." now get "<callsign>, wilco."
+           (Ack, existing p_wilco clip — no new clips). The 16 s gap before
+           "Mode 4 sweet now" is unchanged and now counts from the end of the ack.
+
   v1.4.9 — voices: make_clips v1.6.0 (MARSHAL/APPROACH/PILOT libritts-high 736/69/851,
            OVERLORD lessac-high, DEPARTURE ljspeech-high); clips re-rendered, AUDIO lengths updated.
 
@@ -649,6 +654,7 @@ local function A_StrikeCheckInOut()
     Pilot(string.format("Strike, %s, checking in outbound, passing angels %d, Kilo.", CFG.CS, Angels(p)),
         S("STRIKE", "p_str_out_a", PD(Angels(p)), 0.12, "cv:p_kilo"))
     Q(string.format("[STRIKE] %s, Strike, radar contact. Check Mode 4.", CFG.CS), CFG.DUR_SHORT, CFG.REPLY_GAP, nil, nil, "str_radar_contact")
+    Ack("STRIKE", true)
     local sweetToOvl = function()
         Q(string.format("[STRIKE] %s, Mode 4 sweet. Kilo copied. Switch Overlord, %s.",
             CFG.CS, CFG.FREQ.OVL), CFG.DUR_SHORT + 2, 3, function() SetPhase("OVL_OUT") end, nil, "str_m4_sweet_ovl")
@@ -658,6 +664,7 @@ local function A_StrikeCheckInOut()
         CD.inj.i2 = true
         SetFlag(202, 1)
         Q(string.format("[STRIKE] %s, Mode 4 sour. Recycle.", CFG.CS), CFG.DUR_URGENT, 4, nil, nil, "str_m4_sour")
+        Ack("STRIKE", true)
         Q(string.format("[STRIKE] %s, Strike. Mode 4 sweet now.", CFG.CS), CFG.DUR_SHORT, 16, nil, nil, "str_m4_sweet_now")
         Q(string.format("[STRIKE] %s, Kilo copied. Switch Overlord, %s.", CFG.CS, CFG.FREQ.OVL),
             CFG.DUR_SHORT + 2, 2, function() SetPhase("OVL_OUT") end, nil, "str_kilo_ovl")
@@ -1193,7 +1200,7 @@ local function CD_Init()
 
     SetFlag(200, 0)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.4.9 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.4.10 online — CAS-1 Syria")
 end
 
 CD_Init()
