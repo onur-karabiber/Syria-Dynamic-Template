@@ -1,15 +1,18 @@
-# install_score_display.py | v1.0.0
+# install_score_display.py | v1.1.0
 # Installs / updates Score_Display in a .miz IN PLACE, after a backup.
 #
 #   python tools/score_cards/install_score_display.py "<path>/Close Air Support (L).miz"
 #
 #   1. backup  -> <dir>/BackUps/<name>_before-SD-<version>.miz (refuses if it exists)
-#   2. assets  -> ScoreCards/*.png (out/ScoreCards), Sounds/SCORE/*.ogg; old
-#                 copies of both folders are replaced
+#   2. assets  -> ScoreCards/*.png, PlaneCaptain/*.png (v1.1.0), Sounds/SCORE/*.ogg
+#                 from out/; old copies of these folders are replaced
 #   3. script  -> l10n/DEFAULT/Score_Display.lua from scripts/ (source of truth);
 #                 first install also adds a mapResource key and one
 #                 a_do_script_file action at the end of the mission-start
 #                 trigger that loads Core_Scoring.lua (so after Deck_Park too)
+#   4. v1.1.0: every other .lua named in mapResource is refreshed from scripts/
+#                 too (same rule as build.py: scripts/ is the source of truth);
+#                 the ones whose content changed are listed
 # Re-running with a newer scripts/Score_Display.lua refreshes script + assets.
 # ScoreCards/ and Sounds/SCORE/ survive Mission Editor saves (tested 2026-10-27).
 
@@ -27,7 +30,9 @@ import dcslua  # noqa: E402
 
 SCRIPT = "Score_Display.lua"
 ASSET_DIRS = (("ScoreCards", os.path.join(HERE, "out", "ScoreCards")),
+              ("PlaneCaptain", os.path.join(HERE, "out", "PlaneCaptain")),
               ("Sounds/SCORE", os.path.join(HERE, "out", "Sounds", "SCORE")))
+ASSET_PREFIXES = tuple(a + "/" for a, _ in ASSET_DIRS)
 
 
 def script_version(path):
@@ -81,6 +86,16 @@ def main(src):
         new_mission = new_mapres = None
         print("update: %s already mapped to %s" % (SCRIPT, key.decode()))
 
+    for v in sorted(set(mapres.values())):
+        nm = v.decode()
+        sp = os.path.join(REPO, "scripts", nm)
+        if nm.lower().endswith(".lua") and nm != SCRIPT and os.path.isfile(sp):
+            arc = "l10n/DEFAULT/" + nm
+            old = zin.read(arc) if arc in names else None
+            if old != open(sp, "rb").read():
+                print("refresh (changed):", nm, "->", open(sp, encoding="utf-8").readline().strip())
+            add[arc] = sp
+
     bdir = os.path.join(os.path.dirname(src), "BackUps")
     os.makedirs(bdir, exist_ok=True)
     backup = os.path.join(bdir, "%s_before-SD-%s.miz" % (os.path.splitext(os.path.basename(src))[0], ver))
@@ -90,7 +105,7 @@ def main(src):
     print("backup", backup)
 
     buf = io.BytesIO()   # build in memory, then overwrite src (no rename/delete needed)
-    drop = lambda nm: (nm.startswith("ScoreCards/") or nm.startswith("Sounds/SCORE/") or nm in add
+    drop = lambda nm: (nm.startswith(ASSET_PREFIXES) or nm in add
                        or (new_mission is not None and nm in ("mission", "l10n/DEFAULT/mapResource")))
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zout:
         for nm in names:

@@ -1,9 +1,17 @@
--- PlaneCaptain_Carrier | v1.2.2
+-- PlaneCaptain_Carrier | v1.3.0
 --[[
+  v1.3.0: picture cards per step when Score_Display (CAS (L) only) offers them:
+          TRT.ScoreDisplay.pcHas(id) / pcCard(id) / pcClear(). A step with a card clears the
+          previous step text and shows the card instead of the step text; steps without a card,
+          the phase-end messages, notes and aborts stay text. Every replacing text (clearview)
+          first removes the card. Without Score_Display (template) behaviour is unchanged.
+          RPM unreadable on an engine step with a card -> the "At idle: Done" line is added as
+          text under the card.
   v1.2.2: PC.milestones = { START = t, CHECKS = t } (timer.getTime() when each phase first completes),
           read by Flight_Timeline v1.0.0 (M1 engines running, M2 checks done). No behaviour change.
 
-  Plane captain ground checks on the carrier - text only (no units, no statics, no pictures).
+  Plane captain ground checks on the carrier - text (picture cards only via Score_Display, v1.3.0),
+  no units, no statics.
   Carrier version of the Animated Ground Crew flow, for group "CAS-1", unit "Player_01" (F/A-18C).
 
   Sources (v1.2.0): F/A-18 NATOPS pocket checklist A1-F18AC-NFM-500 (BEFORE TAXI), hand signals
@@ -53,7 +61,7 @@ if TRT.PlaneCaptain then
 end
 
 local CFG = {
-  VERSION       = "1.2.2",
+  VERSION       = "1.3.0",
   PLAYER_UNIT   = "Player_01",
   PLAYER_GROUP  = "CAS-1",
   CARRIER_UNIT  = "CVN",       -- movement is measured relative to this unit (deck is moving)
@@ -222,9 +230,19 @@ end
 
 -- replace = true: clears the screen first (step messages); false: added under what is shown
 local function say(text, dur, replace)
+  local SD = TRT.ScoreDisplay                                  -- v1.3.0: replacing text drops the card
+  if replace == true and SD and SD.pcClear then pcall(SD.pcClear) end
   local gid = groupId()
   if gid then trigger.action.outTextForGroup(gid, text, dur, replace == true)
   else trigger.action.outText(text, dur, replace == true) end
+end
+
+-- v1.3.0: Score_Display picture card for this step id, if it has one
+local function cardFor(id)
+  local SD = TRT.ScoreDisplay
+  if not (SD and SD.pcHas and SD.pcCard) then return nil end
+  local ok, has = pcall(SD.pcHas, id)
+  return (ok and has) and SD or nil
 end
 
 local function note(text) say("[PLANE CAPTAIN] " .. text, CFG.MSG_NOTE, false) end
@@ -353,6 +371,20 @@ local function showStep(s, pilotKey)
   end
   if s.hint then lines[#lines + 1] = ">> " .. s.hint end
   if #lines == 1 then return end
+  local SD = cardFor(s.id)                                     -- v1.3.0
+  if SD then
+    say("", 1, true)                                           -- clear the previous step (text + card)
+    local ok, shown = pcall(SD.pcCard, s.id)
+    if ok and shown then
+      if s.wait and s.wait.type == "engineIdle" and PC.rpm.available ~= true then
+        say(string.format("[PLANE CAPTAIN] Engine %s at idle: Plane captain > Done (pilot signal)",
+          (s.wait.eng == "left") and "1" or "2"), CFG.MSG_HOLD, false)
+      end
+      log("card " .. s.id)
+      return
+    end
+    log("card " .. s.id .. " failed -> text")
+  end
   say(table.concat(lines, "\n"), CFG.MSG_HOLD, true)
   log("show " .. s.id .. ": " .. string.gsub(table.concat(lines, " | ", 2), "\n%s*", " / "))
 end
