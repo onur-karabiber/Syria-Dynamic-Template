@@ -1,4 +1,4 @@
--- Score_Display_Test | v0.1.1
+-- Score_Display_Test | v0.1.2
 --[[
   Feasibility test for picture-based score cards (CAS (L) only, test copy).
   NOT part of the template build: build.py only embeds scripts named in
@@ -28,8 +28,9 @@
 
   v0.1.1: pictures go through net.dostring_in("mission", "a_out_picture_s(...)")
   (same route as MOOSE UTILS.ShowPictureToCoalition); trigger.action.outPicture*
-  does not exist. Layers are packed both as l10n/DEFAULT/<name> and
-  ScoreCards/<name>; Layout > "toggle file path" switches between them.
+  does not exist. v0.1.2 test result: "ScoreCards/x.png" (root), "l10n/DEFAULT/x.png"
+  and getValueResourceByKey work, bare "x.png" does not -> layers live in ScoreCards/.
+  Layout > "toggle file path" is kept for comparison (bare name, expected to fail).
   a_out_picture* argument order:
     ([coalition,] file, duration, clearView, startDelay, "hAlign", "vAlign", size, "sizeUnits")
     hAlign 0 left 1 centre 2 right | vAlign 0 top 1 centre 2 bottom
@@ -41,22 +42,22 @@
 _G.TRT = _G.TRT or {}
 local TRT = _G.TRT
 
-local VERSION = "0.1.1"
+local VERSION = "0.1.2"
 
 local CFG = {
-    DIR        = "",                    -- "" = bare name (l10n/DEFAULT, as ME does) | "ScoreCards/"
+    DIR        = "ScoreCards/",         -- v0.1.2: .miz root folder (P1 ok; bare name P3 fails)
     SND_DIR    = "Sounds/SCORE/",
     FLAG_SCORE = 1908,                  -- Core_Scoring FLAG_SCORE
     SIDE       = coalition.side.BLUE,
     AGG        = 1.2,                   -- s, deltas inside this window -> one card
     LIVE       = true,
     MENU_ORDER = 90,
-    CRT        = { dur = 6,  h = 2, v = 0, size = 22, units = 1 },
+    CRT        = { dur = 6,  h = 0, v = 0, size = 22, units = 1 },
     MED        = { dur = 12, h = 1, v = 1, size = 50, units = 1 },
     PROBE      = { dur = 6,  h = 1, v = 1, size = 30, units = 1 },
 }
 
-local POS   = { { "TOP-RIGHT", 2, 0 }, { "TOP-LEFT", 0, 0 }, { "CENTRE", 1, 1 }, { "BOTTOM-RIGHT", 2, 2 } }
+local POS   = { { "TOP-LEFT", 0, 0 }, { "BOTTOM-LEFT", 0, 2 }, { "TOP-RIGHT", 2, 0 }, { "CENTRE", 1, 1 } }
 local SIZES = { 15, 22, 30, 40 }
 local L = { pos = 1, size = 2 }
 
