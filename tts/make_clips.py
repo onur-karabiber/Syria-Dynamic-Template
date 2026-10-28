@@ -1,9 +1,19 @@
-# make_clips.py | v1.7.0
+# make_clips.py | v1.8.0
 # tts/clips.csv -> src/Sounds/CAS1/<id>.ogg  (Piper TTS + ffmpeg radio chain)
 # CV comms:  python tts/make_clips.py --set cv   (tts/cv_clips.csv -> src/Sounds/CV/,
 #            table tts/cv_audio_table.lua -> paste into CV_Comms CFG.AUDIO)
 # LTCC transit: python tts/make_clips.py --set fc (tts/fc_clips.csv -> src/Sounds/FC/,
 #            table tts/fc_audio_table.lua -> paste into Field_Comms CFG.AUDIO)
+# Pilot banter (CAS (L) only): python tts/make_clips.py --set pb
+#            (tts/pb_clips.csv -> tools/pilot_banter/out/Sounds/PB/, NOT src/Sounds, so the
+#            template build never packs it; the AUDIO block in scripts/Pilot_Banter.lua is
+#            rewritten in place between its BEGIN AUDIO / END AUDIO markers - no paste step)
+#
+# v1.8.0: --set pb. Cockpit chain instead of the radio chain: the pilot talking to himself
+#         is not a transmission (no squelch, no 400-2700 Hz radio band, no bit crush, no
+#         noise floor). 150-5000 Hz, a small boxy resonance (oxygen mask), gentle
+#         compression, natural speed (atempo 1.0; voice PILOT_IN = PILOT model and speaker
+#         at length_mult 1.35 -> length_scale 0.945). Lua table entries carry the text too.
 #
 # v1.7.0: CAP net voices for Comms_Director v1.5.0 (all '>OVERLORD' channel):
 #         CHECK31 ryan-high, CHECK21 john-medium, VIPER21 bryce-medium (three distinct men,
@@ -57,6 +67,7 @@ VOICE = {
     'EYEBALL':   'en_US-hfc_male-medium.onnx',
     'TEXACO':    'en_US-kusal-medium.onnx',
     'PILOT':     ('en_US-libritts-high.onnx', 1.0, 851, 1.0),  # v1.6.0, was john-medium (ryan-high rejected, see header)
+    'PILOT_IN':  ('en_US-libritts-high.onnx', 1.0, 851, 1.35), # v1.8.0 same pilot, natural speed (--set pb)
     'MARSHAL':   ('en_US-libritts-high.onnx', 1.0, 736, 1.0),  # v1.6.0, was hfc_male (norman: garbage on 1-word tokens)
     'APPROACH':  ('en_US-libritts-high.onnx', 1.0, 69, 1.0),   # v1.6.0, was kusal
     'CHECK31':   'en_US-ryan-high.onnx',      # v1.7.0 CAP-1 lead (Comms_Director CAP net)
@@ -82,7 +93,13 @@ SETS = {   # --set name -> (csv, outdir, table)
     'fc':   (os.path.join(ROOT, 'tts', 'fc_clips.csv'),
              os.path.join(ROOT, 'src', 'Sounds', 'FC'),
              os.path.join(ROOT, 'tts', 'fc_audio_table.lua')),
+    'pb':   (os.path.join(ROOT, 'tts', 'pb_clips.csv'),                       # v1.8.0
+             os.path.join(ROOT, 'tools', 'pilot_banter', 'out', 'Sounds', 'PB'),
+             os.path.join(ROOT, 'scripts', 'Pilot_Banter.lua')),
 }
+COCKPIT_SETS = {'pb'}   # v1.8.0: cockpit chain + in-place Lua AUDIO block (markers below)
+LUA_BEGIN = '-- BEGIN AUDIO'
+LUA_END   = '-- END AUDIO'
 TOK_PAD = 0.06   # s silence after a token clip (default, 'tok:<s>' overrides)
 FALLBACK = None  # model file name used for any agency missing above
 
@@ -154,6 +171,42 @@ def radio_token(wav, ogg, pad):
                            '-ac', '1', '-ar', '22050', '-c:a', 'libvorbis', '-q:a', '4', ogg])
 
 
+# v1.8.0: cockpit voice (pilot to himself). No radio band / squelch / crush / hiss.
+COCKPIT_GAIN_DB = 3.0
+COCKPIT = ('silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.02,'
+           'areverse,silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.05,areverse,'
+           'highpass=f=150,lowpass=f=5000,'
+           'equalizer=f=900:t=q:w=1.2:g=3,'          # boxy mask resonance
+           'aecho=0.85:0.5:5:0.18,'                  # 5 ms reflection inside the mask
+           'acompressor=threshold=-22dB:ratio=3:attack=5:release=120:makeup=2,'
+           'adelay=120,apad=pad_dur=0.25,aresample=22050,'
+           'volume=%.1fdB,alimiter=limit=%.2f')
+
+
+def cockpit(wav, ogg):
+    subprocess.check_call(['ffmpeg', '-y', '-v', 'error', '-i', wav,
+                           '-af', COCKPIT % (COCKPIT_GAIN_DB, LIMIT),
+                           '-ac', '1', '-ar', '22050', '-c:a', 'libvorbis', '-q:a', '4', ogg])
+
+
+def write_lua_block(path, entries):
+    """v1.8.0: replace the lines between LUA_BEGIN and LUA_END in a Lua script."""
+    lines = open(path, encoding='utf-8').read().split('\n')
+    b = next((i for i, l in enumerate(lines) if l.strip().startswith(LUA_BEGIN)), None)
+    e = next((i for i, l in enumerate(lines) if l.strip().startswith(LUA_END)), None)
+    if b is None or e is None or e <= b:
+        raise SystemExit('markers %r / %r not found in %s' % (LUA_BEGIN, LUA_END, path))
+    ind = lines[b][:len(lines[b]) - len(lines[b].lstrip())]
+    body = [ind + 'AUDIO = {'] + entries + [ind + '},']
+    out = '\n'.join(lines[:b + 1] + body + lines[e:])
+    with open(path, 'w', encoding='utf-8', newline='\n') as f:
+        f.write(out)
+
+
+def lua_str(t):
+    return '"' + t.replace('\\', '\\\\').replace('"', '\\"') + '"'
+
+
 def squelch(ogg, which):
     d = KEYUP if which == 'up' else KEYDOWN
     fc = ('anoisesrc=d=%.3f:c=white:a=%.3f:r=22050,%s,afade=t=out:d=%.3f[k];'
@@ -205,7 +258,9 @@ def main():
             with tempfile.TemporaryDirectory() as td:
                 wav = os.path.join(td, 'raw.wav')
                 raw = synth(model, text, wav, spk, lmul)
-                if mode.startswith('tok'):
+                if a.set in COCKPIT_SETS:
+                    cockpit(wav, ogg)
+                elif mode.startswith('tok'):
                     pad = float(mode.split(':')[1]) if ':' in mode else TOK_PAD
                     radio_token(wav, ogg, pad)
                 else:
@@ -213,10 +268,16 @@ def main():
         if os.path.isfile(ogg):
             d = duration(ogg)
             ch = agency.partition('>')[2] or agency
-            fmt = '        %-22s = { ch = "%s", len = %.2f },'
-            table.append(fmt % (cid, ch, d))
+            if a.set in COCKPIT_SETS:
+                table.append('        %-18s = { len = %.2f, text = %s },' % (cid, d, lua_str(text)))
+            else:
+                fmt = '        %-22s = { ch = "%s", len = %.2f },'
+                table.append(fmt % (cid, ch, d))
             print('OK       %-22s %5.1f s  %s' % (cid, d, agency))
-    if not a.out:
+    if not a.out and a.set in COCKPIT_SETS:
+        write_lua_block(table_path, table)
+        print('\n%d clip, AUDIO block rewritten: %s' % (len(table), table_path))
+    elif not a.out:
         with open(table_path, 'w', encoding='utf-8') as f:
             f.write('    -- generated by tts/make_clips.py; len = clip length (s)\n')
             f.write('    AUDIO = {\n' + '\n'.join(table) + '\n    },\n')

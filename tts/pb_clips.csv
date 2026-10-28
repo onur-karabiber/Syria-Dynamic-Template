@@ -1,0 +1,105 @@
+# pb_clips.csv | Pilot_Banter (CAS (L) only) - the pilot talking to himself
+# id;voice;spoken text
+#
+# Render:  python tts/make_clips.py --set pb
+#   -> tools/pilot_banter/out/Sounds/PB/<id>.ogg  (NOT src/Sounds: not in the template build)
+#   -> the AUDIO block in scripts/Pilot_Banter.lua is rewritten between its
+#      BEGIN AUDIO / END AUDIO markers (no copy-paste step)
+#
+# id = <moment>_<n>. Pilot_Banter groups variants by the part before the last "_<n>",
+# so a new variant is one new line here + a re-render; no Lua edit.
+# Voice PILOT_IN = the pilot readback voice (libritts-high 851) at natural speed,
+# cockpit chain (no radio band, no squelch, no noise floor).
+#
+# Rules for the text: react to what already happened, never tell the player what to do next.
+# No brevity / radio phraseology: this is not a transmission.
+
+# ── deck: canopy closed (external-model argument 38 open -> closed, on deck)
+canopy_close_1;PILOT_IN;Okay... canopy's coming down.
+canopy_close_2;PILOT_IN;Alright. Lid's closed.
+canopy_close_3;PILOT_IN;There we go. Sealed up.
+canopy_close_4;PILOT_IN;Canopy down, and locked. Good.
+canopy_close_5;PILOT_IN;Bye-bye, fresh air.
+canopy_close_6;PILOT_IN;Okay. Closing up shop.
+
+# ── deck: both engines running (PlaneCaptain milestone START)
+engines_on_1;PILOT_IN;Two good motors. Nice.
+engines_on_2;PILOT_IN;Both turning. Good.
+engines_on_3;PILOT_IN;Engines up... everything looks normal.
+engines_on_4;PILOT_IN;Alright, we're alive.
+engines_on_5;PILOT_IN;And... both engines online.
+
+# ── deck: BEFORE TAXI checks complete (PlaneCaptain milestone CHECKS)
+checks_done_1;PILOT_IN;Checks complete. Let's go to work.
+checks_done_2;PILOT_IN;Okay, that's everything. Waiting on the director.
+checks_done_3;PILOT_IN;Alright. Ready when they are.
+checks_done_4;PILOT_IN;Good to go. Now we wait.
+
+# ── cat shot (takeoff, a few seconds after the stroke)
+cat_shot_1;PILOT_IN;Whoo... good shot.
+cat_shot_2;PILOT_IN;And we're flying.
+cat_shot_3;PILOT_IN;Never gets old.
+cat_shot_4;PILOT_IN;Good shot. Here we go.
+cat_shot_5;PILOT_IN;Ugh... every single time.
+cat_shot_6;PILOT_IN;Off the pointy end. Nice.
+
+# ── coastline (Comms_Director surface monitor)
+feet_dry_1;PILOT_IN;Feet dry. Eyes open.
+feet_dry_2;PILOT_IN;Land below. Head on a swivel.
+feet_dry_3;PILOT_IN;Okay, over land now. Stay sharp.
+feet_dry_4;PILOT_IN;Feet dry... let's be careful out here.
+feet_wet_1;PILOT_IN;Feet wet. That feels better.
+feet_wet_2;PILOT_IN;Water below. Almost home.
+feet_wet_3;PILOT_IN;Okay, back over the water.
+feet_wet_4;PILOT_IN;Feet wet. Let's go find the boat.
+
+# ── tanker contact (S_EVENT_REFUELING)
+tanker_in_1;PILOT_IN;And... we're in.
+tanker_in_2;PILOT_IN;Contact. Hold it steady...
+tanker_in_3;PILOT_IN;Okay, plugged. Don't move.
+tanker_in_4;PILOT_IN;Got it. Easy now.
+
+# ── JTAC target group destroyed (Comms_Director deadJ1 / deadJ2)
+good_hits_1;PILOT_IN;Yeah. Good hits.
+good_hits_2;PILOT_IN;That'll do it.
+good_hits_3;PILOT_IN;Nice. Right on target.
+good_hits_4;PILOT_IN;Okay... that one's done.
+
+# ── threat over (Flight_Timeline engaged -> not engaged, after >= MIN s)
+threat_over_1;PILOT_IN;Okay... okay. Still here.
+threat_over_2;PILOT_IN;Phew. That was close.
+threat_over_3;PILOT_IN;Alright. Breathe.
+threat_over_4;PILOT_IN;Okay, we're clear. Back to work.
+
+# ── trap, by AIRBOSS LSO grade
+trap_good_1;PILOT_IN;Yes! Nailed it.
+trap_good_2;PILOT_IN;Oh, that felt good.
+trap_good_3;PILOT_IN;That's how you do it.
+trap_good_4;PILOT_IN;Okay! Paddles will like that one.
+trap_fair_1;PILOT_IN;Not pretty, but I'll take it.
+trap_fair_2;PILOT_IN;Okay. Fair pass.
+trap_fair_3;PILOT_IN;On deck. Could've been better.
+trap_poor_1;PILOT_IN;Ugh. That was ugly.
+trap_poor_2;PILOT_IN;Okay... I'm going to hear about that one.
+trap_poor_3;PILOT_IN;On deck, at least.
+trap_poor_4;PILOT_IN;Well... that wasn't my best.
+
+# ── bolter / waveoff, by AIRBOSS LSO grade
+bolter_1;PILOT_IN;Come on...
+bolter_2;PILOT_IN;Bolter. Again.
+bolter_3;PILOT_IN;Ugh. One more time.
+bolter_4;PILOT_IN;Missed the wires... okay, okay.
+waveoff_1;PILOT_IN;Waved off. Okay, around again.
+waveoff_2;PILOT_IN;Alright, alright. Next one.
+waveoff_3;PILOT_IN;Not that time.
+
+# ── after the trap: canopy opened on deck
+canopy_open_1;PILOT_IN;Ahh. Fresh air.
+canopy_open_2;PILOT_IN;Okay. Home sweet home.
+canopy_open_3;PILOT_IN;That's it. Open her up.
+
+# ── engines shut down on deck after the trap (Deck_Park flag 1910 = 1 / 2)
+shutdown_1;PILOT_IN;Another day at the office.
+shutdown_2;PILOT_IN;Okay. That's a wrap.
+shutdown_3;PILOT_IN;Good flight. Time for coffee.
+shutdown_4;PILOT_IN;And... done. Debrief time.
