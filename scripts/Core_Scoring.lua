@@ -1,4 +1,7 @@
--- Core_Scoring | v1.4.0
+-- Core_Scoring | v1.4.1
+-- v1.4.1: every TRT.addScore is logged ("[Core_Scoring] SCORE +d (total) reason") - the
+-- 2026-10-28 evening flight could not be audited (two +6 cards for the BV51 group, no +5
+-- group bonus, and the debug line said both units died without a matching KILL).
 -- v1.4.0: kill scoring rebalanced (CAS-1 test 2026-10-28: every ground unit
 -- scored 1, so an SA-13 TEL = a truck). TYPE_SCORES now covers every RED
 -- type in CAS (L) and the template, tiered: SAM radars / CP 10-12,
@@ -89,6 +92,7 @@ function TRT.addScore(delta, reason)
     local new = cur + delta
 
     trigger.action.setUserFlag(FLAG_SCORE, new)
+    env.info(string.format("[Core_Scoring] SCORE %+d (total %s) %s", delta, tostring(new), tostring(reason)))
 
     local sign = (delta >= 0) and ("+" .. tostring(delta)) or tostring(delta)
     trigger.action.outTextForCoalition(
@@ -783,4 +787,4 @@ do
     timer.scheduleFunction(watchCaseChange, nil, timer.getTime() + 1)
 end
 
-env.info("[Core_Scoring] v1.4.0 loaded. Player unit: " .. PLAYER_NAME)
+env.info("[Core_Scoring] v1.4.1 loaded. Player unit: " .. PLAYER_NAME)
