@@ -181,3 +181,9 @@ eye_rb_ok;EYEBALL;Hornet five one, Eyeball one one, readback correct.;tok
 eye_laser_on;EYEBALL;Hornet five one, Eyeball one one, laser on, code one six eight eight.;tok
 eye_laser_shift;EYEBALL;Eyeball one one, shifting laser to next target, same code.;tok
 eye_laser_off;EYEBALL;Eyeball one one, laser off.;tok
+# v1.5.6 (Comms_Director): release calls on the JTAC button (ATP 1-02.1: RIFLE, [n] AWAY)
+p_rel_ptr;PILOT>POINTER;Pointer one one, Hornet five one,;tok:0.08
+p_rel_eye;PILOT>EYEBALL;Eyeball one one, Hornet five one,;tok:0.08
+p_rifle;PILOT;rifle.;tok:0.1
+p_bombs_away;PILOT;bombs away.;tok
+p_away;PILOT;away.;tok

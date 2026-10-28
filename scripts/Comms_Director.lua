@@ -1,5 +1,14 @@
--- Comms_Director | v1.5.5
+-- Comms_Director | v1.5.6
 --[[
+  v1.5.6 — release calls (Onur, 2026-10-29): when the hero fires an air-to-ground weapon
+           while working a JTAC (JTAC1 / JTAC2, or a re-attack under the RbAvail rule), the
+           pilot transmits on that JTAC's button (ATP 1-02.1 brevity):
+             missile (Maverick etc.)  "<JTAC>, Hornet 51, rifle."        ("rifle, two" for 2+)
+             bomb                     "<JTAC>, Hornet 51, bombs away."   ("two away" for 2+)
+           Shots of one kind inside CFG.REL_AGG_S are one call (ripple / pairs). Not called:
+           rockets, guns, anti-radiation missiles (would be MAGNUM; not in CAS-1).
+           CD.relCallUntil tells Pilot_Banter v1.1.1 to drop its own "weapon away" line.
+           No time of flight (would need a fall-time estimate). Can overlap native JTAC talk.
   v1.5.5 — CAS-1 test 2026-10-28 night:
            * Eyeball laser calls: JTAC_Laser v1.1.0 spot events -> EYEBALL 11 on button 5
              "laser on, code 1688" / "shifting laser, same code" / "laser off". The scripted
@@ -247,7 +256,8 @@ local CFG = {
     JTAC2_POS      = { x = 59271, z = -1176 },    -- fallback; live centroid preferred
     JTAC1_GROUP    = "JTAC-1",                    -- v1.5.4: friendlies for Line 8 / TIC
     JTAC2_GROUP    = "JTAC-2",
-    RB_NM          = 30,    -- v1.5.5: readback item outside the JTAC phase within this range
+    RB_NM          = 30,
+    REL_AGG_S      = 2,     -- v1.5.6: release call aggregation window (s)    -- v1.5.5: readback item outside the JTAC phase within this range
 
     -- v1.5.4: troops-in-contact sequence (one JTAC per flight)
     TIC = {
@@ -484,6 +494,11 @@ local CFG = {
         eye_laser_on           = { ch = "EYEBALL", len = 3.46 },
         eye_laser_shift        = { ch = "EYEBALL", len = 2.75 },
         eye_laser_off          = { ch = "EYEBALL", len = 1.31 },
+        p_rel_ptr              = { ch = "POINTER", len = 1.66 },
+        p_rel_eye              = { ch = "EYEBALL", len = 1.48 },
+        p_rifle                = { ch = "PILOT", len = 0.50 },
+        p_bombs_away           = { ch = "PILOT", len = 0.72 },
+        p_away                 = { ch = "PILOT", len = 0.47 },
     },
 
     -- Air picture / threat / CAP net (v1.5.0)
@@ -1453,6 +1468,62 @@ local function OnSpot(ev, info)
     QPlay()
 end
 
+--- v1.5.6: the JTAC the hero is working right now, or nil.
+local function RelKey()
+    if CD.phase == "JTAC1" then return "J1" elseif CD.phase == "JTAC2" then return "J2" end
+    local p, best, bd = Player(), nil, nil
+    if not p then return nil end
+    for _, k in ipairs({ "J1", "J2" }) do
+        if RbAvail(k) then
+            local d = Dist2D(p:getPoint(), TicTgtPos(JT[k]))
+            if not bd or d < bd then best, bd = k, d end
+        end
+    end
+    return best
+end
+
+local function RelFlush(rel)
+    local j = JT[rel.key]
+    local txt, seq
+    if rel.kind == "rifle" then
+        txt = string.format("%s, %s, rifle%s.", j.disp, CFG.CS, rel.n > 1 and (", " .. rel.n) or "")
+        seq = S(j.ch, "p_rel_" .. j.k, "p_rifle", rel.n > 1 and PD(rel.n) or {})
+    else
+        txt = string.format("%s, %s, %s.", j.disp, CFG.CS, rel.n > 1 and (rel.n .. " away") or "bombs away")
+        seq = S(j.ch, "p_rel_" .. j.k, rel.n > 1 and { PD(rel.n), "p_away" } or "p_bombs_away")
+    end
+    env.info(string.format("[CD] release call %s: %s x%d", j.disp, rel.kind, rel.n))
+    Q("[" .. CFG.CS .. "] " .. txt, CFG.DUR_PILOT, 0, nil, CFG.PILOT_HOLD, seq)
+    QPlay()
+end
+
+--- v1.5.6: hero S_EVENT_SHOT -> rifle / bombs away on the JTAC button.
+local function OnHeroShot(w)
+    local d = w:getDesc()
+    if type(d) ~= "table" then return end
+    local kind
+    local tn = tostring(d.typeName or (w.getTypeName and w:getTypeName()) or "")
+    if d.category == Weapon.Category.BOMB then
+        kind = "bombs"
+    elseif d.category == Weapon.Category.MISSILE and d.missileCategory ~= Weapon.MissileCategory.AAM
+        and d.missileCategory ~= Weapon.MissileCategory.SAM and not tn:find("AGM_88") then
+        kind = "rifle"
+    end
+    if not kind then return end
+    local key = RelKey()
+    if not key then return end
+    local now = timer.getTime()
+    CD.relCallUntil = now + 10
+    local rel = CD.rel
+    if rel and not rel.sent and rel.kind == kind and rel.key == key and now - rel.t0 <= CFG.REL_AGG_S then
+        rel.n = rel.n + 1
+        return
+    end
+    rel = { kind = kind, key = key, n = 1, t0 = now }
+    CD.rel = rel
+    timer.scheduleFunction(function() rel.sent = true; RelFlush(rel) end, nil, now + CFG.REL_AGG_S)
+end
+
 -- "What is my next call?" — single-line hint per phase
 local NEXT = {
     IDLE       = "Launch. CASE III departure on Departure " .. BtnL("DEP") .. ".",
@@ -1848,6 +1919,13 @@ end
 
 local CD_EVENTS = {}
 function CD_EVENTS:onEvent(e)
+    if e and e.id == world.event.S_EVENT_SHOT and e.weapon and e.initiator then   -- v1.5.6
+        local okS, err = pcall(function()
+            if e.initiator:getName() == CFG.PLAYER_UNIT then OnHeroShot(e.weapon) end
+        end)
+        if not okS then env.info("[CD] shot handler error: " .. tostring(err)) end
+        return
+    end
     if not e or e.id ~= world.event.S_EVENT_KILL then return end
     local ok, err = pcall(function()
         local k, v = e.initiator, e.target
@@ -1952,7 +2030,7 @@ local function CD_Init()
     SetFlag(200, 0)
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.5.5 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.5.6 online — CAS-1 Syria")
 end
 
 CD_Init()

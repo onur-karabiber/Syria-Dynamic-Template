@@ -1,5 +1,7 @@
--- Pilot_Banter | v1.1.0
+-- Pilot_Banter | v1.1.1
 --[[
+  v1.1.1: weapon_away is dropped while Comms_Director v1.5.6 transmits the release call
+          ("rifle" / "bombs away", TRT.CD.relCallUntil) - one voice per release.
   v1.1.0: more self-talk (Onur, CAS-1 test 2026-10-28: 9 lines in 2.5 h). MAX_LINES 14 -> 32,
           MIN_GAP 30 -> 25, higher probabilities on the airborne moments, and five new moments:
             cruise            quiet transit: airborne, not engaged, CD phase in CRUISE_CD, no radio
@@ -85,7 +87,7 @@ if TRT.PB then
 end
 
 local CFG = {
-    VERSION      = "1.1.0",
+    VERSION      = "1.1.1",
     ENABLED      = true,           -- start state of the F10 toggle
     SND_DIR      = "Sounds/PB/",
     CARRIER_UNIT = "CVN",
@@ -414,6 +416,10 @@ local function Blocked(name)
         if tl and tl.engaged then return "engaged" end
         local cd = TRT.CD
         if cd and cd.phase and CFG.SILENT_CD[cd.phase] and not m.jtac then return "CD " .. cd.phase end
+    end
+    local cdr = TRT.CD   -- v1.1.1
+    if m == CFG.MOMENTS.weapon_away and cdr and cdr.relCallUntil and t < cdr.relCallUntil then
+        return "CD release call"
     end
     return nil
 end
