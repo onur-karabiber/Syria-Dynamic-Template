@@ -1,4 +1,11 @@
--- Core_Scoring | v1.3.2
+-- Core_Scoring | v1.4.0
+-- v1.4.0: kill scoring rebalanced (CAS-1 test 2026-10-28: every ground unit
+-- scored 1, so an SA-13 TEL = a truck). TYPE_SCORES now covers every RED
+-- type in CAS (L) and the template, tiered: SAM radars / CP 10-12,
+-- self-contained SAM 10-12, launchers 5-8, AAA 3-6, MANPADS 3, tanks 3-6,
+-- IFV/APC 2-4, artillery 3-6, trucks 2, infantry 1, aircraft 4-15.
+-- Unlisted ground type: 2 (was 1). New: JTAC_GROUP_BONUS when the hero's
+-- kill leaves a JTAC target group (ME FAC_AttackGroup task) with no unit alive.
 -- v1.3.2: AI refuels no longer score. Only a unit with a human player
 -- (getPlayerName) earns the +7; AI refuels are logged and still call
 -- TRT.onRefuelComplete. (CAS-1 test 2026-10-28: 4 CAP refuels = +28 to
@@ -214,19 +221,59 @@ local UNIT_NAME_OVERRIDES = {
 -- when you rebuild the target list for your current mission.
 
 local TYPE_SCORES = {
-    -- Keyed by unit:getTypeName() - copy straight from the ME's TYPE
-    -- field. This is what covers "every kill scores" without hand-
-    -- curating every group; add entries as you identify recurring
-    -- types across missions.
-    ["Infantry AK-74 Rus ver1"] = 1,
-    -- ["Osa 9A33"]        = 12,
-    -- ["ZSU-23-4 Shilka"] = 8,
+    -- v1.4.0: tiered table built from every RED unit type in CAS (L) and the
+    -- template (2026-10-28 inventory). Keyed by unit:getTypeName() (= ME TYPE).
+    -- Types not listed fall back to GROUP_CATEGORY_SCORES / STATIC_DEFAULT_SCORE.
+
+    -- SAM fire control / tracking radars, command posts (the node that matters)
+    ["Kub 1S91 str"] = 12, ["snr s-125 tr"] = 12, ["SNR_75V"] = 12, ["RD_75"] = 12,
+    ["S-300PS 40B6M tr"] = 12, ["S-300PS 5H63C 30H6_tr"] = 12, ["S-300PS 54K6 cp"] = 12,
+    -- search / early warning radars
+    ["S-300PS 64H6E sr"] = 10, ["S-300PS 40B6MD sr"] = 10, ["S-300PS 40B6MD sr_19J6"] = 10,
+    ["p-19 s-125 sr"] = 10, ["1L13 EWR"] = 10, ["55G6 EWR"] = 10, ["GCI_station_MiG29"] = 10,
+    ["SAMPT_MGE"] = 10,
+    -- self-contained SAM (own radar on the vehicle)
+    ["Tor 9A331"] = 12, ["CHAP_TorM2"] = 12, ["Osa 9A33 ln"] = 10, ["2S6 Tunguska"] = 10,
+    -- SAM launchers (need an external radar) / IR SAM vehicles
+    ["S-300PS 5P85C ln"] = 8, ["S-300PS 5P85D ln"] = 8,
+    ["Kub 2P25 ln"] = 6, ["5p73 s-125 ln"] = 6, ["5p73 V-601P ln"] = 6,
+    ["S_75M_Volhov"] = 6, ["S_75M_Volhov_V759"] = 6,
+    ["Strela-10M3"] = 6, ["Strela-1 9P31"] = 5, ["generator_5i57"] = 3,
+    -- AAA
+    ["ZSU-23-4 Shilka"] = 6, ["ZU-23 Emplacement"] = 4, ["Ural-375 ZU-23 Insurgent"] = 4,
+    ["HL_DSHK"] = 3, ["HL_KORD"] = 3, ["tt_DSHK"] = 3, ["tt_KORD"] = 3,
+    -- MANPADS teams
+    ["SA-14 Strela-3 manpad"] = 3, ["SA-18 Igla manpad"] = 3, ["SA-18 Igla-S manpad"] = 3,
+    ["SA-24 Igla-S manpad"] = 3, ["Igla manpad INS"] = 3,
+    -- tanks
+    ["T-90"] = 6, ["T-72B3"] = 5, ["T-72B"] = 5, ["T62M"] = 4, ["T-55"] = 4, ["PT_76"] = 3,
+    -- IFV / APC / scout
+    ["BMP-3"] = 4, ["BMP-1"] = 3, ["BTR-82A"] = 3, ["BTR-80"] = 3, ["AAV7"] = 3,
+    ["BTR-70"] = 2, ["BTR-60"] = 2, ["BRDM-2"] = 2, ["Tigr_233036"] = 2,
+    -- artillery / MLRS
+    ["CHAP_TOS1A"] = 6, ["Uragan_BM-27"] = 5, ["SAU Msta"] = 5, ["Grad-URAL"] = 4,
+    ["SAU Akatsia"] = 4, ["SAU Gvozdika"] = 4, ["SpGH_Dana"] = 4, ["SAU 2-C9"] = 3,
+    -- command / logistics
+    ["Ural-375 PBU"] = 3,
+    ["ATZ-10"] = 2, ["ATZ-5"] = 2, ["ATZ-60_Maz"] = 2, ["ATMZ-5"] = 2,
+    ["ZIL-131 KUNG"] = 2, ["ZiL-131 APA-80"] = 2, ["Ural-375"] = 2, ["Ural-4320-31"] = 2,
+    ["Ural-4320T"] = 2, ["GAZ-66"] = 2, ["KAMAZ Truck"] = 2, ["KrAZ6322"] = 2, ["ZIL-135"] = 2,
+    ["UAZ-469"] = 1,
+    -- infantry
+    ["Infantry AK"] = 1, ["Infantry AK ver2"] = 1, ["Infantry AK ver3"] = 1, ["Infantry AK Ins"] = 1,
+    ["Infantry AK-74 Rus ver1"] = 1, ["Soldier AK"] = 1, ["Soldier M249"] = 1, ["Soldier RPG"] = 1,
+    -- aircraft (air-to-air or on the ground)
+    ["A-50"] = 15, ["Tu-95MS"] = 10, ["Tu-142"] = 10, ["IL-78M"] = 8,
+    ["MiG-29 Fulcrum"] = 10, ["MiG-29A"] = 10, ["MiG-29S"] = 10, ["Su-27"] = 10, ["Su-33"] = 10,
+    ["MiG-23MLD"] = 8, ["Ka-50"] = 8, ["Ka-50_3"] = 8, ["Mi-8MT"] = 5, ["UH-1H"] = 4,
+    -- statics worth more than STATIC_DEFAULT_SCORE
+    [".Command Center"] = 10, ["ERO_S300_Reload"] = 3, ["ammo_cargo"] = 3,
 }
 
 local GROUP_CATEGORY_SCORES = {
     -- Verify these constant names against your DCS version if this
     -- layer ever resolves to nil unexpectedly.
-    [Group.Category.GROUND]     = 1,
+    [Group.Category.GROUND]     = 2,   -- v1.4.0: unlisted ground type (was 1)
     [Group.Category.SHIP]       = 5,
     [Group.Category.AIRPLANE]   = 8,
     [Group.Category.HELICOPTER] = 8,
@@ -235,6 +282,8 @@ local GROUP_CATEGORY_SCORES = {
 
 local STATIC_DEFAULT_SCORE = 2
 local DEFAULT_ENEMY_SCORE  = 1
+local JTAC_GROUP_BONUS     = 5     -- v1.4.0: hero's kill finishes a JTAC target group
+local JTAC_BONUS_DELAY     = 3     -- s after the kill before counting the survivors
 
 local function resolveEnemyScore(unitName, typeName, groupCategory, isStatic)
     local delta = UNIT_NAME_OVERRIDES[unitName]
@@ -259,6 +308,38 @@ local function resolveEnemyScore(unitName, typeName, groupCategory, isStatic)
     end
 
     return DEFAULT_ENEMY_SCORE, "default"
+end
+
+-- v1.4.0: JTAC target groups = groupId of every FAC_AttackGroup task in the ME data
+local JTAC_TARGETS, jtacBonusDone = {}, {}
+do
+    local byId = {}
+    local function each(fn)
+        for _, side in pairs((env.mission and env.mission.coalition) or {}) do
+            for _, c in pairs(side.country or {}) do
+                for _, cat in ipairs({ "vehicle", "plane", "helicopter", "ship" }) do
+                    for _, g in pairs((c[cat] and c[cat].group) or {}) do fn(g) end
+                end
+            end
+        end
+    end
+    local function scan(t, out)
+        if type(t) ~= "table" then return end
+        if t.id == "FAC_AttackGroup" and t.params and t.params.groupId then out[#out + 1] = t.params.groupId end
+        for _, v in pairs(t) do scan(v, out) end
+    end
+    local ids = {}
+    local ok = pcall(function()
+        each(function(g) if g.groupId and g.name then byId[g.groupId] = env.getValueDictByKey(g.name) or g.name end end)
+        each(function(g) scan(g.tasks, ids); scan(g.route, ids) end)
+    end)
+    local names = {}
+    for _, id in ipairs(ids) do
+        local n = byId[id]
+        if n and not JTAC_TARGETS[n] then JTAC_TARGETS[n] = true; names[#names + 1] = n end
+    end
+    env.info("[Core_Scoring] JTAC target groups (" .. #names .. "): " .. table.concat(names, ", ")
+        .. (ok and "" or " [scan error]"))
 end
 
 do
@@ -313,6 +394,31 @@ do
         killHandled[victimName] = true
         deadSeen[victimName] = nil
         TRT.addScore(delta, string.format("TARGET DESTROYED [%s]: %s", source, victimName))
+
+        -- v1.4.0: JTAC target group finished by this kill -> bonus (once per group)
+        if not isStatic then
+            local okG, grp = pcall(function() return victim:getGroup() end)
+            local okN, gname = false, nil
+            if okG and grp then okN, gname = pcall(function() return grp:getName() end) end
+            if okN and gname and JTAC_TARGETS[gname] and not jtacBonusDone[gname] then
+                timer.scheduleFunction(function()
+                    if jtacBonusDone[gname] then return nil end
+                    local g2 = Group.getByName(gname)
+                    local alive = 0
+                    if g2 then
+                        for _, u in ipairs(g2:getUnits() or {}) do
+                            local okE, ex = pcall(function() return u:isExist() and u:getLife() > 1 end)
+                            if okE and ex then alive = alive + 1 end
+                        end
+                    end
+                    if alive == 0 then
+                        jtacBonusDone[gname] = true
+                        TRT.addScore(JTAC_GROUP_BONUS, "JTAC TARGET GROUP DESTROYED: " .. gname)
+                    end
+                    return nil
+                end, nil, timer.getTime() + JTAC_BONUS_DELAY)
+            end
+        end
     end
 
     world.addEventHandler(KEH)
@@ -677,4 +783,4 @@ do
     timer.scheduleFunction(watchCaseChange, nil, timer.getTime() + 1)
 end
 
-env.info("[Core_Scoring] v1.3.2 loaded. Player unit: " .. PLAYER_NAME)
+env.info("[Core_Scoring] v1.4.0 loaded. Player unit: " .. PLAYER_NAME)
