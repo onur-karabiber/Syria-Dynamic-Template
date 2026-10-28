@@ -1,9 +1,11 @@
-# make_sfx.py | v0.1.0
+# make_sfx.py | v0.2.0
 # Synthesised score-card sound effects (no third-party audio, no licence
 # questions). Output: out/Sounds/SCORE/{reward,penalty,mission_end}.ogg
 #   reward      ~0.45 s  A5 -> E6 (rising perfect fifth), bell partials
 #   penalty     ~0.40 s  E3 -> Eb3 (falling minor second), filtered square buzz
 #   mission_end ~1.30 s  C5-E5-G5-C6 arpeggio, soft brass-like saw stack
+#   check_ok    ~0.14 s  E6 single soft tick, peak -9 dBFS (v0.2.0: plane captain
+#                        step detected; plays ~15x in 4 min, so short and quiet)
 # Mono 44.1 kHz, peak -3 dBFS, Vorbis via ffmpeg.
 #
 # Usage:  python make_sfx.py        (needs numpy + ffmpeg on PATH)
@@ -112,6 +114,12 @@ def main():
                      (783.99, 0.24, 0.35), (1046.50, 0.38, 0.90)):
         place(y, brass(f, d), at)
     write_ogg("mission_end", normalise(lowpass(y, 3500)))
+
+    # check_ok: one short, soft E6 (fundamental + weak octave), no bell tail
+    t = t_axis(0.14)
+    e = env_ad(len(t), 0.002, 0.035)
+    y = (np.sin(2 * np.pi * 1318.51 * t) + 0.18 * np.sin(2 * np.pi * 2637.02 * t)) * e
+    write_ogg("check_ok", normalise(y, -9.0))
 
 
 if __name__ == "__main__":

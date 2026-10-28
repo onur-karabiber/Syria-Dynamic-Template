@@ -1,6 +1,9 @@
--- Score_Display | v1.1.1
+-- Score_Display | v1.2.0
 --[[
   Picture score cards (CAS (L) only; not part of the template build).
+
+  v1.2.0: pcOk() - short check_ok sound (Sounds/SCORE/check_ok.ogg) when PlaneCaptain
+          detects that the aircraft did the step (PlaneCaptain_Carrier v1.3.1+). CFG.PC_OK.
 
   v1.1.1: plane captain cards top-left, 24 % (Onur, test 2026-10-28). They share the corner
           with the CRT score card; the two do not overlap in time in CAS-1 (cards: deck only).
@@ -45,13 +48,13 @@
   Load order: after Core_Scoring.lua (and Deck_Park.lua for the medal).
 
   API: TRT.ScoreDisplay.crt(total, delta) | .medal(total)
-       | .pcHas(id) | .pcCard(id) | .pcClear() | .version
+       | .pcHas(id) | .pcCard(id) | .pcClear() | .pcOk() | .version
 ]]
 
 _G.TRT = _G.TRT or {}
 local TRT = _G.TRT
 
-local VERSION = "1.1.1"
+local VERSION = "1.2.0"
 
 local CFG = {
     DIR         = "ScoreCards/",
@@ -64,6 +67,7 @@ local CFG = {
     POLL        = 1,                       -- s, flag 1910 poll
     MEDAL_DELAY = 3,                       -- s after the park result
     SOUND       = true,
+    PC_OK       = true,                    -- v1.2.0: check_ok sound on detected PC steps
     CRT         = { dur = 6,  h = 0, v = 0, size = 22, units = 1 },
     MED         = { dur = 12, h = 1, v = 1, size = 50, units = 1 },
     PC          = { dir = "PlaneCaptain/", dur = 600, h = 0, v = 0, size = 24, units = 1,
@@ -231,6 +235,10 @@ local function pcClear()
     pcShown = false
 end
 
+local function pcOk()
+    if CFG.PC_OK then sound("check_ok") end
+end
+
 TRT.ScoreDisplay = { crt = crt, medal = medal, pcHas = pcHas, pcCard = pcCard, pcClear = pcClear,
-                     version = VERSION }
+                     pcOk = pcOk, version = VERSION }
 log("v" .. VERSION .. " loaded (pictures " .. (canPic and "ON" or "OFF") .. ")")

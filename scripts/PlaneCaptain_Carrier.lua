@@ -1,5 +1,8 @@
--- PlaneCaptain_Carrier | v1.3.0
+-- PlaneCaptain_Carrier | v1.3.1
 --[[
+  v1.3.1: a step closed by the aircraft itself (reason "condition", wait type arg / argDelta /
+          argNear / range / span / engineIdle) calls TRT.ScoreDisplay.pcOk() -> short sound.
+          Not for plane-captain timers, Done steps or skipped steps. No-op without Score_Display.
   v1.3.0: picture cards per step when Score_Display (CAS (L) only) offers them:
           TRT.ScoreDisplay.pcHas(id) / pcCard(id) / pcClear(). A step with a card clears the
           previous step text and shows the card instead of the step text; steps without a card,
@@ -61,7 +64,7 @@ if TRT.PlaneCaptain then
 end
 
 local CFG = {
-  VERSION       = "1.3.0",
+  VERSION       = "1.3.1",
   PLAYER_UNIT   = "Player_01",
   PLAYER_GROUP  = "CAS-1",
   CARRIER_UNIT  = "CVN",       -- movement is measured relative to this unit (deck is moving)
@@ -479,12 +482,19 @@ end
 
 local enterStep
 
+-- v1.3.1: wait types where "condition" means the aircraft did it (pcOk sound)
+local OK_WAITS = { arg = true, argDelta = true, argNear = true, range = true, span = true, engineIdle = true }
+
 local function completeStep(reason)
   local F = PC.flow
   local s = F.step
   if not s or F.ending then return end
   F.ending = true
   log(string.format("step %s done (%s) after %.1f s", s.id, reason, now() - F.t0))
+  if reason == "condition" and s.wait and OK_WAITS[s.wait.type] then      -- v1.3.1
+    local SD = TRT.ScoreDisplay
+    if SD and SD.pcOk then pcall(SD.pcOk) end
+  end
   if s.lbar == "raise" and PC.calib then calibReport() end
   if reason ~= "condition" then
     for a, sn in pairs(F.seen) do
