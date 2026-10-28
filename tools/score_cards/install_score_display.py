@@ -1,9 +1,10 @@
-# install_score_display.py | v1.2.0
+# install_score_display.py | v1.2.1
 # Installs / updates Score_Display in a .miz IN PLACE, after a backup.
 #
 #   python tools/score_cards/install_score_display.py "<path>/Close Air Support (L).miz"
 #
-#   1. backup  -> <dir>/BackUps/<name>_before-SD-<version>.miz (refuses if it exists)
+#   1. backup  -> <dir>/BackUps/<name>_before-SD-<version>.miz; v1.2.1: if that exists
+#                 (asset-only update, same script version) -> ..._before-SD-<version>-2.miz, -3 ...
 #   2. assets  -> ScoreCards/*.png, PlaneCaptain/*.png (v1.1.0), Sounds/SCORE/*.ogg
 #                 from out/; old copies of these folders are replaced
 #   3. script  -> l10n/DEFAULT/Score_Display.lua from scripts/ (source of truth);
@@ -108,9 +109,10 @@ def main(src):
 
     bdir = os.path.join(os.path.dirname(src), "BackUps")
     os.makedirs(bdir, exist_ok=True)
-    backup = os.path.join(bdir, "%s_before-SD-%s.miz" % (os.path.splitext(os.path.basename(src))[0], ver))
-    if os.path.exists(backup):
-        sys.exit("backup exists, not overwriting: " + backup)
+    stem = "%s_before-SD-%s" % (os.path.splitext(os.path.basename(src))[0], ver)
+    backup, k = os.path.join(bdir, stem + ".miz"), 2
+    while os.path.exists(backup):
+        backup, k = os.path.join(bdir, "%s-%d.miz" % (stem, k)), k + 1
     shutil.copy2(src, backup)
     print("backup", backup)
 
