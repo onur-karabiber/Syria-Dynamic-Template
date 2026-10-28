@@ -1,4 +1,6 @@
-# refresh_scripts.py | v1.0.0
+# refresh_scripts.py | v1.1.0
+# v1.1.0: --sounds <SET> (repeatable) also syncs Sounds/<SET>/*.ogg from src/Sounds/<SET>/
+#         (changed files replaced, new files added; files only in the .miz are kept).
 # Refreshes the embedded Lua scripts of a .miz that build.py does not build
 # (e.g. "Close Air Support (L).miz") from scripts/ (source of truth), IN PLACE,
 # after a backup. Only .lua files named in l10n/DEFAULT/mapResource are touched;
@@ -29,7 +31,7 @@ def first_line(b):
     return b.split(b"\n", 1)[0].decode("utf-8", "replace").strip()
 
 
-def main(src, dry):
+def main(src, dry, sound_sets=()):
     with zipfile.ZipFile(src) as z:
         mapres = dcslua.parse(z.read(PREFIX + "mapResource"))[1]
         luas = sorted({v.decode() for v in mapres.values()
@@ -48,11 +50,27 @@ def main(src, dry):
             if old != data:
                 new[arc] = data
                 print("refresh: %-42s %s -> %s" % (nm, first_line(old) or "(none)", first_line(data)))
-        if not new:
+        names = set(z.namelist())
+        added = {}
+        for st in sound_sets:                                   # v1.1.0
+            d = os.path.join(REPO, "src", "Sounds", st)
+            for f in sorted(os.listdir(d)):
+                if not f.lower().endswith(".ogg"):
+                    continue
+                arc = "Sounds/%s/%s" % (st, f)
+                data = open(os.path.join(d, f), "rb").read()
+                if arc in names:
+                    if z.read(arc) != data:
+                        new[arc] = data
+                        print("sound:   %s (changed)" % arc)
+                else:
+                    added[arc] = data
+                    print("sound:   %s (new)" % arc)
+        if not new and not added:
             print("up to date, nothing written")
             return 0
         if dry:
-            print("dry run: %d script(s) would change" % len(new))
+            print("dry run: %d file(s) would change, %d added" % (len(new), len(added)))
             return 0
         bdir = os.path.join(os.path.dirname(os.path.abspath(src)), "BackUps")
         os.makedirs(bdir, exist_ok=True)
@@ -65,18 +83,27 @@ def main(src, dry):
         with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as out:
             for info in z.infolist():
                 out.writestr(info, new.get(info.filename, z.read(info.filename)))
+            for arc, data in added.items():
+                out.writestr(arc, data, compress_type=zipfile.ZIP_STORED)
     with zipfile.ZipFile(tmp) as t:
         bad = t.testzip()
         if bad:
             os.remove(tmp)
             sys.exit("zip test failed on %s, original untouched" % bad)
     os.replace(tmp, src)
-    print("written: %s (%d script(s))" % (src, len(new)))
+    print("written: %s (%d changed, %d added)" % (src, len(new), len(added)))
     return 0
 
 
 if __name__ == "__main__":
-    args = [a for a in sys.argv[1:] if a != "--dry-run"]
+    argv, sets, args = sys.argv[1:], [], []
+    i = 0
+    while i < len(argv):
+        if argv[i] == "--sounds" and i + 1 < len(argv):
+            sets.append(argv[i + 1]); i += 2; continue
+        if argv[i] != "--dry-run":
+            args.append(argv[i])
+        i += 1
     if len(args) != 1:
-        sys.exit('usage: refresh_scripts.py "<mission.miz>" [--dry-run]')
-    sys.exit(main(args[0], "--dry-run" in sys.argv[1:]))
+        sys.exit('usage: refresh_scripts.py "<mission.miz>" [--dry-run] [--sounds SET ...]')
+    sys.exit(main(args[0], "--dry-run" in argv, sets))

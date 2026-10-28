@@ -103,3 +103,31 @@ shutdown_1;PILOT_IN;Another day at the office.
 shutdown_2;PILOT_IN;Okay. That's a wrap.
 shutdown_3;PILOT_IN;Good flight. Time for coffee.
 shutdown_4;PILOT_IN;And... done. Debrief time.
+
+# ── v1.1.0: quiet transit leg (CRUISE_CD phases, no radio for CRUISE_QUIET s)
+cruise_1;PILOT_IN;Quiet out here.
+cruise_2;PILOT_IN;Long way from the boat.
+cruise_3;PILOT_IN;Nice view, at least.
+cruise_4;PILOT_IN;Just me and the hum of the engines.
+cruise_5;PILOT_IN;Alright... settle in.
+cruise_6;PILOT_IN;Not a cloud worth worrying about.
+# ── v1.1.0: air-to-ground weapon released (hero S_EVENT_SHOT)
+weapon_away_1;PILOT_IN;Off it goes.
+weapon_away_2;PILOT_IN;Weapon's gone. Come on...
+weapon_away_3;PILOT_IN;Okay, it's away.
+weapon_away_4;PILOT_IN;And... released.
+# ── v1.1.0: a missile fired at the hero missed (Missile_Defense)
+missile_defeated_1;PILOT_IN;Whoa... that was close.
+missile_defeated_2;PILOT_IN;Missed me. Okay. Breathe.
+missile_defeated_3;PILOT_IN;Not today.
+missile_defeated_4;PILOT_IN;Heart's still going... good.
+# ── v1.1.0: CAP splash call heard on the Overlord net
+cap_splash_1;PILOT_IN;Good shooting, guys.
+cap_splash_2;PILOT_IN;One less to worry about.
+cap_splash_3;PILOT_IN;Nice. Scratch one.
+cap_splash_4;PILOT_IN;Glad they're on our side.
+# ── v1.1.0: offload complete (Comms_Director refuelDone)
+tanker_done_1;PILOT_IN;Topped off. That's better.
+tanker_done_2;PILOT_IN;Full tanks. Good feeling.
+tanker_done_3;PILOT_IN;Okay, gas is good.
+tanker_done_4;PILOT_IN;Thanks, Texaco.

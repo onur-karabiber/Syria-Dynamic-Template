@@ -1,5 +1,6 @@
--- Missile_Defense | v1.0.0
+-- Missile_Defense | v1.0.1
 --[[
+  v1.0.1: MD.defeated counts defeated engagements (read by Pilot_Banter v1.1.0).
   Score for a defeated missile (Onur, CAS-1 test 2026-10-28): a RED surface-to-air or
   air-to-air missile launched at the hero that stops existing without hitting him
   earns MD.CFG.PTS through TRT.addScore (so Score_Display shows the card).
@@ -35,7 +36,7 @@ if TRT.MD then
 end
 
 local CFG = {
-    VERSION          = "1.0.0",
+    VERSION          = "1.0.1",
     PTS              = 5,       -- per defeated engagement
     SALVO_S          = 15,      -- s: same shooter, missiles inside this window = one engagement
     TICK             = 0.5,     -- s
@@ -44,7 +45,7 @@ local CFG = {
     MAX_FLIGHT_S     = 180,     -- safety: a tracked missile older than this is dropped
 }
 
-local MD = { version = CFG.VERSION, CFG = CFG, eng = {}, byWeapon = {}, n = 0 }
+local MD = { version = CFG.VERSION, CFG = CFG, eng = {}, byWeapon = {}, n = 0, defeated = 0 }
 TRT.MD = MD
 
 local function log(s) env.info("[MD] " .. s) end
@@ -167,8 +168,11 @@ local function settle(eg, h)
         eg.id, eg.shooter, eg.sType, #eg.missiles,
         closest < math.huge and string.format("%.0f m", closest) or "?", now() - eg.t0,
         why and ("no score (" .. why .. ")") or ("DEFEATED +" .. CFG.PTS)))
-    if not why and TRT.addScore then
-        TRT.addScore(CFG.PTS, string.format("MISSILE DEFEATED: %s (%s)", eg.wType, eg.sType))
+    if not why then
+        MD.defeated = MD.defeated + 1
+        if TRT.addScore then
+            TRT.addScore(CFG.PTS, string.format("MISSILE DEFEATED: %s (%s)", eg.wType, eg.sType))
+        end
     end
 end
 

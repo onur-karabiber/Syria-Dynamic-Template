@@ -1,5 +1,14 @@
--- Pilot_Banter | v1.0.1
+-- Pilot_Banter | v1.1.0
 --[[
+  v1.1.0: more self-talk (Onur, CAS-1 test 2026-10-28: 9 lines in 2.5 h). MAX_LINES 14 -> 32,
+          MIN_GAP 30 -> 25, higher probabilities on the airborne moments, and five new moments:
+            cruise            quiet transit: airborne, not engaged, CD phase in CRUISE_CD, no radio
+                              and no line of ours for CRUISE_QUIET s
+            weapon_away       hero S_EVENT_SHOT, air-to-ground weapon (allowed in JTAC phases:
+                              .jtac = true; the JTAC is quiet at release, it speaks at impact)
+            missile_defeated  Missile_Defense MD.defeated +1
+            cap_splash        Comms_Director CD.splashes +1 (CAP splash the hero heard)
+            tanker_done       Comms_Director CD.refuelDone false -> true
   v1.0.1: silent while working a JTAC (Comms_Director phases in CFG.SILENT_CD): the native
           DCS JTAC voice is not visible to RadioBusy(), so lines overlapped it (CAS-1 test
           2026-10-28: feet_dry / feet_wet during JTAC talk). good_hits waits 10 s after the
@@ -76,13 +85,13 @@ if TRT.PB then
 end
 
 local CFG = {
-    VERSION      = "1.0.1",
+    VERSION      = "1.1.0",
     ENABLED      = true,           -- start state of the F10 toggle
     SND_DIR      = "Sounds/PB/",
     CARRIER_UNIT = "CVN",
     TICK         = 0.5,            -- s
-    MIN_GAP      = 30,             -- s between two lines (default; .gap per moment)
-    MAX_LINES    = 14,             -- per mission
+    MIN_GAP      = 25,             -- s between two lines (default; .gap per moment); v1.1.0: was 30
+    MAX_LINES    = 32,             -- per mission; v1.1.0: was 14
     TAIL         = 0.3,            -- s after a clip before anything else of ours may start
     SUBTITLE     = false,          -- true: "(467, to himself) ..." text for SUB_DUR s
     SUB_DUR      = 4,
@@ -105,6 +114,10 @@ local CFG = {
     },
     -- v1.0.1: Comms_Director phases with no banter (native JTAC radio is not detectable)
     SILENT_CD = { JTAC1 = true, JTAC2 = true },
+    -- v1.1.0: cruise musings only in these CD phases (transit legs)
+    CRUISE_CD = { ENROUTE = true, J1_OFF = true, REFUEL = true, TKR_DONE = true,
+                  RTB = true, STRIKE_IN = true, INBOUND = true },
+    CRUISE_QUIET = 240,            -- s without radio and without a line of ours
 
     -- p = probability the moment speaks · delay = s after the event · ttl = s it may wait
     -- for a quiet radio after the delay · cd = s before the same moment may speak again
@@ -113,11 +126,17 @@ local CFG = {
         canopy_close = { p = 0.85, delay = 1.0, ttl = 12, cd = 300, gap = 15 },   -- deck: little radio,
         engines_on   = { p = 0.60, delay = 2.0, ttl = 15, cd = 600, gap = 15 },   -- and these three often
         checks_done  = { p = 0.70, delay = 2.0, ttl = 20, cd = 600, gap = 15 },   -- come close together
-        cat_shot     = { p = 0.85, delay = 3.5, ttl = 12, cd = 120 },
-        feet_dry     = { p = 0.70, delay = 1.0, ttl = 20, cd = 600 },
-        feet_wet     = { p = 0.70, delay = 1.0, ttl = 20, cd = 600 },
-        tanker_in    = { p = 0.70, delay = 1.5, ttl = 8,  cd = 300 },
-        good_hits    = { p = 0.75, delay = 10.0, ttl = 30, cd = 120 },   -- v1.0.1: after the JTAC BDA
+        cat_shot     = { p = 0.90, delay = 3.5, ttl = 12, cd = 120 },
+        feet_dry     = { p = 0.85, delay = 1.0, ttl = 20, cd = 600 },
+        feet_wet     = { p = 0.85, delay = 1.0, ttl = 20, cd = 600 },
+        tanker_in    = { p = 0.85, delay = 1.5, ttl = 8,  cd = 300 },
+        good_hits    = { p = 0.90, delay = 10.0, ttl = 30, cd = 120 },   -- v1.0.1: after the JTAC BDA
+        -- v1.1.0
+        cruise           = { p = 0.70, delay = 0.5, ttl = 10, cd = 360 },
+        weapon_away      = { p = 0.70, delay = 1.5, ttl = 6,  cd = 90, jtac = true },
+        missile_defeated = { p = 0.90, delay = 2.0, ttl = 20, cd = 60, any = true },
+        cap_splash       = { p = 0.80, delay = 2.0, ttl = 25, cd = 300 },
+        tanker_done      = { p = 0.80, delay = 3.0, ttl = 25, cd = 600 },
         threat_over  = { p = 0.90, delay = 2.0, ttl = 20, cd = 300 },
         trap_good    = { p = 0.90, delay = 1.0, ttl = 25, cd = 60, gap = 10, any = true },
         trap_fair    = { p = 0.90, delay = 1.0, ttl = 25, cd = 60, gap = 10, any = true },
@@ -196,6 +215,28 @@ local CFG = {
         shutdown_2         = { len = 1.70, text = "Okay. That's a wrap." },
         shutdown_3         = { len = 2.11, text = "Good flight. Time for coffee." },
         shutdown_4         = { len = 1.82, text = "And... done. Debrief time." },
+        cruise_1           = { len = 1.26, text = "Quiet out here." },
+        cruise_2           = { len = 1.26, text = "Long way from the boat." },
+        cruise_3           = { len = 1.51, text = "Nice view, at least." },
+        cruise_4           = { len = 1.88, text = "Just me and the hum of the engines." },
+        cruise_5           = { len = 1.33, text = "Alright... settle in." },
+        cruise_6           = { len = 2.65, text = "Not a cloud worth worrying about." },
+        weapon_away_1      = { len = 1.21, text = "Off it goes." },
+        weapon_away_2      = { len = 1.79, text = "Weapon's gone. Come on..." },
+        weapon_away_3      = { len = 1.34, text = "Okay, it's away." },
+        weapon_away_4      = { len = 1.07, text = "And... released." },
+        missile_defeated_1 = { len = 2.60, text = "Whoa... that was close." },
+        missile_defeated_2 = { len = 2.17, text = "Missed me. Okay. Breathe." },
+        missile_defeated_3 = { len = 1.03, text = "Not today." },
+        missile_defeated_4 = { len = 1.55, text = "Heart's still going... good." },
+        cap_splash_1       = { len = 1.45, text = "Good shooting, guys." },
+        cap_splash_2       = { len = 1.65, text = "One less to worry about." },
+        cap_splash_3       = { len = 1.77, text = "Nice. Scratch one." },
+        cap_splash_4       = { len = 1.47, text = "Glad they're on our side." },
+        tanker_done_1      = { len = 1.74, text = "Topped off. That's better." },
+        tanker_done_2      = { len = 1.84, text = "Full tanks. Good feeling." },
+        tanker_done_3      = { len = 1.93, text = "Okay, gas is good." },
+        tanker_done_4      = { len = 1.53, text = "Thanks, Texaco." },
     },
     -- END AUDIO
 }
@@ -221,6 +262,7 @@ local PB = {
         tlLaunched = nil,
         surf = nil,
         dead1 = nil, dead2 = nil,
+        splashes = nil, defeated = nil, refuel = nil, lastRadio = 0, cruiseT = 0,   -- v1.1.0
         engaged = false, engT0 = nil,
         park = nil,
     },
@@ -371,7 +413,7 @@ local function Blocked(name)
         local tl = TRT.TL
         if tl and tl.engaged then return "engaged" end
         local cd = TRT.CD
-        if cd and cd.phase and CFG.SILENT_CD[cd.phase] then return "CD " .. cd.phase end
+        if cd and cd.phase and CFG.SILENT_CD[cd.phase] and not m.jtac then return "CD " .. cd.phase end
     end
     return nil
 end
@@ -568,6 +610,29 @@ local function WatchModules(u, air)
         if W.dead2 == nil then W.dead2 = cd.deadJ2 and true or false end
         if cd.deadJ1 and not W.dead1 then W.dead1 = true; Fire("good_hits", "JTAC-1 target dead") end
         if cd.deadJ2 and not W.dead2 then W.dead2 = true; Fire("good_hits", "JTAC-2 target dead") end
+        -- v1.1.0: CAP splash heard, refuel complete
+        local sp = cd.splashes or 0
+        if W.splashes == nil then W.splashes = sp end
+        if sp > W.splashes then W.splashes = sp; if air then Fire("cap_splash", "CAP splash") end end
+        local rf = cd.refuelDone and true or false
+        if W.refuel == nil then W.refuel = rf end
+        if rf and not W.refuel then W.refuel = true; if air then Fire("tanker_done", "refuel complete") end end
+        -- v1.1.0: cruise musing on a quiet transit leg
+        if RadioBusy() then W.lastRadio = now() end
+        if air and cd.phase and CFG.CRUISE_CD[cd.phase] and not W.engaged then
+            local quiet = now() - math.max(W.lastRadio, PB.lastLine, W.cruiseT)
+            if quiet >= CFG.CRUISE_QUIET then
+                W.cruiseT = now()
+                Fire("cruise", string.format("quiet %.0f s in %s", quiet, cd.phase))
+            end
+        end
+    end
+    -- v1.1.0: Missile_Defense defeated engagement
+    local md = TRT.MD
+    if md then
+        local d = md.defeated or 0
+        if W.defeated == nil then W.defeated = d end
+        if d > W.defeated then W.defeated = d; if air then Fire("missile_defeated", "MD defeated") end end
     end
     -- Deck_Park result
     local f = trigger.misc.getUserFlag(CFG.DECK_PARK_FLAG)
@@ -608,6 +673,14 @@ function EH:onEvent(e)
         Log("hero landed")
     elseif e.id == world.event.S_EVENT_REFUELING then
         Fire("tanker_in", "S_EVENT_REFUELING")
+    elseif e.id == world.event.S_EVENT_SHOT and e.weapon then       -- v1.1.0
+        local ok, d = pcall(e.weapon.getDesc, e.weapon)
+        if ok and type(d) == "table" then
+            local c = d.category
+            local ag = (c == Weapon.Category.BOMB) or (c == Weapon.Category.ROCKET)
+                or (c == Weapon.Category.MISSILE and d.missileCategory ~= Weapon.MissileCategory.AAM)
+            if ag then Fire("weapon_away", "S_EVENT_SHOT " .. tostring(d.typeName or "?")) end
+        end
     end
 end
 world.addEventHandler(EH)

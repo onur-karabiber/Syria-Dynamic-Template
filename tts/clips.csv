@@ -1,26 +1,26 @@
 # id;agency;spoken text  (only the STATIC part; bearings, ranges, angels, MGRS, TOT stay on-screen)
 # Piper spells "SAM" letter by letter; written "Sam" so it is spoken as the word (v1.4.3).
-dep_switch_strike;DEPARTURE;Hornet five one, Departure. Switch Strike, two six five decimal zero.
-str_switch_marshal;STRIKE;Hornet five one, Strike. Switch Marshal, two six one decimal zero.
+dep_switch_strike;DEPARTURE;Hornet five one, Departure. Strike, push button three.
+str_switch_marshal;STRIKE;Hornet five one, Strike. Marshal, push button sixteen.
 eye_area_clear;EYEBALL;Hornet five one, target area clear. Continue as briefed.
 str_radar_contact;STRIKE;Hornet five one, Strike, radar contact. Check Mode four.
-str_m4_sweet_ovl;STRIKE;Hornet five one, Mode four sweet. Kilo copied. Switch Overlord, two five one decimal one.
+str_m4_sweet_ovl;STRIKE;Hornet five one, Mode four sweet. Kilo copied. Overlord, push button six.
 str_m4_sour;STRIKE;Hornet five one, Mode four sour. Recycle.
 str_m4_sweet_now;STRIKE;Hornet five one, Strike. Mode four sweet now.
-str_kilo_ovl;STRIKE;Hornet five one, Kilo copied. Switch Overlord, two five one decimal one.
+str_kilo_ovl;STRIKE;Hornet five one, Kilo copied. Overlord, push button six.
 tkr_checkin;TEXACO;Hornet five one, Texaco one one, angels fifteen. Cleared to join, left observation. Port drogue, call pre-contact.
-tkr_done;TEXACO;Hornet five one, Texaco one one, offload complete. Cleared to depart, return to Overlord, two five one decimal one.
-str_inbound;STRIKE;Hornet five one, Strike, radar contact, Mode four sweet. Continue zero five zero. Switch Marshal at fifty miles, two six one decimal zero.
+tkr_done;TEXACO;Hornet five one, Texaco one one, offload complete. Cleared to depart, return to Overlord, push button six.
+str_inbound;STRIKE;Hornet five one, Strike, radar contact, Mode four sweet. Continue zero five zero. Marshal at fifty miles, push button sixteen.
 ovl_feet_dry;OVERLORD;Hornet five one, Overlord, copy feet dry.
 ovl_feet_wet;OVERLORD;Hornet five one, Overlord, copy feet wet.
 ovl_picture;OVERLORD;Hornet five one, Overlord, picture clean. Sam activity reported in the target areas.
 ovl_say_int;OVERLORD;Hornet five one, Overlord. Say intentions.
-ovl_contact_strike;OVERLORD;Hornet five one, Overlord. Contact Strike, two six five decimal zero, how copy?
-dep_contact_strike;DEPARTURE;Hornet five one, Departure. Contact Strike, two six five decimal zero, how copy?
-str_contact_ovl;STRIKE;Hornet five one, Strike. Contact Overlord, two five one decimal one.
+ovl_contact_strike;OVERLORD;Hornet five one, Overlord. Contact Strike, push button three, how copy?
+dep_contact_strike;DEPARTURE;Hornet five one, Departure. Contact Strike, push button three, how copy?
+str_contact_ovl;STRIKE;Hornet five one, Strike. Contact Overlord, push button six.
 ovl_say_status;OVERLORD;Hornet five one, Overlord. Say status.
 ovl_say_status_tkr;OVERLORD;Hornet five one, Overlord. Say status, advise when ready for tanker.
-ovl_texaco_freq;OVERLORD;Hornet five one, Overlord. Texaco one one is on two five two decimal one.
+ovl_texaco_freq;OVERLORD;Hornet five one, Overlord. Texaco one one, push button seven.
 eye_abort;EYEBALL;Hornet five one, abort, abort, abort. Civilian vehicle in target area.
 eye_manpads;EYEBALL;Hornet five one, MANPADS launch observed one klick east of the target. Remain at or above hard deck, two three thousand MSL.
 str_corridor;STRIKE;Hornet five one, Strike. You are off route. Turn now to zero five zero.
@@ -47,16 +47,16 @@ o_mother;OVERLORD;Mother;tok
 ovl_checkin_a;OVERLORD;Hornet five one, Overlord, radar contact. Picture clean. Mission as fragged, Pointer one one and Eyeball one one on station. Proceed C P Tiger,;tok:0.1
 ovl_checkin_b;OVERLORD;Sam activity reported in both target areas, hard deck two three thousand M S L in the engagement area. Report feet dry.;tok
 ovl_contact_pointer_a;OVERLORD;Hornet five one, Overlord. C P Tiger;tok:0.05
-ovl_contact_pointer_b;OVERLORD;Pointer one one is on station. Contact Pointer one one, three three three decimal three. Return to this frequency on check-out.;tok
+ovl_contact_pointer_b;OVERLORD;Pointer one one is on station. Contact Pointer one one, push button four. Return to this button on check-out.;tok
 ovl_off_pointer_a;OVERLORD;Hornet five one, Overlord, copy. Return to C P Tiger,;tok:0.05
-ovl_off_pointer_b;OVERLORD;Eyeball one one is on station. Contact Eyeball one one, three three three decimal four.;tok
+ovl_off_pointer_b;OVERLORD;Eyeball one one is on station. Contact Eyeball one one, push button five.;tok
 ovl_switch_strike_a;OVERLORD;Hornet five one, Overlord,;tok:0.1
-ovl_switch_strike_b;OVERLORD;Switch Strike, two six five decimal zero.;tok
+ovl_switch_strike_b;OVERLORD;Strike, push button three.;tok
 ovl_rtb_a;OVERLORD;Hornet five one, Overlord, RTB approved.;tok:0.15
 ovl_rtb_b;OVERLORD;Proceed outbound zero five zero. Report feet wet.;tok
 ovl_inflrep_a;OVERLORD;Hornet five one, Overlord, copy INFLTREP. Texaco one one;tok:0.05
-ovl_inflrep_b;OVERLORD;TACAN two one Yankee. Switch Texaco, two five two decimal one.;tok
-ovl_inflrep_nt;OVERLORD;Hornet five one, Overlord, copy INFLTREP. Texaco one one on station, TACAN two one Yankee. Switch Texaco, two five two decimal one.;tok
+ovl_inflrep_b;OVERLORD;TACAN two one Yankee. Texaco, push button seven.;tok
+ovl_inflrep_nt;OVERLORD;Hornet five one, Overlord, copy INFLTREP. Texaco one one on station, TACAN two one Yankee. Texaco, push button seven.;tok
 p_str_out_a;PILOT;Strike, Hornet five one, checking in outbound, passing angels;tok
 p_ovl_checkin_a;PILOT;Overlord, Hornet five one, checking in as fragged, mission four one zero one and four one zero two,;tok:0.1
 p_ovl_off_pointer_a;PILOT;Overlord, Hornet five one, off Pointer one one, mission four one zero one complete,;tok:0.1
@@ -67,6 +67,12 @@ p_ovl_rtb_notkr_a;PILOT;Overlord, Hornet five one, no tanker required, RTB,;tok:
 p_str_inbound_a;PILOT;Strike, Hornet five one, inbound,;tok:0.1
 p_switching;PILOT;Hornet five one, switching.;tok
 p_wilco;PILOT;Hornet five one, wilco.;tok
+p_push_3;PILOT;Push button three, Hornet five one.;tok
+p_push_4;PILOT;Push button four, Hornet five one.;tok
+p_push_5;PILOT;Push button five, Hornet five one.;tok
+p_push_6;PILOT;Push button six, Hornet five one.;tok
+p_push_7;PILOT;Push button seven, Hornet five one.;tok
+p_push_16;PILOT;Push button sixteen, Hornet five one.;tok
 i_head;PILOT;Overlord, Hornet five one, INFLTREP.;tok:0.25
 i_l1;PILOT;Line one, Hornet five one.;tok:0.2
 i_l2;PILOT;Line two, mission four one zero one and four one zero two.;tok:0.2
