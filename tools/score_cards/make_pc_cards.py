@@ -1,4 +1,6 @@
-# make_pc_cards.py | v1.1.0
+# make_pc_cards.py | v1.2.0
+# v1.2.0: --suffix S (e.g. _CRT_borderless): reads <id><S>_corrected.png if present, else
+#         <id><S>.png (Onur's CRT cards 2026-10-28, C8 has a _corrected copy).
 # Plane captain step cards for PlaneCaptain_Carrier (via Score_Display, CAS (L) only).
 #
 #   python tools/score_cards/make_pc_cards.py "<Saved Games>/DCS/Missions/The Routine Things (With RAT)/Pics"
@@ -25,13 +27,16 @@ OUT = os.path.join(HERE, "out", "PlaneCaptain")
 IDS = ["S00", "S0P", "S2", "S2W", "S3", "S3W", "S4", "S_END",
        "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10", "C11", "C12", "C13", "C14", "C_END"]
 WIDTH = 1000
+SUFFIX = ""                          # v1.2.0: set by --suffix
 ANCHOR = ("left", "top")             # v1.0.1: matches Score_Display CFG.PC h = 0, v = 0
 
 
 def main(src):
     found = {}
     for i in IDS:
-        p = os.path.join(src, i + ".png")
+        p = os.path.join(src, i + SUFFIX + "_corrected.png")
+        if not os.path.isfile(p):
+            p = os.path.join(src, i + SUFFIX + ".png")
         if os.path.isfile(p):
             found[i] = Image.open(p).convert("RGBA")
         else:
@@ -64,6 +69,11 @@ def main(src):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        sys.exit("usage: make_pc_cards.py <Pics folder>")
-    main(sys.argv[1])
+    a = sys.argv[1:]
+    if "--suffix" in a:
+        k = a.index("--suffix")
+        SUFFIX = a[k + 1]
+        del a[k:k + 2]
+    if len(a) != 1:
+        sys.exit("usage: make_pc_cards.py <cards folder> [--suffix _CRT_borderless]")
+    main(a[0])

@@ -1,4 +1,7 @@
-# make_cards.py | v0.1.0
+# make_cards.py | v0.2.0
+# v0.2.0: Onur's "CRT borderless" art (green phosphor, 2026-10-28): CRT 1254x1254,
+#         medal 1333x1180; boxes re-measured; digits green (total), bright green (+),
+#         red (-); medal digits phosphor green.
 # Score card asset generator for Score_Display (CAS (L) only).
 #
 # Output (out/ScoreCards/):
@@ -38,25 +41,25 @@ CARDS = {
     "crt": {
         "src": "crt_frame_src.png",
         "width": 512,
-        "box": (158, 403, 717, 640),          # dashed orange box (src px)
+        "box": (205, 576, 1060, 940),         # dashed box (src px, v0.2.0)
     },
     "med": {
         "src": "medal_frame_src.png",
         "width": 768,
-        "box": (100, 634, 1065, 941),         # inner dark panel (src px)
+        "box": (100, 760, 1235, 1095),        # inner dark panel (src px, v0.2.0)
     },
 }
 
 # Digit sets: which card, glyphs, centre/height as fractions of the box.
 SETS = {
     "crt_t": dict(card="crt", glyphs="0123456789m", font="BlackOpsOne-Regular.ttf",
-                  cx=0.50, base=0.64, h=0.44, style="crt", rgb=(255, 150, 30)),
+                  cx=0.50, base=0.64, h=0.44, style="crt", rgb=(140, 255, 120)),
     "crt_dp": dict(card="crt", glyphs="0123456789p", font="BlackOpsOne-Regular.ttf",
-                   cx=0.50, base=0.91, h=0.17, style="crt", rgb=(90, 255, 120)),
+                   cx=0.50, base=0.91, h=0.17, style="crt", rgb=(215, 255, 205)),
     "crt_dn": dict(card="crt", glyphs="0123456789m", font="BlackOpsOne-Regular.ttf",
-                   cx=0.50, base=0.91, h=0.17, style="crt", rgb=(255, 60, 45)),
+                   cx=0.50, base=0.91, h=0.17, style="crt", rgb=(255, 70, 50)),
     "med_t": dict(card="med", glyphs="0123456789m", font="BlackOpsOne-Regular.ttf",
-                  cx=0.50, base=0.78, h=0.58, style="medal", rgb=(236, 229, 212)),
+                  cx=0.50, base=0.78, h=0.58, style="medal", rgb=(140, 250, 125)),
 }
 
 
