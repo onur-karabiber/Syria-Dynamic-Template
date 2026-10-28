@@ -1,6 +1,8 @@
--- Score_Display | v1.2.1
+-- Score_Display | v1.2.2
 --[[
   Picture score cards (CAS (L) only; not part of the template build).
+
+  v1.2.2: S3 / S3W redesigned cards added (all 23 plane captain steps now have a card).
 
   v1.2.1: Onur's redesigned step cards (1000x300); phase-end cards S_END / C_END;
           pcCard(id, dur) - optional duration (C_END uses PlaneCaptain MSG_END).
@@ -59,7 +61,7 @@
 _G.TRT = _G.TRT or {}
 local TRT = _G.TRT
 
-local VERSION = "1.2.1"
+local VERSION = "1.2.2"
 
 local CFG = {
     DIR         = "ScoreCards/",
@@ -77,7 +79,7 @@ local CFG = {
     MED         = { dur = 12, h = 1, v = 1, size = 50, units = 1 },
     PC          = { dir = "PlaneCaptain/", dur = 600, h = 0, v = 0, size = 24, units = 1,
                     -- must match tools/score_cards/out/PlaneCaptain (make_pc_cards.py IDS present)
-                    IDS = { "S00", "S0P", "S2", "S2W", "S4", "S_END",
+                    IDS = { "S00", "S0P", "S2", "S2W", "S3", "S3W", "S4", "S_END",
                             "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10",
                             "C11", "C12", "C13", "C14", "C_END" } },
 }
