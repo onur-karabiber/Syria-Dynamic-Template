@@ -1,5 +1,11 @@
--- TrapTraining | v7.5.0-TRT.1
--- Bankler's CASE 1 Recovery Trainer v7.5.0 (third-party) with one TRT patch:
+-- TrapTraining | v7.5.0-TRT.2
+-- Bankler's CASE 1 Recovery Trainer v7.5.0 (third-party) with TRT patches:
+-- TRT.2 (decision 2026-10-28): Bankler LSO voice off. lsoActive = false. The trainer's
+--   LSO clips (Reset.wav, PaddlesContact_1.wav, YoureHi/Power/ComeLeft/RightForLineup_1-3)
+--   are not embedded in any .miz, so the calls were silent anyway, and AIRBOSS/Raynor
+--   already voices the groove in CASE I. The Initial sfx_Reset is gated on lsoActive and
+--   the TRAINING menu no longer offers "Enable LSO". Text feedback is unaffected
+--   (GiveLSOFeedback only ever played voice; DisplayLSOFeedback is commented out upstream).
 -- TRT.1 (Menu_Manager v1.0.0): when TRT.Menu is loaded the trainer's own
 --   "Bankler's CASE 1 Training" mission menu is not created; its toggles appear
 --   under F10 > TRAINING, on deck only: in-flight feedback, LSO, break/pattern
@@ -12,7 +18,7 @@ startingStep = 1
 case1StartingStep = 1  -- Normally 1, and 8 for straight-in.
 case3StartingStep = 8
 case1PatternModeStartingStep = 5
-lsoActive = true
+lsoActive = false  -- TRT.2: Bankler LSO voice off (clips not embedded; AIRBOSS LSO voices the groove)
 useLsoVoiceOver = true
 printDebugGlideslopeFeedback = false
 printDebugLineupFeedback = false
@@ -397,14 +403,15 @@ function CreateRadioMenu()
 	if TRT and TRT.Menu then	-- TRT.1
 		TRT.Menu.Register("TRAINING", "BANKLER", function(ph)
 			if ph ~= "DECK" then return {} end
-			return {
-				inFlightFeedback and { "Disable in-flight feedback", function() ToggleInFlightFeedback(false) end }
-				                  or { "Enable in-flight feedback",  function() ToggleInFlightFeedback(true) end },
-				lsoActive and { "Disable LSO", function() ToggleLSO(false) end }
-				           or { "Enable LSO",  function() ToggleLSO(true) end },
-				patternMode and { "Enable break mode",   function() SetMode("break") end }
-				             or { "Enable pattern mode", function() SetMode("pattern") end },
-			}
+			local items = {}
+			items[#items + 1] = inFlightFeedback and { "Disable in-flight feedback", function() ToggleInFlightFeedback(false) end }
+			                                     or { "Enable in-flight feedback",  function() ToggleInFlightFeedback(true) end }
+			if lsoActive then	-- TRT.2: "Disable LSO" only; no "Enable LSO" (clips not embedded)
+				items[#items + 1] = { "Disable LSO", function() ToggleLSO(false) end }
+			end
+			items[#items + 1] = patternMode and { "Enable break mode",   function() SetMode("break") end }
+			                                or { "Enable pattern mode", function() SetMode("pattern") end }
+			return items
 		end, 10)
 		return
 	end
@@ -743,7 +750,7 @@ function Init(id, patternModeZone)
 	playerData.secondsStandingStill = 0
 	playerData.summary = ""
 	
-	sfx_Reset:Play()
+	if lsoActive then sfx_Reset:Play() end	-- TRT.2
 end
 
 function PrintTestSummary(playerData)
@@ -2262,6 +2269,6 @@ end
 CreateRadioMenu()
 ToggleInFlightFeedback(true, true)
 TogglePublicFeedback(false, true)
-ToggleLSO(true, true)
+ToggleLSO(false, true)	-- TRT.2 (was true)
 SetMode("break", true)
 SetCase(1)
