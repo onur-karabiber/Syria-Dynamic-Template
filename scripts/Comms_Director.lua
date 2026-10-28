@@ -1,5 +1,15 @@
--- Comms_Director | v1.5.4
+-- Comms_Director | v1.5.5
 --[[
+  v1.5.5 — CAS-1 test 2026-10-28 night:
+           * Eyeball laser calls: JTAC_Laser v1.1.0 spot events -> EYEBALL 11 on button 5
+             "laser on, code 1688" / "shifting laser, same code" / "laser off". The scripted
+             spot was on target the whole re-attack, but nothing said so and the pilot
+             aborted for fuel. Only once Eyeball 11 has been worked (JTAC2 entered) and in an
+             OVERLORD phase other than JTAC1.
+           * Re-attack after abort / tanker: the 9-line readback item is no longer tied to
+             the JTAC1 / JTAC2 phase. It is offered for a JTAC that has been worked, whose
+             target group is alive, while the hero is within CFG.RB_NM of it (the night
+             flight attacked YE53 in RTB phase -> no readback item).
   v1.5.4 — troops in contact + 9-line readback (Onur, CAS-1 test 2026-10-28):
            TIC: one JTAC per flight (CFG.TIC.WHO, nil = random between Pointer 11 and
            Eyeball 11, picked at the OVERLORD check-in from the press time) is "in contact".
@@ -237,6 +247,7 @@ local CFG = {
     JTAC2_POS      = { x = 59271, z = -1176 },    -- fallback; live centroid preferred
     JTAC1_GROUP    = "JTAC-1",                    -- v1.5.4: friendlies for Line 8 / TIC
     JTAC2_GROUP    = "JTAC-2",
+    RB_NM          = 30,    -- v1.5.5: readback item outside the JTAC phase within this range
 
     -- v1.5.4: troops-in-contact sequence (one JTAC per flight)
     TIC = {
@@ -470,6 +481,9 @@ local CFG = {
         p_dir_nw               = { ch = "PILOT", len = 0.63 },
         ptr_rb_ok              = { ch = "POINTER", len = 2.40 },
         eye_rb_ok              = { ch = "EYEBALL", len = 2.35 },
+        eye_laser_on           = { ch = "EYEBALL", len = 3.46 },
+        eye_laser_shift        = { ch = "EYEBALL", len = 2.75 },
+        eye_laser_off          = { ch = "EYEBALL", len = 1.31 },
     },
 
     -- Air picture / threat / CAP net (v1.5.0)
@@ -531,7 +545,8 @@ local CD = {
     threat        = {},       -- v1.5.0 per RED group name { far, close } (calls made)
     aborted       = false,    -- v1.5.1 OVERLORD mission abort called (read by Flight_Timeline)
     tic           = nil,      -- v1.5.4 "J1" / "J2" / false (off); nil = not picked yet
-    ticState      = nil,      -- v1.5.4 { key, n, used, next, done, bda } after the TIC hand-off
+    ticState      = nil,
+    worked        = {},       -- v1.5.5 J1 / J2 = true once JTAC1 / JTAC2 was entered      -- v1.5.4 { key, n, used, next, done, bda } after the TIC hand-off
 }
 _G.TRT = _G.TRT or {}
 _G.TRT.CD = CD   -- v1.5.1: read-only view for Flight_Timeline; do not write from outside
@@ -1403,6 +1418,41 @@ local function A_Readback(key)
     QPlay()
 end
 
+--- v1.5.5: readback offered in the JTAC's own phase, or later (re-attack) while its
+--- target group is alive and the hero is within CFG.RB_NM of it.
+local function RbAvail(key)
+    local j = JT[key]
+    if not CD.worked[key] then return false end
+    if CD.phase == j.phase then return true end
+    if not OVL_PHASES[CD.phase] or CD.phase == "JTAC1" or CD.phase == "JTAC2" then return false end
+    local p, tp = Player(), TicTgtPos(j)
+    return (p and tp and Dist2D(p:getPoint(), tp) <= CFG.RB_NM) and true or false
+end
+
+--- v1.5.5: JTAC_Laser spot events -> JTAC radio calls (JTAC-2 / Eyeball 11 only).
+local function OnSpot(ev, info)
+    local key = (info.jtac == JT.J2.jtac and "J2") or (info.jtac == JT.J1.jtac and "J1") or nil
+    if not key then return end
+    local j = JT[key]
+    if not CD.worked[key] or not OVL_PHASES[CD.phase] or CD.phase == "JTAC1" then return end
+    if ev == "OFF" and (info.why == "target group dead" or info.why == "hero not airborne") then return end
+    local std = tonumber(info.code) == 1688
+    local txt, clip
+    if ev == "ON" then
+        txt = string.format("[%s] %s, %s, laser on, code %d.", j.cs, CFG.CS, j.disp, info.code)
+        clip = std and (j.k .. "_laser_on")
+    elseif ev == "MOVE" then
+        txt = string.format("[%s] %s, shifting laser to next target, same code.", j.cs, j.disp)
+        clip = j.k .. "_laser_shift"
+    else
+        txt = string.format("[%s] %s, laser off.", j.cs, j.disp)
+        clip = j.k .. "_laser_off"
+    end
+    env.info(string.format("[CD] laser call %s %s (%s)", j.disp, ev, tostring(info.unit)))
+    Q(txt, CFG.DUR_SHORT, 0, nil, nil, clip and S(j.ch, clip) or nil)
+    QPlay()
+end
+
 -- "What is my next call?" — single-line hint per phase
 local NEXT = {
     IDLE       = "Launch. CASE III departure on Departure " .. BtnL("DEP") .. ".",
@@ -1446,8 +1496,8 @@ local function PhaseActions()
         a[#a+1] = { (ph == "TKR_DONE") and "OVERLORD: RTB" or "OVERLORD: RTB (no tanker)", A_OvlRTB }
     end
     if ph == "STRIKE_IN"  then a[#a+1] = { "STRIKE: check in inbound (btn " .. CFG.BTN.STRIKE .. ")", A_StrikeCheckInIn } end
-    if ph == "JTAC1" then a[#a+1] = { "POINTER 11: 9-line readback (4/6/8)", function() A_Readback("J1") end } end
-    if ph == "JTAC2" then a[#a+1] = { "EYEBALL 11: 9-line readback (4/6/8)", function() A_Readback("J2") end } end
+    if RbAvail("J1") then a[#a+1] = { "POINTER 11: 9-line readback (4/6/8)", function() A_Readback("J1") end } end
+    if RbAvail("J2") then a[#a+1] = { "EYEBALL 11: 9-line readback (4/6/8)", function() A_Readback("J2") end } end
     if ph == "ENROUTE" or ph == "JTAC1" or ph == "J1_OFF" or ph == "JTAC2" or ph == "J2_OFF" then
         a[#a+1] = { "OVERLORD: RTB (mission abort)", A_OvlAbort }
     end
@@ -1593,6 +1643,7 @@ SetPhase = function(new)
         TRT.Menu.SetHint("CD", hint)
     end
 
+    if new == "JTAC1" then CD.worked.J1 = true elseif new == "JTAC2" then CD.worked.J2 = true end  -- v1.5.5
     if new == "JTAC1" or new == "JTAC2" or new == "J1_OFF" or new == "J2_OFF" then
         SetFlag(200, 1)
     else
@@ -1887,10 +1938,21 @@ local function CD_Init()
     end
     timer.scheduleFunction(HookRefuel, nil, timer.getTime() + 2)
 
+    -- v1.5.5: JTAC_Laser spot events (any load order; give up after 60 s)
+    local function HookSpot(_, tm)
+        local jl = _G.TRT and _G.TRT.JL
+        if jl and jl.onSpot then
+            jl.onSpot(OnSpot); env.info("[CD] hooked TRT.JL.onSpot"); return nil
+        end
+        if tm > 60 then env.info("[CD] JTAC_Laser v1.1+ not loaded -> no laser calls"); return nil end
+        return tm + 2
+    end
+    timer.scheduleFunction(HookSpot, nil, timer.getTime() + 1)
+
     SetFlag(200, 0)
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.5.4 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.5.5 online — CAS-1 Syria")
 end
 
 CD_Init()

@@ -170,4 +170,7 @@
         p_dir_nw               = { ch = "PILOT", len = 0.63 },
         ptr_rb_ok              = { ch = "POINTER", len = 2.40 },
         eye_rb_ok              = { ch = "EYEBALL", len = 2.35 },
+        eye_laser_on           = { ch = "EYEBALL", len = 3.46 },
+        eye_laser_shift        = { ch = "EYEBALL", len = 2.75 },
+        eye_laser_off          = { ch = "EYEBALL", len = 1.31 },
     },

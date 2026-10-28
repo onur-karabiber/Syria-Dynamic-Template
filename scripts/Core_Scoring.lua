@@ -1,4 +1,10 @@
--- Core_Scoring | v1.4.1
+-- Core_Scoring | v1.4.2
+-- v1.4.2: JTAC group bonus never fired (CAS-1 test 2026-10-28 night: BV51 and YE53 both
+-- wiped out by the hero, no "+5 JTAC TARGET GROUP DESTROYED"): victim:getGroup() on the
+-- unit of an S_EVENT_KILL returns nothing, so the group name was never found. The JTAC
+-- target groups' unit names are now mapped to their group from the ME data at load.
+-- Also the "DEAD without a matching KILL" debug line was false: S_EVENT_DEAD arrives
+-- ~1 s AFTER the KILL, so a unit already scored by a KILL is no longer reported.
 -- v1.4.1: every TRT.addScore is logged ("[Core_Scoring] SCORE +d (total) reason") - the
 -- 2026-10-28 evening flight could not be audited (two +6 cards for the BV51 group, no +5
 -- group bonus, and the debug line said both units died without a matching KILL).
@@ -316,6 +322,7 @@ end
 
 -- v1.4.0: JTAC target groups = groupId of every FAC_AttackGroup task in the ME data
 local JTAC_TARGETS, jtacBonusDone = {}, {}
+local JTAC_UNIT_GROUP = {}   -- v1.4.2: unit name -> JTAC target group name (ME data)
 do
     local byId = {}
     local function each(fn)
@@ -342,6 +349,16 @@ do
         local n = byId[id]
         if n and not JTAC_TARGETS[n] then JTAC_TARGETS[n] = true; names[#names + 1] = n end
     end
+    pcall(function()
+        each(function(g)
+            local gn = g.name and (env.getValueDictByKey(g.name) or g.name)
+            if gn and JTAC_TARGETS[gn] then
+                for _, u in pairs(g.units or {}) do
+                    if u.name then JTAC_UNIT_GROUP[env.getValueDictByKey(u.name) or u.name] = gn end
+                end
+            end
+        end)
+    end)
     env.info("[Core_Scoring] JTAC target groups (" .. #names .. "): " .. table.concat(names, ", ")
         .. (ok and "" or " [scan error]"))
 end
@@ -359,7 +376,7 @@ do
            and e.initiator and e.initiator.getName then
             local okN, n = pcall(function() return e.initiator:getName() end)
             local okC, c = pcall(function() return e.initiator:getCoalition() end)
-            if okN and n and okC and c == coalition.side.RED then
+            if okN and n and okC and c == coalition.side.RED and not killHandled[n] then
                 deadSeen[n] = true
             end
         end
@@ -401,9 +418,8 @@ do
 
         -- v1.4.0: JTAC target group finished by this kill -> bonus (once per group)
         if not isStatic then
-            local okG, grp = pcall(function() return victim:getGroup() end)
-            local okN, gname = false, nil
-            if okG and grp then okN, gname = pcall(function() return grp:getName() end) end
+            local gname = JTAC_UNIT_GROUP[victimName]   -- v1.4.2 (getGroup() is empty here)
+            local okN = gname ~= nil
             if okN and gname and JTAC_TARGETS[gname] and not jtacBonusDone[gname] then
                 timer.scheduleFunction(function()
                     if jtacBonusDone[gname] then return nil end

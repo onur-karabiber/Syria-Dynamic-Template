@@ -177,3 +177,7 @@ p_dir_w;PILOT;west;tok
 p_dir_nw;PILOT;northwest;tok
 ptr_rb_ok;POINTER;Hornet five one, Pointer one one, readback correct.;tok
 eye_rb_ok;EYEBALL;Hornet five one, Eyeball one one, readback correct.;tok
+# v1.5.5 (Comms_Director): Eyeball 11 calls for the JTAC_Laser spot (button 5)
+eye_laser_on;EYEBALL;Hornet five one, Eyeball one one, laser on, code one six eight eight.;tok
+eye_laser_shift;EYEBALL;Eyeball one one, shifting laser to next target, same code.;tok
+eye_laser_off;EYEBALL;Eyeball one one, laser off.;tok
