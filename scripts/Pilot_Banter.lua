@@ -1,5 +1,9 @@
--- Pilot_Banter | v1.0.0
+-- Pilot_Banter | v1.0.1
 --[[
+  v1.0.1: silent while working a JTAC (Comms_Director phases in CFG.SILENT_CD): the native
+          DCS JTAC voice is not visible to RadioBusy(), so lines overlapped it (CAS-1 test
+          2026-10-28: feet_dry / feet_wet during JTAC talk). good_hits waits 10 s after the
+          kill so the JTAC's BDA call goes first.
   The pilot talking to himself (CAS (L) only; not part of the template build).
 
   Short cockpit lines at a few moments of the sortie, played with outSoundForGroup
@@ -72,7 +76,7 @@ if TRT.PB then
 end
 
 local CFG = {
-    VERSION      = "1.0.0",
+    VERSION      = "1.0.1",
     ENABLED      = true,           -- start state of the F10 toggle
     SND_DIR      = "Sounds/PB/",
     CARRIER_UNIT = "CVN",
@@ -99,6 +103,8 @@ local CFG = {
         NEEDLES = true, FINAL = true, BALLWAIT = true, BALL = true, GROOVE = true,
         ZIPLIP = true, B_UPWIND = true, B_DOWNWIND = true, B_ABEAM = true,
     },
+    -- v1.0.1: Comms_Director phases with no banter (native JTAC radio is not detectable)
+    SILENT_CD = { JTAC1 = true, JTAC2 = true },
 
     -- p = probability the moment speaks · delay = s after the event · ttl = s it may wait
     -- for a quiet radio after the delay · cd = s before the same moment may speak again
@@ -111,7 +117,7 @@ local CFG = {
         feet_dry     = { p = 0.70, delay = 1.0, ttl = 20, cd = 600 },
         feet_wet     = { p = 0.70, delay = 1.0, ttl = 20, cd = 600 },
         tanker_in    = { p = 0.70, delay = 1.5, ttl = 8,  cd = 300 },
-        good_hits    = { p = 0.75, delay = 2.0, ttl = 30, cd = 120 },
+        good_hits    = { p = 0.75, delay = 10.0, ttl = 30, cd = 120 },   -- v1.0.1: after the JTAC BDA
         threat_over  = { p = 0.90, delay = 2.0, ttl = 20, cd = 300 },
         trap_good    = { p = 0.90, delay = 1.0, ttl = 25, cd = 60, gap = 10, any = true },
         trap_fair    = { p = 0.90, delay = 1.0, ttl = 25, cd = 60, gap = 10, any = true },
@@ -364,6 +370,8 @@ local function Blocked(name)
         if cv and cv.phase and CFG.SILENT_CV[cv.phase] then return "CV " .. cv.phase end
         local tl = TRT.TL
         if tl and tl.engaged then return "engaged" end
+        local cd = TRT.CD
+        if cd and cd.phase and CFG.SILENT_CD[cd.phase] then return "CD " .. cd.phase end
     end
     return nil
 end

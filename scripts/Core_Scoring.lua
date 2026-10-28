@@ -1,4 +1,8 @@
--- Core_Scoring | v1.3.1
+-- Core_Scoring | v1.3.2
+-- v1.3.2: AI refuels no longer score. Only a unit with a human player
+-- (getPlayerName) earns the +7; AI refuels are logged and still call
+-- TRT.onRefuelComplete. (CAS-1 test 2026-10-28: 4 CAP refuels = +28 to
+-- the hero's score.)
 -- TRT Syria Recovery Framework - CASE-independent scoring core.
 -- Consolidates: dead-target scoring, refuel scoring (player+AI),
 -- landing scoring, groove fuel scoring, Bankler/TrapTrainer merge,
@@ -519,7 +523,12 @@ do
                             if df > 0 and not baseline[name] then baseline[name] = lastFuel[name] end
                             if baseline[name] and not rewarded[name] and (f - baseline[name]) >= 0.03 then
                                 rewarded[name] = true
-                                TRT.addScore(7, "Aerial Refuel Complete: " .. name)
+                                local okP, pn = pcall(u.getPlayerName, u)        -- v1.3.2
+                                if okP and pn then
+                                    TRT.addScore(7, "Aerial Refuel Complete: " .. name)
+                                else
+                                    env.info("[Core_Scoring] AI refuel complete (no score): " .. name)
+                                end
                                 if TRT.onRefuelComplete then TRT.onRefuelComplete(name) end
                             end
                             lastFuel[name] = f
@@ -668,4 +677,4 @@ do
     timer.scheduleFunction(watchCaseChange, nil, timer.getTime() + 1)
 end
 
-env.info("[Core_Scoring] v1.3.1 loaded. Player unit: " .. PLAYER_NAME)
+env.info("[Core_Scoring] v1.3.2 loaded. Player unit: " .. PLAYER_NAME)

@@ -1,5 +1,12 @@
--- Comms_Director | v1.5.1
+-- Comms_Director | v1.5.2
 --[[
+  v1.5.2 — late RTB fix (CAS-1 test 2026-10-28: RTB at 49.9 NM went RTB -> STRIKE_IN ->
+           RECOVERY in one tick; QClear() dropped the queued "contact Strike" call, so the
+           Strike leg was silent). Marshal hand-off now needs INBOUND (pilot checked in with
+           Strike). STRIKE_IN without a check-in is forced to Marshal only inside
+           RECOVERY_FORCE_NM (fallback, so a pilot who never calls Strike still gets Marshal).
+           CAP-net captions (commit / committing / splash / picture clean) start with
+           "(CAP net)": in the test the CAP commit read as an order to Hornet 51.
   v1.5.1 — read-only state view for Flight_Timeline v1.0.0: _G.TRT.CD = CD (phase, deadJ2,
            j2.tot, inj, ...) and CD.aborted = true when the pilot calls OVERLORD "mission abort".
            No behaviour change; nothing else in this file reads TRT.CD.
@@ -207,6 +214,7 @@ local CFG = {
     JTAC_HANDOFF_NM = 20,    -- OVERLORD → JTAC, distance to CP TIGER
     RTB_STRIKE_NM   = 90,    -- OVERLORD → Strike (inbound)
     RECOVERY_NM     = 50,    -- Strike → Marshal (AIRBOSS)
+    RECOVERY_FORCE_NM = 25,  -- v1.5.2: STRIKE_IN without Strike check-in -> Marshal anyway
 
     -- Airborne detection
     DEP_ALT_M      = 100,    -- ~330 ft MSL
@@ -760,6 +768,7 @@ end
 -- otherwise the transmission still goes out on the OVERLORD frequency, without subtitle.
 local function QNet(text, audio, after)
     local captioned = OVL_PHASES[CD.phase] or CD.phase == "OVL_OUT"
+    if captioned and text then text = "(CAP net) " .. text end   -- v1.5.2
     Q(captioned and text or nil, CFG.DUR_SHORT, after or 0, nil, 0.1, audio)
 end
 
@@ -1359,7 +1368,11 @@ local function EvalPhase(pUnit, cUnit)
     ph = CD.phase
     if (ph == "RTB" or ph == "STRIKE_IN" or ph == "INBOUND") and cPos then
         CorridorCheck(pPos, cPos)
-        if Dist2D(pPos, cPos) <= CFG.RECOVERY_NM then
+        local d = Dist2D(pPos, cPos)
+        -- v1.5.2: hand to Marshal only after the Strike check-in (INBOUND); STRIKE_IN /
+        -- RTB only as a late fallback, so the Overlord -> Strike call is not cleared
+        if (ph == "INBOUND" and d <= CFG.RECOVERY_NM)
+            or (ph ~= "INBOUND" and d <= CFG.RECOVERY_FORCE_NM) then
             QClear()
             C_StrikeSwitchMarshal(); QPlay()
             SetPhase("RECOVERY")
@@ -1521,7 +1534,7 @@ local function CD_Init()
     SetFlag(200, 0)
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.5.1 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.5.2 online — CAS-1 Syria")
 end
 
 CD_Init()

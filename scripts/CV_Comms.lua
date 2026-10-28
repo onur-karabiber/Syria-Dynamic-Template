@@ -1,4 +1,6 @@
--- CV_Comms | v1.6.1
+-- CV_Comms | v1.6.2
+-- v1.6.2: "see you at 10" offered from 30 NM (was 12; CAS-1 test 2026-10-28: too late).
+--         CASE II still only after the platform call.
 --[[
   v1.6.1 — voices: make_clips v1.6.0 (MARSHAL/APPROACH/PILOT libritts-high 736/69/851,
            OVERLORD lessac-high, DEPARTURE ljspeech-high); clips re-rendered, AUDIO lengths updated.
@@ -224,7 +226,7 @@
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "1.6.1",
+    VERSION      = "1.6.2",
     PLAYER_UNIT  = "Player_01",
     CARRIER_UNIT = "CVN",
     MODEX        = "467",       -- fallback if AIRBOSS has no onboard number yet
@@ -239,7 +241,7 @@ local CFG = {
     CCA_NM       = 50,          -- Marshal check-in offered inside this range
     ARM_AIRBORNE = 900,         -- s airborne after which check-in is offered even
                                 -- if the player never left the CCA
-    SEE_YOU_NM   = 12,          -- "see you at 10" offered inside this range (CASE I/II)
+    SEE_YOU_NM   = 30,          -- "see you at 10" offered inside this range (CASE I/II); v1.6.2: was 12
     SWITCH_APP_FT  = 6000,      -- Marshal -> Approach hand-off: altitude (ft MSL) ...
     SWITCH_APP_DME = 21,        -- ... or DME, whichever first
     SWITCH_APP_MIN = 10,        -- s after "radar contact" at the earliest
