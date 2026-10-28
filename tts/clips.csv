@@ -122,3 +122,58 @@ cap_v21_splash;VIPER21>OVERLORD;Overlord, Viper two one, splash one.;tok
 cap_c31_station;CHECK31>OVERLORD;Overlord, Check three one, picture clean, back to station.;tok
 cap_c21_station;CHECK21>OVERLORD;Overlord, Check two one, picture clean, back to station.;tok
 cap_v21_station;VIPER21>OVERLORD;Overlord, Viper two one, picture clean, back to station.;tok
+# v1.5.4 (Comms_Director): troops in contact (one JTAC per flight) + 9-line readback.
+# All token clips, chained inside S(<JTAC channel>, ...). FRIENDLY = Bravo 2-1 (ground force).
+ovl_tic_pointer_b;OVERLORD;Pointer one one reports troops in contact, priority immediate. Contact Pointer one one, push button four, without delay. Return to this button on check-out.;tok
+ovl_tic_eyeball_b;OVERLORD;Eyeball one one reports troops in contact, priority immediate. Contact Eyeball one one, push button five, without delay.;tok
+p_tic_push_4;PILOT>OVERLORD;Push button four, Hornet five one, buster.;tok
+p_tic_push_5;PILOT>OVERLORD;Push button five, Hornet five one, buster.;tok
+ptr_tic;POINTER;Hornet five one, Pointer one one, troops in contact! Troops in contact! Bravo two one is taking effective fire from enemy armor. Request immediate close air support, say time out.;tok
+eye_tic;EYEBALL;Hornet five one, Eyeball one one, troops in contact! Troops in contact! Bravo two one is taking effective fire from enemy armor. Request immediate close air support, say time out.;tok
+p_tic_copy_ptr;PILOT>POINTER;Pointer one one, Hornet five one, copy troops in contact,;tok:0.1
+p_tic_copy_eye;PILOT>EYEBALL;Eyeball one one, Hornet five one, copy troops in contact,;tok:0.1
+p_min_out;PILOT;minutes out.;tok
+p_cs;PILOT;Hornet five one,;tok:0.08
+ptr_tic_ack;POINTER;Hornet five one, copy. Check in when ready for nine-line, we need you now.;tok
+eye_tic_ack;EYEBALL;Hornet five one, copy. Check in when ready for nine-line, we need you now.;tok
+fr_ptr_1;FRIENDLY>POINTER;Pointer, Bravo two one! We are pinned down, taking heavy fire from the ridge. Where is my air?;tok
+fr_ptr_2;FRIENDLY>POINTER;Pointer, Bravo two one, we have one wounded! I need that air now!;tok
+fr_ptr_3;FRIENDLY>POINTER;Pointer, Bravo two one, enemy armor is pushing toward our position!;tok
+fr_ptr_4;FRIENDLY>POINTER;Pointer, Bravo two one, we are running low on ammo. We can't hold much longer!;tok
+fr_eye_1;FRIENDLY>EYEBALL;Eyeball, Bravo two one! We are pinned down, taking heavy fire from the ridge. Where is my air?;tok
+fr_eye_2;FRIENDLY>EYEBALL;Eyeball, Bravo two one, we have one wounded! I need that air now!;tok
+fr_eye_3;FRIENDLY>EYEBALL;Eyeball, Bravo two one, enemy armor is pushing toward our position!;tok
+fr_eye_4;FRIENDLY>EYEBALL;Eyeball, Bravo two one, we are running low on ammo. We can't hold much longer!;tok
+ptr_t1;POINTER;Bravo two one, Pointer. Fast movers inbound, minutes out. Keep your heads down.;tok
+ptr_t2;POINTER;Copy one wounded. Hornet five one, Pointer, friendlies are taking casualties. Expedite.;tok
+ptr_t3;POINTER;Bravo two one, hold what you've got. Hornet five one, Pointer, enemy is closing on friendlies. Say time out.;tok
+ptr_t4;POINTER;Copy, Bravo two one. Air is almost overhead, hang on.;tok
+eye_t1;EYEBALL;Bravo two one, Eyeball. Fast movers inbound, minutes out. Keep your heads down.;tok
+eye_t2;EYEBALL;Copy one wounded. Hornet five one, Eyeball, friendlies are taking casualties. Expedite.;tok
+eye_t3;EYEBALL;Bravo two one, hold what you've got. Hornet five one, Eyeball, enemy is closing on friendlies. Say time out.;tok
+eye_t4;EYEBALL;Copy, Bravo two one. Air is almost overhead, hang on.;tok
+p_expediting;PILOT;Hornet five one, copy, expediting.;tok
+ptr_bda;POINTER;Hornet five one, Pointer one one, good hits, good hits! Enemy fire has stopped.;tok
+eye_bda;EYEBALL;Hornet five one, Eyeball one one, good hits, good hits! Enemy fire has stopped.;tok
+fr_ptr_bda;FRIENDLY>POINTER;Pointer, Bravo two one, contact broken, fire has stopped. Tell that Hornet thanks.;tok
+fr_eye_bda;FRIENDLY>EYEBALL;Eyeball, Bravo two one, contact broken, fire has stopped. Tell that Hornet thanks.;tok
+p_tic_thanks;PILOT;Hornet five one, copy. Glad to help.;tok
+p_rb_ptr;PILOT>POINTER;Pointer one one, Hornet five one, readback.;tok:0.2
+p_rb_eye;PILOT>EYEBALL;Eyeball one one, Hornet five one, readback.;tok:0.2
+p_elev;PILOT;elevation;tok
+p_feet;PILOT;feet,;tok:0.15
+p_grid;PILOT;grid;tok
+p_friendlies;PILOT;friendlies;tok
+p_thousand;PILOT;thousand;tok
+p_hundred;PILOT;hundred;tok
+p_meters;PILOT;meters.;tok
+p_dir_n;PILOT;north;tok
+p_dir_ne;PILOT;northeast;tok
+p_dir_e;PILOT;east;tok
+p_dir_se;PILOT;southeast;tok
+p_dir_s;PILOT;south;tok
+p_dir_sw;PILOT;southwest;tok
+p_dir_w;PILOT;west;tok
+p_dir_nw;PILOT;northwest;tok
+ptr_rb_ok;POINTER;Hornet five one, Pointer one one, readback correct.;tok
+eye_rb_ok;EYEBALL;Hornet five one, Eyeball one one, readback correct.;tok

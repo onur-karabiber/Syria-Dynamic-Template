@@ -1,4 +1,4 @@
-# make_clips.py | v1.8.0
+# make_clips.py | v1.9.0
 # tts/clips.csv -> src/Sounds/CAS1/<id>.ogg  (Piper TTS + ffmpeg radio chain)
 # CV comms:  python tts/make_clips.py --set cv   (tts/cv_clips.csv -> src/Sounds/CV/,
 #            table tts/cv_audio_table.lua -> paste into CV_Comms CFG.AUDIO)
@@ -9,6 +9,9 @@
 #            template build never packs it; the AUDIO block in scripts/Pilot_Banter.lua is
 #            rewritten in place between its BEGIN AUDIO / END AUDIO markers - no paste step)
 #
+# v1.9.0: Comms_Director v1.5.4 voices: POINTER (Pointer 11, JTAC-1) ryan-medium, FRIENDLY
+#         (Bravo 2-1, ground force under fire) sam-medium at length_mult 0.85 (faster =
+#         more urgent). Neither model is on the CAS1 net yet. First pick, not A/B tested.
 # v1.8.0: --set pb. Cockpit chain instead of the radio chain: the pilot talking to himself
 #         is not a transmission (no squelch, no 400-2700 Hz radio band, no bit crush, no
 #         noise floor). 150-5000 Hz, a small boxy resonance (oxygen mask), gentle
@@ -65,6 +68,8 @@ VOICE = {
     'STRIKE':    'en_US-joe-medium.onnx',
     'OVERLORD':  'en_US-lessac-high.onnx',     # female (v1.6.0, was kristin-medium)
     'EYEBALL':   'en_US-hfc_male-medium.onnx',
+    'POINTER':   'en_US-ryan-medium.onnx',                 # v1.9.0 JTAC-1 (scripted TIC / readback lines)
+    'FRIENDLY':  ('en_US-sam-medium.onnx', 1.0, None, 0.85),  # v1.9.0 Bravo 2-1, faster delivery
     'TEXACO':    'en_US-kusal-medium.onnx',
     'PILOT':     ('en_US-libritts-high.onnx', 1.0, 851, 1.0),  # v1.6.0, was john-medium (ryan-high rejected, see header)
     'PILOT_IN':  ('en_US-libritts-high.onnx', 1.0, 851, 1.35), # v1.8.0 same pilot, natural speed (--set pb)

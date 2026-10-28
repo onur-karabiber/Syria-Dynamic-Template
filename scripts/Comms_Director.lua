@@ -1,6 +1,29 @@
--- Comms_Director | v1.5.3
+-- Comms_Director | v1.5.4
 --[[
-  v1.5.3 — preset buttons instead of frequencies (Onur, CAS-1 test 2026-10-28): every
+  v1.5.4 — troops in contact + 9-line readback (Onur, CAS-1 test 2026-10-28):
+           TIC: one JTAC per flight (CFG.TIC.WHO, nil = random between Pointer 11 and
+           Eyeball 11, picked at the OVERLORD check-in from the press time) is "in contact".
+             * OVERLORD's hand-off to it says "troops in contact, priority immediate ...
+               without delay"; pilot "push button N, Hornet 51, buster".
+             * CFG.TIC.FIRST_S after that readback, on the JTAC button: JTAC "troops in
+               contact" call, pilot "copy troops in contact, N minutes out" (N from range
+               and ground speed), JTAC "check in when ready for nine-line".
+             * Up to CFG.TIC.MAX_CALLS tension exchanges (friendly ground unit Bravo 2-1 <->
+               JTAC, sometimes the pilot), CFG.TIC.GAP_MIN..GAP_MAX s apart, only while the
+               hero is more than CFG.TIC.QUIET_NM from the target group (inside that the
+               native 9-line / attack talk owns the frequency).
+             * CFG.TIC.BDA_S after the target group is dead: JTAC "good hits", Bravo 2-1
+               "fire has stopped", pilot "glad to help".
+           Readback: F10 > COMMS "<JTAC>: 9-line readback (4/6/8)" in JTAC1 / JTAC2. The pilot
+           reads Line 4 elevation (ft, land.getHeight at the target unit), Line 6 grid (MGRS,
+           10 m) and Line 8 friendlies (8-point direction + distance target -> JTAC unit,
+           rounded to 100 m); the JTAC answers "readback correct". Values are ground truth;
+           the native 9-line is not readable from scripts, so digits can differ slightly
+           from what the DCS JTAC said (its target unit / precision).
+           New: CFG.CHAN.POINTER, CFG.JTAC1_GROUP / JTAC2_GROUP, CFG.TIC; voices POINTER
+           (ryan-medium) and FRIENDLY (sam-medium, faster) in make_clips v1.9.0.
+           Native JTAC traffic cannot be detected: a scripted call can still overlap it.
+  v1.5.3 —preset buttons instead of frequencies (Onur, CAS-1 test 2026-10-28): every
            hand-off says "<agency>, push button N" (CFG.BTN = Player_01 COMM1 presets) and the
            pilot reads it back: "Push button N, Hornet 51." (new clips p_push_N). Subtitles
            keep the frequency in brackets; F10 labels / next-call hints show the button.
@@ -212,6 +235,21 @@ local CFG = {
     JTAC1_TGT_GROUP = "SAM BV51 (SA-13)-1",       -- Pointer 11, 2 units
     JTAC2_TGT_GROUP = "SAM YE53 (SA-8)-1",        -- Eyeball 11, 4 units
     JTAC2_POS      = { x = 59271, z = -1176 },    -- fallback; live centroid preferred
+    JTAC1_GROUP    = "JTAC-1",                    -- v1.5.4: friendlies for Line 8 / TIC
+    JTAC2_GROUP    = "JTAC-2",
+
+    -- v1.5.4: troops-in-contact sequence (one JTAC per flight)
+    TIC = {
+        ENABLE    = true,
+        WHO       = nil,    -- "J1" (Pointer 11) / "J2" (Eyeball 11) / nil = random
+        FIRST_S   = 10,     -- s after the pilot's "push button" readback: JTAC TIC call
+        GAP_MIN   = 60,     -- s between tension exchanges
+        GAP_MAX   = 90,
+        MAX_CALLS = 3,      -- tension exchanges (of 4)
+        QUIET_NM  = 10,     -- no tension call with the hero this close to the target group
+        BDA_S     = 15,     -- s after the group is dead: "good hits"
+        GS_MIN    = 180,    -- m/s ground speed floor for "N minutes out"
+    },
     INJ_ARM_NM     = 20,
 
     -- Hand-off geometry (NM)
@@ -256,6 +294,7 @@ local CFG = {
         DEPARTURE = { hz = 269.00e6, mod = radio.modulation.AM },
         STRIKE    = { hz = 265.00e6, mod = radio.modulation.AM },
         OVERLORD  = { hz = 251.10e6, mod = radio.modulation.AM },
+        POINTER   = { hz = 333.30e6, mod = radio.modulation.AM },   -- v1.5.4
         EYEBALL   = { hz = 333.40e6, mod = radio.modulation.AM },
         TEXACO    = { hz = 252.10e6, mod = radio.modulation.AM },
     },
@@ -325,6 +364,12 @@ local CFG = {
         p_str_inbound_a        = { ch = "PILOT", len = 2.40 },
         p_switching            = { ch = "PILOT", len = 1.48 },
         p_wilco                = { ch = "PILOT", len = 1.31 },
+        p_push_3               = { ch = "PILOT", len = 1.52 },
+        p_push_4               = { ch = "PILOT", len = 1.65 },
+        p_push_5               = { ch = "PILOT", len = 1.74 },
+        p_push_6               = { ch = "PILOT", len = 1.60 },
+        p_push_7               = { ch = "PILOT", len = 1.66 },
+        p_push_16              = { ch = "PILOT", len = 1.77 },
         i_head                 = { ch = "PILOT", len = 1.93 },
         i_l1                   = { ch = "PILOT", len = 1.49 },
         i_l2                   = { ch = "PILOT", len = 3.48 },
@@ -372,12 +417,59 @@ local CFG = {
         cap_c31_station        = { ch = "OVERLORD", len = 2.95 },
         cap_c21_station        = { ch = "OVERLORD", len = 3.84 },
         cap_v21_station        = { ch = "OVERLORD", len = 3.21 },
-        p_push_3               = { ch = "PILOT", len = 1.52 },
-        p_push_4               = { ch = "PILOT", len = 1.65 },
-        p_push_5               = { ch = "PILOT", len = 1.74 },
-        p_push_6               = { ch = "PILOT", len = 1.60 },
-        p_push_7               = { ch = "PILOT", len = 1.66 },
-        p_push_16              = { ch = "PILOT", len = 1.77 },
+        ovl_tic_pointer_b      = { ch = "OVERLORD", len = 7.33 },
+        ovl_tic_eyeball_b      = { ch = "OVERLORD", len = 5.69 },
+        p_tic_push_4           = { ch = "OVERLORD", len = 2.39 },
+        p_tic_push_5           = { ch = "OVERLORD", len = 2.11 },
+        ptr_tic                = { ch = "POINTER", len = 7.71 },
+        eye_tic                = { ch = "EYEBALL", len = 8.61 },
+        p_tic_copy_ptr         = { ch = "POINTER", len = 2.91 },
+        p_tic_copy_eye         = { ch = "EYEBALL", len = 2.94 },
+        p_min_out              = { ch = "PILOT", len = 0.54 },
+        p_cs                   = { ch = "PILOT", len = 0.78 },
+        ptr_tic_ack            = { ch = "POINTER", len = 2.84 },
+        eye_tic_ack            = { ch = "EYEBALL", len = 3.18 },
+        fr_ptr_1               = { ch = "POINTER", len = 4.33 },
+        fr_ptr_2               = { ch = "POINTER", len = 3.20 },
+        fr_ptr_3               = { ch = "POINTER", len = 3.16 },
+        fr_ptr_4               = { ch = "POINTER", len = 3.73 },
+        fr_eye_1               = { ch = "EYEBALL", len = 4.23 },
+        fr_eye_2               = { ch = "EYEBALL", len = 3.11 },
+        fr_eye_3               = { ch = "EYEBALL", len = 3.25 },
+        fr_eye_4               = { ch = "EYEBALL", len = 3.67 },
+        ptr_t1                 = { ch = "POINTER", len = 3.60 },
+        ptr_t2                 = { ch = "POINTER", len = 3.78 },
+        ptr_t3                 = { ch = "POINTER", len = 4.76 },
+        ptr_t4                 = { ch = "POINTER", len = 2.53 },
+        eye_t1                 = { ch = "EYEBALL", len = 3.39 },
+        eye_t2                 = { ch = "EYEBALL", len = 4.39 },
+        eye_t3                 = { ch = "EYEBALL", len = 5.04 },
+        eye_t4                 = { ch = "EYEBALL", len = 2.72 },
+        p_expediting           = { ch = "PILOT", len = 2.28 },
+        ptr_bda                = { ch = "POINTER", len = 3.78 },
+        eye_bda                = { ch = "EYEBALL", len = 4.28 },
+        fr_ptr_bda             = { ch = "POINTER", len = 4.22 },
+        fr_eye_bda             = { ch = "EYEBALL", len = 4.07 },
+        p_tic_thanks           = { ch = "PILOT", len = 1.73 },
+        p_rb_ptr               = { ch = "POINTER", len = 2.52 },
+        p_rb_eye               = { ch = "EYEBALL", len = 1.89 },
+        p_elev                 = { ch = "PILOT", len = 0.63 },
+        p_feet                 = { ch = "PILOT", len = 0.47 },
+        p_grid                 = { ch = "PILOT", len = 0.33 },
+        p_friendlies           = { ch = "PILOT", len = 0.61 },
+        p_thousand             = { ch = "PILOT", len = 0.47 },
+        p_hundred              = { ch = "PILOT", len = 0.49 },
+        p_meters               = { ch = "PILOT", len = 0.52 },
+        p_dir_n                = { ch = "PILOT", len = 0.47 },
+        p_dir_ne               = { ch = "PILOT", len = 0.59 },
+        p_dir_e                = { ch = "PILOT", len = 0.49 },
+        p_dir_se               = { ch = "PILOT", len = 0.66 },
+        p_dir_s                = { ch = "PILOT", len = 0.50 },
+        p_dir_sw               = { ch = "PILOT", len = 0.76 },
+        p_dir_w                = { ch = "PILOT", len = 0.47 },
+        p_dir_nw               = { ch = "PILOT", len = 0.63 },
+        ptr_rb_ok              = { ch = "POINTER", len = 2.40 },
+        eye_rb_ok              = { ch = "EYEBALL", len = 2.35 },
     },
 
     -- Air picture / threat / CAP net (v1.5.0)
@@ -438,6 +530,8 @@ local CD = {
     cap           = {},       -- v1.5.0 per CAP key { state = off|station|commit, clean }
     threat        = {},       -- v1.5.0 per RED group name { far, close } (calls made)
     aborted       = false,    -- v1.5.1 OVERLORD mission abort called (read by Flight_Timeline)
+    tic           = nil,      -- v1.5.4 "J1" / "J2" / false (off); nil = not picked yet
+    ticState      = nil,      -- v1.5.4 { key, n, used, next, done, bda } after the TIC hand-off
 }
 _G.TRT = _G.TRT or {}
 _G.TRT.CD = CD   -- v1.5.1: read-only view for Flight_Timeline; do not write from outside
@@ -850,6 +944,7 @@ end
 
 -- forward declarations
 local SetPhase, MenuRebuild, Remind
+local TicPick, TicHandoff   -- v1.5.4 (TROOPS IN CONTACT section)
 
 -- ══════════════════════════════════════════════════════════════
 --  RADIO CALLS — controller-initiated (hand-offs / threats)
@@ -861,11 +956,15 @@ local function C_DepSwitchStrike()
 end
 
 local function C_OvlContactPointer(p)
-    Q(string.format("[OVERLORD] %s, Overlord. %s %s. Pointer 11 is on station. "
-        .. "Contact Pointer 11, %s. Return to this button on check-out.",
-        CFG.CS, CFG.CP_NAME, BrgRng(p:getPoint(), CFG.CP_POS), Btn("J1")), CFG.DUR_LONG, 0, nil, nil,
-        S("OVERLORD", "ovl_contact_pointer_a", OBR(p:getPoint(), CFG.CP_POS), 0.1, "ovl_contact_pointer_b"))
-    Ack("OVERLORD", false, CFG.BTN.J1)
+    local tic = TicPick() == "J1"   -- v1.5.4
+    Q(string.format("[OVERLORD] %s, Overlord. %s %s. %s "
+        .. "Contact Pointer 11, %s%s. Return to this button on check-out.",
+        CFG.CS, CFG.CP_NAME, BrgRng(p:getPoint(), CFG.CP_POS),
+        tic and "Pointer 11 reports TROOPS IN CONTACT, priority immediate." or "Pointer 11 is on station.",
+        Btn("J1"), tic and ", without delay" or ""), CFG.DUR_LONG, 0, nil, nil,
+        S("OVERLORD", "ovl_contact_pointer_a", OBR(p:getPoint(), CFG.CP_POS), 0.1,
+          tic and "ovl_tic_pointer_b" or "ovl_contact_pointer_b"))
+    if tic then TicHandoff("J1") else Ack("OVERLORD", false, CFG.BTN.J1) end
 end
 
 local function C_OvlSwitchStrike(p)
@@ -943,6 +1042,7 @@ end
 
 local function A_OvlCheckIn()
     local p = Player(); if not p then return end
+    TicPick()   -- v1.5.4: press time = entropy (math.randomseed is not in the sandbox)
     CD.awaiting = true; MenuRebuild()
     Pilot(string.format("Overlord, %s, checking in as fragged, mission %s and %s, angels %d, state %s.",
         CFG.CS, CFG.MSN_J1, CFG.MSN_J2, Angels(p), State(p)), S("OVERLORD", "p_ovl_checkin_a", PAS(p)))
@@ -964,12 +1064,16 @@ local function A_OvlOffPointer()
     Pilot(string.format("Overlord, %s, off Pointer 11, mission %s complete, angels %d, state %s. "
         .. "Ready for retasking.", CFG.CS, CFG.MSN_J1, Angels(p), State(p)),
         S("OVERLORD", "p_ovl_off_pointer_a", PAS(p), 0.15, "p_ovl_off_pointer_b"))
+    local tic = TicPick() == "J2"   -- v1.5.4
     Q(string.format("[OVERLORD] %s, Overlord, copy. Return to %s, %s. "
-        .. "Eyeball 11 is on station. Contact Eyeball 11, %s.",
-        CFG.CS, CFG.CP_NAME, BrgRng(p:getPoint(), CFG.CP_POS), Btn("J2")),
+        .. "%s Contact Eyeball 11, %s%s.",
+        CFG.CS, CFG.CP_NAME, BrgRng(p:getPoint(), CFG.CP_POS),
+        tic and "Eyeball 11 reports TROOPS IN CONTACT, priority immediate." or "Eyeball 11 is on station.",
+        Btn("J2"), tic and ", without delay" or ""),
         CFG.DUR_LONG, CFG.REPLY_GAP, function() SetPhase("JTAC2") end, nil,
-        S("OVERLORD", "ovl_off_pointer_a", OBR(p:getPoint(), CFG.CP_POS), 0.1, "ovl_off_pointer_b"))
-    Ack("OVERLORD", false, CFG.BTN.J2)
+        S("OVERLORD", "ovl_off_pointer_a", OBR(p:getPoint(), CFG.CP_POS), 0.1,
+          tic and "ovl_tic_eyeball_b" or "ovl_off_pointer_b"))
+    if tic then TicHandoff("J2") else Ack("OVERLORD", false, CFG.BTN.J2) end
     QPlay()
 end
 
@@ -1079,6 +1183,226 @@ local function A_Picture()
     QPlay()
 end
 
+-- ══════════════════════════════════════════════════════════════
+--  TROOPS IN CONTACT + 9-LINE READBACK  (v1.5.4)
+-- ══════════════════════════════════════════════════════════════
+local JT = {
+    J1 = { ch = "POINTER", k = "ptr", cs = "POINTER 11", disp = "Pointer 11", short = "Pointer",
+           tgt = CFG.JTAC1_TGT_GROUP, jtac = CFG.JTAC1_GROUP, phase = "JTAC1", btn = "J1" },
+    J2 = { ch = "EYEBALL", k = "eye", cs = "EYEBALL 11", disp = "Eyeball 11", short = "Eyeball",
+           tgt = CFG.JTAC2_TGT_GROUP, jtac = CFG.JTAC2_GROUP, phase = "JTAC2", btn = "J2" },
+}
+local FR_CS = "BRAVO 2-1"
+
+-- Tension exchanges: Bravo 2-1 -> JTAC (-> pilot). <J> = JTAC short callsign, <CS> = hero.
+-- Clips: fr_<k>_<i>, <k>_t<i>; pilot p_expediting / p_cs + digits + p_min_out.
+local TIC_CALLS = {
+    { fr = "<J>, Bravo 2-1! We are pinned down, taking heavy fire from the ridge. Where is my air?",
+      jt = "Bravo 2-1, <J>. Fast movers inbound, minutes out. Keep your heads down." },
+    { fr = "<J>, Bravo 2-1, we have one wounded! I need that air now!",
+      jt = "Copy one wounded. <CS>, <J>, friendlies are taking casualties. Expedite.", pilot = "expedite" },
+    { fr = "<J>, Bravo 2-1, enemy armor is pushing toward our position!",
+      jt = "Bravo 2-1, hold what you've got. <CS>, <J>, enemy is closing on friendlies. Say time out.",
+      pilot = "time" },
+    { fr = "<J>, Bravo 2-1, we are running low on ammo. We can't hold much longer!",
+      jt = "Copy, Bravo 2-1. Air is almost overhead, hang on." },
+}
+
+local function Fill(s, j)
+    local r = s:gsub("<J>", j.short)
+    r = r:gsub("<CS>", CFG.CS)
+    return r
+end
+
+local function AliveUnits(gname)
+    local out, g = {}, Group.getByName(gname)
+    if not g or not g:isExist() then return out end
+    for _, u in ipairs(g:getUnits() or {}) do
+        if u and u:isExist() and u:getLife() > 0 then out[#out + 1] = u end
+    end
+    return out
+end
+
+--- Live centroid of the JTAC's target group, nil when it is dead.
+local function TicTgtPos(j)
+    local us = AliveUnits(j.tgt)
+    if #us == 0 then return nil end
+    local sx, sz = 0, 0
+    for _, u in ipairs(us) do local q = u:getPoint(); sx, sz = sx + q.x, sz + q.z end
+    return { x = sx / #us, y = 0, z = sz / #us }
+end
+
+--- Readback target unit: JTAC_Laser's spot unit when it has one, else the first alive unit
+--- in JTAC_Laser's PRIORITY type order (SAM first), else ME order.
+local function TicTgtUnit(j)
+    local jl = _G.TRT and _G.TRT.JL
+    if jl then
+        for _, pr in ipairs(jl.pairs or {}) do
+            if pr.target == j.tgt and pr.unit then
+                local u = Unit.getByName(pr.unit)
+                if u and u:isExist() and u:getLife() > 0 then return u end
+            end
+        end
+    end
+    local prio = {}
+    for i, t in ipairs((jl and jl.CFG and jl.CFG.PRIORITY) or {}) do prio[t] = i end
+    local best, bp
+    for i, u in ipairs(AliveUnits(j.tgt)) do
+        local pr = prio[u:getTypeName()] or (100 + i)
+        if not bp or pr < bp then best, bp = u, pr end
+    end
+    return best
+end
+
+--- "N minutes out": range to the target group / ground speed (floor CFG.TIC.GS_MIN), 2..99.
+local function MinutesOut(p, tp)
+    if not tp then return 5 end
+    local v = p:getVelocity()
+    local gs = math.max(CFG.TIC.GS_MIN, math.sqrt(v.x * v.x + v.z * v.z))
+    local m = math.ceil(Dist2D(p:getPoint(), tp) * 1852 / gs / 60)
+    return math.max(2, math.min(m, 99))
+end
+
+--- Pick the TIC JTAC once. math.randomseed is nil in the mission sandbox, so the
+--- millisecond of the first call (a pilot F10 press) decides, mixed with math.random.
+TicPick = function()
+    if CD.tic ~= nil then return CD.tic end
+    local w = CFG.TIC.WHO
+    if w ~= "J1" and w ~= "J2" then
+        local e = math.floor(timer.getTime() * 1000) + math.random(0, 1)
+        w = (e % 2 == 0) and "J1" or "J2"
+    end
+    CD.tic = CFG.TIC.ENABLE and w or false
+    env.info("[CD] TIC sequence: " .. (CD.tic and JT[CD.tic].disp or "off"))
+    return CD.tic
+end
+
+--- Queued right after OVERLORD's TIC hand-off transmission.
+TicHandoff = function(key)
+    local j = JT[key]
+    local btn = CFG.BTN[j.btn]
+    local prev = CD.queue[#CD.queue]
+    if prev then prev.hold = 0.1 end
+    Q(string.format("[%s] Push button %d, %s, buster.", CFG.CS, btn, CFG.CS),
+        CFG.DUR_PILOT, 0.8, nil, CFG.PILOT_HOLD, S("OVERLORD", "p_tic_push_" .. btn))
+    CD.ticState = { key = key, n = 0, used = {}, next = nil, done = false, bda = false }
+    Q(string.format("[%s] %s, %s, TROOPS IN CONTACT, troops in contact! Bravo 2-1 is taking effective "
+        .. "fire from enemy armor. Request immediate CAS, say time out.", j.cs, CFG.CS, j.disp),
+        CFG.DUR_URGENT, CFG.TIC.FIRST_S, function() env.info("[CD] TIC call " .. j.disp) end, nil,
+        S(j.ch, j.k .. "_tic"))
+    CD.queue[#CD.queue].hold = 0.1
+    local p = Player()
+    local m = p and MinutesOut(p, TicTgtPos(j)) or 5
+    Q(string.format("[%s] %s, %s, copy troops in contact, %d minutes out.", CFG.CS, j.disp, CFG.CS, m),
+        CFG.DUR_PILOT, 1.0, nil, CFG.PILOT_HOLD, S(j.ch, "p_tic_copy_" .. j.k, PD(m), "p_min_out"))
+    Q(string.format("[%s] %s, copy. Check in when ready for nine-line, we need you now.", j.cs, CFG.CS),
+        CFG.DUR_SHORT + 2, CFG.REPLY_GAP, function()
+            Msg(string.format("[CAS-1] Check in with %s in the DCS JTAC menu (native 9-line). "
+                .. "Readback: F10 > COMMS.", j.disp), CFG.DUR_HANDOFF)
+            local s = CD.ticState
+            if s then s.next = timer.getTime() + math.random(CFG.TIC.GAP_MIN, CFG.TIC.GAP_MAX) end
+        end, nil, S(j.ch, j.k .. "_tic_ack"))
+end
+
+--- Main-tick pump for the tension exchanges.
+local function TicTick(now, p)
+    local s = CD.ticState
+    if not s or s.done or not s.next or now < s.next then return end
+    local j = JT[s.key]
+    if CD.phase ~= j.phase then return end
+    local tp = TicTgtPos(j)
+    if not tp then s.done = true; return end
+    local d = Dist2D(p:getPoint(), tp)
+    if d <= CFG.TIC.QUIET_NM or s.n >= CFG.TIC.MAX_CALLS then
+        s.done = true
+        env.info(string.format("[CD] TIC tension calls end (%d made, hero %.1f NM)", s.n, d))
+        return
+    end
+    if CD.qPlaying or #CD.queue > 0 then s.next = now + 5; return end
+    local free = {}
+    for i = 1, #TIC_CALLS do if not s.used[i] then free[#free + 1] = i end end
+    if #free == 0 then s.done = true; return end
+    local i = free[math.random(1, #free)]
+    s.used[i], s.n = true, s.n + 1
+    s.next = now + math.random(CFG.TIC.GAP_MIN, CFG.TIC.GAP_MAX)
+    local c = TIC_CALLS[i]
+    Q("[" .. FR_CS .. "] " .. Fill(c.fr, j), CFG.DUR_URGENT, 0, nil, nil, S(j.ch, "fr_" .. j.k .. "_" .. i))
+    CD.queue[#CD.queue].hold = 0.1
+    Q("[" .. j.cs .. "] " .. Fill(c.jt, j), CFG.DUR_SHORT + 2, 0.8, nil, nil, S(j.ch, j.k .. "_t" .. i))
+    if c.pilot == "expedite" then
+        ReadBack(j.ch, CFG.CS .. ", copy, expediting.", "p_expediting")
+    elseif c.pilot == "time" then
+        local m = MinutesOut(p, tp)
+        CD.queue[#CD.queue].hold = 0.1
+        Q(string.format("[%s] %s, %d minutes out.", CFG.CS, CFG.CS, m), CFG.DUR_PILOT, 0.8, nil,
+            CFG.PILOT_HOLD, S(j.ch, "p_cs", PD(m), "p_min_out"))
+    end
+    env.info(string.format("[CD] TIC tension %d/%d (#%d), hero %.1f NM", s.n, CFG.TIC.MAX_CALLS, i, d))
+    QPlay()
+end
+
+--- Called from SetPhase on J1_OFF / J2_OFF (target group dead).
+local function TicBDA(key)
+    local s = CD.ticState
+    if not s or s.key ~= key or s.bda then return end
+    s.bda, s.done = true, true
+    local j = JT[key]
+    timer.scheduleFunction(function()
+        Q(string.format("[%s] %s, %s, good hits, good hits! Enemy fire has stopped.", j.cs, CFG.CS, j.disp),
+            CFG.DUR_SHORT + 2, 0, nil, nil, S(j.ch, j.k .. "_bda"))
+        CD.queue[#CD.queue].hold = 0.1
+        Q(string.format("[%s] %s, Bravo 2-1, contact broken, fire has stopped. Tell that Hornet thanks.",
+            FR_CS, j.short), CFG.DUR_SHORT + 2, 1.0, nil, nil, S(j.ch, "fr_" .. j.k .. "_bda"))
+        ReadBack(j.ch, CFG.CS .. ", copy. Glad to help.", "p_tic_thanks")
+        QPlay()
+        env.info("[CD] TIC BDA " .. j.disp)
+    end, nil, timer.getTime() + CFG.TIC.BDA_S)
+end
+
+local DIR8 = { "n", "ne", "e", "se", "s", "sw", "w", "nw" }
+local DIR8_TXT = { n = "north", ne = "northeast", e = "east", se = "southeast",
+                   s = "south", sw = "southwest", w = "west", nw = "northwest" }
+local function Dir8(brg) return DIR8[math.floor(((brg % 360) + 22.5) / 45) % 8 + 1] end
+
+--- Pilot tokens for a distance rounded to 100 m: "one thousand two hundred".
+local function SpokenM(m)
+    local t = {}
+    local th, h = math.floor(m / 1000), math.floor((m % 1000) / 100)
+    if th > 0 then t[#t + 1] = PD(th); t[#t + 1] = "p_thousand" end
+    if h > 0 then t[#t + 1] = PD(h); t[#t + 1] = "p_hundred" end
+    return t
+end
+
+--- F10: 9-line readback, Lines 4 / 6 / 8 from ground truth.
+local function A_Readback(key)
+    local j = JT[key]
+    local tu = TicTgtUnit(j)
+    if not tu then Msg("[CAS-1] " .. j.disp .. ": no live target for a readback.", CFG.DUR_SHORT); return end
+    local tp = tu:getPoint()
+    local okH, h = pcall(land.getHeight, { x = tp.x, y = tp.z })
+    local elev = math.floor(((okH and h) or tp.y) * 3.28084 + 0.5)
+    local grid = MGRS(tp)
+    local ju = AliveUnits(j.jtac)[1]
+    local frTxt, frSeq = "", {}
+    if ju then
+        local fp = ju:getPoint()
+        local dx, dz = fp.x - tp.x, fp.z - tp.z
+        local m = math.max(100, math.floor(math.sqrt(dx * dx + dz * dz) / 100 + 0.5) * 100)
+        local d8 = Dir8(Bearing(tp, fp))
+        frTxt = string.format(", friendlies %s %d meters", DIR8_TXT[d8], m)
+        frSeq = { 0.2, "p_friendlies", "p_dir_" .. d8, SpokenM(m), "p_meters" }
+    end
+    CD.awaiting = true; MenuRebuild()
+    Pilot(string.format("%s, %s, readback: elevation %d feet, grid %s%s.", j.disp, CFG.CS, elev, grid, frTxt),
+        S(j.ch, "p_rb_" .. j.k, "p_elev", PD(elev), "p_feet", "p_grid", PSpell(grid), frSeq))
+    CD.queue[#CD.queue].dur = CFG.DUR_LONG
+    Q(string.format("[%s] %s, %s, readback correct.", j.cs, CFG.CS, j.disp), CFG.DUR_SHORT, CFG.REPLY_GAP,
+        function() CD.awaiting = false; MenuRebuild() end, nil, S(j.ch, j.k .. "_rb_ok"))
+    env.info(string.format("[CD] readback %s: %s [%s] elev %d ft, %s%s", j.disp, tu:getName(),
+        tu:getTypeName(), elev, grid, frTxt))
+    QPlay()
+end
+
 -- "What is my next call?" — single-line hint per phase
 local NEXT = {
     IDLE       = "Launch. CASE III departure on Departure " .. BtnL("DEP") .. ".",
@@ -1090,9 +1414,11 @@ local NEXT = {
     OVL_OUT    = "Check in with OVERLORD " .. BtnL("OVL") .. " (F10).",
     ENROUTE    = "Proceed " .. CFG.CP_NAME .. ". OVERLORD hands you to Pointer 11 at "
                  .. CFG.JTAC_HANDOFF_NM .. " NM.",
-    JTAC1      = "Work Pointer 11 " .. BtnL("J1") .. " (native JTAC menu).",
+    JTAC1      = "Work Pointer 11 " .. BtnL("J1") .. " (native JTAC menu). After the 9-line: "
+                 .. "readback via F10 > COMMS.",
     J1_OFF     = "Check out with Pointer 11, report to OVERLORD (F10).",
-    JTAC2      = "Work Eyeball 11 " .. BtnL("J2") .. " (native JTAC menu).",
+    JTAC2      = "Work Eyeball 11 " .. BtnL("J2") .. " (native JTAC menu). After the 9-line: "
+                 .. "readback via F10 > COMMS.",
     J2_OFF     = "Check out with Eyeball 11, pass INFLTREP to OVERLORD (F10).",
     REFUEL     = "Check in with TEXACO 11 " .. BtnL("TKR") .. " (F10), refuel.",
     TKR_DONE   = "Report RTB to OVERLORD (F10).",
@@ -1120,6 +1446,8 @@ local function PhaseActions()
         a[#a+1] = { (ph == "TKR_DONE") and "OVERLORD: RTB" or "OVERLORD: RTB (no tanker)", A_OvlRTB }
     end
     if ph == "STRIKE_IN"  then a[#a+1] = { "STRIKE: check in inbound (btn " .. CFG.BTN.STRIKE .. ")", A_StrikeCheckInIn } end
+    if ph == "JTAC1" then a[#a+1] = { "POINTER 11: 9-line readback (4/6/8)", function() A_Readback("J1") end } end
+    if ph == "JTAC2" then a[#a+1] = { "EYEBALL 11: 9-line readback (4/6/8)", function() A_Readback("J2") end } end
     if ph == "ENROUTE" or ph == "JTAC1" or ph == "J1_OFF" or ph == "JTAC2" or ph == "J2_OFF" then
         a[#a+1] = { "OVERLORD: RTB (mission abort)", A_OvlAbort }
     end
@@ -1275,8 +1603,10 @@ SetPhase = function(new)
         Msg("[CAS-1] All radio calls: F10 > COMMS. \"Show: next call\" lists the next step.", CFG.DUR_HANDOFF)
     elseif new == "J1_OFF" then
         Msg("[CAS-1] Pointer 11 tasking complete. Check out, then report to OVERLORD (F10).", CFG.DUR_SHORT)
+        TicBDA("J1")   -- v1.5.4
     elseif new == "J2_OFF" then
         Msg("[CAS-1] Eyeball 11 tasking complete. Check out, then INFLTREP to OVERLORD (F10).", CFG.DUR_SHORT)
+        TicBDA("J2")
     elseif new == "RECOVERY" then
         env.info("[CD] RECOVERY phase — AIRBOSS active, CD standing down after Marshal hand-off.")
     end
@@ -1527,6 +1857,8 @@ local function CD_Tick(_, t)
     CapMonitor()
     ThreatMonitor(p:getPoint())
     ChatPump(t)
+    local okT, errT = pcall(TicTick, t, p)   -- v1.5.4
+    if not okT then env.info("[CD] TIC error: " .. tostring(errT)) end
     if OVL_PHASES[CD.phase] or CD.phase == "DEPARTURE" then SurfaceCheck(p:getPoint()) end
     return t + CFG.TICK
 end
@@ -1558,7 +1890,7 @@ local function CD_Init()
     SetFlag(200, 0)
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.5.3 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.5.4 online — CAS-1 Syria")
 end
 
 CD_Init()
