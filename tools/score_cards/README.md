@@ -1,14 +1,14 @@
 # score_cards — picture score cards for CAS (L)
 
 Status: `Score_Display.lua` v1.0.0 installed in CAS (L) only. Not used by the template build.
-Test kit (`Score_Display_Test.lua`, `make_test_miz.py`) kept for re-verification.
+Test kit moved to legacy 2026-10-28 (`scripts/legacy/Score_Display_Test.lua`, `tools/score_cards/legacy/make_test_miz.py`); test .miz copies deleted.
 
 | File | Role |
 |---|---|
 | `make_cards.py` | Frames + full-canvas digit layers → `out/ScoreCards/`, previews → `out/preview/` (ignored), path-probe images → `out/test/` |
 | `make_sfx.py` | Synthesised `reward` / `penalty` / `mission_end` → `out/Sounds/SCORE/*.ogg` (needs ffmpeg) |
 | `install_score_display.py` | Installs/updates `scripts/Score_Display.lua` + assets in a `.miz` in place (backup to `BackUps/<name>_before-SD-<ver>.miz`) |
-| `make_test_miz.py` | Reads a `.miz`, writes `<name>_ScoreCardTest.miz` with the assets and `scripts/Score_Display_Test.lua` |
+| `legacy/make_test_miz.py` | (legacy) Reads a `.miz`, writes `<name>_ScoreCardTest.miz` with the assets and `scripts/legacy/Score_Display_Test.lua` |
 | `src_art/` | Source card art (Onur) |
 | `fonts/` | Black Ops One (used), plus Stardos Stencil, Share Tech Mono, Orbitron — all SIL OFL, licences alongside |
 
@@ -39,7 +39,7 @@ Close the mission in DCS / ME first. Placement, sizes, durations: `CFG` at the t
 ## Test run
 
 ```
-python tools/score_cards/make_test_miz.py "<Saved Games>/DCS/Missions/The Routine Things (With RAT)/Close Air Support (L).miz"
+python tools/score_cards/legacy/make_test_miz.py "<Saved Games>/DCS/Missions/The Routine Things (With RAT)/Close Air Support (L).miz"
 ```
 
 In DCS: F10 › Other › INFO › Score card test. Read results from `dcs.log` (`Score_Display_Test |` lines) and what is on screen.

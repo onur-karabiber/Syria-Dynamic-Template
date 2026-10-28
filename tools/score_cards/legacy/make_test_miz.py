@@ -1,8 +1,10 @@
-# make_test_miz.py | v0.1.2
+# make_test_miz.py | v0.1.3
+# v0.1.3 (2026-10-28): LEGACY. Moved to tools/score_cards/legacy/ with
+#   scripts/legacy/Score_Display_Test.lua; paths updated. Test .miz copies deleted.
 # Builds a throwaway test copy of a mission with the score-card assets and
 # Score_Display_Test.lua. The source .miz is only read, never written.
 #
-#   python tools/score_cards/make_test_miz.py "<path>/Close Air Support (L).miz"
+#   python tools/score_cards/legacy/make_test_miz.py "<path>/Close Air Support (L).miz"
 #   -> "<path>/Close Air Support (L)_ScoreCardTest.miz"   (optional 2nd arg: output path)
 #
 # Packs:
@@ -17,7 +19,7 @@ import re
 import sys
 import zipfile
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))  # tools/score_cards
 REPO = os.path.abspath(os.path.join(HERE, "..", ".."))
 sys.path.insert(0, REPO)
 import dcslua  # noqa: E402
@@ -63,7 +65,7 @@ def main(src, dst=None):
     mapres[PIC_KEY] = PIC_FILE
 
     add = {
-        "l10n/DEFAULT/" + SCRIPT: os.path.join(REPO, "scripts", SCRIPT),
+        "l10n/DEFAULT/" + SCRIPT: os.path.join(REPO, "scripts", "legacy", SCRIPT),
         "l10n/DEFAULT/" + PIC_FILE.decode(): os.path.join(HERE, "out", "test", PIC_FILE.decode()),
         "ScoreCards/sc_test_root.png": os.path.join(HERE, "out", "test", "sc_test_root.png"),
     }

@@ -61,6 +61,14 @@ The `.miz` that DCS opens (`config.py`: `Saved Games\DCS\Missions\The Routine Th
 * **Remove a script:** delete its `Do Script File` action in the Mission Editor and re-extract. Scripts that are not referenced by `mapResource` are not embedded.
 * The Mission Editor only runs the scripts in trigger order; the load order requirements noted in each script header still apply.
 
+### 3a. Missions not built by `build.py` (e.g. `Close Air Support (L).miz`)
+Only `Syria_Dynamic_Template.miz` is built from `src/`. Other missions keep their own `mission` in the `.miz` and are updated in place:
+```bash
+python tools/refresh_scripts.py "<Missions>/Close Air Support (L).miz" --dry-run   # list scripts that differ from scripts/
+python tools/refresh_scripts.py "<Missions>/Close Air Support (L).miz"             # backup to BackUps/<name>_before-refresh-<time>.miz, then write
+```
+It replaces only the `.lua` files named in `mapResource` with their `scripts/` copies; mission, triggers, sounds and pictures are copied unchanged. Adding a new script still needs the ME or an installer (`tools/score_cards/install_score_display.py`, `tools/pilot_banter/install_pilot_banter.py`).
+
 ### 4. Player Slot Convention
 * The scenario's "hero" slot is the unit named `Player_01`. The **group name is free** (`CAS-1`, `SEAD-1`, ...); no scoring script depends on it.
 * Additional human slots should be named `Player_02` ... `Player_NN`. Bankler's `TrapTraining.lua` grades `Player_01`-`Player_44` per slot; the TRT scoring layer (flags, departure, approach, kill/landing score) follows only the hero.
@@ -71,6 +79,7 @@ _G.TRT = _G.TRT or {}; _G.TRT.PLAYER_NAME = "Player_03"
 * Each script logs `Player unit: <name>` when it loads. Check `dcs.log` to confirm all of them resolved the same name.
 * Unit names are unique per mission. Renaming a slot to `Player_01` requires renaming the previous holder.
 * Legacy, not migrated: `scripts/legacy/CASE-I/II/III_v14.lua`, `CASE_IorII_Departure.lua`, `CASE_III_Departure.lua` still hardcode `Player_01`. They are superseded by `Recovery_Approach.lua` / `Departure.lua`, are not referenced by the mission and are not built. To reuse one, move it back to `scripts/` (`build.py` looks for referenced scripts only directly in `scripts/`).
+* Also in `scripts/legacy/` (2026-10-28): `Field_Comms.lua` (LTCC -> CVN-73 transit radio; its transit mission was deleted, `src/Sounds/FC/` kept) and `Score_Display_Test.lua` (score-card feasibility kit, with `tools/score_cards/legacy/make_test_miz.py`).
 
 ### 5. AI JTAC Placement Rule
 An AI JTAC (a ground group with a `FAC_AttackGroup` task, e.g. `JTAC-1`) lases only targets it can see. Observed in `dcs.log` tests (2026-10): when terrain blocked the line of sight (LOS) from the JTAC to its target group, the JTAC gave coordinates but no laser, said "type-3 in effect", and its comm menu showed `Repeat brief` instead of `IP INBOUND`. After the target was moved to a position with clear LOS, all four test JTACs lased, said "type-2 in effect" and showed `IP INBOUND`.
