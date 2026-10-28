@@ -1,4 +1,4 @@
-# make_pc_cards.py | v1.0.1
+# make_pc_cards.py | v1.1.0
 # Plane captain step cards for PlaneCaptain_Carrier (via Score_Display, CAS (L) only).
 #
 #   python tools/score_cards/make_pc_cards.py "<Saved Games>/DCS/Missions/The Routine Things (With RAT)/Pics"
@@ -8,7 +8,9 @@
 # source size), anchored ANCHOR, scales the canvas to WIDTH px, quantises to 256
 # colours (saved back as RGBA) and writes out/PlaneCaptain/<STEP>.png, plus
 # blank.png (2x2 transparent, used with clearView=true to remove the last card).
-# Source art stays in Onur's Pics folder (not committed: ~1.4 MB per card).
+# Source art stays in Onur's Pics folder (not committed).
+# v1.1.0: S_END / C_END added; stale cards in out/PlaneCaptain (ids no longer in the
+#         source folder) are removed, so the output always matches the source set.
 #
 # Same canvas for every card -> identical align/size arguments put every card at
 # the same screen spot. Change ANCHOR together with Score_Display CFG.PC (h/v).
@@ -20,8 +22,8 @@ from PIL import Image
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "out", "PlaneCaptain")
 
-IDS = ["S00", "S0P", "S2", "S2W", "S3", "S3W", "S4",
-       "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10", "C11", "C12", "C13", "C14"]
+IDS = ["S00", "S0P", "S2", "S2W", "S3", "S3W", "S4", "S_END",
+       "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10", "C11", "C12", "C13", "C14", "C_END"]
 WIDTH = 1000
 ANCHOR = ("left", "top")             # v1.0.1: matches Score_Display CFG.PC h = 0, v = 0
 
@@ -41,6 +43,10 @@ def main(src):
     s = WIDTH / cw
     W, H = WIDTH, round(ch * s)
     os.makedirs(OUT, exist_ok=True)
+    for f in os.listdir(OUT):
+        if f.endswith(".png") and f != "blank.png" and f[:-4] not in found:
+            os.remove(os.path.join(OUT, f))
+            print("removed stale:", f)
     total = 0
     for i, im in found.items():
         canvas = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))

@@ -1,6 +1,11 @@
--- Score_Display | v1.2.0
+-- Score_Display | v1.2.1
 --[[
   Picture score cards (CAS (L) only; not part of the template build).
+
+  v1.2.1: Onur's redesigned step cards (1000x300); phase-end cards S_END / C_END;
+          pcCard(id, dur) - optional duration (C_END uses PlaneCaptain MSG_END).
+          S3 / S3W have no new card yet -> text. IDS must match out/PlaneCaptain
+          (install_score_display.py checks it).
 
   v1.2.0: pcOk() - short check_ok sound (Sounds/SCORE/check_ok.ogg) when PlaneCaptain
           detects that the aircraft did the step (PlaneCaptain_Carrier v1.3.1+). CFG.PC_OK.
@@ -54,7 +59,7 @@
 _G.TRT = _G.TRT or {}
 local TRT = _G.TRT
 
-local VERSION = "1.2.0"
+local VERSION = "1.2.1"
 
 local CFG = {
     DIR         = "ScoreCards/",
@@ -72,9 +77,9 @@ local CFG = {
     MED         = { dur = 12, h = 1, v = 1, size = 50, units = 1 },
     PC          = { dir = "PlaneCaptain/", dur = 600, h = 0, v = 0, size = 24, units = 1,
                     -- must match tools/score_cards/out/PlaneCaptain (make_pc_cards.py IDS present)
-                    IDS = { "S00", "S0P", "S2", "S2W", "S3", "S3W", "S4",
+                    IDS = { "S00", "S0P", "S2", "S2W", "S4", "S_END",
                             "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10",
-                            "C11", "C12", "C13", "C14" } },
+                            "C11", "C12", "C13", "C14", "C_END" } },
 }
 
 local function log(s) env.info("Score_Display | " .. s) end
@@ -222,9 +227,11 @@ local pcShown = false
 
 local function pcHas(id) return canPic and PCSET[id] == true end
 
-local function pcCard(id)
+local function pcCard(id, dur)
     if not pcHas(id) then return false end
-    local ok = pic(CFG.PC.dir .. id .. ".png", CFG.PC, true)
+    local lay = CFG.PC
+    if dur then lay = { dur = dur, h = CFG.PC.h, v = CFG.PC.v, size = CFG.PC.size, units = CFG.PC.units } end
+    local ok = pic(CFG.PC.dir .. id .. ".png", lay, true)
     pcShown = pcShown or ok
     return ok
 end

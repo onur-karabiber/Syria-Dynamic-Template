@@ -1,5 +1,7 @@
--- PlaneCaptain_Carrier | v1.3.1
+-- PlaneCaptain_Carrier | v1.3.2
 --[[
+  v1.3.2: phase-end cards S_END (engines running, held until Ready for checks) and C_END
+          (stands by for the director, CFG.MSG_END s) when Score_Display has them; text otherwise.
   v1.3.1: a step closed by the aircraft itself (reason "condition", wait type arg / argDelta /
           argNear / range / span / engineIdle) calls TRT.ScoreDisplay.pcOk() -> short sound.
           Not for plane-captain timers, Done steps or skipped steps. No-op without Score_Display.
@@ -64,7 +66,7 @@ if TRT.PlaneCaptain then
 end
 
 local CFG = {
-  VERSION       = "1.3.1",
+  VERSION       = "1.3.2",
   PLAYER_UNIT   = "Player_01",
   PLAYER_GROUP  = "CAS-1",
   CARRIER_UNIT  = "CVN",       -- movement is measured relative to this unit (deck is moving)
@@ -246,6 +248,17 @@ local function cardFor(id)
   if not (SD and SD.pcHas and SD.pcCard) then return nil end
   local ok, has = pcall(SD.pcHas, id)
   return (ok and has) and SD or nil
+end
+
+-- v1.3.2: phase-end card (S_END / C_END); false -> caller shows the text
+local function endCard(id, dur)
+  local SD = cardFor(id)
+  if not SD then return false end
+  say("", 1, true)
+  local ok, shown = pcall(SD.pcCard, id, dur)
+  if ok and shown then log("card " .. id) return true end
+  log("card " .. id .. " failed -> text")
+  return false
 end
 
 local function note(text) say("[PLANE CAPTAIN] " .. text, CFG.MSG_NOTE, false) end
@@ -520,14 +533,18 @@ local function completeStep(reason)
       end
       if np then
         F.phase = "WAIT_" .. np
-        say("[PLANE CAPTAIN] Engines running.\n>> When ready: Plane captain > Ready for checks", CFG.MSG_HOLD, true)
+        if not endCard("S_END", CFG.MSG_HOLD) then                 -- v1.3.2
+          say("[PLANE CAPTAIN] Engines running.\n>> When ready: Plane captain > Ready for checks", CFG.MSG_HOLD, true)
+        end
       else
         F.phase = "DONE"
         local lines = { "[PLANE CAPTAIN]" }
         local pl = pilotNext and sigLine("You", pilotNext)
         if pl then lines[#lines + 1] = pl end
         lines[#lines + 1] = ">> Plane captain stands by with you until the director (yellow shirt) takes the aircraft."
-        say(table.concat(lines, "\n"), CFG.MSG_END, true)
+        if not endCard("C_END", CFG.MSG_END) then                  -- v1.3.2
+          say(table.concat(lines, "\n"), CFG.MSG_END, true)
+        end
       end
       log("phase -> " .. F.phase)
       refreshMenu()

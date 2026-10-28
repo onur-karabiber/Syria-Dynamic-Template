@@ -1,4 +1,4 @@
-# install_score_display.py | v1.1.0
+# install_score_display.py | v1.2.0
 # Installs / updates Score_Display in a .miz IN PLACE, after a backup.
 #
 #   python tools/score_cards/install_score_display.py "<path>/Close Air Support (L).miz"
@@ -13,6 +13,8 @@
 #   4. v1.1.0: every other .lua named in mapResource is refreshed from scripts/
 #                 too (same rule as build.py: scripts/ is the source of truth);
 #                 the ones whose content changed are listed
+#   5. v1.2.0: refuses when Score_Display CFG.PC.IDS and out/PlaneCaptain/*.png differ
+#                 (a listed id without a file would show nothing and suppress the text)
 # Re-running with a newer scripts/Score_Display.lua refreshes script + assets.
 # ScoreCards/ and Sounds/SCORE/ survive Mission Editor saves (tested 2026-10-27).
 
@@ -48,6 +50,14 @@ def main(src):
         sys.exit("not found: " + src)
     lua_path = os.path.join(REPO, "scripts", SCRIPT)
     ver = script_version(lua_path)
+    src_lua = open(lua_path, encoding="utf-8").read()
+    m = re.search(r"IDS\s*=\s*\{([^}]*)\}", src_lua)
+    ids = set(re.findall(r'"([^"]+)"', m.group(1))) if m else set()
+    pc_dir = os.path.join(HERE, "out", "PlaneCaptain")
+    files = {f[:-4] for f in os.listdir(pc_dir) if f.endswith(".png") and f != "blank.png"}
+    if ids != files:
+        sys.exit("CFG.PC.IDS / out/PlaneCaptain mismatch - only in IDS: %s, only files: %s"
+                 % (sorted(ids - files), sorted(files - ids)))
 
     add = {"l10n/DEFAULT/" + SCRIPT: lua_path}
     for arc, d in ASSET_DIRS:
