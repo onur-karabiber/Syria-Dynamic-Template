@@ -1,4 +1,6 @@
-# make_kneeboard.py | v3.1.0
+# make_kneeboard.py | v3.1.1
+# v3.1.1: IP LYNX moved onto the CP TIGER - target line, 12 NM from the target (37S BV 4071 2864),
+#         matching JTAC_Controller v0.2.0.
 # v3.1.0: --scripted-jtac (CAS (L) with JTAC_Controller): 04/05 JTAC cards without the 9-line
 #         values the readback quiz asks for (elevation, grid, FAH, LTL, friendlies) - the JTAC passes
 #         them on the radio; doctrine brevity flow (JFIRE 2023: CEASE LASER); abort code reply
@@ -137,7 +139,7 @@ def route():
     d.text((2, c.y), "WP", font=F10, fill=GRY); d.text((42, c.y), "NAME", font=F10, fill=GRY); d.text((190, c.y), "NOTES", font=F10, fill=GRY); c.y += 14
     wps = [("WP0","CATAPULT","t","CVN","CASE III dep"),("WP1","DEPART","t","","22 000 ft · alt hold"),
            ("WP2","CP TIGER","t","YE 1990 4989","22 000 ft · JTAC h/o 20 NM out"),
-           ("IP1","IP LYNX","y","37S BV 8009 0816","24 000 ft · JTAC-1"),
+           ("IP1","IP LYNX","y","37S BV 4071 2864","24 000 ft · JTAC-1"),
            ("TGT1","TARGET ALPHA","r","BV 6187 2081","elev 570 ft"),
            ("IP2","IP PUMA","y","36S YE 4714 5182","24 000 ft · JTAC-2"),
            ("TGT2","TARGET BRAVO","r","YE 5987 3843","elev 150 ft")]
@@ -259,7 +261,7 @@ def jtac1_s():
     return jtac_s("04", "POINTER 11", "JTAC-1", "ALPHA",
         [("CALLSIGN", "POINTER ONE-ONE", "t"), ("FREQ", "333.30 AM · COMM1-04", "t"), ("MSN#", "4101", "t"),
          ("CHECK-IN", "OVERLORD h/o, 20 NM to CP", "t")],
-        [("IP", "LYNX  37S BV 8009 0816", "y"), ("TGT AREA", "BV 62 (general)", "t"), ("MARK", "Laser · JTAC · 1688", "y"),
+        [("IP", "LYNX  37S BV 4071 2864", "y"), ("TGT AREA", "BV 62 (general)", "t"), ("MARK", "Laser · JTAC · 1688", "y"),
          ("CONTROL", "Type II · BOT (JTAC decides)", "t"), ("ORDNANCE", "AGM-65E (65E code 1688)", "t")],
         [("SA-13 at the target site", "r"), ("SA-8 vicinity YE53", "o"), ("Hard deck 23 000 ft MSL (eng. area)", "r")])
 

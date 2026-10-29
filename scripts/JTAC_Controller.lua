@@ -1,5 +1,18 @@
--- JTAC_Controller | v0.1.0
+-- JTAC_Controller | v0.2.0
 --[[
+  v0.2.0 (CAS-1 test flight 2026-10-29, Pointer 11):
+    * JTAC observation post (CFG.JTACS[k].op): at mission start the JTAC group is moved to the
+      land / road point nearest to <brg, m> from its target group (search radius r, step 100 m)
+      that has terrain LOS to every target unit and is at least min_tgt_m from all of them, by
+      destroying the ME group and spawning the same type / name there (invisible, immortal, weapon
+      hold). Reason: Pointer 11 sat 300 m east of its target, so every sensible run-in from CP
+      TIGER pointed at the JTAC; Eyeball 11 sat 350 m from the SA-8s. No point found -> ME position.
+    * IP LYNX moved onto the CP TIGER - target line, 12 NM from the target (37S BV 4071 2864).
+      With the JTAC south-west of the target the FAH search now yields 080-110 (mag) for Pointer.
+    * Unauthorized release (not cleared, or after an abort): 1st -> "you were not cleared, hold
+      fire" + on-screen [CAS-1] note; 2nd -> the JTAC terminates control ("cleared off, return to
+      Overlord"), phase TERMINATED (laser off after the weapon in flight lands). Comms_Director
+      >= v1.6.2 treats TERMINATED like a finished tasking.
   Scripted JTAC (replaces the native DCS JTAC) — TRT Syria Dynamic Template (template-level module)
   Plan: project doc claude/jtac-plan-2026-10-29.md (J2 = this version: text only, no voice yet).
   Doctrine: JP 3-09.3 (2009) Ch V, JFIRE (Nov 2023) CAS section, brevity and laser examples.
@@ -112,14 +125,16 @@ local CFG = {
     JTACS = {
         J1 = { cs = "POINTER 11", disp = "Pointer 11", group = "JTAC-1", cdPhase = "JTAC1", btn = 4,
                msn = "4101", targets = { "SAM BV51 (SA-13)-1" },
-               ip = { name = "LYNX", mgrs = "37S BV 8009 0816" }, egress = "north to TIGER",
+               ip = { name = "LYNX", mgrs = "37S BV 4071 2864" }, egress = "north to TIGER",
                mark = { kind = "laser", code = 1688 }, control = "auto", method = "BOT",
-               ord = "one AGM-65E", friendly_ofs = { brg = 45, m = 1100 }, abort_inject = 0 },
+               ord = "one AGM-65E", friendly_ofs = { brg = 200, m = 1200 }, abort_inject = 0,
+               op = { brg = 238, m = 2500, r = 800, min_tgt_m = 1500 } },
         J2 = { cs = "EYEBALL 11", disp = "Eyeball 11", group = "JTAC-2", cdPhase = "JTAC2", btn = 5,
                msn = "4102", targets = { "SAM YE53 (SA-8)-1" },
                ip = { name = "PUMA", mgrs = "36S YE 4714 5182" }, egress = "northwest, feet wet",
                mark = { kind = "laser", code = 1688 }, control = "auto", method = "BOT",
-               ord = "one GBU-12", friendly_ofs = { brg = 150, m = 900 }, abort_inject = 30 },
+               ord = "one GBU-12", friendly_ofs = { brg = 200, m = 1000 }, abort_inject = 30,
+               op = { brg = 250, m = 2500, r = 800, min_tgt_m = 1500 } },
     },
     ORDER = { "J1", "J2" },
 }
@@ -936,7 +951,7 @@ local function ActiveKey(u)
     local best, bd
     for _, k in ipairs(CFG.ORDER) do
         local ph = JC.st[k].phase
-        if ph ~= "IDLE" and ph ~= "DONE" then
+        if ph ~= "IDLE" and ph ~= "DONE" then   -- TERMINATED stays: releases are still logged
             local tp = Centroid(TargetUnits(k))
             local d = tp and NM(D2(u:getPoint(), tp)) or 999
             if d <= CFG.REATTACK_NM and (not bd or d < bd) then best, bd = k, d end
@@ -951,6 +966,11 @@ local function Assess(k)
     st.pass = nil
     if not pass then return end
     local alive = TargetUnits(k)
+    if st.phase == "TERMINATED" then
+        LaserOff(k, "control terminated")
+        if #alive == 0 then Emit("DONE", { key = k }) end
+        return
+    end
     if st.phase ~= "ATTACK" and #alive > 0 then
         Log(string.format("ASSESS %s skipped (phase %s, release not part of an attack)", k, st.phase))
         return
@@ -1042,10 +1062,25 @@ local function OnShot(w)
         tostring(rec.laser), st.phase))
     Emit("RELEASE", rec)
     a.released, a.offPending = true, true
-    if rec.afterAbort then
-        JtacF(k, string.format("%s, %s, weapon released after abort. Hold fire.", CFG.CS, J(k).disp))
-    elseif not rec.cleared then
-        JtacF(k, string.format("%s, %s, you were not cleared. Hold fire.", CFG.CS, J(k).disp))
+    if st.phase == "TERMINATED" then
+        Log("RELEASE after TERMINATED " .. k)
+    elseif rec.afterAbort or not rec.cleared then
+        st.viol = (st.viol or 0) + 1
+        Emit("VIOLATION", { key = k, n = st.viol, afterAbort = rec.afterAbort })
+        if st.viol >= 2 then
+            JtacF(k, string.format("%s, %s, second unauthorized release. Terminating control. "
+                .. "Cleared off, return to Overlord.", CFG.CS, J(k).disp))
+            Msg(string.format("[CAS-1] %s terminated control after two unauthorized releases (ROE). "
+                .. "Check out with OVERLORD.", J(k).disp), 15)
+            Log("TERMINATED " .. k .. " (2 unauthorized releases)")
+            SetPhase(k, "TERMINATED")
+            Emit("TERMINATED", { key = k })
+        else
+            JtacF(k, string.format("%s, %s, %s Hold fire.", CFG.CS, J(k).disp,
+                rec.afterAbort and "weapon released after abort." or "you were not cleared."))
+            Msg(string.format("[CAS-1] Unauthorized release logged (ROE). A second one ends %s's control.",
+                J(k).disp), 12)
+        end
     end
     if TRT.CD then TRT.CD.relCallUntil = now + 10 end   -- Pilot_Banter drops its own "weapon away"
     -- pass bookkeeping (ripple / pairs within 2 s = one call)
@@ -1070,7 +1105,7 @@ end
 -- ══════════════════════════════════════════════════════════════
 local function Offered(k, u)
     local st = JC.st[k]
-    if st.phase == "IDLE" or st.phase == "DONE" or st.busy then return false end
+    if st.phase == "IDLE" or st.phase == "DONE" or st.phase == "TERMINATED" or st.busy then return false end
     local cd = TRT.CD
     if CFG.HANDOFF == "CD" and cd and cd.phase == J(k).cdPhase then return true end
     local tp = Centroid(TargetUnits(k))
@@ -1153,6 +1188,71 @@ local function NextText()
 end
 
 -- ══════════════════════════════════════════════════════════════
+--  OBSERVATION POST (v0.2.0)
+-- ══════════════════════════════════════════════════════════════
+local function SetupGround(gname, skill)
+    timer.scheduleFunction(function()
+        local g = Group.getByName(gname)
+        if not g then return end
+        local c = g:getController()
+        pcall(c.setCommand, c, { id = "SetInvisible", params = { value = true } })
+        pcall(c.setCommand, c, { id = "SetImmortal", params = { value = true } })
+        pcall(c.setOption, c, AI.Option.Ground.id.ROE, AI.Option.Ground.val.ROE.WEAPON_HOLD)
+    end, nil, timer.getTime() + 1)
+end
+
+local function Relocate(k)
+    local j = J(k)
+    local op = j.op
+    if not op then return end
+    local ju, tus = JtacUnit(k), TargetUnits(k)
+    if not ju or #tus == 0 then Log("RELOCATE " .. k .. ": no JTAC / target, ME position kept"); return end
+    local tp = Centroid(tus)
+    local r = math.rad(op.brg)
+    local cx, cz = tp.x + math.cos(r) * op.m, tp.z + math.sin(r) * op.m
+    local best, bd, tried = nil, nil, 0
+    local step = op.step or 100
+    for dx = -op.r, op.r, step do
+        for dz = -op.r, op.r, step do
+            local d2 = dx * dx + dz * dz
+            if d2 <= op.r * op.r and (not bd or d2 < bd) then
+                tried = tried + 1
+                local p = { x = cx + dx, y = 0, z = cz + dz }
+                local okS, sf = pcall(land.getSurfaceType, { x = p.x, y = p.z })
+                if okS and (sf == land.SurfaceType.LAND or sf == land.SurfaceType.ROAD) then
+                    local eye, ok = Eye(p), true
+                    for _, u in ipairs(tus) do
+                        local up = u:getPoint()
+                        if D2(p, up) < (op.min_tgt_m or 1200) or not land.isVisible(eye, Eye(up, 1.5)) then
+                            ok = false; break
+                        end
+                    end
+                    if ok then best, bd = p, d2 end
+                end
+            end
+        end
+    end
+    local old = ju:getPoint()
+    if not best then
+        Log(string.format("RELOCATE %s: no point with LOS within %d m of %s %d m (%d tried), ME position kept",
+            k, op.r, Dir8(op.brg), op.m, tried))
+        return
+    end
+    local typ, uname, country = ju:getTypeName(), ju:getName(), ju:getCountry()
+    local g = Group.getByName(j.group)
+    pcall(g.destroy, g)
+    local ok, err = pcall(coalition.addGroup, country, Group.Category.GROUND, {
+        name = j.group, task = "Ground Nothing",
+        units = { { type = typ, name = uname, skill = "Excellent", playerCanDrive = false,
+                    x = best.x, y = best.z, heading = math.rad(BrgT(best, tp)) } },
+        route = { points = { { x = best.x, y = best.z, type = "Turning Point", action = "Off Road", speed = 0 } } } })
+    if not ok then Log("RELOCATE " .. k .. ": spawn failed: " .. tostring(err)); return end
+    SetupGround(j.group)
+    Log(string.format("RELOCATE %s: %s -> %s, %s %.0f m from target, %.0f m off the requested point, LOS to %d units",
+        k, MGRS(old), MGRS(best), Dir8(BrgT(tp, best)), D2(tp, best), math.sqrt(bd), #tus))
+end
+
+-- ══════════════════════════════════════════════════════════════
 --  HAND-OFF / TICK
 -- ══════════════════════════════════════════════════════════════
 local function Handoff(k)
@@ -1193,7 +1293,8 @@ local function Tick(_, now)
                 end
             end
             LaserTick(k, now)
-            if st.phase ~= "IDLE" and st.phase ~= "DONE" and #TargetUnits(k) == 0 and not st.pass then
+            if st.phase ~= "IDLE" and st.phase ~= "DONE" and st.phase ~= "TERMINATED"
+                and #TargetUnits(k) == 0 and not st.pass then
                 LaserOff(k, "target group dead")
                 Log("target group dead outside a tracked pass: " .. k)
                 Emit("DONE", { key = k })
@@ -1232,7 +1333,13 @@ else
     Log("TRT.Menu missing (Menu_Manager.lua must load first) -> no F10 calls")
 end
 world.addEventHandler(EV)
-timer.scheduleFunction(Tick, nil, timer.getTime() + 2)
+timer.scheduleFunction(function()
+    for _, k in ipairs(CFG.ORDER) do
+        local ok, err = pcall(Relocate, k)
+        if not ok then Log("RELOCATE " .. k .. " error: " .. tostring(err)) end
+    end
+    timer.scheduleFunction(Tick, nil, timer.getTime() + 2)
+end, nil, timer.getTime() + 2)
 do
     local r = AbortReply()
     Log(string.format("JTAC_Controller v%s online - abort challenge %s, reply %s", CFG.VERSION,

@@ -1,4 +1,7 @@
--- Menu_Manager | v1.0.0
+-- Menu_Manager | v1.0.1
+-- v1.0.1: logs every F10 press ("press: COMMS > <label>") and every COMMS rebuild with its labels,
+--         to find the 2026-10-29 case where a press on "POINTER 11: IP INBOUND" ran
+--         "OVERLORD: request picture" (no stale-press line, so DCS delivered that command).
 --[[
   F10 menu owner — TRT Syria Dynamic Template (template-level module)
 
@@ -41,7 +44,7 @@ if TRT.Menu then
 end
 
 local CFG = {
-    VERSION     = "1.0.0",
+    VERSION     = "1.0.1",
     PLAYER_UNIT = "Player_01",
     TICK        = 2,                                          -- s
     SECTIONS    = { "COMMS", "INFO", "CARRIER", "TRAINING" }, -- F1..F4, fixed order
@@ -255,6 +258,7 @@ local function Build()
             end
             local sig = Signature(items)
             if sig ~= M.sig[s] then
+                if s == "COMMS" then Log("rebuild COMMS: " .. sig) end   -- v1.0.1
                 for _, h in ipairs(M.handles[s] or {}) do pcall(missionCommands.removeItemForGroup, gid, h) end
                 M.handles[s] = {}
                 AddItems(gid, M.roots[s], items, s, {}, M.handles[s])
@@ -282,6 +286,7 @@ local function Find(items, path, depth)
 end
 
 Press = function(arg)
+    Log("press: " .. tostring(arg.section) .. " > " .. table.concat(arg.path or {}, " > "))   -- v1.0.1
     local it = Find(M.cur[arg.section], arg.path, 1)
     if it and it[2] then
         local ok, err = pcall(it[2])

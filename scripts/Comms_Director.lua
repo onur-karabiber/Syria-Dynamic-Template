@@ -1,5 +1,8 @@
--- Comms_Director | v1.6.1
+-- Comms_Director | v1.6.2
 --[[
+  v1.6.2 — JTAC_Controller v0.2.0: a JTAC in phase TERMINATED (two unauthorized releases) ends the
+           JTAC1 / JTAC2 phase like a destroyed target group. With JTAC_Controller the on-screen
+           "tasking complete" hint waits 8 s (it came before the JTAC's BDA in the 2026-10-29 flight).
   v1.6.1 — air start (test variants, tools/make_test_variant.py): on the first tick with the hero
            in the world, if it is airborne (> CFG.AIRSTART.ALT_AGL_M AGL, > CFG.AIRSTART.SPD_MS) and
            more than CFG.AIRSTART.NM from the carrier, the departure / Strike / OVERLORD check-in legs
@@ -662,6 +665,12 @@ local function SetFlag(f, v)  trigger.action.setUserFlag(tostring(f), v) end
 local function JcOn()
     local jc = _G.TRT and _G.TRT.JC
     return (jc and jc.active) and true or false
+end
+
+--- v1.6.2: JTAC_Controller terminated control of JTAC key "J1" / "J2"
+local function JcTerm(k)
+    local jc = _G.TRT and _G.TRT.JC
+    return (jc and jc.active and jc.st and jc.st[k] and jc.st[k].phase == "TERMINATED") and true or false
 end
 
 --- Clip length + file for a token id. "cv:<id>" = CV_Comms clip set (TRT.CV_AUDIO).
@@ -1762,10 +1771,16 @@ SetPhase = function(new)
     if new == "DEPARTURE" then
         Msg("[CAS-1] All radio calls: F10 > COMMS. \"Show: next call\" lists the next step.", CFG.DUR_HANDOFF)
     elseif new == "J1_OFF" then
-        Msg("[CAS-1] Pointer 11 tasking complete. Check out, then report to OVERLORD (F10).", CFG.DUR_SHORT)
+        local txt = "[CAS-1] Pointer 11 tasking complete. Check out, then report to OVERLORD (F10)."
+        if JcOn() then   -- v1.6.2: after the JTAC's BDA / termination call
+            timer.scheduleFunction(function() Msg(txt, CFG.DUR_SHORT) end, nil, timer.getTime() + 8)
+        else Msg(txt, CFG.DUR_SHORT) end
         TicBDA("J1")   -- v1.5.4
     elseif new == "J2_OFF" then
-        Msg("[CAS-1] Eyeball 11 tasking complete. Check out, then INFLTREP to OVERLORD (F10).", CFG.DUR_SHORT)
+        local txt = "[CAS-1] Eyeball 11 tasking complete. Check out, then INFLTREP to OVERLORD (F10)."
+        if JcOn() then
+            timer.scheduleFunction(function() Msg(txt, CFG.DUR_SHORT) end, nil, timer.getTime() + 8)
+        else Msg(txt, CFG.DUR_SHORT) end
         TicBDA("J2")
     elseif new == "RECOVERY" then
         env.info("[CD] RECOVERY phase — AIRBOSS active, CD standing down after Marshal hand-off.")
@@ -1852,14 +1867,14 @@ local function EvalPhase(pUnit, cUnit)
         end
 
     elseif ph == "JTAC1" then
-        if CD.deadJ1 then SetPhase("J1_OFF") end
+        if CD.deadJ1 or JcTerm("J1") then SetPhase("J1_OFF") end
 
     elseif ph == "JTAC2" then
         if not CD.j2Armed then
             local tgt = CD.j2.pos or CFG.JTAC2_POS
             if Dist2D(pPos, tgt) <= CFG.INJ_ARM_NM then CD.j2Armed = true; ArmJ2Injects() end
         end
-        if CD.deadJ2 then SetPhase("J2_OFF") end
+        if CD.deadJ2 or JcTerm("J2") then SetPhase("J2_OFF") end
 
     elseif ph == "REFUEL" then
         if CD.refuelDone then
@@ -2125,7 +2140,7 @@ local function CD_Init()
     SetFlag(200, 0)
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.6.1 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.6.2 online — CAS-1 Syria")
 end
 
 CD_Init()
