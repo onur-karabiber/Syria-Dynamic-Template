@@ -1,4 +1,6 @@
-# make_kneeboard.py | v3.1.4
+# make_kneeboard.py | v3.2.0
+# v3.2.0: 03 ROUTE / NAV: Morse A-Z table (NAVAID ident check) at the bottom; replaces the
+#         separate Morse.jpg page in Saved Games\DCS\Kneeboard\FA-18C_hornet.
 # v3.1.4: hard deck 20 000 ft MSL (Comms_Director v1.6.3).
 # v3.1.3: IP LYNX / IP PUMA are CAS-1 route waypoints WP3 / WP4 (03 ROUTE labels, 04/05 IP rows).
 # v3.1.2: scripted JTAC cards: keyhole IP note (JTAC_Controller v0.3.0 may brief 'keyhole brg/NM').
@@ -162,7 +164,26 @@ def route():
     c.kv("AREA", "True − 5°  →  Mag ≈ True+5°", "m")
     c.rule(); c.head("HARD DECK")
     c.kv("ENGAGE AREA", "20 000 ft MSL", "r"); c.kv("TRANSIT", "not in effect")
+    c.rule(); c.head("MORSE  (NAVAID IDENT · CVN = WSH)")
+    morse(c)
     return c
+
+MORSE = dict(zip("ABCDEFGHIJKLMNOPQRSTUVWXYZ", [".-", "-...", "-.-.", "-..", ".", "..-.", "--.", "....",
+    "..", ".---", "-.-", ".-..", "--", "-.", "---", ".--.", "--.-", ".-.", "...", "-", "..-", "...-", ".--",
+    "-..-", "-.--", "--.."]))
+
+def morse(c, rows=7, cols=4, rh=14):
+    """A-Z in column-major order (A-G | H-N | O-U | V-Z); dots/dashes drawn as shapes."""
+    d, cw = c.d, IW // cols
+    for i, L in enumerate("ABCDEFGHIJKLMNOPQRSTUVWXYZ"):
+        x = (i // rows) * cw + 2; y = c.y + (i % rows) * rh
+        if (i % rows) % 2 == 0: d.rectangle((x - 2, y - 1, x + cw - 8, y + rh - 2), fill=BAND)
+        d.text((x + 2, y), L, font=B11, fill=TAG)
+        cx, cy = x + 20, y + 6
+        for s in MORSE[L]:
+            if s == ".": d.ellipse((cx, cy - 2, cx + 4, cy + 2), fill=NAVY); cx += 4 + 5
+            else: d.rectangle((cx, cy - 2, cx + 12, cy + 1), fill=NAVY); cx += 12 + 5
+    c.y += rows * rh
 
 def jtac(num, name, tl, tr, contact, nine, restr, extra_head, extra, flow, threats=None, banner=None):
     c = Card(num, name, tl, tr)
