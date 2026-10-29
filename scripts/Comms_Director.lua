@@ -1,5 +1,14 @@
--- Comms_Director | v1.6.0
+-- Comms_Director | v1.6.1
 --[[
+  v1.6.1 — air start (test variants, tools/make_test_variant.py): on the first tick with the hero
+           in the world, if it is airborne (> CFG.AIRSTART.ALT_AGL_M AGL, > CFG.AIRSTART.SPD_MS) and
+           more than CFG.AIRSTART.NM from the carrier, the departure / Strike / OVERLORD check-in legs
+           are skipped (text only, no voice):
+             * first route point of the hero's group named "AIRSTART J2" -> straight to JTAC2
+               (OVERLORD "contact Eyeball 11" + the TIC hand-off when Eyeball is the TIC JTAC)
+             * any other air start ("AIRSTART J1" or no tag)            -> ENROUTE (Pointer hand-off
+               at JTAC_HANDOFF_NM from CP TIGER as usual)
+           CD.airStart = "J1" / "J2" (read-only for other modules). A deck start is unchanged.
   v1.6.0 — scripted JTAC (JTAC_Controller v0.1.0, plan claude/jtac-plan-2026-10-29.md):
            * TRT.CD_RADIO = { Q, QPlay, Msg } exports the clip queue, so JTAC_Controller
              transmissions are serialised with every Comms_Director call.
@@ -539,6 +548,7 @@ local CFG = {
     DUR_URGENT     = 12,
     DUR_HANDOFF    = 15,
 
+    AIRSTART       = { NM = 60, ALT_AGL_M = 300, SPD_MS = 80 },   -- v1.6.1
     REMIND_FIRST   = 60,     -- s after a check-in becomes due before the first repeat
     REMIND_EVERY   = 120,    -- s between further repeats
 }
@@ -2004,11 +2014,68 @@ Remind = function(now)
     Msg("[CAS-1] F10 > COMMS - " .. (NEXT[CD.phase] or ""), CFG.DUR_HANDOFF)
 end
 
+-- v1.6.1: air start tag from the hero group's first route point name ("AIRSTART J2")
+local function AirStartTag()
+    local tag
+    pcall(function()
+        for _, side in pairs(env.mission.coalition or {}) do
+            for _, c in pairs(side.country or {}) do
+                for _, g in pairs((c.plane and c.plane.group) or {}) do
+                    for _, u in pairs(g.units or {}) do
+                        if u.name == CFG.PLAYER_UNIT then
+                            local pt = g.route and g.route.points and g.route.points[1]
+                            local nm = pt and pt.name
+                            if nm and env.getValueDictByKey then nm = env.getValueDictByKey(nm) or nm end
+                            tag = nm and tostring(nm):upper():match("^AIRSTART%s*(J%d)")
+                            return
+                        end
+                    end
+                end
+            end
+        end
+    end)
+    return tag
+end
+
+--- v1.6.1: first tick with the hero in the world: skip the carrier legs on an air start.
+local function AirStartCheck(p, c)
+    CD.airChecked = true
+    local pos, v = p:getPoint(), p:getVelocity()
+    local okH, gh = pcall(land.getHeight, { x = pos.x, y = pos.z })
+    local agl = pos.y - ((okH and gh) or 0)
+    local spd = math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
+    local far = (not c) or Dist2D(pos, c:getPoint()) > CFG.AIRSTART.NM
+    if not (agl > CFG.AIRSTART.ALT_AGL_M and spd > CFG.AIRSTART.SPD_MS and far) then return end
+    local key = AirStartTag() or "J1"
+    CD.airStart = key
+    env.info(string.format("[CD] AIR START detected (%s): AGL %.0f m, %.0f m/s", key, agl, spd))
+    SetFlag(200, 0)
+    if key == "J2" then
+        CD.worked.J1 = true
+        SetPhase("JTAC2")
+        local tic = TicPick() == "J2"
+        Q(string.format("[OVERLORD] %s, Overlord. AIR START: check-in assumed. %s %s. %s Contact Eyeball 11, %s.",
+            CFG.CS, CFG.CP_NAME, BrgRng(pos, CFG.CP_POS),
+            tic and "Eyeball 11 reports TROOPS IN CONTACT, priority immediate." or "Eyeball 11 is on station.",
+            Btn("J2")), CFG.DUR_LONG, 2)
+        if tic then TicHandoff("J2") else Ack("OVERLORD", false, CFG.BTN.J2) end
+        QPlay()
+    else
+        TicPick()   -- as at the OVERLORD check-in: JTAC_Controller spawns Bravo 2-1 from CD.tic
+        SetPhase("ENROUTE")
+        Q(string.format("[OVERLORD] %s, Overlord. AIR START: check-in assumed. Proceed %s, %s, "
+            .. "hard deck two-three thousand. Pointer 11 hand-off %d NM from %s.", CFG.CS, CFG.CP_NAME,
+            BrgRng(pos, CFG.CP_POS), CFG.JTAC_HANDOFF_NM, CFG.CP_NAME), CFG.DUR_LONG, 2)
+        QPlay()
+    end
+end
+
 local function CD_Tick(_, t)
     if CD.phase == "DONE" or CD.phase == "RECOVERY" then return end
     TrackTargets()
     local p = Player()
     if not p then return t + CFG.TICK end
+    if not CD.airChecked and CD.phase == "IDLE" then AirStartCheck(p, Carrier()) end   -- v1.6.1
     EvalPhase(p, Carrier())
     Remind(t)
     CapMonitor()
@@ -2058,7 +2125,7 @@ local function CD_Init()
     SetFlag(200, 0)
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.6.0 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.6.1 online — CAS-1 Syria")
 end
 
 CD_Init()
