@@ -1,5 +1,17 @@
--- JTAC_Controller | v0.2.0
+-- JTAC_Controller | v0.3.0
 --[[
+  v0.3.0 (TEST-J1 flight 2026-10-29 #2):
+    * Observation post search widened: sector op.brg +/- op.sector deg, op.dmin..op.dmax m from the
+      target, ~op.step m grid; among the points with LOS to every target unit the JTAC prefers high
+      ground, then closeness to <brg, m>. The log gives the rejection counts (surface / too close /
+      LOS). v0.2.0 found nothing within 800 m of 2.5 km SW / W (197 points each) -> JTACs stayed
+      300 / 350 m from their targets and Pointer's FAH came out 205-235 against an IP heading of 107.
+    * IP / FAH consistency: when the pre-briefed IP's run-in is more than CFG.IP_MAX_OFF deg from the
+      FAH centre, Line 1 becomes a keyhole IP (JFIRE fig 7: target = Echo, "brg/NM" from Echo,
+      magnetic), on the reciprocal of the FAH centre at CFG.KEYHOLE_NM. Lines 2 / 3 follow it.
+    * "OFF (dry)" offered after IN / CLEARED HOT when nothing was released; it closes the clearance,
+      the next pass needs a new IN (flight #2: no way to end a dry pass, clearance stayed open).
+    * CFG.VERSION was left at 0.1.0 in v0.2.0 (log said v0.1.0) - fixed.
   v0.2.0 (CAS-1 test flight 2026-10-29, Pointer 11):
     * JTAC observation post (CFG.JTACS[k].op): at mission start the JTAC group is moved to the
       land / road point nearest to <brg, m> from its target group (search radius r, step 100 m)
@@ -66,7 +78,7 @@ if TRT.JC then env.info("[JC] already loaded, second copy ignored") return end
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "0.1.0",
+    VERSION      = "0.3.0",
     PLAYER_UNIT  = "Player_01",
     CS           = "HORNET 51",
     NUM_TYPE     = "one Hornet",
@@ -92,6 +104,8 @@ local CFG = {
     EYE_M        = 2.5,
     IMPACT_WAIT_S = 3,
     THREAT_NM    = 8,
+    IP_MAX_OFF   = 45,          -- deg: pre-briefed IP run-in vs FAH centre, beyond -> keyhole IP
+    KEYHOLE_NM   = 10,
     ABORT        = { challenge = "BR" },
     -- kneeboard 06 AUTH (tools/make_kneeboard.py AUTH, same seed 20261029) - keep identical
     AUTH = {
@@ -128,13 +142,13 @@ local CFG = {
                ip = { name = "LYNX", mgrs = "37S BV 4071 2864" }, egress = "north to TIGER",
                mark = { kind = "laser", code = 1688 }, control = "auto", method = "BOT",
                ord = "one AGM-65E", friendly_ofs = { brg = 200, m = 1200 }, abort_inject = 0,
-               op = { brg = 238, m = 2500, r = 800, min_tgt_m = 1500 } },
+               op = { brg = 238, m = 2500, sector = 60, dmin = 1500, dmax = 4000, step = 150 } },
         J2 = { cs = "EYEBALL 11", disp = "Eyeball 11", group = "JTAC-2", cdPhase = "JTAC2", btn = 5,
                msn = "4102", targets = { "SAM YE53 (SA-8)-1" },
                ip = { name = "PUMA", mgrs = "36S YE 4714 5182" }, egress = "northwest, feet wet",
                mark = { kind = "laser", code = 1688 }, control = "auto", method = "BOT",
                ord = "one GBU-12", friendly_ofs = { brg = 200, m = 1000 }, abort_inject = 30,
-               op = { brg = 250, m = 2500, r = 800, min_tgt_m = 1500 } },
+               op = { brg = 250, m = 2500, sector = 60, dmin = 1500, dmax = 4000, step = 150 } },
     },
     ORDER = { "J1", "J2" },
 }
@@ -532,6 +546,16 @@ local function BuildNine(k)
     n.egress = j.egress
     local c, lo, hi, ltl = ComputeFAH(k, ap, ipPos)
     n.fahC, n.fahLo, n.fahHi = Mag(c), R5(Mag(lo)), R5(Mag(hi))
+    -- v0.3.0: keyhole IP when the pre-briefed IP does not fit the FAH
+    if not ipPos or AngD(BrgT(ipPos, ap), c) > CFG.IP_MAX_OFF then
+        local kb = R5(Mag((c + 180) % 360))
+        n.ip = string.format("keyhole %s/%d", H3(kb), CFG.KEYHOLE_NM)
+        n.hdg = H3(R5(Mag(c)))
+        n.dist = string.format("%.1f", CFG.KEYHOLE_NM)
+        n.keyhole = true
+        Log(string.format("IP %s: %s run-in %s is %.0f deg off the FAH centre -> %s", k, j.ip.name,
+            ipPos and H3(Mag(BrgT(ipPos, ap))) or "?", ipPos and AngD(BrgT(ipPos, ap), c) or 0, n.ip))
+    end
     n.fah = string.format("%s-%s", H3(n.fahLo), H3(n.fahHi))
     n.ltl = ltl and H3(Mag(ltl)) or nil
     st.nine = n
@@ -884,6 +908,7 @@ local function A_Off(k)
     local st, u = JC.st[k], Hero()
     local dir = u and Dir8(HeroHdgT(u)) or "north"
     PilotF(string.format("%s, off %s%s.", CFG.CS, dir, st.att.released and "" or ", dry"))
+    if st.att.cleared and not st.att.released then Log("CLEARANCE closed " .. k .. " (dry pass)") end
     st.att.inCalled, st.att.cleared, st.att.released, st.att.aborted = false, false, false, false
     st.att.offPending = false
     MenuRefresh()
@@ -1135,7 +1160,7 @@ local function Items(_)
                 out[#out + 1] = { string.format("%sREADBACK %d/3: %s", P, q.step, it.label), sub = sub }
             elseif ph == "ATTACK" then
                 local a = st.att
-                if a.offPending or a.aborted then
+                if a.offPending or a.aborted or (a.inCalled and not a.released) then   -- v0.3.0: dry pass
                     out[#out + 1] = { P .. "OFF" .. (a.released and "" or " (dry)"), function() A_Off(k) end }
                 elseif not a.ipIn then
                     out[#out + 1] = { P .. "IP INBOUND", function() A_IpInbound(k) end }
@@ -1208,30 +1233,43 @@ local function Relocate(k)
     local ju, tus = JtacUnit(k), TargetUnits(k)
     if not ju or #tus == 0 then Log("RELOCATE " .. k .. ": no JTAC / target, ME position kept"); return end
     local tp = Centroid(tus)
-    local r = math.rad(op.brg)
-    local cx, cz = tp.x + math.cos(r) * op.m, tp.z + math.sin(r) * op.m
-    local best, bd, tried = nil, nil, 0
-    local step = op.step or 100
-    for dx = -op.r, op.r, step do
-        for dz = -op.r, op.r, step do
-            local d2 = dx * dx + dz * dz
-            if d2 <= op.r * op.r and (not bd or d2 < bd) then
-                tried = tried + 1
-                local p = { x = cx + dx, y = 0, z = cz + dz }
-                local okS, sf = pcall(land.getSurfaceType, { x = p.x, y = p.z })
-                if okS and (sf == land.SurfaceType.LAND or sf == land.SurfaceType.ROAD) then
-                    local eye, ok = Eye(p), true
-                    for _, u in ipairs(tus) do
-                        local up = u:getPoint()
-                        if D2(p, up) < (op.min_tgt_m or 1200) or not land.isVisible(eye, Eye(up, 1.5)) then
-                            ok = false; break
-                        end
-                    end
-                    if ok then best, bd = p, d2 end
+    local tgtH = GroundY(tp)
+    local best, bs, bd = nil, nil, nil
+    local n, nSurf, nNear, nLos = 0, 0, 0, 0
+    local step, sec = op.step or 150, op.sector or 60
+    for d = op.dmin or 1500, op.dmax or 4000, step do
+        local da = math.max(2, math.deg(step / d))
+        for a = -sec, sec, da do
+            n = n + 1
+            local r = math.rad(op.brg + a)
+            local p = { x = tp.x + math.cos(r) * d, y = 0, z = tp.z + math.sin(r) * d }
+            local okS, sf = pcall(land.getSurfaceType, { x = p.x, y = p.z })
+            if not (okS and (sf == land.SurfaceType.LAND or sf == land.SurfaceType.ROAD)) then
+                nSurf = nSurf + 1
+            else
+                local eye, ok, near = Eye(p), true, false
+                for _, u in ipairs(tus) do
+                    local up = u:getPoint()
+                    if D2(p, up) < (op.dmin or 1500) then near = true; break end
+                    if not land.isVisible(eye, Eye(up, 1.5)) then ok = false; break end
+                end
+                if near then nNear = nNear + 1
+                elseif not ok then nLos = nLos + 1
+                else
+                    -- high ground first (1 point per 50 m above the target), then closeness to <brg, m>
+                    local score = (GroundY(p) - tgtH) / 50 - math.abs(a) / 30 - math.abs(d - op.m) / 1000
+                    if not bs or score > bs then best, bs, bd = p, score, D2(p, { x = tp.x + math.cos(math.rad(op.brg)) * op.m, z = tp.z + math.sin(math.rad(op.brg)) * op.m }) end
                 end
             end
         end
     end
+    if not best then
+        Log(string.format("RELOCATE %s: no point with LOS in %s +/-%d deg, %d-%d m (%d tried: surface %d, too close %d, "
+            .. "no LOS %d), ME position kept", k, Dir8(op.brg), sec, op.dmin or 1500, op.dmax or 4000, n, nSurf, nNear, nLos))
+        return
+    end
+    Log(string.format("RELOCATE %s: %d tried (surface %d, too close %d, no LOS %d), best %.0f m above the target",
+        k, n, nSurf, nNear, nLos, GroundY(best) - tgtH))
     local old = ju:getPoint()
     if not best then
         Log(string.format("RELOCATE %s: no point with LOS within %d m of %s %d m (%d tried), ME position kept",
@@ -1249,7 +1287,7 @@ local function Relocate(k)
     if not ok then Log("RELOCATE " .. k .. ": spawn failed: " .. tostring(err)); return end
     SetupGround(j.group)
     Log(string.format("RELOCATE %s: %s -> %s, %s %.0f m from target, %.0f m off the requested point, LOS to %d units",
-        k, MGRS(old), MGRS(best), Dir8(BrgT(tp, best)), D2(tp, best), math.sqrt(bd), #tus))
+        k, MGRS(old), MGRS(best), Dir8(BrgT(tp, best)), D2(tp, best), bd, #tus))
 end
 
 -- ══════════════════════════════════════════════════════════════

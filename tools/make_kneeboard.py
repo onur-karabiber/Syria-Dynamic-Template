@@ -1,4 +1,5 @@
-# make_kneeboard.py | v3.1.1
+# make_kneeboard.py | v3.1.2
+# v3.1.2: scripted JTAC cards: keyhole IP note (JTAC_Controller v0.3.0 may brief 'keyhole brg/NM').
 # v3.1.1: IP LYNX moved onto the CP TIGER - target line, 12 NM from the target (37S BV 4071 2864),
 #         matching JTAC_Controller v0.2.0.
 # v3.1.0: --scripted-jtac (CAS (L) with JTAC_Controller): 04/05 JTAC cards without the 9-line
@@ -246,7 +247,7 @@ def jtac_s(num, name, tl, tr, contact, ip, notes, banner=None):
     c.rule(); c.head("9-LINE  (copy into HSI · JTAC passes on radio)")
     for i, k in enumerate(["IP", "HDG", "DIST", "ELEV", "TGT", "LOC", "MARK", "FRDLY", "EGRESS"], 1):
         c.nine(str(i), k, "...........................")
-    c.line("Mandatory readback: L4, L6, all restrictions", "r", F10)
+    c.line("Readback L4, L6, restrictions · IP 'keyhole 040/10' = brg/NM from TGT", "r", F10)
     c.rule(); c.head("BREVITY FLOW")
     for l in FLOW_SCRIPTED: c.line(l, f=F10)
     if notes:

@@ -1,4 +1,8 @@
-# make_test_variant.py | v1.0.0
+# make_test_variant.py | v1.1.0
+# v1.1.0: random RED air activations are switched off in the TEST variants (every trigger action
+#         a_activate_group for a late-activated RED plane / helicopter group is removed from
+#         trigrules and from the compiled trig.actions); --keep-red-air keeps them. The source
+#         mission (CAS (L)) keeps them in any case. (Flight 2026-10-29: a MiG-23 ended a JTAC test.)
 # Builds air-start TEST copies of a CAS mission so a JTAC change can be flown in minutes instead of
 # an hour. The source .miz is read only; each variant is written NEXT TO it (Missions folder) as
 #   "<name> TEST-J1.miz"  hero 30 NM before CP TIGER on the departure->CP leg, heading to CP
@@ -21,6 +25,7 @@ import copy
 import io
 import math
 import os
+import re
 import sys
 import zipfile
 
@@ -41,6 +46,32 @@ def find_group(mission, cat, name):
                 if s(g.get(b"name")) == name:
                     return g
     return None
+
+
+def strip_red_air(mission):
+    red = {}
+    side = mission[b"coalition"].get(b"red", {})
+    for c in side.get(b"country", {}).values():
+        for cat in (b"plane", b"helicopter"):
+            for g in c.get(cat, {}).get(b"group", {}).values():
+                if g.get(b"lateActivation"):
+                    red[g[b"groupId"]] = s(g[b"name"])
+    rules, trig = mission.get(b"trigrules", {}), mission.get(b"trig", {})
+    gone = []
+    for k, r in rules.items():
+        acts = r.get(b"actions", {})
+        hit = [a for a in acts.values() if a.get(b"predicate") == b"a_activate_group" and a.get(b"group") in red]
+        if not hit:
+            continue
+        keep = [a for _, a in sorted(acts.items()) if a not in hit]
+        r[b"actions"] = {i: a for i, a in enumerate(keep, 1)}
+        code = trig.get(b"actions", {}).get(k)
+        if isinstance(code, bytes):
+            for a in hit:
+                code = re.sub(rb"a_activate_group\(%d\);\s*" % a[b"group"], b"", code)
+            trig[b"actions"][k] = code
+        gone += [red[a[b"group"]] for a in hit]
+    print("  red air activations removed (%d): %s" % (len(gone), ", ".join(gone) or "none"))
 
 
 def build(mission, a, key):
@@ -104,6 +135,7 @@ def main():
     ap.add_argument("--unit", default="Player_01")
     ap.add_argument("--cp-name", default="Contact JTAC")
     ap.add_argument("--j2-target", default="SAM YE53 (SA-8)-1")
+    ap.add_argument("--keep-red-air", action="store_true", help="keep the random RED air activations")
     a = ap.parse_args()
     src = os.path.abspath(a.miz)
     if src.startswith(REPO + os.sep):
@@ -115,6 +147,8 @@ def main():
             _, mission = dcslua.parse(raw)
             print(stem, "->", key)
             build(mission, a, key)
+            if not a.keep_red_air:
+                strip_red_air(mission)
             out = os.path.join(os.path.dirname(src), "%s TEST-%s.miz" % (stem, key))
             buf = io.BytesIO()
             with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zout:
