@@ -1,5 +1,10 @@
--- JTAC_Controller | v0.3.0
+-- JTAC_Controller | v0.3.1
 --[[
+  v0.3.1 (flight #2 menu case): no menu change without a press where avoidable - the JTAC items no
+         longer disappear while the JTAC is transmitting (busy), and LASER ON stays offered after
+         TEN SECONDS until it is pressed (v0.3.0 reverted it to TEN SECONDS after 30 s, which rebuilt
+         the menu 5 s before a misrouted press). LASER_TIMEOUT_S 120 -> 180 (Maverick set-ups from
+         the hard deck start lasing earlier).
   v0.3.0 (TEST-J1 flight 2026-10-29 #2):
     * Observation post search widened: sector op.brg +/- op.sector deg, op.dmin..op.dmax m from the
       target, ~op.step m grid; among the points with LOS to every target unit the JTAC prefers high
@@ -78,7 +83,7 @@ if TRT.JC then env.info("[JC] already loaded, second copy ignored") return end
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "0.3.0",
+    VERSION      = "0.3.1",
     PLAYER_UNIT  = "Player_01",
     CS           = "HORNET 51",
     NUM_TYPE     = "one Hornet",
@@ -99,7 +104,7 @@ local CFG = {
     LASER_SAFE   = 10,
     LASER_MAX    = 60,
     FRIEND_SEP   = 25,           -- 30 left no window when the JTAC is both designator and friendly
-    LASER_TIMEOUT_S = 120,
+    LASER_TIMEOUT_S = 180,
     LASER_SRC    = { x = 0, y = 3, z = 0 },
     EYE_M        = 2.5,
     IMPACT_WAIT_S = 3,
@@ -704,7 +709,7 @@ local function SetPhase(k, ph)
     MenuRefresh()
 end
 
-local function Busy(k, v) JC.st[k].busy = v; MenuRefresh() end
+local function Busy(k, v) JC.st[k].busy = v end   -- v0.3.1: no menu rebuild (items stay)
 local function Free(k) return function() Busy(k, false) end end
 
 local function A_CheckIn(k)
@@ -947,6 +952,7 @@ local function A_Laser(k, call)
     elseif call == "ON" or call == "SHIFT" then
         PilotF((call == "ON") and string.format("%s, laser on.", j.disp) or string.format("%s, shift.", j.disp))
         local ok, why = LaserOn(k)
+        st.att.tenT = nil
         if ok then
             st.att.laserCalled = true
             JtacF(k, string.format("%s, lasing %d.", j.disp, j.mark.code))
@@ -964,6 +970,7 @@ local function A_Laser(k, call)
     elseif call == "CEASE" then
         PilotF(string.format("%s, cease laser.", j.disp))
         LaserOff(k, "cease laser")
+        st.att.tenT = nil
         JtacF(k, string.format("%s, laser off.", j.disp))
         st.att.spotSaid = false
     end
@@ -1130,7 +1137,7 @@ end
 -- ══════════════════════════════════════════════════════════════
 local function Offered(k, u)
     local st = JC.st[k]
-    if st.phase == "IDLE" or st.phase == "DONE" or st.phase == "TERMINATED" or st.busy then return false end
+    if st.phase == "IDLE" or st.phase == "DONE" or st.phase == "TERMINATED" then return false end
     local cd = TRT.CD
     if CFG.HANDOFF == "CD" and cd and cd.phase == J(k).cdPhase then return true end
     local tp = Centroid(TargetUnits(k))
@@ -1169,7 +1176,7 @@ local function Items(_)
                 end
                 if j.mark.kind == "laser" then
                     if not st.spot then
-                        if not a.tenT or timer.getTime() - a.tenT > 30 then
+                        if not a.tenT then   -- v0.3.1: LASER ON stays until pressed
                             out[#out + 1] = { P .. "TEN SECONDS", function() A_Laser(k, "TEN") end }
                         else
                             out[#out + 1] = { P .. "LASER ON", function() A_Laser(k, "ON") end }

@@ -1,4 +1,10 @@
--- Menu_Manager | v1.0.1
+-- Menu_Manager | v1.1.0
+-- v1.1.0: prefix-stable rebuild. Only the items from the first changed position on are removed and
+--         re-added; the DCS handles of the items above stay. Flight 2026-10-29 #2: a COMMS rebuild
+--         (label change, no press) 5 s before a press made DCS deliver "OVERLORD: feet dry" for a
+--         press on "correlation > TALLY" (log: rebuild 15:08:31, press 15:08:36). The full
+--         remove/re-add of v1.0.x is the suspected cause [V]; JTAC items sit on top, so changes in the
+--         Comms_Director items below no longer touch them.
 -- v1.0.1: logs every F10 press ("press: COMMS > <label>") and every COMMS rebuild with its labels,
 --         to find the 2026-10-29 case where a press on "POINTER 11: IP INBOUND" ran
 --         "OVERLORD: request picture" (no stale-press line, so DCS delivered that command).
@@ -44,7 +50,7 @@ if TRT.Menu then
 end
 
 local CFG = {
-    VERSION     = "1.0.1",
+    VERSION     = "1.1.0",
     PLAYER_UNIT = "Player_01",
     TICK        = 2,                                          -- s
     SECTIONS    = { "COMMS", "INFO", "CARRIER", "TRAINING" }, -- F1..F4, fixed order
@@ -62,6 +68,7 @@ local M = {
     roots     = {},      -- section -> DCS path (nil = not created / hidden)
     handles   = {},      -- section -> { top-level child path, ... }
     sig       = {},      -- section -> label signature of the built children
+    isig      = {},      -- section -> { per-item signature, ... } (v1.1.0)
     cur       = {},      -- section -> item list the children were built from
 }
 TRT.Menu = M
@@ -227,7 +234,7 @@ local function DropAll()
             if M.roots[s] then pcall(missionCommands.removeItemForGroup, M.gid, M.roots[s]) end
         end
     end
-    M.gid, M.roots, M.handles, M.sig, M.cur = nil, {}, {}, {}, {}
+    M.gid, M.roots, M.handles, M.sig, M.cur, M.isig = nil, {}, {}, {}, {}, {}
 end
 
 local function Build()
@@ -249,20 +256,29 @@ local function Build()
         if hide then
             if M.roots[s] then
                 pcall(missionCommands.removeItemForGroup, gid, M.roots[s])
-                M.roots[s], M.handles[s], M.sig[s], M.cur[s] = nil, nil, nil, nil
+                M.roots[s], M.handles[s], M.sig[s], M.cur[s], M.isig[s] = nil, nil, nil, nil, nil
             end
         else
             if not M.roots[s] then
                 M.roots[s] = missionCommands.addSubMenuForGroup(gid, s)
-                M.handles[s], M.sig[s] = {}, nil
+                M.handles[s], M.sig[s], M.isig[s] = {}, nil, nil
             end
             local sig = Signature(items)
             if sig ~= M.sig[s] then
-                if s == "COMMS" then Log("rebuild COMMS: " .. sig) end   -- v1.0.1
-                for _, h in ipairs(M.handles[s] or {}) do pcall(missionCommands.removeItemForGroup, gid, h) end
-                M.handles[s] = {}
-                AddItems(gid, M.roots[s], items, s, {}, M.handles[s])
-                M.sig[s] = sig
+                -- v1.1.0: keep the handles of the unchanged leading items
+                local old, new = M.isig[s] or {}, {}
+                for i, it in ipairs(items) do new[i] = Signature({ it }) end
+                local first = 1
+                while first <= #new and first <= #old and old[first] == new[first] do first = first + 1 end
+                if s == "COMMS" then Log(string.format("rebuild COMMS from #%d: %s", first, sig)) end
+                local hs = M.handles[s] or {}
+                for i = #hs, first, -1 do
+                    pcall(missionCommands.removeItemForGroup, gid, hs[i]); hs[i] = nil
+                end
+                local tail = {}
+                for i = first, #items do tail[#tail + 1] = items[i] end
+                AddItems(gid, M.roots[s], tail, s, {}, hs)
+                M.handles[s], M.sig[s], M.isig[s] = hs, sig, new
             end
             M.cur[s] = items
         end
