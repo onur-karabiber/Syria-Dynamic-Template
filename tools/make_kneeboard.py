@@ -1,4 +1,9 @@
-# make_kneeboard.py | v3.0.2
+# make_kneeboard.py | v3.1.0
+# v3.1.0: --scripted-jtac (CAS (L) with JTAC_Controller): 04/05 JTAC cards without the 9-line
+#         values the readback quiz asks for (elevation, grid, FAH, LTL, friendlies) - the JTAC passes
+#         them on the radio; doctrine brevity flow (JFIRE 2023: CEASE LASER); abort code reply
+#         procedure. New 06 AUTH card: challenge-reply table (same rows as JTAC_Controller CFG.AUTH,
+#         seed 20261029). 02 COMM: abort line points to 06 AUTH. Default output is unchanged.
 # v3.0.2: 03 ROUTE: TEXACO TACAN 21Y note (Hornet needs A/A selected with T/R for range).
 # v3.0.1: 02 COMM LADDER: F10 menu renamed (Menu_Manager v1.0.0) -> "F10 > COMMS".
 # Generates src/KNEEBOARD/images/01..05 *.png (CAS-1 kneeboard, 512x768).
@@ -32,6 +37,7 @@ def font(bold, size):
     raise SystemExit("DejaVu Sans Mono not found (set KB_FONT_DIR)")
 
 F13, F11, F10 = font(False, 13), font(False, 11), font(False, 10)
+SCRIPTED = False   # set in __main__ (--scripted-jtac)
 B11, B10, BT = font(True, 11), font(True, 10), font(True, 20)
 VX = 160   # value column (inner coordinates)
 
@@ -104,11 +110,12 @@ def comm():
     c.chrow("01", "251.10 AM", "OVERLORD mon", "OVL")
     c.chrow("02", "128.10 AM", "AI traffic", "AI", "02–10: 128.1–128.9")
     c.rule(); c.head("DISCRETE / GUARD")
-    c.kv("GUARD", "243.00 AM (monitor)", "m"); c.kv("ABORT (tac)", 'JTAC: "abort, abort, abort"')
+    c.kv("GUARD", "243.00 AM (monitor)", "m")
+    c.kv("ABORT (tac)", 'JTAC: "ABORT <reply> x3" (06 AUTH)' if SCRIPTED else 'JTAC: "abort, abort, abort"')
     c.kv("CVN native", "127.60 AM not used (F1)", "m")
     c.rule(); c.head("COMM FLOW   (F10 > COMMS)")
     flow = [("1","Airborne","DEP","C1-02","CASE III dep (I/II zip)"),("2","7 DME/clrd","STK","C1-03","Mode 4 · Kilo"),
-            ("3","Strike h/o","OVL","C1-06","check in · picture"),("4","20 NM to CP","PTR","C1-04","native JTAC"),
+            ("3","Strike h/o","OVL","C1-06","check in · picture"),("4","20 NM to CP","PTR","C1-04","JTAC (F10)" if SCRIPTED else "native JTAC"),
             ("5","Off Pointer","OVL","C1-06","→ EYE C1-05"),("6","Off Eyeball","OVL","C1-06","INFLTREP → Texaco"),
             ("7","Texaco","TKR","C1-07","check in · refuel"),("8","Off Texaco","OVL","C1-06","RTB · feet wet"),
             ("9","90 NM CVN","STK","C1-03","check in inbound"),("10","50 NM CVN","MRS","C1-16","check in · readback"),
@@ -204,9 +211,101 @@ def jtac2():
          "Terminate  →  Laser off  ·  BDA"],
         banner="! MANPADS inject (25%): threat call · deck 23 000 MSL")
 
+# ── scripted JTAC variant (JTAC_Controller) ────────────────────────────────────────────
+ABORT_CHALLENGE = "BR"
+AUTH_ROWS = [  # identical to scripts/JTAC_Controller.lua CFG.AUTH (seed 20261029)
+    "BSIAZTXKDGPQVEMCNWFJYLUHOR", "AXYSFZJLHPVECBNDRQTWMOGIUK", "GDSIVRKUXELOCFHWJQBZYANMPT",
+    "TVYMLCBUWEHRDGKAFJQZIXSNPO", "GWFIYONQJDATVUZCLMSBKPHEXR", "YBOLUVNIPHTKAFQDSRXMEGJZCW",
+    "BFMUPEQNRLKSDZXAGVOITCHJWY", "MLARHQFGXKSZYIWVPJEONBCTUD", "LGOXJHDCEWMSYNTFARVIKBUPQZ",
+    "MHFEZPQKCXVJRLOIYUWBNAGTDS", "EUQKCOBNGAYHLPTMFRWXJIZSVD", "THVCREZAGYBFQXIUNLOPMJDWSK",
+    "PVJCEWGTSYHIMZONLDRQKAXUBF", "ATWGDVJHPBLOXMICSNUEFQKYZR", "UABNFJQGLPIEZTXOMVCSKYDRHW",
+    "XMSTRKLFOGVBQWZEDUPJACHIYN", "TULZBGPAXRHWFYJKSOQENVDIMC", "CSUIOLMHNFXQGDWZPAJETVBYRK",
+    "FDNESUCBQIXZMVJKTWLRYHGOAP", "HVAJXUYTEKLWGISDOFMPQRZCBN", "TZGCEPRHIVAQXBFSYUJDWMLKON",
+    "QXCGHNDVZTOJAUESBYMFPWRLIK", "FIZAVYBLSJQHEXMKWNPOTRUDCG", "XCSJZBDMTHQEAUFLRGPOINWKYV",
+    "MNFYBDGIUHLJZSKRPQOWCATXVE", "MBSLRJTUINYWQDCXPVHEZFOKAG"]
+PHON = dict(zip("ABCDEFGHIJKLMNOPQRSTUVWXYZ", ["ALFA", "BRAVO", "CHARLIE", "DELTA", "ECHO", "FOXTROT",
+    "GOLF", "HOTEL", "INDIA", "JULIETT", "KILO", "LIMA", "MIKE", "NOVEMBER", "OSCAR", "PAPA", "QUEBEC",
+    "ROMEO", "SIERRA", "TANGO", "UNIFORM", "VICTOR", "WHISKEY", "XRAY", "YANKEE", "ZULU"]))
+FLOW_SCRIPTED = ["Check in: msn · pos · ordnance · playtime · abort code",
+                 "Sitrep → game plan → 9-line → remarks (F10 'ready')",
+                 "READBACK from HSI: L4 · L6 · restrictions (FAH)",
+                 "IP INBOUND → CONTINUE · IN [dir] → CLEARED HOT",
+                 "TEN SECONDS → LASER ON → JTAC: LASING 1688",
+                 "SPOT / NEGATIVE LASER · SHIFT · CEASE LASER",
+                 "BOT: TALLY or CAPTURED before CLEARED HOT",
+                 "Release: RIFLE / ONE AWAY → OFF [dir]"]
+
+def jtac_s(num, name, tl, tr, contact, ip, notes, banner=None):
+    c = Card(num, name, tl, tr)
+    c.head("CONTACT")
+    for k, v, col in contact: c.kv(k, v, col)
+    c.rule(); c.head("PRE-BRIEFED")
+    for k, v, col in ip: c.kv(k, v, col)
+    c.rule(); c.head("9-LINE  (copy into HSI · JTAC passes on radio)")
+    for i, k in enumerate(["IP", "HDG", "DIST", "ELEV", "TGT", "LOC", "MARK", "FRDLY", "EGRESS"], 1):
+        c.nine(str(i), k, "...........................")
+    c.line("Mandatory readback: L4, L6, all restrictions", "r", F10)
+    c.rule(); c.head("BREVITY FLOW")
+    for l in FLOW_SCRIPTED: c.line(l, f=F10)
+    if notes:
+        c.rule(); c.head("NOTES")
+        for l, col in notes: c.line(l, col, F10)
+    if banner:
+        c.y += 2; c.d.rectangle((0, c.y, IW, c.y + 18), fill=(250, 232, 200))
+        c.d.text((4, c.y + 3), banner, font=F10, fill=OCH); c.y += 20
+    return c
+
+def jtac1_s():
+    return jtac_s("04", "POINTER 11", "JTAC-1", "ALPHA",
+        [("CALLSIGN", "POINTER ONE-ONE", "t"), ("FREQ", "333.30 AM · COMM1-04", "t"), ("MSN#", "4101", "t"),
+         ("CHECK-IN", "OVERLORD h/o, 20 NM to CP", "t")],
+        [("IP", "LYNX  37S BV 8009 0816", "y"), ("TGT AREA", "BV 62 (general)", "t"), ("MARK", "Laser · JTAC · 1688", "y"),
+         ("CONTROL", "Type II · BOT (JTAC decides)", "t"), ("ORDNANCE", "AGM-65E (65E code 1688)", "t")],
+        [("SA-13 at the target site", "r"), ("SA-8 vicinity YE53", "o"), ("Hard deck 23 000 ft MSL (eng. area)", "r")])
+
+def jtac2_s():
+    return jtac_s("05", "EYEBALL 11", "JTAC-2", "BRAVO",
+        [("CALLSIGN", "EYEBALL ONE-ONE", "t"), ("FREQ", "333.40 AM · COMM1-05", "t"), ("MSN#", "4102", "t"),
+         ("CHECK-IN", "Via OVERLORD, off Pointer 11", "t")],
+        [("IP", "PUMA  36S YE 4714 5182", "y"), ("TGT AREA", "YE 53 (general)", "t"), ("MARK", "Laser · JTAC · 1688", "y"),
+         ("CONTROL", "Type II · BOT (JTAC decides)", "t"), ("ORDNANCE", "GBU-12 (code 1688)", "t")],
+        [("SA-8 battery = target", "r"), ("MANPADS reported near YE53", "o"), ("Hard deck 23 000 ft MSL (eng. area)", "r")],
+        banner="! Any abort call: verify the reply letter (06 AUTH)")
+
+def auth():
+    c = Card("06", "AUTHENTICATION", "CAS-1", "VALID 24H")
+    c.head("ABORT CODE  (challenge-reply · JP 3-09.3)")
+    ch = ABORT_CHALLENGE
+    c.kv("HORNET 51", "challenge  %s %s" % (PHON[ch[0]], PHON[ch[1]]), "y")
+    c.line("Pass the challenge in the JTAC check-in. The JTAC", f=F10)
+    c.line("aborts with the REPLY letter: ABORT <reply> x3.", f=F10)
+    c.line("Reply = letter RIGHT of the 2nd challenge letter,", f=F10)
+    c.line("in the row of the 1st letter (wraps to start).", f=F10)
+    c.line("Work it out before the push. Wrong letter = not", "r", F10)
+    c.line("an abort from your JTAC.", "r", F10)
+    c.rule()
+    d = c.d
+    x0, cw = 26, 14
+    for r, row in enumerate(AUTH_ROWS):
+        y = c.y + r * 17
+        if r % 2 == 0: d.rectangle((0, y - 1, IW, y + 15), fill=BAND)
+        d.text((4, y), chr(65 + r), font=B11, fill=TAG)
+        for i, L in enumerate(row):
+            d.text((x0 + i * cw, y), L, font=F13, fill=TXT)
+    c.y += 26 * 17 + 4
+    c.line("SIMULATION TABLE · simplified DRYAD-style · not a real system", "m", F10)
+    return c
+
 if __name__ == "__main__":
-    out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    SCRIPTED = "--scripted-jtac" in sys.argv
+    out = args[0] if args else os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src", "KNEEBOARD", "images")
-    for fn, mk in [("01_ADMIN.png", admin), ("02_COMM.png", comm), ("03_ROUTE.png", route),
-                   ("04_JTAC1.png", jtac1), ("05_JTAC2.png", jtac2)]:
+    os.makedirs(out, exist_ok=True)
+    cards = [("01_ADMIN.png", admin), ("02_COMM.png", comm), ("03_ROUTE.png", route)]
+    if SCRIPTED:
+        cards += [("04_JTAC1.png", jtac1_s), ("05_JTAC2.png", jtac2_s), ("06_AUTH.png", auth)]
+    else:
+        cards += [("04_JTAC1.png", jtac1), ("05_JTAC2.png", jtac2)]
+    for fn, mk in cards:
         mk().save(os.path.join(out, fn))

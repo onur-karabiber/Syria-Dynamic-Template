@@ -1,4 +1,6 @@
-# refresh_scripts.py | v1.1.0
+# refresh_scripts.py | v1.2.0
+# v1.2.0: --kneeboard DIR also syncs KNEEBOARD/images/*.png from DIR (e.g. the output of
+#         make_kneeboard.py --scripted-jtac); changed files replaced, new files added.
 # v1.1.0: --sounds <SET> (repeatable) also syncs Sounds/<SET>/*.ogg from src/Sounds/<SET>/
 #         (changed files replaced, new files added; files only in the .miz are kept).
 # Refreshes the embedded Lua scripts of a .miz that build.py does not build
@@ -31,7 +33,7 @@ def first_line(b):
     return b.split(b"\n", 1)[0].decode("utf-8", "replace").strip()
 
 
-def main(src, dry, sound_sets=()):
+def main(src, dry, sound_sets=(), kb_dir=None):
     with zipfile.ZipFile(src) as z:
         mapres = dcslua.parse(z.read(PREFIX + "mapResource"))[1]
         luas = sorted({v.decode() for v in mapres.values()
@@ -66,6 +68,19 @@ def main(src, dry, sound_sets=()):
                 else:
                     added[arc] = data
                     print("sound:   %s (new)" % arc)
+        if kb_dir:                                              # v1.2.0
+            for f in sorted(os.listdir(kb_dir)):
+                if not f.lower().endswith(".png"):
+                    continue
+                arc = "KNEEBOARD/images/" + f
+                data = open(os.path.join(kb_dir, f), "rb").read()
+                if arc in names:
+                    if z.read(arc) != data:
+                        new[arc] = data
+                        print("kneeboard: %s (changed)" % arc)
+                else:
+                    added[arc] = data
+                    print("kneeboard: %s (new)" % arc)
         if not new and not added:
             print("up to date, nothing written")
             return 0
@@ -96,14 +111,16 @@ def main(src, dry, sound_sets=()):
 
 
 if __name__ == "__main__":
-    argv, sets, args = sys.argv[1:], [], []
+    argv, sets, args, kb = sys.argv[1:], [], [], None
     i = 0
     while i < len(argv):
         if argv[i] == "--sounds" and i + 1 < len(argv):
             sets.append(argv[i + 1]); i += 2; continue
+        if argv[i] == "--kneeboard" and i + 1 < len(argv):
+            kb = argv[i + 1]; i += 2; continue
         if argv[i] != "--dry-run":
             args.append(argv[i])
         i += 1
     if len(args) != 1:
-        sys.exit('usage: refresh_scripts.py "<mission.miz>" [--dry-run] [--sounds SET ...]')
-    sys.exit(main(args[0], "--dry-run" in argv, sets))
+        sys.exit('usage: refresh_scripts.py "<mission.miz>" [--dry-run] [--sounds SET ...] [--kneeboard DIR]')
+    sys.exit(main(args[0], "--dry-run" in argv, sets, kb))

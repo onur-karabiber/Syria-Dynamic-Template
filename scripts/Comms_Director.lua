@@ -1,5 +1,14 @@
--- Comms_Director | v1.5.6
+-- Comms_Director | v1.6.0
 --[[
+  v1.6.0 — scripted JTAC (JTAC_Controller v0.1.0, plan claude/jtac-plan-2026-10-29.md):
+           * TRT.CD_RADIO = { Q, QPlay, Msg } exports the clip queue, so JTAC_Controller
+             transmissions are serialised with every Comms_Director call.
+           * While TRT.JC.active (JTAC_Controller loaded) Comms_Director stands down on the JTAC
+             net: no F10 9-line readback, no JTAC_Laser spot calls, no rifle / bombs away calls,
+             no INJ-1 abort (JTAC_Controller owns all four), no JTAC "good hits" line in the TIC
+             BDA (Bravo 2-1 and the pilot's thanks stay), "next call" hint for JTAC1 / JTAC2 comes
+             from JTAC_Controller, TIC hand-off text points to F10 > COMMS.
+           * Without JTAC_Controller nothing changes (template with the native JTAC).
   v1.5.6 — release calls (Onur, 2026-10-29): when the hero fires an air-to-ground weapon
            while working a JTAC (JTAC1 / JTAC2, or a re-attack under the RbAvail rule), the
            pilot transmits on that JTAC's button (ATP 1-02.1 brevity):
@@ -639,6 +648,12 @@ end
 
 local function SetFlag(f, v)  trigger.action.setUserFlag(tostring(f), v) end
 
+--- v1.6.0: scripted JTAC loaded and active (JTAC_Controller)
+local function JcOn()
+    local jc = _G.TRT and _G.TRT.JC
+    return (jc and jc.active) and true or false
+end
+
 --- Clip length + file for a token id. "cv:<id>" = CV_Comms clip set (TRT.CV_AUDIO).
 local function ClipOf(id)
     local cvid = id:match("^cv:(.+)$")
@@ -812,6 +827,9 @@ end
 -- v1.5.3: "button N (frequency)" for subtitles, "btn N" for F10 / hints
 local function Btn(k) return string.format("push button %d (%s)", CFG.BTN[k], CFG.FREQ[k]) end
 local function BtnL(k) return string.format("btn %d / %s", CFG.BTN[k], CFG.FREQ[k]) end
+
+-- v1.6.0: shared radio queue for JTAC_Controller (text only for now; audio arg optional)
+_G.TRT.CD_RADIO = { Q = function(...) return Q(...) end, QPlay = function() return QPlay() end, Msg = Msg }
 
 --- Pilot readback after the queued controller transmission (v1.4.5).
 local function ReadBack(ch, text, clip)
@@ -1327,8 +1345,12 @@ TicHandoff = function(key)
         CFG.DUR_PILOT, 1.0, nil, CFG.PILOT_HOLD, S(j.ch, "p_tic_copy_" .. j.k, PD(m), "p_min_out"))
     Q(string.format("[%s] %s, copy. Check in when ready for nine-line, we need you now.", j.cs, CFG.CS),
         CFG.DUR_SHORT + 2, CFG.REPLY_GAP, function()
-            Msg(string.format("[CAS-1] Check in with %s in the DCS JTAC menu (native 9-line). "
-                .. "Readback: F10 > COMMS.", j.disp), CFG.DUR_HANDOFF)
+            if JcOn() then   -- v1.6.0
+                Msg(string.format("[CAS-1] Check in with %s: F10 > COMMS.", j.disp), CFG.DUR_HANDOFF)
+            else
+                Msg(string.format("[CAS-1] Check in with %s in the DCS JTAC menu (native 9-line). "
+                    .. "Readback: F10 > COMMS.", j.disp), CFG.DUR_HANDOFF)
+            end
             local s = CD.ticState
             if s then s.next = timer.getTime() + math.random(CFG.TIC.GAP_MIN, CFG.TIC.GAP_MAX) end
         end, nil, S(j.ch, j.k .. "_tic_ack"))
@@ -1378,9 +1400,11 @@ local function TicBDA(key)
     s.bda, s.done = true, true
     local j = JT[key]
     timer.scheduleFunction(function()
-        Q(string.format("[%s] %s, %s, good hits, good hits! Enemy fire has stopped.", j.cs, CFG.CS, j.disp),
-            CFG.DUR_SHORT + 2, 0, nil, nil, S(j.ch, j.k .. "_bda"))
-        CD.queue[#CD.queue].hold = 0.1
+        if not JcOn() then   -- v1.6.0: JTAC_Controller already gave the BDA
+            Q(string.format("[%s] %s, %s, good hits, good hits! Enemy fire has stopped.", j.cs, CFG.CS, j.disp),
+                CFG.DUR_SHORT + 2, 0, nil, nil, S(j.ch, j.k .. "_bda"))
+            CD.queue[#CD.queue].hold = 0.1
+        end
         Q(string.format("[%s] %s, Bravo 2-1, contact broken, fire has stopped. Tell that Hornet thanks.",
             FR_CS, j.short), CFG.DUR_SHORT + 2, 1.0, nil, nil, S(j.ch, "fr_" .. j.k .. "_bda"))
         ReadBack(j.ch, CFG.CS .. ", copy. Glad to help.", "p_tic_thanks")
@@ -1437,6 +1461,7 @@ end
 --- target group is alive and the hero is within CFG.RB_NM of it.
 local function RbAvail(key)
     local j = JT[key]
+    if JcOn() then return false end   -- v1.6.0
     if not CD.worked[key] then return false end
     if CD.phase == j.phase then return true end
     if not OVL_PHASES[CD.phase] or CD.phase == "JTAC1" or CD.phase == "JTAC2" then return false end
@@ -1446,6 +1471,7 @@ end
 
 --- v1.5.5: JTAC_Laser spot events -> JTAC radio calls (JTAC-2 / Eyeball 11 only).
 local function OnSpot(ev, info)
+    if JcOn() then return end   -- v1.6.0
     local key = (info.jtac == JT.J2.jtac and "J2") or (info.jtac == JT.J1.jtac and "J1") or nil
     if not key then return end
     local j = JT[key]
@@ -1510,6 +1536,7 @@ local function OnHeroShot(w)
         kind = "rifle"
     end
     if not kind then return end
+    if JcOn() then return end   -- v1.6.0: JTAC_Controller makes the release call
     local key = RelKey()
     if not key then return end
     local now = timer.getTime()
@@ -1616,6 +1643,7 @@ end
 
 local function NextText()
     if CD.phase == "RECOVERY" or CD.phase == "DONE" then return nil end
+    if JcOn() and (CD.phase == "JTAC1" or CD.phase == "JTAC2") then return nil end   -- v1.6.0
     return NEXT[CD.phase]
 end
 
@@ -1646,7 +1674,7 @@ local function ArmJ2Injects()
             end
         end, nil, timer.getTime() + d3)
     end
-    if not CD.inj.i1 then
+    if not CD.inj.i1 and not JcOn() then   -- v1.6.0: JTAC_Controller owns the abort inject
         local d1 = 85 + math.random(0, 60)
         timer.scheduleFunction(function()
             if CD.phase == "JTAC2" and not CD.inj.i1 and Roll(CFG.PROB_INJ1) then
@@ -2030,7 +2058,7 @@ local function CD_Init()
     SetFlag(200, 0)
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.5.6 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.6.0 online — CAS-1 Syria")
 end
 
 CD_Init()
