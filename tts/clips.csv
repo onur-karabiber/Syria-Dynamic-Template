@@ -187,3 +187,392 @@ p_rel_eye;PILOT>EYEBALL;Eyeball one one, Hornet five one,;tok:0.08
 p_rifle;PILOT;rifle.;tok:0.1
 p_bombs_away;PILOT;bombs away.;tok
 p_away;PILOT;away.;tok
+# BEGIN JC (tools/jc_clips.py)
+pj_n_0;POINTER_JC>POINTER;zero;tok
+pj_n_1;POINTER_JC>POINTER;one;tok
+pj_n_2;POINTER_JC>POINTER;two;tok
+pj_n_3;POINTER_JC>POINTER;three;tok
+pj_n_4;POINTER_JC>POINTER;four;tok
+pj_n_5;POINTER_JC>POINTER;five;tok
+pj_n_6;POINTER_JC>POINTER;six;tok
+pj_n_7;POINTER_JC>POINTER;seven;tok
+pj_n_8;POINTER_JC>POINTER;eight;tok
+pj_n_9;POINTER_JC>POINTER;niner;tok
+pj_l_a;POINTER_JC>POINTER;Alfa;tok
+pj_l_b;POINTER_JC>POINTER;Bravo;tok
+pj_l_c;POINTER_JC>POINTER;Charlie;tok
+pj_l_d;POINTER_JC>POINTER;Delta;tok
+pj_l_e;POINTER_JC>POINTER;Echo;tok
+pj_l_f;POINTER_JC>POINTER;Foxtrot;tok
+pj_l_g;POINTER_JC>POINTER;Golf;tok
+pj_l_h;POINTER_JC>POINTER;Hotel;tok
+pj_l_i;POINTER_JC>POINTER;India;tok
+pj_l_j;POINTER_JC>POINTER;Juliett;tok
+pj_l_k;POINTER_JC>POINTER;Kilo;tok
+pj_l_l;POINTER_JC>POINTER;Lima;tok
+pj_l_m;POINTER_JC>POINTER;Mike;tok
+pj_l_n;POINTER_JC>POINTER;November;tok
+pj_l_o;POINTER_JC>POINTER;Oscar;tok
+pj_l_p;POINTER_JC>POINTER;Papa;tok
+pj_l_q;POINTER_JC>POINTER;Quebec;tok
+pj_l_r;POINTER_JC>POINTER;Romeo;tok
+pj_l_s;POINTER_JC>POINTER;Sierra;tok
+pj_l_t;POINTER_JC>POINTER;Tango;tok
+pj_l_u;POINTER_JC>POINTER;Uniform;tok
+pj_l_v;POINTER_JC>POINTER;Victor;tok
+pj_l_w;POINTER_JC>POINTER;Whiskey;tok
+pj_l_x;POINTER_JC>POINTER;X-ray;tok
+pj_l_y;POINTER_JC>POINTER;Yankee;tok
+pj_l_z;POINTER_JC>POINTER;Zulu;tok
+pj_d_north;POINTER_JC>POINTER;north;tok
+pj_d_northeast;POINTER_JC>POINTER;north east;tok
+pj_d_east;POINTER_JC>POINTER;east;tok
+pj_d_southeast;POINTER_JC>POINTER;south east;tok
+pj_d_south;POINTER_JC>POINTER;south;tok
+pj_d_southwest;POINTER_JC>POINTER;south west;tok
+pj_d_west;POINTER_JC>POINTER;west;tok
+pj_d_northwest;POINTER_JC>POINTER;north west;tok
+pj_lab_sa_8_launcher;POINTER_JC>POINTER;S A eight launcher;tok
+pj_lab_sa_8_launcher_pl;POINTER_JC>POINTER;S A eight launchers;tok
+pj_lab_sa_13_launcher;POINTER_JC>POINTER;S A thirteen launcher;tok
+pj_lab_sa_13_launcher_pl;POINTER_JC>POINTER;S A thirteen launchers;tok
+pj_lab_sa_15;POINTER_JC>POINTER;S A fifteen;tok
+pj_lab_sa_15_pl;POINTER_JC>POINTER;S A fifteens;tok
+pj_lab_sa_15_m2;POINTER_JC>POINTER;S A fifteen M two;tok
+pj_lab_sa_15_m2_pl;POINTER_JC>POINTER;S A fifteen M twos;tok
+pj_lab_sa_6_radar;POINTER_JC>POINTER;S A six radar;tok
+pj_lab_sa_6_radar_pl;POINTER_JC>POINTER;S A six radars;tok
+pj_lab_sa_6_launcher;POINTER_JC>POINTER;S A six launcher;tok
+pj_lab_sa_6_launcher_pl;POINTER_JC>POINTER;S A six launchers;tok
+pj_lab_sa_6;POINTER_JC>POINTER;S A six;tok
+pj_lab_sa_6_pl;POINTER_JC>POINTER;S A sixes;tok
+pj_lab_sa_3;POINTER_JC>POINTER;S A three;tok
+pj_lab_sa_3_pl;POINTER_JC>POINTER;S A threes;tok
+pj_lab_sa_10;POINTER_JC>POINTER;S A ten;tok
+pj_lab_sa_10_pl;POINTER_JC>POINTER;S A tens;tok
+pj_lab_sa_11;POINTER_JC>POINTER;S A eleven;tok
+pj_lab_sa_11_pl;POINTER_JC>POINTER;S A elevens;tok
+pj_lab_sa_8;POINTER_JC>POINTER;S A eight;tok
+pj_lab_sa_8_pl;POINTER_JC>POINTER;S A eights;tok
+pj_lab_sa_19;POINTER_JC>POINTER;S A nineteen;tok
+pj_lab_sa_19_pl;POINTER_JC>POINTER;S A nineteens;tok
+pj_lab_zsu_23_4;POINTER_JC>POINTER;Z S U twenty three four;tok
+pj_lab_zsu_23_4_pl;POINTER_JC>POINTER;Z S U twenty three fours;tok
+pj_lab_sa_14_manpads;POINTER_JC>POINTER;S A fourteen manpads;tok
+pj_lab_sa_18_manpads;POINTER_JC>POINTER;S A eighteen manpads;tok
+pj_lab_sa_3_radar;POINTER_JC>POINTER;S A three radar;tok
+pj_lab_sa_3_radar_pl;POINTER_JC>POINTER;S A three radars;tok
+pj_lab_sa_3_launcher;POINTER_JC>POINTER;S A three launcher;tok
+pj_lab_sa_3_launcher_pl;POINTER_JC>POINTER;S A three launchers;tok
+pj_lab_t_55_tank;POINTER_JC>POINTER;T fifty five tank;tok
+pj_lab_t_55_tank_pl;POINTER_JC>POINTER;T fifty five tanks;tok
+pj_lab_t_72_tank;POINTER_JC>POINTER;T seventy two tank;tok
+pj_lab_t_72_tank_pl;POINTER_JC>POINTER;T seventy two tanks;tok
+pj_lab_btr;POINTER_JC>POINTER;B T R;tok
+pj_lab_btr_pl;POINTER_JC>POINTER;B T Rs;tok
+pj_lab_bmp;POINTER_JC>POINTER;B M P;tok
+pj_lab_bmp_pl;POINTER_JC>POINTER;B M Ps;tok
+pj_lab_truck;POINTER_JC>POINTER;truck;tok
+pj_lab_truck_pl;POINTER_JC>POINTER;trucks;tok
+pj_lab_infantry;POINTER_JC>POINTER;infantry;tok
+pj_ord_one_agm_65e;POINTER_JC>POINTER;one A G M sixty five echo;tok
+pj_ord_one_gbu_12;POINTER_JC>POINTER;one G B U twelve;tok
+pj_egress;POINTER_JC>POINTER;Egress north to Tiger.;tok
+pj_ci_a;POINTER_JC>POINTER;Hornet five one, Pointer one one, copy all, abort code noted. Situation update. Threat, the target itself,;tok:0.1
+pj_w_plus;POINTER_JC>POINTER;plus;tok
+pj_ci_enemy;POINTER_JC>POINTER;Enemy,;tok:0.1
+pj_ci_fr_bravo;POINTER_JC>POINTER;Friendlies, Bravo two one, mech platoon, in contact. All friendlies;tok
+pj_ci_fr_team;POINTER_JC>POINTER;Friendlies, my team only. All friendlies;tok
+pj_w_of_tgt;POINTER_JC>POINTER;of the target.;tok
+pj_ci_wind;POINTER_JC>POINTER;No artillery. Hazards, winds on the deck;tok
+pj_ci_calm;POINTER_JC>POINTER;No artillery. Hazards, winds on the deck calm.;tok
+pj_w_at;POINTER_JC>POINTER;at;tok
+pj_ci_end;POINTER_JC>POINTER;Remarks, I have a laser, no I R pointer. Request IN with heading. Advise when ready for game plan.;tok
+pj_gp_t1;POINTER_JC>POINTER;Hornet five one, type one control, bomb on target,;tok:0.1
+pj_gp_t2;POINTER_JC>POINTER;Hornet five one, type two control, bomb on target,;tok:0.1
+pj_gp_t2c;POINTER_JC>POINTER;Hornet five one, type two control, bomb on coordinate,;tok:0.1
+pj_gp_end;POINTER_JC>POINTER;Advise when ready for nine line.;tok
+pj_cs;POINTER_JC>POINTER;Hornet five one,;tok:0.1
+pj_ip_lynx;POINTER_JC>POINTER;Lynx.;tok
+pj_ip_puma;POINTER_JC>POINTER;Puma.;tok
+pj_w_keyhole;POINTER_JC>POINTER;Keyhole;tok
+pj_w_laser;POINTER_JC>POINTER;Laser;tok
+pj_w_toc;POINTER_JC>POINTER;troops in contact.;tok
+pj_nl_end;POINTER_JC>POINTER;Advise when ready for remarks.;tok
+pj_rm_a;POINTER_JC>POINTER;Hornet five one, remarks.;tok
+pj_rm_ltl;POINTER_JC>POINTER;Laser to target line;tok
+pj_rm_threat;POINTER_JC>POINTER;Threat;tok
+pj_rm_caution;POINTER_JC>POINTER;Caution, no run in clear of;tok
+pj_rm_via;POINTER_JC>POINTER;Proceed to the I P via;tok
+pj_w_caution;POINTER_JC>POINTER;Caution,;tok:0.1
+pj_rm_route;POINTER_JC>POINTER;on the route to the I P.;tok
+pj_rm_req;POINTER_JC>POINTER;Request;tok
+pj_rm_hd;POINTER_JC>POINTER;Hard deck two zero thousand in effect.;tok
+pj_rm_fah;POINTER_JC>POINTER;Restrictions. Final attack heading;tok
+pj_w_to;POINTER_JC>POINTER;to;tok
+pj_rm_end;POINTER_JC>POINTER;Report I P inbound.;tok
+pj_rb_ok;POINTER_JC>POINTER;Hornet five one, readback correct.;tok
+pj_w_call_laser;POINTER_JC>POINTER;Call for laser.;tok
+pj_rb_neg;POINTER_JC>POINTER;Hornet five one, negative.;tok
+pj_w_elev;POINTER_JC>POINTER;Elevation;tok
+pj_w_grid;POINTER_JC>POINTER;grid;tok
+pj_w_fah;POINTER_JC>POINTER;final attack heading;tok
+pj_w_readback;POINTER_JC>POINTER;Read back.;tok
+pj_say_rb;POINTER_JC>POINTER;Hornet five one, Pointer one one, say readback.;tok
+pj_cont;POINTER_JC>POINTER;Hornet five one, continue.;tok
+pj_clr_hot;POINTER_JC>POINTER;Hornet five one, cleared hot.;tok
+pj_blind;POINTER_JC>POINTER;Hornet five one, blind. Continue.;tok
+pj_cont_tally;POINTER_JC>POINTER;Hornet five one, continue. Say when tally or captured.;tok
+pj_w_abort;POINTER_JC>POINTER;abort;tok
+pj_ab_fah;POINTER_JC>POINTER;Outside final attack heading, heading;tok
+pj_ab_civ;POINTER_JC>POINTER;Civilian vehicle entering the target area.;tok
+pj_lasing;POINTER_JC>POINTER;Pointer one one, lasing;tok
+pj_unable_los;POINTER_JC>POINTER;Hornet five one, unable laser, no line of sight.;tok
+pj_neg_resp;POINTER_JC>POINTER;Hornet five one, laser on, code;tok
+pj_laser_off;POINTER_JC>POINTER;Pointer one one, laser off.;tok
+pj_laser_to;POINTER_JC>POINTER;Hornet five one, Pointer one one, laser off, no cease laser call.;tok
+pj_not_clr;POINTER_JC>POINTER;Hornet five one, Pointer one one, you were not cleared. Hold fire.;tok
+pj_aft_abort;POINTER_JC>POINTER;Hornet five one, Pointer one one, weapon released after abort. Hold fire.;tok
+pj_term;POINTER_JC>POINTER;Hornet five one, Pointer one one, second unauthorized release. Terminating control. Cleared off, return to Overlord.;tok
+pj_as_a;POINTER_JC>POINTER;Hornet five one, Pointer one one,;tok:0.1
+pj_w_splash;POINTER_JC>POINTER;splash,;tok:0.1
+pj_as_good;POINTER_JC>POINTER;good hits.;tok
+pj_as_next;POINTER_JC>POINTER;Next target,;tok:0.1
+pj_as_from;POINTER_JC>POINTER;From your hits,;tok:0.1
+pj_as_shift;POINTER_JC>POINTER;Call shift.;tok
+pj_as_rin;POINTER_JC>POINTER;Report IN.;tok
+pj_as_miss;POINTER_JC>POINTER;miss.;tok
+pj_bda_a;POINTER_JC>POINTER;B D A. Size,;tok:0.1
+pj_w_destroyed;POINTER_JC>POINTER;destroyed,;tok:0.1
+pj_w_notobs;POINTER_JC>POINTER;not observed.;tok
+pj_bda_act;POINTER_JC>POINTER;Activity, none observed. Location,;tok:0.1
+pj_w_time;POINTER_JC>POINTER;Time,;tok:0.1
+pj_w_local;POINTER_JC>POINTER;local.;tok
+pj_bda_rmk;POINTER_JC>POINTER;Remarks, mission;tok
+pj_bda_end;POINTER_JC>POINTER;successful. Cleared to depart, return to Overlord.;tok
+pj_nj_a;POINTER_JC>POINTER;Hornet five one, target is the;tok
+pj_nj_bravo;POINTER_JC>POINTER;From Bravo two one,;tok:0.1
+pj_nj_me;POINTER_JC>POINTER;From my position,;tok:0.1
+pj_off_copy;POINTER_JC>POINTER;Hornet five one, copy.;tok
+pj_off_reatk;POINTER_JC>POINTER;Hornet five one, copy, re-attack approved.;tok
+pj_area_clear;POINTER_JC>POINTER;Hornet five one, Pointer one one, target area clear.;tok
+pj_w_and;POINTER_JC>POINTER;and;tok
+pj_w_meters;POINTER_JC>POINTER;meters.;tok
+pj_w_point;POINTER_JC>POINTER;point;tok
+pj_w_hundred;POINTER_JC>POINTER;hundred;tok
+pj_w_thousand;POINTER_JC>POINTER;thousand;tok
+ej_n_0;EYEBALL;zero;tok
+ej_n_1;EYEBALL;one;tok
+ej_n_2;EYEBALL;two;tok
+ej_n_3;EYEBALL;three;tok
+ej_n_4;EYEBALL;four;tok
+ej_n_5;EYEBALL;five;tok
+ej_n_6;EYEBALL;six;tok
+ej_n_7;EYEBALL;seven;tok
+ej_n_8;EYEBALL;eight;tok
+ej_n_9;EYEBALL;niner;tok
+ej_l_a;EYEBALL;Alfa;tok
+ej_l_b;EYEBALL;Bravo;tok
+ej_l_c;EYEBALL;Charlie;tok
+ej_l_d;EYEBALL;Delta;tok
+ej_l_e;EYEBALL;Echo;tok
+ej_l_f;EYEBALL;Foxtrot;tok
+ej_l_g;EYEBALL;Golf;tok
+ej_l_h;EYEBALL;Hotel;tok
+ej_l_i;EYEBALL;India;tok
+ej_l_j;EYEBALL;Juliett;tok
+ej_l_k;EYEBALL;Kilo;tok
+ej_l_l;EYEBALL;Lima;tok
+ej_l_m;EYEBALL;Mike;tok
+ej_l_n;EYEBALL;November;tok
+ej_l_o;EYEBALL;Oscar;tok
+ej_l_p;EYEBALL;Papa;tok
+ej_l_q;EYEBALL;Quebec;tok
+ej_l_r;EYEBALL;Romeo;tok
+ej_l_s;EYEBALL;Sierra;tok
+ej_l_t;EYEBALL;Tango;tok
+ej_l_u;EYEBALL;Uniform;tok
+ej_l_v;EYEBALL;Victor;tok
+ej_l_w;EYEBALL;Whiskey;tok
+ej_l_x;EYEBALL;X-ray;tok
+ej_l_y;EYEBALL;Yankee;tok
+ej_l_z;EYEBALL;Zulu;tok
+ej_d_north;EYEBALL;north;tok
+ej_d_northeast;EYEBALL;north east;tok
+ej_d_east;EYEBALL;east;tok
+ej_d_southeast;EYEBALL;south east;tok
+ej_d_south;EYEBALL;south;tok
+ej_d_southwest;EYEBALL;south west;tok
+ej_d_west;EYEBALL;west;tok
+ej_d_northwest;EYEBALL;north west;tok
+ej_lab_sa_8_launcher;EYEBALL;S A eight launcher;tok
+ej_lab_sa_8_launcher_pl;EYEBALL;S A eight launchers;tok
+ej_lab_sa_13_launcher;EYEBALL;S A thirteen launcher;tok
+ej_lab_sa_13_launcher_pl;EYEBALL;S A thirteen launchers;tok
+ej_lab_sa_15;EYEBALL;S A fifteen;tok
+ej_lab_sa_15_pl;EYEBALL;S A fifteens;tok
+ej_lab_sa_15_m2;EYEBALL;S A fifteen M two;tok
+ej_lab_sa_15_m2_pl;EYEBALL;S A fifteen M twos;tok
+ej_lab_sa_6_radar;EYEBALL;S A six radar;tok
+ej_lab_sa_6_radar_pl;EYEBALL;S A six radars;tok
+ej_lab_sa_6_launcher;EYEBALL;S A six launcher;tok
+ej_lab_sa_6_launcher_pl;EYEBALL;S A six launchers;tok
+ej_lab_sa_6;EYEBALL;S A six;tok
+ej_lab_sa_6_pl;EYEBALL;S A sixes;tok
+ej_lab_sa_3;EYEBALL;S A three;tok
+ej_lab_sa_3_pl;EYEBALL;S A threes;tok
+ej_lab_sa_10;EYEBALL;S A ten;tok
+ej_lab_sa_10_pl;EYEBALL;S A tens;tok
+ej_lab_sa_11;EYEBALL;S A eleven;tok
+ej_lab_sa_11_pl;EYEBALL;S A elevens;tok
+ej_lab_sa_8;EYEBALL;S A eight;tok
+ej_lab_sa_8_pl;EYEBALL;S A eights;tok
+ej_lab_sa_19;EYEBALL;S A nineteen;tok
+ej_lab_sa_19_pl;EYEBALL;S A nineteens;tok
+ej_lab_zsu_23_4;EYEBALL;Z S U twenty three four;tok
+ej_lab_zsu_23_4_pl;EYEBALL;Z S U twenty three fours;tok
+ej_lab_sa_14_manpads;EYEBALL;S A fourteen manpads;tok
+ej_lab_sa_18_manpads;EYEBALL;S A eighteen manpads;tok
+ej_lab_sa_3_radar;EYEBALL;S A three radar;tok
+ej_lab_sa_3_radar_pl;EYEBALL;S A three radars;tok
+ej_lab_sa_3_launcher;EYEBALL;S A three launcher;tok
+ej_lab_sa_3_launcher_pl;EYEBALL;S A three launchers;tok
+ej_lab_t_55_tank;EYEBALL;T fifty five tank;tok
+ej_lab_t_55_tank_pl;EYEBALL;T fifty five tanks;tok
+ej_lab_t_72_tank;EYEBALL;T seventy two tank;tok
+ej_lab_t_72_tank_pl;EYEBALL;T seventy two tanks;tok
+ej_lab_btr;EYEBALL;B T R;tok
+ej_lab_btr_pl;EYEBALL;B T Rs;tok
+ej_lab_bmp;EYEBALL;B M P;tok
+ej_lab_bmp_pl;EYEBALL;B M Ps;tok
+ej_lab_truck;EYEBALL;truck;tok
+ej_lab_truck_pl;EYEBALL;trucks;tok
+ej_lab_infantry;EYEBALL;infantry;tok
+ej_ord_one_agm_65e;EYEBALL;one A G M sixty five echo;tok
+ej_ord_one_gbu_12;EYEBALL;one G B U twelve;tok
+ej_egress;EYEBALL;Egress north west, feet wet.;tok
+ej_ci_a;EYEBALL;Hornet five one, Eyeball one one, copy all, abort code noted. Situation update. Threat, the target itself,;tok:0.1
+ej_w_plus;EYEBALL;plus;tok
+ej_ci_enemy;EYEBALL;Enemy,;tok:0.1
+ej_ci_fr_bravo;EYEBALL;Friendlies, Bravo two one, mech platoon, in contact. All friendlies;tok
+ej_ci_fr_team;EYEBALL;Friendlies, my team only. All friendlies;tok
+ej_w_of_tgt;EYEBALL;of the target.;tok
+ej_ci_wind;EYEBALL;No artillery. Hazards, winds on the deck;tok
+ej_ci_calm;EYEBALL;No artillery. Hazards, winds on the deck calm.;tok
+ej_w_at;EYEBALL;at;tok
+ej_ci_end;EYEBALL;Remarks, I have a laser, no I R pointer. Request IN with heading. Advise when ready for game plan.;tok
+ej_gp_t1;EYEBALL;Hornet five one, type one control, bomb on target,;tok:0.1
+ej_gp_t2;EYEBALL;Hornet five one, type two control, bomb on target,;tok:0.1
+ej_gp_t2c;EYEBALL;Hornet five one, type two control, bomb on coordinate,;tok:0.1
+ej_gp_end;EYEBALL;Advise when ready for nine line.;tok
+ej_cs;EYEBALL;Hornet five one,;tok:0.1
+ej_ip_lynx;EYEBALL;Lynx.;tok
+ej_ip_puma;EYEBALL;Puma.;tok
+ej_w_keyhole;EYEBALL;Keyhole;tok
+ej_w_laser;EYEBALL;Laser;tok
+ej_w_toc;EYEBALL;troops in contact.;tok
+ej_nl_end;EYEBALL;Advise when ready for remarks.;tok
+ej_rm_a;EYEBALL;Hornet five one, remarks.;tok
+ej_rm_ltl;EYEBALL;Laser to target line;tok
+ej_rm_threat;EYEBALL;Threat;tok
+ej_rm_caution;EYEBALL;Caution, no run in clear of;tok
+ej_rm_via;EYEBALL;Proceed to the I P via;tok
+ej_w_caution;EYEBALL;Caution,;tok:0.1
+ej_rm_route;EYEBALL;on the route to the I P.;tok
+ej_rm_req;EYEBALL;Request;tok
+ej_rm_hd;EYEBALL;Hard deck two zero thousand in effect.;tok
+ej_rm_fah;EYEBALL;Restrictions. Final attack heading;tok
+ej_w_to;EYEBALL;to;tok
+ej_rm_end;EYEBALL;Report I P inbound.;tok
+ej_rb_ok;EYEBALL;Hornet five one, readback correct.;tok
+ej_w_call_laser;EYEBALL;Call for laser.;tok
+ej_rb_neg;EYEBALL;Hornet five one, negative.;tok
+ej_w_elev;EYEBALL;Elevation;tok
+ej_w_grid;EYEBALL;grid;tok
+ej_w_fah;EYEBALL;final attack heading;tok
+ej_w_readback;EYEBALL;Read back.;tok
+ej_say_rb;EYEBALL;Hornet five one, Eyeball one one, say readback.;tok
+ej_cont;EYEBALL;Hornet five one, continue.;tok
+ej_clr_hot;EYEBALL;Hornet five one, cleared hot.;tok
+ej_blind;EYEBALL;Hornet five one, blind. Continue.;tok
+ej_cont_tally;EYEBALL;Hornet five one, continue. Say when tally or captured.;tok
+ej_w_abort;EYEBALL;abort;tok
+ej_ab_fah;EYEBALL;Outside final attack heading, heading;tok
+ej_ab_civ;EYEBALL;Civilian vehicle entering the target area.;tok
+ej_lasing;EYEBALL;Eyeball one one, lasing;tok
+ej_unable_los;EYEBALL;Hornet five one, unable laser, no line of sight.;tok
+ej_neg_resp;EYEBALL;Hornet five one, laser on, code;tok
+ej_laser_off;EYEBALL;Eyeball one one, laser off.;tok
+ej_laser_to;EYEBALL;Hornet five one, Eyeball one one, laser off, no cease laser call.;tok
+ej_not_clr;EYEBALL;Hornet five one, Eyeball one one, you were not cleared. Hold fire.;tok
+ej_aft_abort;EYEBALL;Hornet five one, Eyeball one one, weapon released after abort. Hold fire.;tok
+ej_term;EYEBALL;Hornet five one, Eyeball one one, second unauthorized release. Terminating control. Cleared off, return to Overlord.;tok
+ej_as_a;EYEBALL;Hornet five one, Eyeball one one,;tok:0.1
+ej_w_splash;EYEBALL;splash,;tok:0.1
+ej_as_good;EYEBALL;good hits.;tok
+ej_as_next;EYEBALL;Next target,;tok:0.1
+ej_as_from;EYEBALL;From your hits,;tok:0.1
+ej_as_shift;EYEBALL;Call shift.;tok
+ej_as_rin;EYEBALL;Report IN.;tok
+ej_as_miss;EYEBALL;miss.;tok
+ej_bda_a;EYEBALL;B D A. Size,;tok:0.1
+ej_w_destroyed;EYEBALL;destroyed,;tok:0.1
+ej_w_notobs;EYEBALL;not observed.;tok
+ej_bda_act;EYEBALL;Activity, none observed. Location,;tok:0.1
+ej_w_time;EYEBALL;Time,;tok:0.1
+ej_w_local;EYEBALL;local.;tok
+ej_bda_rmk;EYEBALL;Remarks, mission;tok
+ej_bda_end;EYEBALL;successful. Cleared to depart, return to Overlord.;tok
+ej_nj_a;EYEBALL;Hornet five one, target is the;tok
+ej_nj_bravo;EYEBALL;From Bravo two one,;tok:0.1
+ej_nj_me;EYEBALL;From my position,;tok:0.1
+ej_off_copy;EYEBALL;Hornet five one, copy.;tok
+ej_off_reatk;EYEBALL;Hornet five one, copy, re-attack approved.;tok
+ej_area_clear;EYEBALL;Hornet five one, Eyeball one one, target area clear.;tok
+ej_w_and;EYEBALL;and;tok
+ej_w_meters;EYEBALL;meters.;tok
+ej_w_point;EYEBALL;point;tok
+ej_w_hundred;EYEBALL;hundred;tok
+ej_w_thousand;EYEBALL;thousand;tok
+jp_ci_ptr;PILOT;Pointer one one, Hornet five one, mission;tok
+jp_ci_eye;PILOT;Eyeball one one, Hornet five one, mission;tok
+jp_one_hornet;PILOT;one Hornet,;tok:0.1
+jp_cptiger;PILOT;C P Tiger;tok
+jp_for;PILOT;for;tok
+jp_overhead;PILOT;overhead C P Tiger,;tok:0.1
+jp_angels;PILOT;angels;tok
+jp_wpn_agm_65e;PILOT;A G M sixty five echo,;tok:0.1
+jp_wpn_gbu_12;PILOT;G B U twelve,;tok:0.1
+jp_gun;PILOT;gun,;tok:0.1
+jp_playtime;PILOT;playtime;tok
+jp_ci_end;PILOT;A T FLIR, laser spot tracker, abort code;tok
+jp_ready_ptr;PILOT;Pointer one one, Hornet five one, ready to copy.;tok
+jp_ready_eye;PILOT;Eyeball one one, Hornet five one, ready to copy.;tok
+jp_ready_rmk;PILOT;Ready to copy remarks.;tok
+jp_rb_ptr;PILOT;Pointer one one,;tok:0.1
+jp_rb_eye;PILOT;Eyeball one one,;tok:0.1
+jp_fah;PILOT;final attack heading;tok
+jp_to;PILOT;to;tok
+jp_ipin;PILOT;Hornet five one, I P inbound.;tok
+jp_ten;PILOT;Hornet five one, ten seconds.;tok
+jp_lon_ptr;PILOT;Pointer one one, laser on.;tok
+jp_lon_eye;PILOT;Eyeball one one, laser on.;tok
+jp_shift_ptr;PILOT;Pointer one one, shift.;tok
+jp_shift_eye;PILOT;Eyeball one one, shift.;tok
+jp_cease_ptr;PILOT;Pointer one one, cease laser.;tok
+jp_cease_eye;PILOT;Eyeball one one, cease laser.;tok
+jp_spot;PILOT;Hornet five one, spot.;tok
+jp_neglaser;PILOT;Hornet five one, negative laser.;tok
+jp_tally;PILOT;Hornet five one, tally.;tok
+jp_captured;PILOT;Hornet five one, captured.;tok
+jp_nojoy;PILOT;Hornet five one, no joy.;tok
+jp_in;PILOT;Hornet five one, IN from the;tok
+jp_off;PILOT;Hornet five one, off;tok
+jp_dry;PILOT;dry.;tok
+jp_aborting;PILOT;Hornet five one, aborting, off;tok
+jp_cs;PILOT;Hornet five one,;tok:0.1
+jp_rifle;PILOT;rifle,;tok:0.1
+jp_away;PILOT;away.;tok
+ovl_rep_ptr;OVERLORD;Hornet five one, Overlord. Pointer one one reports an unauthorized weapons release. The incident has been reported to CAG. Report to CAG on recovery.;tok
+ovl_rep_eye;OVERLORD;Hornet five one, Overlord. Eyeball one one reports an unauthorized weapons release. The incident has been reported to CAG. Report to CAG on recovery.;tok
+# END JC

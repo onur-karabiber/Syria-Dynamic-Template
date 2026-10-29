@@ -1,4 +1,4 @@
-# make_clips.py | v1.9.0
+# make_clips.py | v1.10.0
 # tts/clips.csv -> src/Sounds/CAS1/<id>.ogg  (Piper TTS + ffmpeg radio chain)
 # CV comms:  python tts/make_clips.py --set cv   (tts/cv_clips.csv -> src/Sounds/CV/,
 #            table tts/cv_audio_table.lua -> paste into CV_Comms CFG.AUDIO)
@@ -9,6 +9,11 @@
 #            template build never packs it; the AUDIO block in scripts/Pilot_Banter.lua is
 #            rewritten in place between its BEGIN AUDIO / END AUDIO markers - no paste step)
 #
+# v1.10.0: POINTER_JC voice (john-medium) for the JTAC_Controller v0.7.0 POINTER token clips (pj_*,
+#         rows from tools/jc_clips.py, agency POINTER_JC>POINTER). ryan-medium (POINTER) collapses
+#         one-word tokens ("eight" 0.15 s raw, unchanged by length_mult), so chained digits are not
+#         intelligible; john-medium gives 0.4-0.5 s. Old ptr_* CD clips keep ryan-medium (unused while
+#         JTAC_Controller runs). CHECK21 also uses john-medium, but on the CAP net, not 333.30.
 # v1.9.0: Comms_Director v1.5.4 voices: POINTER (Pointer 11, JTAC-1) ryan-medium, FRIENDLY
 #         (Bravo 2-1, ground force under fire) sam-medium at length_mult 0.85 (faster =
 #         more urgent). Neither model is on the CAS1 net yet. First pick, not A/B tested.
@@ -69,6 +74,7 @@ VOICE = {
     'OVERLORD':  'en_US-lessac-high.onnx',     # female (v1.6.0, was kristin-medium)
     'EYEBALL':   'en_US-hfc_male-medium.onnx',
     'POINTER':   'en_US-ryan-medium.onnx',                 # v1.9.0 JTAC-1 (scripted TIC / readback lines)
+    'POINTER_JC': 'en_US-john-medium.onnx',              # v1.10.0 JTAC_Controller POINTER tokens (pj_*)
     'FRIENDLY':  ('en_US-sam-medium.onnx', 1.0, None, 0.85),  # v1.9.0 Bravo 2-1, faster delivery
     'TEXACO':    'en_US-kusal-medium.onnx',
     'PILOT':     ('en_US-libritts-high.onnx', 1.0, 851, 1.0),  # v1.6.0, was john-medium (ryan-high rejected, see header)
