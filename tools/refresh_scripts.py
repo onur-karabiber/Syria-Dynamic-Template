@@ -1,4 +1,6 @@
-# refresh_scripts.py | v1.2.0
+# refresh_scripts.py | v1.3.0
+# v1.3.0: kneeboard entries go to KNEEBOARD/IMAGES/ (upper case, as the ME writes them; DCS did not
+#         show pages under KNEEBOARD/images/). Existing KNEEBOARD/images/* entries are moved there.
 # v1.2.0: --kneeboard DIR also syncs KNEEBOARD/images/*.png from DIR (e.g. the output of
 #         make_kneeboard.py --scripted-jtac); changed files replaced, new files added.
 # v1.1.0: --sounds <SET> (repeatable) also syncs Sounds/<SET>/*.ogg from src/Sounds/<SET>/
@@ -27,6 +29,7 @@ sys.path.insert(0, REPO)
 import dcslua  # noqa: E402
 
 PREFIX = "l10n/DEFAULT/"
+KB = "KNEEBOARD/IMAGES/"   # v1.3.0: case as written by the ME
 
 
 def first_line(b):
@@ -54,6 +57,15 @@ def main(src, dry, sound_sets=(), kb_dir=None):
                 print("refresh: %-42s %s -> %s" % (nm, first_line(old) or "(none)", first_line(data)))
         names = set(z.namelist())
         added = {}
+        moved = {}                                              # v1.3.0: wrong-case kneeboard dir
+        for n in sorted(names):
+            if n.upper().startswith(KB.upper()) and not n.startswith(KB) and not n.endswith("/"):
+                moved[n] = KB + n[len(KB):]
+                print("kneeboard: %s -> %s (moved)" % (n, moved[n]))
+        for o, t in moved.items():
+            if t not in names:
+                added[t] = new.pop(o, None) or z.read(o)
+        names = (names - set(moved)) | set(added)
         for st in sound_sets:                                   # v1.1.0
             d = os.path.join(REPO, "src", "Sounds", st)
             for f in sorted(os.listdir(d)):
@@ -72,20 +84,24 @@ def main(src, dry, sound_sets=(), kb_dir=None):
             for f in sorted(os.listdir(kb_dir)):
                 if not f.lower().endswith(".png"):
                     continue
-                arc = "KNEEBOARD/images/" + f
+                arc = KB + f
                 data = open(os.path.join(kb_dir, f), "rb").read()
-                if arc in names:
+                if arc in added:
+                    if added[arc] != data:
+                        added[arc] = data
+                        print("kneeboard: %s (changed)" % arc)
+                elif arc in names:
                     if z.read(arc) != data:
                         new[arc] = data
                         print("kneeboard: %s (changed)" % arc)
                 else:
                     added[arc] = data
                     print("kneeboard: %s (new)" % arc)
-        if not new and not added:
+        if not new and not added and not moved:
             print("up to date, nothing written")
             return 0
         if dry:
-            print("dry run: %d file(s) would change, %d added" % (len(new), len(added)))
+            print("dry run: %d file(s) would change, %d added, %d moved" % (len(new), len(added), len(moved)))
             return 0
         bdir = os.path.join(os.path.dirname(os.path.abspath(src)), "BackUps")
         os.makedirs(bdir, exist_ok=True)
@@ -97,6 +113,8 @@ def main(src, dry, sound_sets=(), kb_dir=None):
         tmp = src + ".tmp"
         with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as out:
             for info in z.infolist():
+                if info.filename in moved:
+                    continue
                 out.writestr(info, new.get(info.filename, z.read(info.filename)))
             for arc, data in added.items():
                 out.writestr(arc, data, compress_type=zipfile.ZIP_STORED)

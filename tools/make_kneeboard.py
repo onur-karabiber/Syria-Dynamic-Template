@@ -1,4 +1,5 @@
-# make_kneeboard.py | v3.2.0
+# make_kneeboard.py | v3.2.1
+# v3.2.1: default output src/KNEEBOARD/IMAGES (upper case; DCS ignored KNEEBOARD/images in the .miz).
 # v3.2.0: 03 ROUTE / NAV: Morse A-Z table (NAVAID ident check) at the bottom; replaces the
 #         separate Morse.jpg page in Saved Games\DCS\Kneeboard\FA-18C_hornet.
 # v3.1.4: hard deck 20 000 ft MSL (Comms_Director v1.6.3).
@@ -326,7 +327,7 @@ if __name__ == "__main__":
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     SCRIPTED = "--scripted-jtac" in sys.argv
     out = args[0] if args else os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src", "KNEEBOARD", "images")
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src", "KNEEBOARD", "IMAGES")
     os.makedirs(out, exist_ok=True)
     cards = [("01_ADMIN.png", admin), ("02_COMM.png", comm), ("03_ROUTE.png", route)]
     if SCRIPTED:
