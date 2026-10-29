@@ -1,4 +1,4 @@
--- SAM_FireGate | v1.5.2
+-- SAM_FireGate | v1.5.3
 -- Belirtilen SAM gruplarinin ROE'sini (WEAPON_HOLD / WEAPON_FREE) kurala gore yonetir.
 -- Radar/lock davranisina dokunmaz; sadece atis iznini kontrol eder.
 --
@@ -7,6 +7,11 @@
 --   mode = "ceiling" : menzil (rangeNM) icinde irtifasi ceilingFt veya altinda
 --                      en az bir mavi ucak yoksa HOLD. Menzil icindeki tum mavi
 --                      ucaklar ceilingFt ustundeyse SAM atis yapmaz.
+--
+-- v1.5.3:
+--  * Hard deck 23,000 -> 20,000 ft MSL (Comms_Director v1.6.3): the three ceiling groups
+--    (YE53 SA-3, BV22 SA-6, HS02 SA-6) 22000 -> 19000 ft, i.e. 1,000 ft below the deck (+500 ft
+--    hysteresis while FREE). Config only.
 --
 -- v1.5.2:
 --  * "SAM HS02 (SA-6)-1" icin ceiling kurali eklendi (22000 ft, highVeto="players").
@@ -76,7 +81,7 @@ local FIRE_GATE = {
         {
             name         = "SAM YE53 (SA-3)-1",
             mode         = "ceiling",
-            ceilingFt    = 22000, -- MSL; bu irtifa ve altindaki ucak kapiyi acar
+            ceilingFt    = 19000, -- MSL; bu irtifa ve altindaki ucak kapiyi acar
             hysteresisFt = 500,   -- FREE'de ceilingFt + hysteresisFt'e kadar tolerans
             rangeNM      = 25,    -- bu yaricap icindeki ucaklar degerlendirilir
             playersOnly  = false, -- AI mavi ucaklar da sayilir
@@ -86,7 +91,7 @@ local FIRE_GATE = {
         {
             name         = "SAM BV22 (SA-6)-1",
             mode         = "ceiling",
-            ceilingFt    = 22000,
+            ceilingFt    = 19000,
             hysteresisFt = 500,
             rangeNM      = 20,    -- TAHMIN: SA-6'nin DCS menzili dogrulanmadi; SHOT logundan ayarla
             playersOnly  = false,
@@ -99,7 +104,7 @@ local FIRE_GATE = {
         {
             name         = "SAM HS02 (SA-6)-1",
             mode         = "ceiling",
-            ceilingFt    = 22000,
+            ceilingFt    = 19000,
             hysteresisFt = 500,
             rangeNM      = 20,    -- TAHMIN: BV22 ile ayni; SA-6 menzili dogrulanmadi, SHOT logundan ayarla
             playersOnly  = false,
@@ -541,4 +546,4 @@ timer.scheduleFunction(function(_, t)
     return res
 end, nil, timer.getTime() + 2)
 
-env.info("[FIREGATE] v1.5.2 initialized for " .. #FIRE_GATE.groups .. " group(s)")
+env.info("[FIREGATE] v1.5.3 initialized for " .. #FIRE_GATE.groups .. " group(s)")

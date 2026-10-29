@@ -1,5 +1,6 @@
--- JTAC_Controller | v0.3.1
+-- JTAC_Controller | v0.3.2
 --[[
+  v0.3.2: hard deck 20,000 ft MSL in the remarks (Comms_Director v1.6.3).
   v0.3.1 (flight #2 menu case): no menu change without a press where avoidable - the JTAC items no
          longer disappear while the JTAC is transmitting (busy), and LASER ON stays offered after
          TEN SECONDS until it is pressed (v0.3.0 reverted it to TEN SECONDS after 30 s, which rebuilt
@@ -48,7 +49,7 @@
             CFG.LASER_TIMEOUT_S switches it off if CEASE LASER never comes (logged).
   Type of control: "auto" = Type 1 only if day, hero within CFG.TYPE1.max_nm, below max_agl_ft and
   JTAC terrain LOS to the hero at the game plan; otherwise Type 2. With the CAS-1 hard deck
-  (23,000 ft MSL) this is always Type 2.
+  (20,000 ft MSL) this is always Type 2.
   Abort code: challenge-reply. Pilot passes CFG.ABORT.challenge at check-in; the JTAC aborts with
   the reply letter from CFG.AUTH (kneeboard 06 AUTH): row = 1st challenge letter, reply = the letter
   to the RIGHT of the 2nd challenge letter in that row (wraps). Simplified DRYAD-style, not a real system.
@@ -83,7 +84,7 @@ if TRT.JC then env.info("[JC] already loaded, second copy ignored") return end
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "0.3.1",
+    VERSION      = "0.3.2",
     PLAYER_UNIT  = "Player_01",
     CS           = "HORNET 51",
     NUM_TYPE     = "one Hornet",
@@ -769,7 +770,7 @@ local function A_ReadyRemarks(k)
     local rem = {}
     if n.ltl then rem[#rem + 1] = string.format("laser-to-target line %s", n.ltl) end
     rem[#rem + 1] = "request " .. j.ord
-    rem[#rem + 1] = "hard deck two-three thousand in effect"
+    rem[#rem + 1] = "hard deck two-zero thousand in effect"
     Jtac(k, string.format("%s, remarks: %s. Restrictions: final attack heading %s to %s. Report IP inbound.",
         CFG.CS, table.concat(rem, ", "), H3(n.fahLo), H3(n.fahHi)), CFG.DUR.long, function()
             st.rbT0, st.rbPrompted = timer.getTime(), 0

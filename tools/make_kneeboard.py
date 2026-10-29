@@ -1,4 +1,5 @@
-# make_kneeboard.py | v3.1.3
+# make_kneeboard.py | v3.1.4
+# v3.1.4: hard deck 20 000 ft MSL (Comms_Director v1.6.3).
 # v3.1.3: IP LYNX / IP PUMA are CAS-1 route waypoints WP3 / WP4 (03 ROUTE labels, 04/05 IP rows).
 # v3.1.2: scripted JTAC cards: keyhole IP note (JTAC_Controller v0.3.0 may brief 'keyhole brg/NM').
 # v3.1.1: IP LYNX moved onto the CP TIGER - target line, 12 NM from the target (37S BV 4071 2864),
@@ -95,7 +96,7 @@ def admin():
     c.rule(); c.head("IFF / MODES")
     c.kv("MODE 4", "Check-in on Strike freq", "o"); c.kv("SQUAWK", "2042")
     c.rule(); c.head("HARD DECK  /  RESTRICTIONS")
-    c.kv("ENGAGE AREA", "23 000 ft MSL (JTAC-1/2)", "r"); c.kv("TRANSIT", "not in effect")
+    c.kv("ENGAGE AREA", "20 000 ft MSL (JTAC-1/2)", "r"); c.kv("TRANSIT", "not in effect")
     c.kv("MANPADS inj", "threat call · deck unchanged", "o")
     c.rule(); c.head("LASER CODES")
     c.kv("POINTER 11", "1688", "y"); c.kv("EYEBALL 11", "1688", "y"); c.kv("65E code", "Set in cockpit → 1688", "o")
@@ -160,7 +161,7 @@ def route():
     c.rule(); c.head("MAG VARIATION")
     c.kv("AREA", "True − 5°  →  Mag ≈ True+5°", "m")
     c.rule(); c.head("HARD DECK")
-    c.kv("ENGAGE AREA", "23 000 ft MSL", "r"); c.kv("TRANSIT", "not in effect")
+    c.kv("ENGAGE AREA", "20 000 ft MSL", "r"); c.kv("TRANSIT", "not in effect")
     return c
 
 def jtac(num, name, tl, tr, contact, nine, restr, extra_head, extra, flow, threats=None, banner=None):
@@ -192,7 +193,7 @@ def jtac1():
         [("IP","LYNX"),("HDG","300°M"),("DIST","12.0 NM"),("ELEV","570 ft"),("TGT","SA-13 launcher + T-55 tank"),
          ("GRID","BV 6187 2081"),("MARK","Laser · Pointer · 1688"),("FRDLY","EAST · 1 200 m"),
          ("EGRESS","North → TIGER · block 24–26k")],
-        [("FAH","285° – 315°  (attack cone)","r"),("HARD DECK","23 000 ft MSL (eng. area)","r"),
+        [("FAH","285° – 315°  (attack cone)","r"),("HARD DECK","20 000 ft MSL (eng. area)","r"),
          ("LTL","260° (laser-target line)","t"),("TYPE","Type II · BOT","t")],
         None, None,
         ["IP inbound  →  Continue","In [hdg]  →  Cleared hot","Rifle  →  Ten seconds  →  Laser on",
@@ -206,14 +207,14 @@ def jtac2():
         [("IP","PUMA"),("HDG","135°M"),("DIST","10.0 NM"),("ELEV","150 ft"),("TGT","SA-8 btry (2×TEL+BTR+T-72)"),
          ("GRID","YE 5987 3843"),("MARK","Laser · Eyeball · 1688"),("FRDLY","WEST · 400 m"),
          ("EGRESS","Left pull NW · feet wet")],
-        [("FAH","135° – 145°  (tight cone)","r"),("HARD DECK","23 000 ft MSL (eng. area)","r"),
+        [("FAH","135° – 145°  (tight cone)","r"),("HARD DECK","20 000 ft MSL (eng. area)","r"),
          ("LTL","105° (laser-target line)","t"),("TYPE","Type II · BOT","t")],
         "TARGET ORDER  (4 RUNS)",
         [("1st","Northern SA-8 launcher"),("2nd","Southern SA-8 launcher"),("3rd","BTR (~150 m NE of 2nd)"),
          ("4th","T-72 (~250 m NW of BTR)")],
         ["IP inbound  →  Continue","In [hdg]  →  Cleared hot  →  Bomb away","Ten seconds  →  Laser on  →  Lasing",
          "Terminate  →  Laser off  ·  BDA"],
-        banner="! MANPADS inject (25%): threat call · deck 23 000 MSL")
+        banner="! MANPADS inject (25%): threat call · deck 20 000 MSL")
 
 # ── scripted JTAC variant (JTAC_Controller) ────────────────────────────────────────────
 ABORT_CHALLENGE = "BR"
@@ -265,7 +266,7 @@ def jtac1_s():
          ("CHECK-IN", "OVERLORD h/o, 20 NM to CP", "t")],
         [("IP  (WP3)", "LYNX  37S BV 4071 2864", "y"), ("TGT AREA", "BV 62 (general)", "t"), ("MARK", "Laser · JTAC · 1688", "y"),
          ("CONTROL", "Type II · BOT (JTAC decides)", "t"), ("ORDNANCE", "AGM-65E (65E code 1688)", "t")],
-        [("SA-13 at the target site", "r"), ("SA-8 vicinity YE53", "o"), ("Hard deck 23 000 ft MSL (eng. area)", "r")])
+        [("SA-13 at the target site", "r"), ("SA-8 vicinity YE53", "o"), ("Hard deck 20 000 ft MSL (eng. area)", "r")])
 
 def jtac2_s():
     return jtac_s("05", "EYEBALL 11", "JTAC-2", "BRAVO",
@@ -273,7 +274,7 @@ def jtac2_s():
          ("CHECK-IN", "Via OVERLORD, off Pointer 11", "t")],
         [("IP  (WP4)", "PUMA  36S YE 4714 5182", "y"), ("TGT AREA", "YE 53 (general)", "t"), ("MARK", "Laser · JTAC · 1688", "y"),
          ("CONTROL", "Type II · BOT (JTAC decides)", "t"), ("ORDNANCE", "GBU-12 (code 1688)", "t")],
-        [("SA-8 battery = target", "r"), ("MANPADS reported near YE53", "o"), ("Hard deck 23 000 ft MSL (eng. area)", "r")],
+        [("SA-8 battery = target", "r"), ("MANPADS reported near YE53", "o"), ("Hard deck 20 000 ft MSL (eng. area)", "r")],
         banner="! Any abort call: verify the reply letter (06 AUTH)")
 
 def auth():

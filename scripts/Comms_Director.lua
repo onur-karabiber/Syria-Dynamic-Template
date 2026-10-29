@@ -1,5 +1,10 @@
--- Comms_Director | v1.6.2
+-- Comms_Director | v1.6.3
 --[[
+  v1.6.3 — hard deck 23,000 -> 20,000 ft MSL (Onur, 2026-10-29): it clears every short-range threat
+           covering the two target areas (SA-8 ~16,500 ft the highest) and leaves room for AGM-65E
+           attacks. Texts and clips eye_manpads / ovl_checkin_b / p_ovl_checkin_rb re-rendered
+           ("two zero thousand"). SAM_FireGate v1.5.3 ceilings 22,000 -> 19,000 ft to match.
+           Hard deck violations stay unscored (decision 2026-10-29).
   v1.6.2 — JTAC_Controller v0.2.0: a JTAC in phase TERMINATED (two unauthorized releases) ends the
            JTAC1 / JTAC2 phase like a destroyed target group. With JTAC_Controller the on-screen
            "tasking complete" hint waits 8 s (it came before the JTAC's BDA in the 2026-10-29 flight).
@@ -214,7 +219,7 @@
         Strike    → Marshal   ≤ RECOVERY_NM from the carrier (AIRBOSS takes over)
     * Agencies corrected: CP / JTAC / tanker / RTB tasking = OVERLORD (C2 agency).
       Strike = Mode 4 / Kilo outbound, corridor + Marshal hand-off inbound.
-    * Hard deck: single value, 23,000 ft MSL, engagement area (flag 200 = 1).
+    * Hard deck: single value, 20,000 ft MSL (v1.6.3; was 23,000), engagement area (flag 200 = 1).
     * INFLTREP (JP 3-09.3 Fig V-17) to OVERLORD after JTAC-2, then tanker assignment.
     * Feet dry / feet wet reports offered in F10 when the coastline is crossed
       (land.getSurfaceType).
@@ -238,7 +243,7 @@
 
   FLAGS  (no ME trigger reads 200-205 as of v1.2.0)
     100  = departure CASE (3 = CASE III — pre-set, DO NOT WRITE)
-    200  = hard deck  0 = not in effect   1 = in effect, 23,000 ft MSL
+    200  = hard deck  0 = not in effect   1 = in effect, 20,000 ft MSL
     201  = INJ-1 state     0=clear  1=abort active  2=re-cleared
     202  = INJ-2 fired
     203  = INJ-3 fired (MANPADS)
@@ -313,7 +318,7 @@ local CFG = {
     CORRIDOR_IN    = 50,
 
     MAGVAR         = 5,      -- east; magnetic = true − MAGVAR
-    HARD_DECK_FT   = 23000,  -- MSL, engagement area
+    HARD_DECK_FT   = 20000,  -- MSL, engagement area (v1.6.3)
     INTERNAL_FUEL_LB = 10860,
 
     -- v1.5.3: Player_01 COMM1 preset buttons (ME, checked 2026-10-28)
@@ -364,7 +369,7 @@ local CFG = {
         ovl_say_status_tkr     = { ch = "OVERLORD", len = 3.50 },
         ovl_texaco_freq        = { ch = "OVERLORD", len = 3.63 },
         eye_abort              = { ch = "EYEBALL", len = 3.98 },
-        eye_manpads            = { ch = "EYEBALL", len = 6.11 },
+        eye_manpads            = { ch = "EYEBALL", len = 5.91 },
         str_corridor           = { ch = "STRIKE", len = 3.72 },
         p_ovl_feet_dry         = { ch = "OVERLORD", len = 2.09 },
         p_ovl_feet_wet         = { ch = "OVERLORD", len = 1.97 },
@@ -384,7 +389,7 @@ local CFG = {
         o_angels               = { ch = "OVERLORD", len = 0.53 },
         o_mother               = { ch = "OVERLORD", len = 0.36 },
         ovl_checkin_a          = { ch = "OVERLORD", len = 7.03 },
-        ovl_checkin_b          = { ch = "OVERLORD", len = 5.62 },
+        ovl_checkin_b          = { ch = "OVERLORD", len = 5.73 },
         ovl_contact_pointer_a  = { ch = "OVERLORD", len = 2.09 },
         ovl_contact_pointer_b  = { ch = "OVERLORD", len = 4.98 },
         ovl_off_pointer_a      = { ch = "OVERLORD", len = 2.97 },
@@ -422,7 +427,7 @@ local CFG = {
         i_rmk                  = { ch = "PILOT", len = 3.06 },
         p_ovl_abort_a          = { ch = "PILOT", len = 2.71 },
         ovl_abort_a            = { ch = "OVERLORD", len = 3.24 },
-        p_ovl_checkin_rb       = { ch = "OVERLORD", len = 3.72 },
+        p_ovl_checkin_rb       = { ch = "OVERLORD", len = 4.25 },
         p_ovl_rtb_rb           = { ch = "OVERLORD", len = 2.06 },
         ovl_ci_rc              = { ch = "OVERLORD", len = 2.39 },
         ovl_ci_frag            = { ch = "OVERLORD", len = 3.95 },
@@ -730,7 +735,7 @@ local function Tx(id, cut)
     return a.len
 end
 
-local HD_TEXT = "hard deck two-three thousand MSL in the engagement area"
+local HD_TEXT = "hard deck two-zero thousand MSL in the engagement area"
 
 -- ══════════════════════════════════════════════════════════════
 --  CLIP QUEUE
@@ -1066,7 +1071,7 @@ end
 
 local function C_Manpads()
     Msg(string.format("[EYEBALL 11] %s, MANPADS launch observed one klick east of the target. "
-        .. "Remain at or above hard deck, two-three thousand MSL.", CFG.CS), CFG.DUR_URGENT + 1)
+        .. "Remain at or above hard deck, two-zero thousand MSL.", CFG.CS), CFG.DUR_URGENT + 1)
     Tx("eye_manpads", true)
     SetFlag(203, 1)
 end
@@ -1120,7 +1125,7 @@ local function A_OvlCheckIn()
         CFG.CS, picTxt, CFG.CP_NAME, BrgRng(p:getPoint(), CFG.CP_POS), HD_TEXT),
         CFG.DUR_LONG + 4, CFG.REPLY_GAP, function() SetPhase("ENROUTE") end, nil,
         S("OVERLORD", "ovl_ci_rc", picSeq, 0.1, "ovl_ci_frag", OBR(p:getPoint(), CFG.CP_POS), 0.15, "ovl_checkin_b"))
-    ReadBack("OVERLORD", string.format("%s, proceeding %s, hard deck two-three thousand, wilco.", CFG.CS, CFG.CP_NAME),
+    ReadBack("OVERLORD", string.format("%s, proceeding %s, hard deck two-zero thousand, wilco.", CFG.CS, CFG.CP_NAME),
         "p_ovl_checkin_rb")
     QPlay()
 end
@@ -2079,7 +2084,7 @@ local function AirStartCheck(p, c)
         TicPick()   -- as at the OVERLORD check-in: JTAC_Controller spawns Bravo 2-1 from CD.tic
         SetPhase("ENROUTE")
         Q(string.format("[OVERLORD] %s, Overlord. AIR START: check-in assumed. Proceed %s, %s, "
-            .. "hard deck two-three thousand. Pointer 11 hand-off %d NM from %s.", CFG.CS, CFG.CP_NAME,
+            .. "hard deck two-zero thousand. Pointer 11 hand-off %d NM from %s.", CFG.CS, CFG.CP_NAME,
             BrgRng(pos, CFG.CP_POS), CFG.JTAC_HANDOFF_NM, CFG.CP_NAME), CFG.DUR_LONG, 2)
         QPlay()
     end
@@ -2140,7 +2145,7 @@ local function CD_Init()
     SetFlag(200, 0)
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.6.2 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.6.3 online — CAS-1 Syria")
 end
 
 CD_Init()

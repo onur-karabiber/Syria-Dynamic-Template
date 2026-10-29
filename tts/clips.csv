@@ -22,7 +22,7 @@ ovl_say_status;OVERLORD;Hornet five one, Overlord. Say status.
 ovl_say_status_tkr;OVERLORD;Hornet five one, Overlord. Say status, advise when ready for tanker.
 ovl_texaco_freq;OVERLORD;Hornet five one, Overlord. Texaco one one, push button seven.
 eye_abort;EYEBALL;Hornet five one, abort, abort, abort. Civilian vehicle in target area.
-eye_manpads;EYEBALL;Hornet five one, MANPADS launch observed one klick east of the target. Remain at or above hard deck, two three thousand MSL.
+eye_manpads;EYEBALL;Hornet five one, MANPADS launch observed one klick east of the target. Remain at or above hard deck, two zero thousand MSL.
 str_corridor;STRIKE;Hornet five one, Strike. You are off route. Turn now to zero five zero.
 # HORNET 51 (pilot) — static part only; angels, state, MGRS, TOT stay on-screen
 p_ovl_feet_dry;PILOT>OVERLORD;Overlord, Hornet five one, feet dry.
@@ -45,7 +45,7 @@ o_for;OVERLORD;for;tok:0.1
 o_angels;OVERLORD;angels;tok
 o_mother;OVERLORD;Mother;tok
 ovl_checkin_a;OVERLORD;Hornet five one, Overlord, radar contact. Picture clean. Mission as fragged, Pointer one one and Eyeball one one on station. Proceed C P Tiger,;tok:0.1
-ovl_checkin_b;OVERLORD;Sam activity reported in both target areas, hard deck two three thousand M S L in the engagement area. Report feet dry.;tok
+ovl_checkin_b;OVERLORD;Sam activity reported in both target areas, hard deck two zero thousand M S L in the engagement area. Report feet dry.;tok
 ovl_contact_pointer_a;OVERLORD;Hornet five one, Overlord. C P Tiger;tok:0.05
 ovl_contact_pointer_b;OVERLORD;Pointer one one is on station. Contact Pointer one one, push button four. Return to this button on check-out.;tok
 ovl_off_pointer_a;OVERLORD;Hornet five one, Overlord, copy. Return to C P Tiger,;tok:0.05
@@ -84,7 +84,7 @@ i_rmk;PILOT;Remarks, Sam activity in both target areas.;tok
 # ── v1.4.2: mission abort / RTB from any mission phase
 p_ovl_abort_a;PILOT;Overlord, Hornet five one, mission abort, RTB,;tok:0.1
 ovl_abort_a;OVERLORD;Hornet five one, Overlord, copy abort. RTB approved.;tok:0.15
-p_ovl_checkin_rb;PILOT>OVERLORD;Hornet five one, proceeding C P Tiger, hard deck two three thousand, wilco.;tok
+p_ovl_checkin_rb;PILOT>OVERLORD;Hornet five one, proceeding C P Tiger, hard deck two zero thousand, wilco.;tok
 p_ovl_rtb_rb;PILOT>OVERLORD;Hornet five one, zero five zero, wilco.;tok
 # v1.5.0 (Comms_Director): computed picture, threat calls, CAP net on the OVERLORD channel
 ovl_ci_rc;OVERLORD;Hornet five one, Overlord, radar contact.;tok:0.15
