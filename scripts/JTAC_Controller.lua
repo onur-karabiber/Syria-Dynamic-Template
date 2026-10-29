@@ -1,5 +1,20 @@
--- JTAC_Controller | v0.3.2
+-- JTAC_Controller | v0.4.0
 --[[
+  v0.4.0 (TEST-J1 flight #3, 2026-10-29): threat-aware FAH and IP. The keyhole IP 220/10 sent the hero
+         straight at the YD67 SA-10 (34 NM SW of the target, FireGate distance gate 30 NM): shot at
+         25 NM. JP 3-09.3: route aircraft away from known threats; the IP / offset keep aircrews away
+         from them. Now:
+           * threats = RED ground groups with a SAM launcher type in CFG.THREAT.TYPES whose ceiling is
+             above CFG.THREAT.HARD_DECK_FT; a SAM_FireGate (>= v1.5.4, TRT.FG) rule overrides: distance
+             gate -> radius gateNM (fire opens there; the hysteresis only delays closing), ceiling gate
+             -> ceiling ceilingFt + hysteresisFt
+             (YE53 SA-3 / BV22 SA-6 / HS02 SA-6 at 19,500 ft drop out above the 20,000 ft deck).
+           * a FAH window is rejected when the run-in (reciprocal of its centre / edges, CFG.THREAT.PATH_NM)
+             passes within radius + MARGIN_NM of a threat; with no clean window the least-risk one is
+             taken and logged as WARN.
+           * a pre-briefed IP is used only if its run-in fits the FAH and is clear; otherwise a keyhole
+             IP at 10 / 8 / 12 / 6 NM, the first with a clear run-in.
+           * sitrep / remarks name the threats whose ring reaches within CFG.THREAT.REMARK_NM of the target.
   v0.3.2: hard deck 20,000 ft MSL in the remarks (Comms_Director v1.6.3).
   v0.3.1 (flight #2 menu case): no menu change without a press where avoidable - the JTAC items no
          longer disappear while the JTAC is transmitting (busy), and LASER ON stays offered after
@@ -84,7 +99,7 @@ if TRT.JC then env.info("[JC] already loaded, second copy ignored") return end
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "0.3.2",
+    VERSION      = "0.4.0",
     PLAYER_UNIT  = "Player_01",
     CS           = "HORNET 51",
     NUM_TYPE     = "one Hornet",
@@ -110,6 +125,21 @@ local CFG = {
     EYE_M        = 2.5,
     IMPACT_WAIT_S = 3,
     THREAT_NM    = 8,
+    -- v0.4.0: threats to the run-in (typical envelopes, NM / ft MSL; not verified against DCS models)
+    THREAT = {
+        HARD_DECK_FT = 20000, MARGIN_NM = 2, PATH_NM = 14, REMARK_NM = 15,
+        TYPES = {
+            ["S-300PS 5P85C ln"] = { nm = 40, ceil = 90000, label = "SA-10" },
+            ["S-300PS 5P85D ln"] = { nm = 40, ceil = 90000, label = "SA-10" },
+            ["5p73 s-125 ln"]    = { nm = 13, ceil = 60000, label = "SA-3" },
+            ["5p73 V-601P ln"]   = { nm = 13, ceil = 60000, label = "SA-3" },
+            ["Kub 2P25 ln"]      = { nm = 13, ceil = 46000, label = "SA-6" },
+            ["SA-11 Buk LN 9A310M1"] = { nm = 19, ceil = 72000, label = "SA-11" },
+            ["CHAP_TorM2"]       = { nm = 8,  ceil = 33000, label = "SA-15 (M2)" },
+            ["Tor 9A331"]        = { nm = 6.5, ceil = 19700, label = "SA-15" },
+            ["Osa 9A33 ln"]      = { nm = 5.5, ceil = 16500, label = "SA-8" },
+        },
+    },
     IP_MAX_OFF   = 45,          -- deg: pre-briefed IP run-in vs FAH centre, beyond -> keyhole IP
     KEYHOLE_NM   = 10,
     ABORT        = { challenge = "BR" },
@@ -361,6 +391,73 @@ local function FriendlyUnit(k)
     return JtacUnit(k), J(k).disp
 end
 
+-- ── v0.4.0 threats ──────────────────────────────────────────────────────────────────
+local function FGRule(gname)
+    local fg = TRT.FG
+    for _, r in ipairs((fg and fg.groups) or {}) do if r.name == gname then return r end end
+end
+
+--- Live threats that reach above the hard deck: { name, label, pos, nm, ceil }
+local function Threats()
+    local out = {}
+    local T = CFG.THREAT
+    for _, gr in ipairs(coalition.getGroups(coalition.side.RED, Group.Category.GROUND) or {}) do
+        local sx, sz, n, ty = 0, 0, 0, nil
+        for _, u in ipairs(gr:getUnits() or {}) do
+            local d = Alive(u) and T.TYPES[u:getTypeName()]
+            if d then
+                local p = u:getPoint(); sx, sz, n = sx + p.x, sz + p.z, n + 1
+                if not ty or d.nm > ty.nm then ty = d end
+            end
+        end
+        if n > 0 then
+            local th = { name = gr:getName(), label = ty.label, pos = { x = sx / n, y = 0, z = sz / n },
+                         nm = ty.nm, ceil = ty.ceil }
+            local r = FGRule(th.name)
+            if r and r.mode == "distance" then th.nm, th.ceil, th.gate = r.gateNM or th.nm, 1e9, "distance"
+            elseif r and r.mode == "ceiling" then th.ceil, th.gate = (r.ceilingFt or 0) + (r.hysteresisFt or 0), "ceiling" end
+            if th.ceil > T.HARD_DECK_FT then out[#out + 1] = th end
+        end
+    end
+    return out
+end
+
+--- Worst penetration (NM, > 0 = inside radius + margin) of the run-in that ends at aimPos on true
+--- heading hdg, from len NM out (inbound path only).
+local function PathRisk(threats, aimPos, hdg, len)
+    local worst, who = -1e9, nil
+    local r = math.rad((hdg + 180) % 360)
+    for d = 0, len, 1 do
+        local p = { x = aimPos.x + math.cos(r) * d * 1852, z = aimPos.z + math.sin(r) * d * 1852 }
+        for _, t in ipairs(threats) do
+            local pen = t.nm + CFG.THREAT.MARGIN_NM - NM(D2(p, t.pos))
+            if pen > worst then worst, who = pen, t end
+        end
+    end
+    return worst, who
+end
+
+local function WindowRisk(threats, aimPos, c)
+    local w, who = -1e9, nil
+    for _, h in ipairs({ c - CFG.FAH_HALF, c, c + CFG.FAH_HALF }) do
+        local r, t = PathRisk(threats, aimPos, h % 360, CFG.THREAT.PATH_NM)
+        if r > w then w, who = r, t end
+    end
+    return w, who
+end
+
+--- "SA-10 southwest 34" for threats whose ring reaches within REMARK_NM of the target
+local function LongThreatText(threats, tp)
+    local out = {}
+    for _, t in ipairs(threats) do
+        local d = NM(D2(tp, t.pos))
+        if d - t.nm <= CFG.THREAT.REMARK_NM then
+            out[#out + 1] = string.format("%s %s %d", t.label, Dir8(BrgT(tp, t.pos)), math.floor(d + 0.5))
+        end
+    end
+    return out
+end
+
 --- FAH window (true degrees): centre, lo, hi.
 local function ComputeFAH(k, aimPos, ipPos)
     local ju = JtacUnit(k)
@@ -369,7 +466,9 @@ local function ComputeFAH(k, aimPos, ipPos)
     local fu = FriendlyUnit(k)
     local bf = fu and BrgT(aimPos, fu:getPoint()) or nil
     local iph = ipPos and BrgT(ipPos, aimPos) or nil
+    local threats = Threats()
     local best, bs
+    local riskBest, riskC, riskWho      -- least-risk fallback among laser / friendly-valid windows
     for c = 0, 355, 5 do
         local ok = true
         for h = c - CFG.FAH_HALF, c + CFG.FAH_HALF, 5 do
@@ -380,15 +479,24 @@ local function ComputeFAH(k, aimPos, ipPos)
             if bf and math.min(AngD(h, bf), AngD(h, bf + 180)) < CFG.FRIEND_SEP then ok = false end
         end
         if ok then
-            local s = iph and AngD(c, iph) or (ltl and AngD(c, ltl + 35) or 0)
-            if not bs or s < bs then best, bs = c, s end
+            local risk, who = WindowRisk(threats, aimPos, c)
+            if not riskBest or risk < riskBest then riskBest, riskC, riskWho = risk, c, who end
+            if risk <= 0 then
+                local s = iph and AngD(c, iph) or (ltl and AngD(c, ltl + 35) or 0)
+                if not bs or s < bs then best, bs = c, s end
+            end
         end
+    end
+    if not best and riskC then
+        best = riskC
+        Log(string.format("WARN FAH %s: every valid window's run-in is inside a threat ring; least risk %03d true, "
+            .. "%.1f NM inside %s (%s)", k, best, riskBest, riskWho and riskWho.label or "?", riskWho and riskWho.name or "?"))
     end
     if not best then
         best = ltl and ((ltl + 35) % 360) or (iph or 0)
         Log(string.format("FAH %s: no window satisfies laser/friendly limits, fallback %d", k, best))
     end
-    return best, (best - CFG.FAH_HALF) % 360, (best + CFG.FAH_HALF) % 360, ltl
+    return best, (best - CFG.FAH_HALF) % 360, (best + CFG.FAH_HALF) % 360, ltl, threats
 end
 
 local function ThreatText(tp, exclude)
@@ -550,17 +658,23 @@ local function BuildNine(k)
         n.fr = "none"
     end
     n.egress = j.egress
-    local c, lo, hi, ltl = ComputeFAH(k, ap, ipPos)
+    local c, lo, hi, ltl, threats = ComputeFAH(k, ap, ipPos)
     n.fahC, n.fahLo, n.fahHi = Mag(c), R5(Mag(lo)), R5(Mag(hi))
-    -- v0.3.0: keyhole IP when the pre-briefed IP does not fit the FAH
-    if not ipPos or AngD(BrgT(ipPos, ap), c) > CFG.IP_MAX_OFF then
+    n.threats = LongThreatText(threats or {}, ap)
+    -- v0.3.0 / v0.4.0: keyhole IP when the pre-briefed IP does not fit the FAH or its run-in is threatened
+    local ipRisk = ipPos and PathRisk(threats or {}, ap, BrgT(ipPos, ap), NM(D2(ipPos, ap))) or 1
+    if not ipPos or AngD(BrgT(ipPos, ap), c) > CFG.IP_MAX_OFF or ipRisk > 0 then
         local kb = R5(Mag((c + 180) % 360))
-        n.ip = string.format("keyhole %s/%d", H3(kb), CFG.KEYHOLE_NM)
+        local knm = CFG.KEYHOLE_NM
+        for _, d in ipairs({ CFG.KEYHOLE_NM, 8, 12, 6 }) do
+            if PathRisk(threats or {}, ap, c, d) <= 0 then knm = d; break end
+        end
+        n.ip = string.format("keyhole %s/%d", H3(kb), knm)
         n.hdg = H3(R5(Mag(c)))
-        n.dist = string.format("%.1f", CFG.KEYHOLE_NM)
+        n.dist = string.format("%.1f", knm)
         n.keyhole = true
-        Log(string.format("IP %s: %s run-in %s is %.0f deg off the FAH centre -> %s", k, j.ip.name,
-            ipPos and H3(Mag(BrgT(ipPos, ap))) or "?", ipPos and AngD(BrgT(ipPos, ap), c) or 0, n.ip))
+        Log(string.format("IP %s: %s run-in %s is %.0f deg off the FAH centre, threat %.1f NM -> %s", k, j.ip.name,
+            ipPos and H3(Mag(BrgT(ipPos, ap))) or "?", ipPos and AngD(BrgT(ipPos, ap), c) or 0, ipRisk, n.ip))
     end
     n.fah = string.format("%s-%s", H3(n.fahLo), H3(n.fahHi))
     n.ltl = ltl and H3(Mag(ltl)) or nil
@@ -723,6 +837,7 @@ local function A_CheckIn(k)
     local excl = {}
     for _, gn in ipairs(j.targets) do excl[gn] = true end
     local thr = tp and ThreatText(tp, excl) or {}
+    if tp then for _, t in ipairs(LongThreatText(Threats(), tp)) do thr[#thr + 1] = t end end   -- v0.4.0
     local tgt = Describe(TargetUnits(k))
     local fu, fcs = FriendlyUnit(k)
     local frTxt = "unknown"
@@ -769,6 +884,7 @@ local function A_ReadyRemarks(k)
     Pilot("Ready to copy remarks.")
     local rem = {}
     if n.ltl then rem[#rem + 1] = string.format("laser-to-target line %s", n.ltl) end
+    if n.threats and #n.threats > 0 then rem[#rem + 1] = "threat " .. table.concat(n.threats, ", ") end   -- v0.4.0
     rem[#rem + 1] = "request " .. j.ord
     rem[#rem + 1] = "hard deck two-zero thousand in effect"
     Jtac(k, string.format("%s, remarks: %s. Restrictions: final attack heading %s to %s. Report IP inbound.",

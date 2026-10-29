@@ -1,4 +1,4 @@
--- SAM_FireGate | v1.5.3
+-- SAM_FireGate | v1.5.4
 -- Belirtilen SAM gruplarinin ROE'sini (WEAPON_HOLD / WEAPON_FREE) kurala gore yonetir.
 -- Radar/lock davranisina dokunmaz; sadece atis iznini kontrol eder.
 --
@@ -7,6 +7,11 @@
 --   mode = "ceiling" : menzil (rangeNM) icinde irtifasi ceilingFt veya altinda
 --                      en az bir mavi ucak yoksa HOLD. Menzil icindeki tum mavi
 --                      ucaklar ceilingFt ustundeyse SAM atis yapmaz.
+--
+-- v1.5.4:
+--  * Read-only export TRT.FG = { groups = FIRE_GATE.groups } for JTAC_Controller v0.4.0 (threat-aware
+--    IP / FAH: a distance gate is that group's threat radius, a ceiling gate below the hard deck
+--    means no threat above it). No behaviour change.
 --
 -- v1.5.3:
 --  * Hard deck 23,000 -> 20,000 ft MSL (Comms_Director v1.6.3): the three ceiling groups
@@ -546,4 +551,6 @@ timer.scheduleFunction(function(_, t)
     return res
 end, nil, timer.getTime() + 2)
 
-env.info("[FIREGATE] v1.5.3 initialized for " .. #FIRE_GATE.groups .. " group(s)")
+_G.TRT = _G.TRT or {}
+_G.TRT.FG = { version = "1.5.4", groups = FIRE_GATE.groups }   -- v1.5.4 read-only
+env.info("[FIREGATE] v1.5.4 initialized for " .. #FIRE_GATE.groups .. " group(s)")
