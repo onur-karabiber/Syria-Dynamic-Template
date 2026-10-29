@@ -1,5 +1,12 @@
--- Comms_Director | v1.6.4
+-- Comms_Director | v1.6.5
 --[[
+  v1.6.5 — tanker dialogue removed (TEST flight #5, Onur, 2026-10-30). The DCS tanker AI ignored a
+           silent pre-contact with the probe out, so the native DCS "intent to refuel" call is needed
+           anyway; the scripted TEXACO check-in duplicated it, and "offload complete" fired as soon as
+           Core_Scoring's refuel score (TRT.onRefuelComplete) came in, while the pilot still wanted fuel.
+           Now: OVERLORD still routes to Texaco (INFLTREP reply, TACAN, button); no TEXACO F10 item, no
+           Texaco radio calls, no REFUEL reminder; refuel complete -> TKR_DONE silently (RTB item then
+           says "off Texaco"). Load log line fixed (said v1.6.3 under v1.6.4).
   v1.6.4 — JTAC_Controller v0.7.0 voice: TRT.CD_RADIO.len(id) / has(id) (clip length or nil, "cv:" ids
            via TRT.CV_AUDIO), so JC can check every clip of a sequence before it queues it.
            CFG.AUDIO now also carries the JC token clips (pj_* POINTER, ej_* EYEBALL, jp_* pilot,
@@ -914,6 +921,10 @@ local CFG = {
         jp_cs                  = { ch = "PILOT", len = 0.90 },
         jp_rifle               = { ch = "PILOT", len = 0.58 },
         jp_away                = { ch = "PILOT", len = 0.44 },
+        jp_bda_ptr             = { ch = "PILOT", len = 3.97 },
+        jp_bda_eye             = { ch = "PILOT", len = 3.57 },
+        jp_swo_ptr             = { ch = "PILOT", len = 3.12 },
+        jp_swo_eye             = { ch = "PILOT", len = 3.14 },
         ovl_rep_ptr            = { ch = "OVERLORD", len = 7.49 },
         ovl_rep_eye            = { ch = "OVERLORD", len = 7.60 },
     },
@@ -1571,16 +1582,7 @@ local function A_Inflrep()
     QPlay()
 end
 
-local function A_TexacoCheckIn()
-    local p = Player(); if not p then return end
-    CD.tkrCheckedIn = true
-    Pilot(string.format("Texaco 11, %s, checking in, angels %d, state %s.", CFG.CS, Angels(p), State(p)),
-        S("TEXACO", "p_tkr_checkin_a", PAS(p)))
-    Q(string.format("[TEXACO 11] %s, Texaco 11, angels 15. Cleared to join, left observation. "
-        .. "Port drogue, call pre-contact.", CFG.CS), CFG.DUR_LONG - 2, CFG.REPLY_GAP, nil, nil, "tkr_checkin")
-    QPlay()
-    MenuRebuild()
-end
+-- v1.6.5: A_TexacoCheckIn removed (refuelling uses the native DCS tanker comms)
 
 local function A_OvlRTB()
     local p = Player(); if not p then return end
@@ -1985,7 +1987,8 @@ local NEXT = {
     JTAC2      = "Work Eyeball 11 " .. BtnL("J2") .. " (native JTAC menu). After the 9-line: "
                  .. "readback via F10 > COMMS.",
     J2_OFF     = "Check out with Eyeball 11, pass INFLTREP to OVERLORD (F10).",
-    REFUEL     = "Check in with TEXACO 11 " .. BtnL("TKR") .. " (F10), refuel.",
+    REFUEL     = "Refuel with TEXACO 11 " .. BtnL("TKR") .. ", TACAN 21Y: use the DCS radio menu (intent to refuel). "
+        .. "Then report RTB to OVERLORD (F10).",
     TKR_DONE   = "Report RTB to OVERLORD (F10).",
     RTB        = "RTB outbound zero five zero. OVERLORD hands you to Strike at "
                  .. CFG.RTB_STRIKE_NM .. " NM.",
@@ -2004,9 +2007,6 @@ local function PhaseActions()
     if ph == "OVL_OUT"    then a[#a+1] = { "OVERLORD: check in (btn " .. CFG.BTN.OVL .. ")", A_OvlCheckIn } end
     if ph == "J1_OFF"     then a[#a+1] = { "OVERLORD: off Pointer 11, ready for retasking", A_OvlOffPointer } end
     if ph == "J2_OFF"     then a[#a+1] = { "OVERLORD: INFLTREP", A_Inflrep } end
-    if ph == "REFUEL" and not CD.tkrCheckedIn then
-        a[#a+1] = { "TEXACO: check in (btn " .. CFG.BTN.TKR .. ")", A_TexacoCheckIn }
-    end
     if ph == "REFUEL" or ph == "TKR_DONE" then
         a[#a+1] = { (ph == "TKR_DONE") and "OVERLORD: RTB" or "OVERLORD: RTB (no tanker)", A_OvlRTB }
     end
@@ -2275,13 +2275,7 @@ local function EvalPhase(pUnit, cUnit)
         if CD.deadJ2 or JcTerm("J2") then SetPhase("J2_OFF") end
 
     elseif ph == "REFUEL" then
-        if CD.refuelDone then
-            Q(string.format("[TEXACO 11] %s, Texaco 11, offload complete. Cleared to depart, "
-                .. "return to Overlord, %s.", CFG.CS, Btn("OVL")), CFG.DUR_SHORT + 4, 0, nil, nil, "tkr_done")
-            Ack("TEXACO", false, CFG.BTN.OVL)
-            QPlay()
-            SetPhase("TKR_DONE")
-        end
+        if CD.refuelDone then SetPhase("TKR_DONE") end   -- v1.6.5: silent (no Texaco call)
     end
 
     -- Inbound: OVERLORD → Strike (also catches a skipped INFLTREP / tanker / RTB call)
@@ -2406,10 +2400,7 @@ local REMIND = {
     OVL_OUT    = function() return string.format("[STRIKE] %s, Strike. Contact Overlord, %s.", CFG.CS, Btn("OVL")), "str_contact_ovl" end,
     J1_OFF     = function() return string.format("[OVERLORD] %s, Overlord. Say status.", CFG.CS), "ovl_say_status" end,
     J2_OFF     = function() return string.format("[OVERLORD] %s, Overlord. Say status, advise when ready for tanker.", CFG.CS), "ovl_say_status_tkr" end,
-    REFUEL     = function()
-        if CD.tkrCheckedIn then return nil end
-        return string.format("[OVERLORD] %s, Overlord. Texaco 11, %s.", CFG.CS, Btn("TKR")), "ovl_texaco_freq"
-    end,
+    -- v1.6.5: no REFUEL reminder (the pilot is on the tanker, native DCS comms)
     TKR_DONE   = function() return string.format("[OVERLORD] %s, Overlord. Say intentions.", CFG.CS), "ovl_say_int" end,
     STRIKE_IN  = function() return string.format("[OVERLORD] %s, Overlord. Contact Strike, %s, how copy?", CFG.CS, Btn("STRIKE")), "ovl_contact_strike" end,
 }
@@ -2538,7 +2529,7 @@ local function CD_Init()
     SetFlag(200, 0)
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.6.3 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.6.5 online — CAS-1 Syria")
 end
 
 CD_Init()

@@ -573,6 +573,10 @@ jp_aborting;PILOT;Hornet five one, aborting, off;tok
 jp_cs;PILOT;Hornet five one,;tok:0.1
 jp_rifle;PILOT;rifle,;tok:0.1
 jp_away;PILOT;away.;tok
+jp_bda_ptr;PILOT;Pointer one one, Hornet five one, copy B D A, switching Overlord.;tok
+jp_bda_eye;PILOT;Eyeball one one, Hornet five one, copy B D A, switching Overlord.;tok
+jp_swo_ptr;PILOT;Pointer one one, Hornet five one, copy, switching Overlord.;tok
+jp_swo_eye;PILOT;Eyeball one one, Hornet five one, copy, switching Overlord.;tok
 ovl_rep_ptr;OVERLORD;Hornet five one, Overlord. Pointer one one reports an unauthorized weapons release. The incident has been reported to CAG. Report to CAG on recovery.;tok
 ovl_rep_eye;OVERLORD;Hornet five one, Overlord. Eyeball one one reports an unauthorized weapons release. The incident has been reported to CAG. Report to CAG on recovery.;tok
 # END JC

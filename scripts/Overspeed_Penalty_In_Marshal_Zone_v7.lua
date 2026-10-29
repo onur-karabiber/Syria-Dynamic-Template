@@ -1,4 +1,12 @@
--- Overspeed_Penalty_In_Marshal_Zone | v7.3.0
+-- Overspeed_Penalty_In_Marshal_Zone | v7.4.0
+-- v7.4.0: the limit is indicated (calibrated) airspeed, not ground speed (Onur, 2026-10-30).
+--   Navy speed restrictions are given in KIAS (CV NATOPS 2004 glossary: 8-nm DME fix
+--   "1,200 feet, 250 KIAS"). The 350 kt value itself was NOT found in the public (incomplete)
+--   CV NATOPS copy: it is the template SOP until a source says otherwise.
+--   CAS = air-relative velocity (getVelocity - atmosphere.getWind) -> TAS -> Mach with the local
+--   temperature -> impact pressure -> CAS (subsonic, ISA sea-level reference). Position /
+--   instrument error ignored. Falls back to the old 3D ground-relative speed if the
+--   atmosphere calls fail. At 20,000 ft 350 KCAS is ~470 KTAS: v7.3.0 penalised that.
 -- v7.3.0: no warning / penalty once the pilot is cleared into the visual pattern:
 --   CV_Comms phase ZIPLIP (after "see you at 10") or any later recovery phase
 --   (FINAL .. GROOVE, bolter pattern). CV_Comms IDLE (no CV comms used) or not loaded:
@@ -13,7 +21,7 @@
 -- v7.1.0: player unit read from _G.TRT.PLAYER_NAME (default "Player_01");
 -- hardcoded GROUP_NAME "CAS-1" removed - messages go to unit:getGroup().
 
-local SPEED_THRESHOLD_MS = 355 * 0.514444
+local SPEED_THRESHOLD_MS = 355 * 0.514444   -- KCAS (v7.4.0), 5 kt over the 350 kt limit
 local WARNING_DELAY      = 20
 local PENALTY_INTERVAL   = 5
 local MSG_EVERY          = 30   -- s between penalty summaries (v7.2.0)
@@ -46,9 +54,20 @@ local lastPenaltyTime = nil
 local runPenalties    = 0     -- penalties in the current violation (v7.2.0)
 local lastMsgTime     = nil
 
+--- v7.4.0: calibrated airspeed (m/s); ground-relative 3D speed if the atmosphere calls fail
 local function getUnitSpeed(unit)
-    local vel = unit:getVelocity()
-    return math.sqrt(vel.x * vel.x + vel.y * vel.y + vel.z * vel.z)
+    local v, p = unit:getVelocity(), unit:getPoint()
+    local ax, ay, az = v.x, v.y, v.z
+    local okW, w = pcall(atmosphere.getWind, p)
+    if okW and w then ax, ay, az = v.x - w.x, v.y - (w.y or 0), v.z - w.z end
+    local tas = math.sqrt(ax * ax + ay * ay + az * az)
+    local okT, T, P = pcall(atmosphere.getTemperatureAndPressure, p)
+    if not (okW and okT and T and P and T > 150 and P > 1000) then
+        return math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
+    end
+    local M  = tas / math.sqrt(1.4 * 287.05 * T)
+    local qc = P * ((1 + 0.2 * M * M) ^ 3.5 - 1)                      -- impact pressure (subsonic)
+    return 340.294 * math.sqrt(5 * ((qc / 101325 + 1) ^ (2 / 7) - 1))  -- CAS, m/s
 end
 
 local function isUnitInZone(unit, zoneName)
@@ -99,7 +118,7 @@ local function checkMarshalSpeed()
                 local grp = unit:getGroup()
                 if grp then
                     sendGroupMessage(grp,
-                        "WARNING: Do not exceed 350 knots within the Marshal Zone!\n" ..
+                        "WARNING: Do not exceed 350 KIAS within the Marshal Zone!\n" ..
                         "Otherwise, you will start receiving penalty points shortly.",
                         15)
                 end
