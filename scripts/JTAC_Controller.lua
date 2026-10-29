@@ -1,5 +1,24 @@
--- JTAC_Controller | v0.4.0
+-- JTAC_Controller | v0.5.0
 --[[
+  v0.5.0 (TEST-J1 / J2 flights #3-#4, 2026-10-29): the second SA-10 shot came because Eyeball's post
+         (found 3 km south, the only LOS points in a +/-60 deg sector) forces south->north run-ins
+         towards the YD67 SA-10, 35 NM south of YE53 (log: WARN FAH J2 ... 3.9 NM inside SA-10).
+    * Observation post: op.auto = 360 deg search; every LOS candidate is scored first by whether a
+      FAH window with a threat-clear run-in exists from it (designator = friendly = that point),
+      then high ground, then closeness to op.m. The JTAC ends up on the side away from the threats.
+    * No clean window: the remarks say so ("caution, no run-in clear of SA-10 south 35").
+    * Keyhole IP: an on-screen [CAS-1] line gives its grid (Line 1 alone was easy to miss).
+    * Route to the IP (JFIRE routing / safety of flight): at the remarks the hero -> IP leg is checked
+      against the threats; if it is not clear, "proceed to the IP via <dir> of the target" (first clear
+      10 NM N / E / S / W via point), else a caution.
+    * OFF gets an answer: "copy" after a release, "copy, report IN" after a dry pass, "copy, re-attack
+      approved, report IN" after an abort (inject abort: "copy", the all-clear follows).
+    * After an abort the item is "ABORTING (off dry)" and the pilot says "aborting, off <dir>, dry";
+      the response time is logged (ABORT ACK).
+    * SPOT is offered again after every LASER ON / SHIFT / laser off (it stayed hidden after a laser
+      timeout on the second pass).
+    * Bravo 2-1 (troops in contact) is placed on the JTAC's side of the target (target -> JTAC bearing
+      + friendly_ofs.side, at friendly_ofs.m), not at a fixed bearing that could close every clean window.
   v0.4.0 (TEST-J1 flight #3, 2026-10-29): threat-aware FAH and IP. The keyhole IP 220/10 sent the hero
          straight at the YD67 SA-10 (34 NM SW of the target, FireGate distance gate 30 NM): shot at
          25 NM. JP 3-09.3: route aircraft away from known threats; the IP / offset keep aircrews away
@@ -99,7 +118,7 @@ if TRT.JC then env.info("[JC] already loaded, second copy ignored") return end
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "0.4.0",
+    VERSION      = "0.5.0",
     PLAYER_UNIT  = "Player_01",
     CS           = "HORNET 51",
     NUM_TYPE     = "one Hornet",
@@ -178,13 +197,13 @@ local CFG = {
                ip = { name = "LYNX", mgrs = "37S BV 4071 2864" }, egress = "north to TIGER",
                mark = { kind = "laser", code = 1688 }, control = "auto", method = "BOT",
                ord = "one AGM-65E", friendly_ofs = { brg = 200, m = 1200 }, abort_inject = 0,
-               op = { brg = 238, m = 2500, sector = 60, dmin = 1500, dmax = 4000, step = 150 } },
+               op = { auto = true, brg = 238, m = 2500, dmin = 1500, dmax = 4000, step = 150 } },
         J2 = { cs = "EYEBALL 11", disp = "Eyeball 11", group = "JTAC-2", cdPhase = "JTAC2", btn = 5,
                msn = "4102", targets = { "SAM YE53 (SA-8)-1" },
                ip = { name = "PUMA", mgrs = "36S YE 4714 5182" }, egress = "northwest, feet wet",
                mark = { kind = "laser", code = 1688 }, control = "auto", method = "BOT",
                ord = "one GBU-12", friendly_ofs = { brg = 200, m = 1000 }, abort_inject = 30,
-               op = { brg = 250, m = 2500, sector = 60, dmin = 1500, dmax = 4000, step = 150 } },
+               op = { auto = true, brg = 250, m = 2500, dmin = 1500, dmax = 4000, step = 150 } },
     },
     ORDER = { "J1", "J2" },
 }
@@ -458,15 +477,12 @@ local function LongThreatText(threats, tp)
     return out
 end
 
---- FAH window (true degrees): centre, lo, hi.
-local function ComputeFAH(k, aimPos, ipPos)
-    local ju = JtacUnit(k)
-    local laser = J(k).mark.kind == "laser" and ju
-    local ltl = laser and BrgT(ju:getPoint(), aimPos) or nil
-    local fu = FriendlyUnit(k)
-    local bf = fu and BrgT(aimPos, fu:getPoint()) or nil
+--- v0.5.0: window search for a designator position desPos (nil = no laser) and friendly position frPos.
+--- Returns best clean centre (true) or nil, plus the least-risk centre / risk / threat, and the LTL.
+local function FahSearch(aimPos, desPos, frPos, ipPos, threats)
+    local ltl = desPos and BrgT(desPos, aimPos) or nil
+    local bf = frPos and BrgT(aimPos, frPos) or nil
     local iph = ipPos and BrgT(ipPos, aimPos) or nil
-    local threats = Threats()
     local best, bs
     local riskBest, riskC, riskWho      -- least-risk fallback among laser / friendly-valid windows
     for c = 0, 355, 5 do
@@ -487,16 +503,43 @@ local function ComputeFAH(k, aimPos, ipPos)
             end
         end
     end
+    return best, riskC, riskBest, riskWho, ltl
+end
+
+--- FAH window (true degrees): centre, lo, hi, ltl, threats, warn (threat on every valid window)
+local function ComputeFAH(k, aimPos, ipPos)
+    local ju = JtacUnit(k)
+    local des = (J(k).mark.kind == "laser" and ju) and ju:getPoint() or nil
+    local fu = FriendlyUnit(k)
+    local threats = Threats()
+    local best, riskC, riskBest, riskWho, ltl = FahSearch(aimPos, des, fu and fu:getPoint(), ipPos, threats)
+    local warn
     if not best and riskC then
         best = riskC
+        warn = riskWho
         Log(string.format("WARN FAH %s: every valid window's run-in is inside a threat ring; least risk %03d true, "
             .. "%.1f NM inside %s (%s)", k, best, riskBest, riskWho and riskWho.label or "?", riskWho and riskWho.name or "?"))
     end
     if not best then
-        best = ltl and ((ltl + 35) % 360) or (iph or 0)
+        best = ltl and ((ltl + 35) % 360) or (ipPos and BrgT(ipPos, aimPos) or 0)
         Log(string.format("FAH %s: no window satisfies laser/friendly limits, fallback %d", k, best))
     end
-    return best, (best - CFG.FAH_HALF) % 360, (best + CFG.FAH_HALF) % 360, ltl, threats
+    return best, (best - CFG.FAH_HALF) % 360, (best + CFG.FAH_HALF) % 360, ltl, threats, warn
+end
+
+--- v0.5.0: worst penetration of the straight leg a -> b
+local function SegRisk(threats, a, b)
+    local steps = math.max(1, math.floor(NM(D2(a, b))))
+    local worst, who = -1e9, nil
+    for i = 0, steps do
+        local f = i / steps
+        local p = { x = a.x + (b.x - a.x) * f, z = a.z + (b.z - a.z) * f }
+        for _, t in ipairs(threats) do
+            local pen = t.nm + CFG.THREAT.MARGIN_NM - NM(D2(p, t.pos))
+            if pen > worst then worst, who = pen, t end
+        end
+    end
+    return worst, who
 end
 
 local function ThreatText(tp, exclude)
@@ -574,7 +617,11 @@ local function SpawnFriendly(k)
     local tp, ju = Centroid(TargetUnits(k)), JtacUnit(k)
     if not (tp and ju) then Log("friendly spawn skipped: no target / JTAC for " .. k); return end
     local o = J(k).friendly_ofs
-    local r = math.rad(o.brg)
+    -- v0.5.0: the supported unit is on the JTAC's side of the target (target -> JTAC bearing + o.side),
+    -- so it shares the JTAC's axis and the observation post search already allowed for it
+    local brg = o.brg
+    if o.near_jtac ~= false then brg = BrgT(tp, ju:getPoint()) + (o.side or 15) end
+    local r = math.rad(brg)
     local cx, cz = tp.x + math.cos(r) * o.m, tp.z + math.sin(r) * o.m
     local units = {}
     for i, typ in ipairs(CFG.FRIENDLY.units) do
@@ -595,7 +642,7 @@ local function SpawnFriendly(k)
         pcall(c.setOption, c, AI.Option.Ground.id.ROE, AI.Option.Ground.val.ROE.WEAPON_HOLD)
     end, nil, timer.getTime() + 1)
     Log(string.format("friendly %s spawned for %s: %s %d m from target (%s)", CFG.FRIENDLY.name, k,
-        Dir8(o.brg), o.m, MGRS({ x = cx, y = 0, z = cz })))
+        Dir8(brg), o.m, MGRS({ x = cx, y = 0, z = cz })))
 end
 
 -- ══════════════════════════════════════════════════════════════
@@ -658,7 +705,13 @@ local function BuildNine(k)
         n.fr = "none"
     end
     n.egress = j.egress
-    local c, lo, hi, ltl, threats = ComputeFAH(k, ap, ipPos)
+    local c, lo, hi, ltl, threats, warn = ComputeFAH(k, ap, ipPos)
+    n.ipPos = ipPos
+    n.threatList = threats
+    if warn then
+        n.warn = string.format("caution, no run-in clear of %s %s %d", warn.label, Dir8(BrgT(ap, warn.pos)),
+            math.floor(NM(D2(ap, warn.pos)) + 0.5))
+    end
     n.fahC, n.fahLo, n.fahHi = Mag(c), R5(Mag(lo)), R5(Mag(hi))
     n.threats = LongThreatText(threats or {}, ap)
     -- v0.3.0 / v0.4.0: keyhole IP when the pre-briefed IP does not fit the FAH or its run-in is threatened
@@ -670,6 +723,8 @@ local function BuildNine(k)
             if PathRisk(threats or {}, ap, c, d) <= 0 then knm = d; break end
         end
         n.ip = string.format("keyhole %s/%d", H3(kb), knm)
+        local rr = math.rad((c + 180) % 360)
+        n.ipPos = { x = ap.x + math.cos(rr) * knm * 1852, y = 0, z = ap.z + math.sin(rr) * knm * 1852 }
         n.hdg = H3(R5(Mag(c)))
         n.dist = string.format("%.1f", knm)
         n.keyhole = true
@@ -780,6 +835,7 @@ local function LaserOff(k, why)
     if st.spot then pcall(st.spot.destroy, st.spot) end
     if st.spot then Log(string.format("LASER OFF %s (%s) after %.0f s", k, why, timer.getTime() - (st.laserT0 or 0))) end
     st.spot, st.laserT0, st.laserUnit = nil, nil, nil
+    if st.att then st.att.spotSaid = false end   -- v0.5.0
 end
 
 local function LaserOn(k)
@@ -793,6 +849,7 @@ local function LaserOn(k)
     local ok, spot = pcall(Spot.createLaser, ju, CFG.LASER_SRC, tp, J(k).mark.code)
     if not ok or not spot then return false, tostring(spot) end
     st.spot, st.laserT0, st.laserUnit = spot, timer.getTime(), au:getName()
+    if st.att then st.att.spotSaid = false end   -- v0.5.0
     Log(string.format("LASER ON %s -> %s [%s] code %d", k, au:getName(), au:getTypeName(), J(k).mark.code))
     return true
 end
@@ -873,7 +930,13 @@ local function A_ReadyNine(k)
     Pilot(string.format("%s, %s, ready to copy.", j.disp, CFG.CS))
     Jtac(k, string.format("%s\n  %s\n  %s\n  %s\n  %d\n  %s\n  %s\n  %s\n  %s\n  egress %s\n"
         .. "Advise when ready for remarks.", CFG.CS .. ",", n.ip, n.hdg, n.dist, n.elev, n.desc, n.grid,
-        n.mark, n.fr, n.egress), CFG.DUR.nine, Free(k), 8)
+        n.mark, n.fr, n.egress), CFG.DUR.nine, function()
+            Busy(k, false)
+            if n.keyhole and n.ipPos then   -- v0.5.0
+                Msg(string.format("[CAS-1] IP %s = %s (from the target %s mag, %s NM).", n.ip, MGRS(n.ipPos),
+                    n.ip:match("keyhole (%d+)/") or "?", n.dist), 30)
+            end
+        end, 8)
     SetPhase(k, "NINE")
 end
 
@@ -885,6 +948,27 @@ local function A_ReadyRemarks(k)
     local rem = {}
     if n.ltl then rem[#rem + 1] = string.format("laser-to-target line %s", n.ltl) end
     if n.threats and #n.threats > 0 then rem[#rem + 1] = "threat " .. table.concat(n.threats, ", ") end   -- v0.4.0
+    if n.warn then rem[#rem + 1] = n.warn end   -- v0.5.0
+    local hu = Hero()
+    if hu and n.ipPos and n.threatList then     -- v0.5.0: route to the IP
+        local hp = hu:getPoint()
+        if SegRisk(n.threatList, hp, n.ipPos) > 0 then
+            local via
+            for _, b in ipairs({ 0, 90, 180, 270 }) do
+                local r = math.rad(b)
+                local vp = { x = n.aimPos.x + math.cos(r) * 10 * 1852, y = 0, z = n.aimPos.z + math.sin(r) * 10 * 1852 }
+                if SegRisk(n.threatList, hp, vp) <= 0 and SegRisk(n.threatList, vp, n.ipPos) <= 0 then via = b; break end
+            end
+            if via then
+                rem[#rem + 1] = string.format("proceed to the IP via %s of the target", DIR8_TXT[via / 45 + 1])
+            else
+                local _, who = SegRisk(n.threatList, hp, n.ipPos)
+                rem[#rem + 1] = string.format("caution, %s on the route to the IP", who and who.label or "threat")
+            end
+            Log(string.format("ROUTE %s: hero -> IP not clear, %s", k,
+                via and ("via " .. DIR8_TXT[via / 45 + 1]) or "no clear via point"))
+        end
+    end
     rem[#rem + 1] = "request " .. j.ord
     rem[#rem + 1] = "hard deck two-zero thousand in effect"
     Jtac(k, string.format("%s, remarks: %s. Restrictions: final attack heading %s to %s. Report IP inbound.",
@@ -993,6 +1077,7 @@ local function TryClear(k)
         timer.scheduleFunction(function()
             if st.att.cleared and st.att.clearT == t0 and not st.att.released then
                 Abort(k, "Civilian vehicle entering the target area.")
+                st.att.injAbort = true
                 timer.scheduleFunction(function()
                     if st.phase == "ATTACK" then
                         Jtac(k, string.format("%s, %s, target area clear. Report IN.", CFG.CS, J(k).disp))
@@ -1028,11 +1113,23 @@ end
 
 local function A_Off(k)
     local st, u = JC.st[k], Hero()
+    local a = st.att
     local dir = u and Dir8(HeroHdgT(u)) or "north"
-    PilotF(string.format("%s, off %s%s.", CFG.CS, dir, st.att.released and "" or ", dry"))
-    if st.att.cleared and not st.att.released then Log("CLEARANCE closed " .. k .. " (dry pass)") end
-    st.att.inCalled, st.att.cleared, st.att.released, st.att.aborted = false, false, false, false
-    st.att.offPending = false
+    local reply
+    if a.aborted and not a.released then   -- v0.5.0: abort acknowledgement
+        local dt = timer.getTime() - (a.abortT or timer.getTime())
+        PilotF(string.format("%s, aborting, off %s, dry.", CFG.CS, dir))
+        Log(string.format("ABORT ACK %s %.1f s", k, dt))
+        Emit("ABORT_ACK", { key = k, seconds = dt })
+        reply = a.injAbort and "copy." or "copy, re-attack approved. Report IN."
+    else
+        PilotF(string.format("%s, off %s%s.", CFG.CS, dir, a.released and "" or ", dry"))
+        reply = a.released and "copy." or "copy. Report IN."
+    end
+    if a.cleared and not a.released then Log("CLEARANCE closed " .. k .. " (dry pass)") end
+    a.inCalled, a.cleared, a.released, a.aborted, a.injAbort = false, false, false, false, false
+    a.offPending = false
+    if #TargetUnits(k) > 0 then JtacF(k, string.format("%s, %s", CFG.CS, reply)) end
     MenuRefresh()
 end
 
@@ -1285,7 +1382,9 @@ local function Items(_)
             elseif ph == "ATTACK" then
                 local a = st.att
                 if a.offPending or a.aborted or (a.inCalled and not a.released) then   -- v0.3.0: dry pass
-                    out[#out + 1] = { P .. "OFF" .. (a.released and "" or " (dry)"), function() A_Off(k) end }
+                    local lab = (a.aborted and not a.released) and "ABORTING (off dry)"    -- v0.5.0
+                        or ("OFF" .. (a.released and "" or " (dry)"))
+                    out[#out + 1] = { P .. lab, function() A_Off(k) end }
                 elseif not a.ipIn then
                     out[#out + 1] = { P .. "IP INBOUND", function() A_IpInbound(k) end }
                 elseif not a.inCalled then
@@ -1358,12 +1457,14 @@ local function Relocate(k)
     if not ju or #tus == 0 then Log("RELOCATE " .. k .. ": no JTAC / target, ME position kept"); return end
     local tp = Centroid(tus)
     local tgtH = GroundY(tp)
-    local best, bs, bd = nil, nil, nil
-    local n, nSurf, nNear, nLos = 0, 0, 0, 0
-    local step, sec = op.step or 150, op.sector or 60
+    local threats = op.auto and Threats() or {}
+    local best, bs, bClear = nil, nil, false
+    local n, nSurf, nNear, nLos, nClear = 0, 0, 0, 0, 0
+    local step = op.step or 150
+    local sec = op.auto and 180 or (op.sector or 60)
     for d = op.dmin or 1500, op.dmax or 4000, step do
         local da = math.max(2, math.deg(step / d))
-        for a = -sec, sec, da do
+        for a = -sec, sec - (op.auto and da or 0), da do
             n = n + 1
             local r = math.rad(op.brg + a)
             local p = { x = tp.x + math.cos(r) * d, y = 0, z = tp.z + math.sin(r) * d }
@@ -1380,26 +1481,25 @@ local function Relocate(k)
                 if near then nNear = nNear + 1
                 elseif not ok then nLos = nLos + 1
                 else
-                    -- high ground first (1 point per 50 m above the target), then closeness to <brg, m>
-                    local score = (GroundY(p) - tgtH) / 50 - math.abs(a) / 30 - math.abs(d - op.m) / 1000
-                    if not bs or score > bs then best, bs, bd = p, score, D2(p, { x = tp.x + math.cos(math.rad(op.brg)) * op.m, z = tp.z + math.sin(math.rad(op.brg)) * op.m }) end
+                    -- v0.5.0: a threat-clear FAH window from this post first, then high ground, then distance
+                    local clear = FahSearch(tp, (j.mark.kind == "laser") and p or nil, p, nil, threats) ~= nil
+                    if clear then nClear = nClear + 1 end
+                    local score = (clear and 100 or 0) + (GroundY(p) - tgtH) / 50 - math.abs(d - op.m) / 1000
+                        - (op.auto and 0 or math.abs(a) / 30)
+                    if not bs or score > bs then best, bs, bClear = p, score, clear end
                 end
             end
         end
     end
     if not best then
-        Log(string.format("RELOCATE %s: no point with LOS in %s +/-%d deg, %d-%d m (%d tried: surface %d, too close %d, "
-            .. "no LOS %d), ME position kept", k, Dir8(op.brg), sec, op.dmin or 1500, op.dmax or 4000, n, nSurf, nNear, nLos))
+        Log(string.format("RELOCATE %s: no point with LOS (%d tried: surface %d, too close %d, no LOS %d), ME position kept",
+            k, n, nSurf, nNear, nLos))
         return
     end
-    Log(string.format("RELOCATE %s: %d tried (surface %d, too close %d, no LOS %d), best %.0f m above the target",
-        k, n, nSurf, nNear, nLos, GroundY(best) - tgtH))
+    Log(string.format("RELOCATE %s: %d tried (surface %d, too close %d, no LOS %d, threat-clear %d), best %.0f m above "
+        .. "the target, threat-clear window %s", k, n, nSurf, nNear, nLos, nClear, GroundY(best) - tgtH, tostring(bClear)))
+    local bd = D2(best, { x = tp.x + math.cos(math.rad(op.brg)) * op.m, z = tp.z + math.sin(math.rad(op.brg)) * op.m })
     local old = ju:getPoint()
-    if not best then
-        Log(string.format("RELOCATE %s: no point with LOS within %d m of %s %d m (%d tried), ME position kept",
-            k, op.r, Dir8(op.brg), op.m, tried))
-        return
-    end
     local typ, uname, country = ju:getTypeName(), ju:getName(), ju:getCountry()
     local g = Group.getByName(j.group)
     pcall(g.destroy, g)
