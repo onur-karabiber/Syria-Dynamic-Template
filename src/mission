@@ -737,7 +737,7 @@ mission =
 												{
 												},
 											},
-											["speed"] = 172.5,
+											["speed"] = 162.0,
 											["speed_locked"] = true,
 											["task"] = 
 											{
@@ -810,8 +810,8 @@ mission =
 															["params"] = 
 															{
 																["altitude"] = 4572,
-																["pattern"] = "Circle",
-																["speed"] = 185,
+																["pattern"] = "Race-Track",
+																["speed"] = 162.0,
 																["speedEdited"] = true,
 															},
 														},
@@ -821,6 +821,36 @@ mission =
 											["type"] = "Turning Point",
 											["x"] = 89888.28785108,
 											["y"] = -52369.609161018,
+										},
+										[2] = 
+										{
+											["ETA"] = 285.802469,
+											["ETA_locked"] = false,
+											["action"] = "Turning Point",
+											["alt"] = 4572,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["properties"] = 
+											{
+												["addopt"] = 
+												{
+												},
+											},
+											["speed"] = 162.0,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 57149.243882,
+											["y"] = -85108.65313,
 										},
 									},
 								},
@@ -843,7 +873,7 @@ mission =
 											[3] = 1,
 											["name"] = "Texaco11",
 										},
-										["heading"] = 0,
+										["heading"] = 3.926991,
 										["livery_id"] = "default",
 										["name"] = "TANKER-1-1",
 										["onboard_num"] = "011",
@@ -857,9 +887,9 @@ mission =
 											{
 											},
 										},
-										["psi"] = 0,
+										["psi"] = -3.926991,
 										["skill"] = "High",
-										["speed"] = 172.5,
+										["speed"] = 162.0,
 										["type"] = "KC130",
 										["unitId"] = 176,
 										["x"] = 89888.28785108,
@@ -12749,7 +12779,7 @@ mission =
 													[5] = 333.4,
 													[6] = 251.1,
 													[7] = 252.1,
-													[8] = 257,
+													[8] = 252.3,
 													[9] = 255,
 													[10] = 262,
 													[11] = 259,
