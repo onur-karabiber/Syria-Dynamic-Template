@@ -1,4 +1,6 @@
--- Core_Scoring | v1.4.3
+-- Core_Scoring | v1.4.4
+-- v1.4.4: the player's TRT.onRefuelComplete call is skipped when AAR_Monitor owns it
+-- (TRT.AAR.callsRefuelComplete, AAR_Monitor >= v1.1.0 live). Without the Monitor (or in its shadow mode) it fires as before.
 -- v1.4.3: player aerial refuel score disabled (PLAYER_REFUEL_SCORE = false). AAR test flights
 -- 2026-10-30 (TEST-AAR / TEST-AAR-S): the +7 fired when getFuel() rose by 0.2 of the internal
 -- capacity (~2,160 lb), i.e. about a third of a 6,500-6,900 lb onload, while the transfer was
@@ -640,7 +642,9 @@ do
             else
                 env.info("[Core_Scoring] player refuel detected (no score, PLAYER_REFUEL_SCORE=false): " .. PLAYER_NAME)
             end
-            if TRT.onRefuelComplete then TRT.onRefuelComplete(PLAYER_NAME) end
+            if TRT.onRefuelComplete and not (TRT.AAR and TRT.AAR.callsRefuelComplete) then
+                TRT.onRefuelComplete(PLAYER_NAME)
+            end
         end
     end
 

@@ -1,13 +1,17 @@
--- AAR_Monitor | v1.0.1
+-- AAR_Monitor | v1.1.0
+-- v1.1.0: LIVE (CFG.SCORING = true, CFG.CALL_REFUEL_COMPLETE = true). Adds the clipped session total to the
+-- score (TRT.addScore) and calls TRT.onRefuelComplete(player) at session end (hero > LEAVE_NM from the tanker
+-- after the last disconnect); Core_Scoring v1.4.4 no longer calls it for the player when TRT.AAR.callsRefuelComplete.
+-- Validated on one TEST-AAR flight in shadow mode (2026-10-30, proposed +6/+7); never flown live.
 -- v1.0.1: EXIT_FUEL row (fuel at the last disconnect >= EXIT_MIN_LB = 12,000 lb: +1, else -2) replaces the
 -- planned-onload idea (DCS cuts the flow when the tank is full, so onload only measured the arrival fuel).
 --[[
   Aerial refuelling (AAR) measurement - TRT Syria Dynamic Template (template-level module).
   Design: project doc claude/aar-plan-2026-10-30.md (v0.6, sections 10 and 18).
 
-  SHADOW MODE (CFG.SCORING = false): everything is measured and logged ("[AAR]"), a summary is
-  shown at the end of each session, nothing is added to the score and TRT.onRefuelComplete is not
-  called. Core_Scoring v1.4.3 no longer scores the player refuel either.
+  LIVE (v1.1.0, CFG.SCORING = true): everything is measured and logged ("[AAR]"), a summary is shown at
+  the end of each session, the clipped total is added to the score and TRT.onRefuelComplete is called once.
+  CFG.SCORING = false = shadow: log + summary only, no score, no callback (Core_Scoring then calls it itself).
 
   A session = hero approaches the tanker (<= RV_NM) ... last disconnect ... hero > LEAVE_NM away.
   A second refuelling (AR2) is a new session. A session without contact ends "abandoned" when the
@@ -51,12 +55,12 @@ if TRT.AAR then
 end
 
 local CFG = {
-    VERSION      = "1.0.1",
+    VERSION      = "1.1.0",
     PLAYER_UNIT  = TRT.PLAYER_NAME or "Player_01",
     TANKERS      = { "TANKER-1-1" },     -- unit names; the nearest existing one is used
-    SCORING      = false,                -- shadow
+    SCORING      = true,                 -- false = shadow (log + summary only)
     SHADOW_MSG   = true,                 -- show the session summary on screen
-    CALL_REFUEL_COMPLETE = false,        -- TRT.onRefuelComplete at session end (only with SCORING)
+    CALL_REFUEL_COMPLETE = true,         -- TRT.onRefuelComplete at session end (only with SCORING)
 
     TICK_FAR     = 2,                    -- s
     TICK_NEAR    = 1,                    -- s, inside 2 NM
@@ -90,6 +94,7 @@ local NM, FT, KT, LB = 1852, 3.28084, 1.94384, 2.2046226218
 
 local AAR = { version = CFG.VERSION, session = nil, sessions = {}, last = nil, nSession = 0, armed = true }
 TRT.AAR = AAR
+AAR.callsRefuelComplete = CFG.SCORING and CFG.CALL_REFUEL_COMPLETE or false   -- Core_Scoring v1.4.4 reads this
 
 local function log(s) env.info("[AAR] " .. s) end
 local function now() return timer.getTime() end
@@ -256,7 +261,7 @@ local function finish(S, why)
     for _, p in ipairs(P) do
         log(string.format("S%d %-9s %+d  %s", S.n, p.code, p.pts, p.txt))
     end
-    log(string.format("S%d proposed total %+d (clipped %+d)%s", S.n, sum, clipped, CFG.SCORING and "" or "  [shadow, not applied]"))
+    log(string.format("S%d %s total %+d (clipped %+d)%s", S.n, CFG.SCORING and "score" or "proposed", sum, clipped, CFG.SCORING and "  [applied]" or "  [shadow, not applied]"))
 
     S.summary = { points = P, sum = sum, clipped = clipped, onload = onload, why = why, contacts = #S.contacts }
     AAR.last = S.summary
@@ -267,7 +272,7 @@ local function finish(S, why)
     if #S.contacts > 0 then
         setFlag(CFG.FLAGS.DONE)
         if CFG.SHADOW_MSG then
-            local lines = { string.format("[AAR shadow] S%d: %d contact(s), onload %.0f lb, proposed %+d", S.n, #S.contacts, onload, clipped) }
+            local lines = { string.format("%s S%d: %d contact(s), onload %.0f lb, %s %+d", CFG.SCORING and "[AAR]" or "[AAR shadow]", S.n, #S.contacts, onload, CFG.SCORING and "score" or "proposed", clipped) }
             for _, p in ipairs(P) do
                 if p.pts ~= 0 then lines[#lines + 1] = string.format("  %s %+d: %s", p.code, p.pts, p.txt) end
             end

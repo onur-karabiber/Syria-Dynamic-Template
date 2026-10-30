@@ -1,4 +1,11 @@
--- Flight_Timeline | v1.0.0
+-- Flight_Timeline | v1.1.0
+-- v1.1.0: phase-based fuel thresholds (project doc aar-plan v0.8 s.8, s.11, s.15):
+--   STATION (CD phases ENROUTE..TKR_DONE, tanker + LTAG): BINGO 4,100 lb, JOKER +1,000 (measured burn
+--     154-162 lb/min, VUL ~4,950 lb, VUL end -> tanker ~1,250 lb, 29 Oct log; the tanker -> LTAG leg is an estimate).
+--   RTB (RTB, STRIKE_IN, INBOUND): BINGO = FIELD_RESERVE_LB + FIELD_BURN_LB_PER_NM x NM to the nearer of LTAG / LCRA.
+--   RECOVERY: BINGO = FIELD_RESERVE_LB + FIELD_BURN_LB_PER_NM x NM carrier -> LCRA; TANK = BINGO + TANK_MARGIN_LB (flag 3105).
+--   Fuel ladder snapshots (launch, CP, contact, disconnect, recovery start, landing) in the debrief.
+--   Station T4 uses the station BINGO. BINGO_CALIBRATED stays false (T4 shadow) until the CP fuel of a full sortie is measured.
 --[[
   CAS-1 timing (ATO) and timing score — TRT Syria Dynamic Template (template-level module)
   Design: project doc claude/cas1-timing-design-2026-10-27.md (v0.2, decisions 2026-10-27).
@@ -36,7 +43,7 @@
   BURN_LB_PER_NM, JOKER_MARGIN_LB and BURN_ON_STATION_LB_MIN are placeholders until measured from the
   "[TL] FUEL" log lines.
 
-  Flags (latched 1): 3100 cat shot · 3101 CP reached · 3102 JOKER · 3103 BINGO · 3104 VUL END passed.
+  Flags (latched 1): 3100 cat shot · 3101 CP reached · 3102 JOKER · 3103 BINGO · 3104 VUL END passed · 3105 TANK (recovery).
   Menu: F10 > INFO > "Show: flight card", "Show: timeline" (Menu_Manager).
   Reads, never writes: TRT.CD (Comms_Director >= v1.5.1: phase, aborted, deadJ2, j2.tot),
                        TRT.PlaneCaptain.milestones (PlaneCaptain_Carrier >= v1.2.2).
@@ -51,7 +58,7 @@ if TRT.TL then
 end
 
 local CFG = {
-    VERSION        = "1.0.0",
+    VERSION        = "1.1.0",
     PLAYER_UNIT    = TRT.PLAYER_NAME or "Player_01",
     GROUP          = "CAS-1",          -- ME group whose route builds the ATO
     CARRIER        = "CVN",
@@ -100,12 +107,20 @@ local CFG = {
 
     -- fuel (lb). PLACEHOLDERS except ARR_RESERVE_LB (= middle of Core_Scoring's 2500-3500 groove window)
     ARR_RESERVE_LB         = 3000,
-    BURN_LB_PER_NM         = 11,       -- PLACEHOLDER (assumed 3500-4500 lb/h at 350-420 kt GS, unverified)
-    JOKER_MARGIN_LB        = 1000,     -- PLACEHOLDER
-    BURN_ON_STATION_LB_MIN = 70,       -- PLACEHOLDER, only for the TOS estimate on the card
+    BURN_LB_PER_NM         = 11,       -- legacy single-formula value, kept for the card header only
+    JOKER_MARGIN_LB        = 1000,
+    BURN_ON_STATION_LB_MIN = 160,      -- [D] 29 Oct log: 154-162 lb/min FL140-FL240, only for the TOS estimate on the card
+    STATION_BINGO_LB       = 4100,     -- tanker transfer 1,250 + tanker -> LTAG ~860 [V] + 2,000 reserve
+    FIELD_RESERVE_LB       = 2000,
+    FIELD_BURN_LB_PER_NM   = 11,       -- [V] same value as the tanker -> LTAG estimate (860 lb / 71.5 NM = 12)
+    TANK_MARGIN_LB         = 1000,     -- TANK = BINGO + this (RECOVERY)
+    FIELDS = {                         -- decimal degrees, coord.LLtoLO at runtime
+        LTAG = { lat = 37.00205,  lon = 35.426083 },   -- Incirlik  N37 00.123 E035 25.565
+        LCRA = { lat = 34.590367, lon = 32.987783 },   -- Akrotiri  N34 35.422 E032 59.267
+    },
     FUEL_FALLBACK_LB       = 10860,    -- internal fuel if getDesc() has no fuelMassMax
 
-    FLAGS = { LAUNCH = 3100, CP = 3101, JOKER = 3102, BINGO = 3103, VUL = 3104 },
+    FLAGS = { LAUNCH = 3100, CP = 3101, JOKER = 3102, BINGO = 3103, VUL = 3104, TANK = 3105 },
     MENU_ORDER = 30,
     DEBRIEF_DELAY = 20, DEBRIEF_DUR = 45,
 }
@@ -141,7 +156,8 @@ local TL = {
     phase = nil, phaseT = {},
     bingoSec = 0, t4Mark = nil,
     refueling = false, refuelT = nil,
-    joker = false, bingo = false,
+    joker = false, bingo = false, bingoRtb = false, bingoRec = false, tank = false,
+    ladder = {},
     ag = nil, agMax = nil, winchester = nil,
     lastTick = nil, lastFuelLog = nil, lastAmmo = nil, fuelInit = false,
 }
@@ -223,6 +239,68 @@ local function fuelLb(u)
 end
 
 local function bingoLb(dNm) return CFG.ARR_RESERVE_LB + dNm * CFG.BURN_LB_PER_NM end
+
+-- v1.1.0 phase-based thresholds -----------------------------------------------------------------
+local fieldCache = {}
+local function fieldPos(name)
+    local f = fieldCache[name]
+    if f then return f end
+    local c = CFG.FIELDS[name]
+    if not (c and coord and coord.LLtoLO) then return nil end
+    local ok, v = pcall(coord.LLtoLO, c.lat, c.lon, 0)
+    if ok and v then fieldCache[name] = v; return v end
+    return nil
+end
+
+local RTB_PH = { RTB = true, STRIKE_IN = true, INBOUND = true }
+
+-- zone of the current CD phase (or position, without CD): "STATION" | "RTB" | "RECOVERY" | nil
+local function zoneOf(cd, dCP)
+    if cd then
+        if cd.phase == "RECOVERY" then return "RECOVERY" end
+        if RTB_PH[cd.phase] then return "RTB" end
+        if MISSION_PH[cd.phase] then return "STATION" end
+        return nil
+    end
+    return "STATION"
+end
+
+-- returns { zone, bingo, joker, tank, field } for the hero at p (vec3)
+local function thresholds(p, cd, dCP)
+    local zone = zoneOf(cd, dCP)
+    if not zone then return nil end
+    if zone == "STATION" then
+        return { zone = zone, bingo = CFG.STATION_BINGO_LB, joker = CFG.STATION_BINGO_LB + CFG.JOKER_MARGIN_LB, field = "LTAG" }
+    end
+    if zone == "RTB" then
+        local best, bn
+        for _, n in ipairs({ "LTAG", "LCRA" }) do
+            local fp = fieldPos(n)
+            if fp then
+                local d = distNm(p, fp)
+                if not best or d < best then best, bn = d, n end
+            end
+        end
+        if not best then return nil end
+        return { zone = zone, bingo = CFG.FIELD_RESERVE_LB + best * CFG.FIELD_BURN_LB_PER_NM, field = bn, dField = best }
+    end
+    -- RECOVERY: carrier -> LCRA
+    local cv = Unit.getByName(CFG.CARRIER)
+    local fp = fieldPos("LCRA")
+    if not (cv and cv:isExist() and fp) then return nil end
+    local d = distNm(cv:getPoint(), fp)
+    local b = CFG.FIELD_RESERVE_LB + d * CFG.FIELD_BURN_LB_PER_NM
+    return { zone = zone, bingo = b, tank = b + CFG.TANK_MARGIN_LB, field = "LCRA", dField = d }
+end
+
+local function snap(label, lb)
+    if not lb then
+        local u = Unit.getByName(CFG.PLAYER_UNIT)
+        if u and u:isExist() then lb = fuelLb(u) end
+    end
+    TL.ladder[#TL.ladder + 1] = { label = label, t = now(), lb = lb }
+    log(string.format("LADDER %-12s %s %s lb", label, clock(now()), lb and string.format("%.0f", lb) or "n/a"))
+end
 
 local function cdState()
     local cd = TRT.CD
@@ -418,21 +496,26 @@ local function cardText()
     L[#L + 1] = string.format("CP  %-21s %s   +/-2:00 +%d   (L%s, %s)", CFG.CP_NAME, clock(A.CP + c),
         CFG.T2_PTS_GOOD, mmss(A.ete), A.src)
     L[#L + 1] = string.format("VUL END (JTAC-2 done)     %s   +%d", clock(A.VUL + c), CFG.T3_PTS_GOOD)
-    local bcp = bingoAtCP()
-    L[#L + 1] = string.format("BINGO = %.1f + %.3f x NM to Mother (k lb)%s", CFG.ARR_RESERVE_LB / 1000,
-        CFG.BURN_LB_PER_NM / 1000, CFG.BINGO_CALIBRATED and "" or "   [PLACEHOLDER, uncalibrated]")
-    if bcp then
-        L[#L + 1] = string.format("at %s: BINGO %.1f  JOKER %.1f", CFG.CP_NAME, bcp / 1000, (bcp + CFG.JOKER_MARGIN_LB) / 1000)
-    end
+    L[#L + 1] = string.format("FUEL (lb)  STATION BINGO %.1f JOKER %.1f (tanker + LTAG)", CFG.STATION_BINGO_LB / 1000,
+        (CFG.STATION_BINGO_LB + CFG.JOKER_MARGIN_LB) / 1000)
+    L[#L + 1] = string.format("RTB: %.1f + %.0f lb/NM to nearer of LTAG/LCRA   RECOVERY: LCRA, TANK = BINGO + %.1f",
+        CFG.FIELD_RESERVE_LB / 1000, CFG.FIELD_BURN_LB_PER_NM, CFG.TANK_MARGIN_LB / 1000)
     local u = hero()
     if u and TL.launched and not TL.landed then
         local lb = fuelLb(u)
-        local d = carrierDistNm(u:getPoint())
-        if lb and d then
-            local b = bingoLb(d)
-            local tos = math.max(0, math.floor((lb - b) / CFG.BURN_ON_STATION_LB_MIN))
-            L[#L + 1] = string.format("NOW: state %.1f  BINGO %.1f  JOKER %.1f  TOS ~%d min", lb / 1000, b / 1000,
-                (b + CFG.JOKER_MARGIN_LB) / 1000, tos)
+        local thr = thresholds(u:getPoint(), cdState(), nil)
+        if lb and thr then
+            if thr.zone == "STATION" then
+                local tos = math.max(0, math.floor((lb - thr.bingo) / CFG.BURN_ON_STATION_LB_MIN))
+                L[#L + 1] = string.format("NOW: state %.1f  BINGO %.1f  JOKER %.1f  TOS ~%d min", lb / 1000, thr.bingo / 1000,
+                    thr.joker / 1000, tos)
+            elseif thr.zone == "RECOVERY" then
+                L[#L + 1] = string.format("NOW: state %.1f  TANK %.1f  BINGO %.1f  (Akrotiri)", lb / 1000, thr.tank / 1000, thr.bingo / 1000)
+            else
+                L[#L + 1] = string.format("NOW: state %.1f  BINGO %.1f  (nearest %s)", lb / 1000, thr.bingo / 1000, thr.field)
+            end
+        elseif lb then
+            L[#L + 1] = string.format("NOW: state %.1f", lb / 1000)
         end
     end
     L[#L + 1] = string.format("Timing sum %+d   cap [%d, %+d]", TL.sum, CFG.CAP_MIN, CFG.CAP_MAX)
@@ -460,6 +543,12 @@ local function timelineText(title)
     if TL.phaseT.J1_OFF then L[#L + 1] = "JTAC-1 complete   " .. clock(TL.phaseT.J1_OFF) end
     if TL.phaseT.J2_OFF then L[#L + 1] = "JTAC-2 complete   " .. clock(TL.phaseT.J2_OFF) end
     if TL.refuelT then L[#L + 1] = "Refuel contact    " .. clock(TL.refuelT) end
+    if #TL.ladder > 0 then
+        L[#L + 1] = "FUEL LADDER (lb)"
+        for _, e in ipairs(TL.ladder) do
+            L[#L + 1] = string.format("  %-12s %s  %s", e.label, clock(e.t), e.lb and string.format("%.0f", e.lb) or "n/a")
+        end
+    end
     L[#L + 1] = string.format("TIMING SUM %+d  [%s]", TL.sum, CFG.SCORING and "scored" or "shadow, not scored")
     return table.concat(L, "\n")
 end
@@ -484,6 +573,7 @@ local function onLaunch(t, how)
     TL.launched = t
     setFlag(CFG.FLAGS.LAUNCH)
     log(string.format("LAUNCH %s (%s)", clock(t), how))
+    snap("CAT SHOT")
     if not TL.m.M1.state then
         if TL.engEvt then
             scoreGround("M1", TL.engEvt, TL.ato.M1, CFG.M1_PTS, "engines", "S_EVENT_ENGINE_STARTUP")
@@ -501,6 +591,7 @@ local function onLand(t, place)
     if not TL.launched or TL.landed then return end
     TL.landed = t
     log(string.format("LAND %s at %s", clock(t), tostring(place)))
+    snap("LANDING")
     if not TL.m.T2.state then
         if TL.aborted then mark("T2", "void", "mission abort") else mark("T2", "n/a", CFG.CP_NAME .. " not reached") end
     end
@@ -558,9 +649,11 @@ function EH:onEvent(e)
             TL.refueling = true
             TL.refuelT = TL.refuelT or now()
             log("REFUELING start " .. clock(now()))
+            snap("CONTACT")
         elseif id == world.event.S_EVENT_REFUELING_STOP then
             TL.refueling = false
             log("REFUELING stop " .. clock(now()))
+            snap("DISCONNECT")
         end
     end)
     if not ok then log("event error: " .. tostring(err)) end
@@ -661,6 +754,7 @@ local function tick()
             TL.phase = cd.phase
             if not TL.phaseT[cd.phase] then TL.phaseT[cd.phase] = t end
             log("phase " .. tostring(cd.phase) .. " " .. clock(t))
+            if cd.phase == "RECOVERY" or cd.phase == "J2_OFF" then snap("PH " .. cd.phase) end
         end
         if cd.aborted and not TL.aborted then
             TL.aborted = t
@@ -700,6 +794,7 @@ local function tick()
     if not TL.cpReached and dCP <= CFG.CP_RADIUS_NM then
         TL.cpReached = t
         setFlag(CFG.FLAGS.CP)
+        snap("CP")
         if TL.aborted then mark("T2", "void", "mission abort") else scoreT2(t) end
     end
 
@@ -719,36 +814,56 @@ local function tick()
             TL.fuelInit = true
             log(string.format("FUEL INIT raw getFuel=%.4f fuelMassMax=%s kg -> %.0f lb", raw, tostring(maxKg), lb))
         end
-        local bingo = bingoLb(dCV)
-        local joker = bingo + CFG.JOKER_MARGIN_LB
+        local thr = thresholds(p, cd, dCP)
+        local bingo = thr and thr.bingo or bingoLb(dCV)
         local phase = cd and cd.phase or "?"
         if not TL.lastFuelLog or t - TL.lastFuelLog >= CFG.FUEL_LOG_EVERY then
             TL.lastFuelLog = t
             local v = u:getVelocity()
             local gs = v and math.sqrt(v.x * v.x + v.z * v.z) * 1.94384 or 0
-            log(string.format("FUEL %s lb=%.0f raw=%.4f distCVN=%.1f distCP=%.1f alt=%.0f gs=%.0f bingo=%.0f phase=%s",
-                clock(t), lb, raw, dCV, dCP, p.y * 3.28084, gs, bingo, phase))
+            log(string.format("FUEL %s lb=%.0f raw=%.4f distCVN=%.1f distCP=%.1f alt=%.0f gs=%.0f bingo=%.0f zone=%s phase=%s",
+                clock(t), lb, raw, dCV, dCP, p.y * 3.28084, gs, bingo, thr and thr.zone or "-", phase))
         end
-        local inMission = (cd and MISSION_PH[cd.phase]) or (not cd)
-        if inMission and not TL.aborted then
-            if not TL.joker and lb < joker then
-                TL.joker = true; setFlag(CFG.FLAGS.JOKER)
-                log(string.format("JOKER %s lb=%.0f joker=%.0f", clock(t), lb, joker))
-                if CFG.FUEL_CALLS then msg(string.format("[TL] JOKER, state %.1f", lb / 1000), 10) end
-            end
-            if not TL.bingo and lb < bingo then
-                TL.bingo = true; setFlag(CFG.FLAGS.BINGO)
-                log(string.format("BINGO %s lb=%.0f bingo=%.0f", clock(t), lb, bingo))
-                if CFG.FUEL_CALLS then msg(string.format("[TL] BINGO, state %.1f", lb / 1000), 10) end
+        if thr and not TL.aborted then
+            if thr.zone == "STATION" then
+                if not TL.joker and lb < thr.joker then
+                    TL.joker = true; setFlag(CFG.FLAGS.JOKER)
+                    log(string.format("JOKER %s lb=%.0f joker=%.0f (station)", clock(t), lb, thr.joker))
+                    snap("JOKER", lb)
+                    if CFG.FUEL_CALLS then msg(string.format("[TL] JOKER, state %.1f", lb / 1000), 10) end
+                end
+                if not TL.bingo and lb < thr.bingo then
+                    TL.bingo = true; setFlag(CFG.FLAGS.BINGO)
+                    log(string.format("BINGO %s lb=%.0f bingo=%.0f (station: tanker + LTAG)", clock(t), lb, thr.bingo))
+                    snap("BINGO", lb)
+                    if CFG.FUEL_CALLS then msg(string.format("[TL] BINGO, state %.1f", lb / 1000), 10) end
+                end
+            elseif thr.zone == "RTB" then
+                if not TL.bingoRtb and lb < thr.bingo then
+                    TL.bingoRtb = true; setFlag(CFG.FLAGS.BINGO)
+                    log(string.format("BINGO(RTB) %s lb=%.0f bingo=%.0f nearest %s %.0f NM", clock(t), lb, thr.bingo, thr.field, thr.dField or -1))
+                    snap("BINGO-RTB", lb)
+                end
+            elseif thr.zone == "RECOVERY" then
+                if not TL.tank and lb < thr.tank then
+                    TL.tank = true; setFlag(CFG.FLAGS.TANK)
+                    log(string.format("TANK %s lb=%.0f tank=%.0f (recovery, LCRA %.0f NM)", clock(t), lb, thr.tank, thr.dField or -1))
+                    snap("TANK", lb)
+                end
+                if not TL.bingoRec and lb < thr.bingo then
+                    TL.bingoRec = true; setFlag(CFG.FLAGS.BINGO)
+                    log(string.format("BINGO(REC) %s lb=%.0f bingo=%.0f (recovery, LCRA %.0f NM)", clock(t), lb, thr.bingo, thr.dField or -1))
+                    snap("BINGO-REC", lb)
+                end
             end
         end
-        -- T4: on station, below BINGO, not refuelling
+        -- T4: on station, below the station BINGO, not refuelling
         if not TL.m.T4.state and TL.cpReached then
             local ended = (cd and END_PH[cd.phase]) or dCP > CFG.STATION_LEFT_NM
             if ended then
                 settleT4(cd and END_PH[cd.phase] and ("phase " .. cd.phase) or "left station")
             elseif dCP <= CFG.STATION_NM and not TL.refueling and not (cd and cd.phase == "REFUEL")
-                and lb < bingo then
+                and thr and thr.zone == "STATION" and lb < thr.bingo then
                 TL.bingoSec = TL.bingoSec + dt
             end
         end

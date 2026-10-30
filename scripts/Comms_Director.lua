@@ -1,5 +1,6 @@
--- Comms_Director | v1.6.5
+-- Comms_Director | v1.6.6
 --[[
+  v1.6.6 - card data: COMM1 btn 8 = ARCO 31 (252.30 AM, CVN recovery tanker) added to the F10 info card.
   v1.6.5 — tanker dialogue removed (TEST flight #5, Onur, 2026-10-30). The DCS tanker AI ignored a
            silent pre-contact with the probe out, so the native DCS "intent to refuel" call is needed
            anyway; the scripted TEXACO check-in duplicated it, and "offload complete" fired as soon as
@@ -2047,6 +2048,7 @@ local function CardData()
             { n = 5,  f = CFG.FREQ.J2 .. " AM",      name = "EYEBALL 11 (JTAC-2)" },
             { n = 6,  f = CFG.FREQ.OVL .. " AM",     name = "OVERLORD" },
             { n = 7,  f = CFG.FREQ.TKR .. " AM",     name = "TEXACO 11" },
+            { n = 8,  f = "252.30 AM", name = "ARCO 31 (recovery tanker)" },
             { n = 15, f = "263.00 AM", name = "APPROACH" },
             { n = 16, f = CFG.FREQ.MARSHAL .. " AM", name = "MARSHAL" },
         },

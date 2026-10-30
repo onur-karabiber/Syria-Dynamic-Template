@@ -1,5 +1,9 @@
-# make_kneeboard.py | v3.2.1
-# v3.2.1: default output src/KNEEBOARD/IMAGES (upper case; DCS ignored KNEEBOARD/images in the .miz).
+# make_kneeboard.py | v3.3.0
+# v3.3.0: 07 AAR and 08 FUEL cards (project doc aar-plan v0.8: TEST-AAR flights 2026-10-30; fuel ladder and
+#         thresholds = Flight_Timeline v1.1.0). 02 COMM: COMM1-08 ARCO 31 (252.30 AM, CVN recovery tanker).
+#         Altimeter note: the tanker altitude is true MSL; the mission is
+#         29.84 inHg and 10 C, so a 29.92 setting reads ~300-400 ft high (the old card said "29.92").
+# v3.2.1: default output# v3.2.1: default output src/KNEEBOARD/IMAGES (upper case; DCS ignored KNEEBOARD/images in the .miz).
 # v3.2.0: 03 ROUTE / NAV: Morse A-Z table (NAVAID ident check) at the bottom; replaces the
 #         separate Morse.jpg page in Saved Games\DCS\Kneeboard\FA-18C_hornet.
 # v3.1.4: hard deck 20 000 ft MSL (Comms_Director v1.6.3).
@@ -111,7 +115,8 @@ def comm():
     for r in [("01","262.00 AM","TOWER/PADDLES","TWR","CASE I/II"),("02","269.00 AM","DEPARTURE","DEP",""),
               ("03","265.00 AM","STRIKE","STK",""),("04","333.30 AM","POINTER 11","JTAC-1",""),
               ("05","333.40 AM","EYEBALL 11","JTAC-2",""),("06","251.10 AM","OVERLORD","OVL",""),
-              ("07","252.10 AM","TEXACO 11","TKR",""),("15","263.00 AM","APPROACH","APP","+CASE III LSO"),
+              ("07","252.10 AM","TEXACO 11","TKR",""),("08","252.30 AM","ARCO 31 (RCV)","RTK","CVN tanker"),
+              ("15","263.00 AM","APPROACH","APP","+CASE III LSO"),
               ("16","261.00 AM","MARSHAL","MRS","")]:
         c.chrow(*r)
     c.rule(); c.band("COMM 2  (UFC → C2)")
@@ -323,6 +328,68 @@ def auth():
     c.line("SIMULATION TABLE · simplified DRYAD-style · not a real system", "m", F10)
     return c
 
+def aar():
+    c = Card("07", "AAR", "TEXACO 11", "KC-130")
+    c.head("TANKER")
+    c.kv("FREQ / TACAN", "252.10 · btn 7 · 21Y (A/A)", "g")
+    c.kv("RACETRACK", "225°T 25 NM · left · angels 15")
+    c.kv("SPEED", "~250 KIAS · GS 305-325 kt")
+    c.rule(); c.head("ALTIMETER  [V]", "o")
+    c.line("Tanker 15 000 ft = TRUE MSL. Mission QNH 29.84.", "t", F10)
+    c.line("Cold air (10 C) = indicated reads ~+300 ft: level with", "t", F10)
+    c.line("the tanker ~15 300 ind. RV 1 000 below ~14 300 ind.", "o", F10)
+    c.rule(); c.head("RV  (Overlord vector -> Judy)")
+    c.line("1 NM behind, 1 000 ft below, same heading", "t", F10)
+    c.line("Judy = voice call (no F10 item). EMCON 2: initial call only", "t", F10)
+    c.line("Closure: tanker GS +8..10 kt (about +3 KIAS) to 1 500 ft,", "t", F10)
+    c.line("then match. Max 10 kt inside 1/2 NM. No visual: stop 1 500 ft", "t", F10)
+    c.rule(); c.head("JOIN  (before 1 NM)")
+    c.line("MASTER ARM SAFE · EXT TANK CTR NORM · FUEL DUMP OFF", "t", F10)
+    c.line("Visual: radar STBY · join LEFT · Echelon Left", "t", F10)
+    c.rule(); c.head("CONTACT  (no menu call = no contact)", "r")
+    c.line("F10 > Texaco: 1 Intent to refuel · 2 Ready pre-contact", "t", F10)
+    c.line("PROBE EXTEND · astern, LEFT drogue (~91 ft aft, 47 ft left)", "t", F10)
+    c.line("Closure 3-5 kt · flow ~2 900 lb/min · ~2 min from 6 500", "t", F10)
+    c.line("Tank full: auto disconnect (13 043). Else F10 Abort refuel", "t", F10)
+    c.line("Doubt: BREAKAWAY x3", "r", F10)
+    c.rule(); c.head("LEAVE")
+    c.line("PROBE RETRACT · Echelon RIGHT · >= 1 NM lateral", "t", F10)
+    c.line("Level or climb to 2 NM (below -500 ft = penalty)", "t", F10)
+    c.line("Exit fuel >= 12 000 lb", "g", F10)
+    c.rule(); c.head("AAR SCORE  (cap +/-10, at session end)")
+    c.line("RV vert +2/-2 · join side +1/-1 · overtake >25 kt -2", "t", F10)
+    c.line("overrun -2 · weapon -5 · breaks +2..-3 · exit fuel +1/-2", "t", F10)
+    c.line("depart +1/-2", "t", F10)
+    return c
+
+def fuel():
+    c = Card("08", "FUEL", "CAS-1", "lb total")
+    c.head("PLAN  (total incl. external tank)")
+    c.kv("RAMP", "13 043 (full)"); c.kv("CP TIGER", "~8 000 before VUL")
+    c.kv("BURN", "~155 lb/min · 160 on station")
+    c.kv("VUL 30 MIN", "~4 950 (JTAC-1 + JTAC-2)")
+    c.kv("VUL END -> TKR", "~1 250 (7 min)")
+    c.kv("AR1 / AR2", "AR1 top-off pre-VUL · AR2 on call")
+    c.kv("ONLOAD", "~2 900 lb/min", "g"); c.kv("EXIT FUEL", ">= 12 000 lb", "g")
+    c.rule(); c.head("STATION  (CP +/-40 NM)  tanker + LTAG")
+    c.kv("JOKER", "5 100", "y"); c.kv("BINGO", "4 100", "r")
+    c.kv("BINGO FIELD", "LTAG Incirlik", "o")
+    c.line("007 T / 71.5 NM from the racetrack anchor", "t", F10)
+    c.line("CP -> LTAG 80 NM (148 km)", "t", F10)
+    c.line("AR2 if leaving station below RTB bingo + 1 000", "t", F10)
+    c.rule(); c.head("RTB  (after the tanker)")
+    c.line("BINGO = 2 000 + 11 lb/NM x nearer of LTAG / LCRA", "t", F10)
+    c.line("With >= 12 000 at exit this is rarely reached", "t", F10)
+    c.rule(); c.head("RECOVERY  (Marshal -> trap)")
+    c.kv("BINGO FIELD", "LCRA Akrotiri", "o")
+    c.line("110 NM from CVN, ~028 T", "t", F10)
+    c.kv("TANK", "~4 200  (flag 3105)", "y"); c.kv("BINGO", "~3 200  (flag 3103)", "r")
+    c.rule(); c.head("FLAGS")
+    c.line("3102 JOKER · 3103 BINGO · 3105 TANK", "t", F10)
+    c.line("[V] thresholds: estimates until the CP fuel of a full", "m", F10)
+    c.line("sortie and the burn on station are measured.", "m", F10)
+    return c
+
 if __name__ == "__main__":
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     SCRIPTED = "--scripted-jtac" in sys.argv
@@ -334,5 +401,6 @@ if __name__ == "__main__":
         cards += [("04_JTAC1.png", jtac1_s), ("05_JTAC2.png", jtac2_s), ("06_AUTH.png", auth)]
     else:
         cards += [("04_JTAC1.png", jtac1), ("05_JTAC2.png", jtac2)]
+    cards += [("07_AAR.png", aar), ("08_FUEL.png", fuel)]
     for fn, mk in cards:
         mk().save(os.path.join(out, fn))
