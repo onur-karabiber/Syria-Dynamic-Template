@@ -1,5 +1,10 @@
--- Comms_Director | v1.7.0
+-- Comms_Director | v1.7.1
 --[[
+  v1.7.1 - AR1 hand-off hold (TEST-AAR, Onur, 2026-10-30): the AR1 anchor is ~11 NM from CP TIGER, inside the
+           20 NM POINTER hand-off ring, so ENROUTE handed off to POINTER at once and "request Texaco" never
+           showed. Now, while a tanker exists, the hand-off waits until AR1 is closed: "off Texaco" or the new
+           F10 "OVERLORD: skip AR1 (no top-off)". CFG.TKR.AR1_HOLD = false restores the old ring-only hand-off.
+           Next-call hint names both items.
   v1.7.0 - EMCON 2 tanker radio (project doc aar-plan s.9 v2), plan C: AR1 top-off before the VUL, AR2 after.
            The native DCS tanker exchange (intent to refuel / ready pre-contact / abort) stays; it cannot be
            silenced and without it there is no contact. The script talks only where native DCS does not:
@@ -1015,6 +1020,7 @@ local CFG = {
         FULL_LB  = 13000,        -- "request" = FULL_LB - fuel (DCS stops the flow at ~13,043 lb)
         BRA_NM   = { 20, 10, 5 },-- OVERLORD tanker bearing / range calls until Judy
         RCVD_WAIT = 30,          -- s after the last disconnect if no 0.3 NM departure was measured
+        AR1_HOLD  = true,        -- v1.7.1 POINTER hand-off waits for AR1 closed (off Texaco / skip AR1)
     },
     REMIND_FIRST   = 60,     -- s after a check-in becomes due before the first repeat
     REMIND_EVERY   = 120,    -- s between further repeats
@@ -1737,6 +1743,22 @@ local function A_TkrState()
     QPlay()
 end
 
+--- v1.7.1: AR1 still open (not flown, not skipped) while a tanker exists -> POINTER hand-off waits.
+local function Ar1Pending()
+    return CFG.TKR.AR1_HOLD and not CD.ar1Done and Tanker() ~= nil
+end
+
+--- v1.7.1: no AR1 top-off wanted.
+local function A_SkipAR1()
+    local p = Player(); if not p then return end
+    CD.awaiting = true; MenuRebuild()
+    Pilot(string.format("Overlord, %s, negative Texaco, state %s, proceeding %s.", CFG.CS, State(p), CFG.CP_NAME))
+    Q(string.format("[OVERLORD] %s, Overlord, copy.", CFG.CS), CFG.DUR_SHORT, CFG.REPLY_GAP,
+        function() CD.tk = nil; CD.ar1Done = true; CD.awaiting = false; MenuRebuild() end, nil,
+        Voiced(S("OVERLORD", "ovl_copy_51")))
+    QPlay()
+end
+
 --- AR1 closed: off Texaco (or cancelled), back to CP TIGER; the JTAC-1 hand-off follows if inside 20 NM.
 local function A_OffTkrAR1()
     local p = Player(); if not p then return end
@@ -1799,6 +1821,9 @@ end
 
 local function TkrNext()
     local tk = CD.tk
+    if not tk and CD.phase == "ENROUTE" and Ar1Pending() and not CD.awaiting then   -- v1.7.1
+        return "AR1 top-off: OVERLORD, request Texaco (F10), or skip AR1 (F10). The hand-off to Pointer 11 waits for AR1."
+    end
     if not tk or not (CD.phase == "ENROUTE" or CD.phase == "REFUEL" or CD.phase == "TKR_DONE") then return nil end
     local btn = BtnL("TKR")
     if tk.clear then
@@ -2275,6 +2300,7 @@ local function PhaseActions()
     -- v1.7.0 tanker RV (EMCON 2)
     if ph == "ENROUTE" and not CD.tk and not CD.ar1Done and Tanker() then
         a[#a+1] = { "OVERLORD: request Texaco (AR1 top-off)", A_TkrRequest }
+        if CFG.TKR.AR1_HOLD then a[#a+1] = { "OVERLORD: skip AR1 (no top-off)", A_SkipAR1 } end
     end
     local tk = CD.tk
     if tk and tk.vec and (ph == "ENROUTE" or ph == "REFUEL" or ph == "TKR_DONE") then
@@ -2536,7 +2562,7 @@ local function EvalPhase(pUnit, cUnit)
         end
 
     elseif ph == "ENROUTE" then
-        if Dist2D(pPos, CFG.CP_POS) <= CFG.JTAC_HANDOFF_NM and not CD.tk and not CD.awaiting then  -- v1.7.0: not during AR1
+        if Dist2D(pPos, CFG.CP_POS) <= CFG.JTAC_HANDOFF_NM and not CD.tk and not CD.awaiting and not Ar1Pending() then  -- v1.7.0/1: not during or before AR1
             C_OvlContactPointer(pUnit); QPlay()
             SetPhase("JTAC1")
         end
@@ -2808,7 +2834,7 @@ local function CD_Init()
     SetFlag(200, 0)
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.7.0 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.7.1 online — CAS-1 Syria")
 end
 
 CD_Init()
