@@ -8,8 +8,6 @@ str_m4_sweet_ovl;STRIKE;Hornet five one, Mode four sweet. Kilo copied. Overlord,
 str_m4_sour;STRIKE;Hornet five one, Mode four sour. Recycle.
 str_m4_sweet_now;STRIKE;Hornet five one, Strike. Mode four sweet now.
 str_kilo_ovl;STRIKE;Hornet five one, Kilo copied. Overlord, push button six.
-tkr_checkin;TEXACO;Hornet five one, Texaco one one, angels fifteen. Cleared to join, left observation. Port drogue, call pre-contact.
-tkr_done;TEXACO;Hornet five one, Texaco one one, offload complete. Cleared to depart, return to Overlord, push button six.
 str_inbound;STRIKE;Hornet five one, Strike, radar contact, Mode four sweet. Continue zero five zero. Marshal at fifty miles, push button sixteen.
 ovl_feet_dry;OVERLORD;Hornet five one, Overlord, copy feet dry.
 ovl_feet_wet;OVERLORD;Hornet five one, Overlord, copy feet wet.
@@ -20,7 +18,6 @@ dep_contact_strike;DEPARTURE;Hornet five one, Departure. Contact Strike, push bu
 str_contact_ovl;STRIKE;Hornet five one, Strike. Contact Overlord, push button six.
 ovl_say_status;OVERLORD;Hornet five one, Overlord. Say status.
 ovl_say_status_tkr;OVERLORD;Hornet five one, Overlord. Say status, advise when ready for tanker.
-ovl_texaco_freq;OVERLORD;Hornet five one, Overlord. Texaco one one, push button seven.
 eye_abort;EYEBALL;Hornet five one, abort, abort, abort. Civilian vehicle in target area.
 eye_manpads;EYEBALL;Hornet five one, MANPADS launch observed one klick east of the target. Remain at or above hard deck, two zero thousand MSL.
 str_corridor;STRIKE;Hornet five one, Strike. You are off route. Turn now to zero five zero.
@@ -61,7 +58,6 @@ p_str_out_a;PILOT;Strike, Hornet five one, checking in outbound, passing angels;
 p_ovl_checkin_a;PILOT;Overlord, Hornet five one, checking in as fragged, mission four one zero one and four one zero two,;tok:0.1
 p_ovl_off_pointer_a;PILOT;Overlord, Hornet five one, off Pointer one one, mission four one zero one complete,;tok:0.1
 p_ovl_off_pointer_b;PILOT;Ready for retasking.;tok
-p_tkr_checkin_a;PILOT;Texaco one one, Hornet five one, checking in,;tok:0.1
 p_ovl_rtb_tkr_a;PILOT;Overlord, Hornet five one, off Texaco, RTB,;tok:0.1
 p_ovl_rtb_notkr_a;PILOT;Overlord, Hornet five one, no tanker required, RTB,;tok:0.1
 p_str_inbound_a;PILOT;Strike, Hornet five one, inbound,;tok:0.1
@@ -580,3 +576,35 @@ jp_swo_eye;PILOT;Eyeball one one, Hornet five one, copy, switching Overlord.;tok
 ovl_rep_ptr;OVERLORD;Hornet five one, Overlord. Pointer one one reports an unauthorized weapons release. The incident has been reported to CAG. Report to CAG on recovery.;tok
 ovl_rep_eye;OVERLORD;Hornet five one, Overlord. Eyeball one one reports an unauthorized weapons release. The incident has been reported to CAG. Report to CAG on recovery.;tok
 # END JC
+# v1.7.0 Comms_Director EMCON 2 tanker RV (aar-plan s.9 v2). Token clips, chained at runtime.
+ovl_ar1_a;OVERLORD;Hornet five one, Overlord, Texaco one one;tok:0.05
+o_maintain;OVERLORD;maintain;tok
+ovl_tkr_bra;OVERLORD;Hornet five one, Texaco;tok:0.05
+ovl_judy;OVERLORD;Hornet five one, Overlord, copy Judy. Texaco is yours.;tok
+ovl_off_tkr;OVERLORD;Hornet five one, Overlord, copy. Proceed C P Tiger,;tok:0.05
+ovl_copy_51;OVERLORD;Hornet five one, Overlord, copy.;tok
+p_ovl_req_tkr_a;PILOT;Overlord, Hornet five one, request Texaco,;tok:0.1
+p_ovl_off_tkr_a;PILOT;Overlord, Hornet five one, off Texaco,;tok:0.1
+p_ovl_off_tkr_b;PILOT;proceeding C P Tiger.;tok
+p_tkr_rb_a;PILOT;Hornet five one,;tok:0.1
+p_tkr_rb_b;PILOT;push button seven.;tok
+p_tkr_init_a;PILOT;Texaco one one, Hornet five one, angels;tok
+p_tkr_init_b;PILOT;TACAN two one Yankee, nose cold, switches safe,;tok:0.1
+p_request;PILOT;request;tok
+p_judy;PILOT;Hornet five one, Judy.;tok
+tkr_init_a;TEXACO;Hornet five one, Texaco one one, angels;tok
+tkr_rcvd;TEXACO;Hornet five one, Texaco one one, you received;tok
+tkr_clear;TEXACO;Hornet five one, Texaco one one, clear to leave.;tok
+t_altimeter;TEXACO;altimeter;tok
+t_available;TEXACO;available.;tok
+t_point;TEXACO;point;tok
+t_0;TEXACO;zero;tok
+t_1;TEXACO;one;tok
+t_2;TEXACO;two;tok
+t_3;TEXACO;three;tok
+t_4;TEXACO;four;tok
+t_5;TEXACO;five;tok
+t_6;TEXACO;six;tok
+t_7;TEXACO;seven;tok
+t_8;TEXACO;eight;tok
+t_9;TEXACO;niner;tok

@@ -1,5 +1,28 @@
--- Comms_Director | v1.6.6
+-- Comms_Director | v1.7.0
 --[[
+  v1.7.0 - EMCON 2 tanker radio (project doc aar-plan s.9 v2), plan C: AR1 top-off before the VUL, AR2 after.
+           The native DCS tanker exchange (intent to refuel / ready pre-contact / abort) stays; it cannot be
+           silenced and without it there is no contact. The script talks only where native DCS does not:
+             AR1: ENROUTE, F10 "OVERLORD: request Texaco (AR1 top-off)" -> pilot request -> OVERLORD
+                  "Texaco 11 bears BBB for RR, angels 15. Maintain angels 14. TACAN 21Y. Texaco, button 7."
+                  The JTAC-1 hand-off (20 NM from CP TIGER) is held while AR1 is open (the anchor is 11 NM
+                  from CP TIGER). F10 "OVERLORD: off Texaco" closes AR1 (also usable to cancel it).
+             AR2: INFLTREP reply now carries the same vector ("Maintain angels 14").
+             Both: pilot readback "angels 14, push button 7" | F10 TEXACO "RV initial" (angels, TACAN, nose
+                  cold, switches safe, state, request) -> TEXACO "angels 15, altimeter <mission QNH>,
+                  <request> available" | OVERLORD "Texaco bears BBB for RR" at 20 / 10 / 5 NM until Judy |
+                  F10 "OVERLORD: Judy" -> "copy Judy, Texaco is yours" | silent join / contact (EMCON 2,
+                  native calls only) | after the last disconnect (AAR_Monitor session, departure at 0.3 NM
+                  or 30 s) TEXACO "you received X.X" | F10 "TEXACO: state" -> "clear to leave".
+             AR2: REFUEL -> TKR_DONE at "clear to leave" (fallback: TRT.onRefuelComplete as before).
+           Removed: clips tkr_checkin ("Port drogue": EMCON 1 content, and ATP-56 puts a single receiver
+           on the right hose), tkr_done, p_tkr_checkin_a, ovl_texaco_freq (unused since v1.6.5).
+           A call is voiced only if every clip of it exists (Voiced()); new clips in tts/clips.csv must be
+           rendered on the PC (python tts/make_clips.py, paste tts/audio_table.lua into CFG.AUDIO). Until then
+           the new calls, and the AR2 INFLTREP reply (new token o_maintain), are subtitle-only.
+           Not yet: overrun / breakaway / spokes / divert calls (plan s.9 branch calls).
+           "You received" needs AAR_Monitor >= v1.1.0 (TRT.AAR); without it the RV stops at Judy and AR2 ends via
+           TRT.onRefuelComplete as before.
   v1.6.6 - card data: COMM1 btn 8 = ARCO 31 (252.30 AM, CVN recovery tanker) added to the F10 info card.
   v1.6.5 — tanker dialogue removed (TEST flight #5, Onur, 2026-10-30). The DCS tanker AI ignored a
            silent pre-contact with the probe out, so the native DCS "intent to refuel" call is needed
@@ -367,8 +390,6 @@ local CFG = {
         str_m4_sour            = { ch = "STRIKE", len = 2.48 },
         str_m4_sweet_now       = { ch = "STRIKE", len = 2.44 },
         str_kilo_ovl           = { ch = "STRIKE", len = 3.01 },
-        tkr_checkin            = { ch = "TEXACO", len = 6.44 },
-        tkr_done               = { ch = "TEXACO", len = 5.54 },
         str_inbound            = { ch = "STRIKE", len = 6.69 },
         ovl_feet_dry           = { ch = "OVERLORD", len = 2.62 },
         ovl_feet_wet           = { ch = "OVERLORD", len = 2.51 },
@@ -379,7 +400,6 @@ local CFG = {
         str_contact_ovl        = { ch = "STRIKE", len = 3.26 },
         ovl_say_status         = { ch = "OVERLORD", len = 2.36 },
         ovl_say_status_tkr     = { ch = "OVERLORD", len = 3.50 },
-        ovl_texaco_freq        = { ch = "OVERLORD", len = 3.63 },
         eye_abort              = { ch = "EYEBALL", len = 3.98 },
         eye_manpads            = { ch = "EYEBALL", len = 5.91 },
         str_corridor           = { ch = "STRIKE", len = 3.72 },
@@ -417,7 +437,6 @@ local CFG = {
         p_ovl_checkin_a        = { ch = "PILOT", len = 5.60 },
         p_ovl_off_pointer_a    = { ch = "PILOT", len = 4.38 },
         p_ovl_off_pointer_b    = { ch = "PILOT", len = 0.97 },
-        p_tkr_checkin_a        = { ch = "PILOT", len = 2.65 },
         p_ovl_rtb_tkr_a        = { ch = "PILOT", len = 2.88 },
         p_ovl_rtb_notkr_a      = { ch = "PILOT", len = 3.27 },
         p_str_inbound_a        = { ch = "PILOT", len = 2.40 },
@@ -960,6 +979,12 @@ local CFG = {
     DUR_HANDOFF    = 15,
 
     AIRSTART       = { NM = 60, ALT_AGL_M = 300, SPD_MS = 80 },   -- v1.6.1
+    TKR            = {       -- v1.7.0 EMCON 2 tanker radio
+        RV_BELOW_ANGELS = 1,     -- RV altitude = tanker angels - 1 (ATP-56 RV: receiver 1,000 ft below)
+        FULL_LB  = 13000,        -- "request" = FULL_LB - fuel (DCS stops the flow at ~13,043 lb)
+        BRA_NM   = { 20, 10, 5 },-- OVERLORD tanker bearing / range calls until Judy
+        RCVD_WAIT = 30,          -- s after the last disconnect if no 0.3 NM departure was measured
+    },
     REMIND_FIRST   = 60,     -- s after a check-in becomes due before the first repeat
     REMIND_EVERY   = 120,    -- s between further repeats
 }
@@ -978,6 +1003,8 @@ local CD = {
     j2Armed       = false,
     tkrCheckedIn  = false,
     refuelDone    = false,
+    tk            = nil,      -- v1.7.0 open tanker RV { ar = 1|2, vec, init, judy, bra, rcvd, state, clear }
+    ar1Done       = false,    -- v1.7.0 AR1 closed (off Texaco) or not wanted any more
     corridorDone  = false,
     surf          = nil,      -- "LAND" / "WATER" (debounced)
     surfCand      = nil,
@@ -1554,6 +1581,208 @@ local function A_OvlOffPointer()
     QPlay()
 end
 
+-- ══════════════════════════════════════════════════════════════
+--  v1.7.0 TANKER RV, EMCON 2 (AR1 before the VUL, AR2 after INFLTREP)
+-- ══════════════════════════════════════════════════════════════
+--- seq if every clip in it exists, else nil (text only, never a half-voiced call).
+local function Voiced(seq)
+    if type(seq) ~= "table" then return seq end
+    for _, id in ipairs(seq) do
+        if type(id) == "string" and not ClipOf(id) then
+            env.info("[CD] text only, missing clip " .. id)
+            return nil
+        end
+    end
+    return seq
+end
+
+local function FuelLb(u) return (u:getFuel() or 0) * CFG.INTERNAL_FUEL_LB end
+local function Klb(lb) return string.format("%.1f", math.floor(math.max(0, lb) / 100 + 0.5) / 10) end
+local function TD(v) local t = {}; for c in tostring(v):gmatch("%d") do t[#t + 1] = "t_" .. c end; return t end
+--- "6.8" -> digit tokens with "point" (pilot cv:p_*, Texaco t_*).
+local function PNum(s) local i, f = s:match("^(%d+)%.(%d)$"); return { PD(i or "0"), "cv:p_point", PD(f or "0") } end
+local function TNum(s) local i, f = s:match("^(%d+)%.(%d)$"); return { TD(i or "0"), "t_point", TD(f or "0") } end
+
+--- Mission QNH as 4 digits ("2984"), nil if unreadable.
+local function QnhDigits()
+    local ok, q = pcall(function() return env.mission.weather.qnh end)
+    if not ok or type(q) ~= "number" or q <= 0 then return nil end
+    return string.format("%04d", math.floor(q / 25.4 * 100 + 0.5))
+end
+
+local function TkOpen(ar)
+    local A = _G.TRT and _G.TRT.AAR
+    CD.tk = { ar = ar, t0 = timer.getTime(), bra = {},
+              aarN0 = A and ((A.nSession or 0) - (A.session and 1 or 0)) or nil,
+              last0 = A and A.last or nil }   -- AAR.last before this RV (an abandoned session leaves it unchanged)
+    CD.refuelDone = false
+end
+
+--- OVERLORD vector to the tanker (AR1 head or AR2 INFLTREP head) + pilot readback.
+-- @return true if a tanker exists (vector given)
+local function TkrVector(p, ar)
+    local t = Tanker()
+    if not t then return false end
+    local ta = Angels(t)
+    local rv = ta - CFG.TKR.RV_BELOW_ANGELS
+    local head = (ar == 2) and "copy INFLTREP. " or ""
+    Q(string.format("[OVERLORD] %s, Overlord, %sTexaco 11 %s, angels %d. Maintain angels %d. TACAN 21 Yankee. Texaco, %s.",
+        CFG.CS, head, BrgRng(p:getPoint(), t:getPoint()), ta, rv, Btn("TKR")),
+        CFG.DUR_LONG, CFG.REPLY_GAP, function()
+            if ar == 2 then SetPhase("REFUEL") else CD.awaiting = false end
+            if CD.tk then CD.tk.vec = true end
+            local u, k = Player(), Tanker()
+            if CD.tk and u and k then      -- calls only below the current range
+                local d = Dist2D(u:getPoint(), k:getPoint())
+                for _, th in ipairs(CFG.TKR.BRA_NM) do if d <= th + 1 then CD.tk.bra[th] = true end end
+            end
+            MenuRebuild()
+        end, nil,
+        Voiced(S("OVERLORD", (ar == 2) and "ovl_inflrep_a" or "ovl_ar1_a", OBR(p:getPoint(), t:getPoint()), 0.08,
+          "o_angels", OD(ta), 0.15, "o_maintain", "o_angels", OD(rv), 0.15, "ovl_inflrep_b")))
+    local prev = CD.queue[#CD.queue]
+    if prev then prev.hold = 0.1 end
+    Q(string.format("[%s] %s, angels %d, push button %d.", CFG.CS, CFG.CS, rv, CFG.BTN.TKR),
+        CFG.DUR_PILOT, 0.8, nil, CFG.PILOT_HOLD,
+        Voiced(S("OVERLORD", "p_tkr_rb_a", "cv:p_angels", PD(rv), "p_tkr_rb_b")))
+    return true
+end
+
+local function A_TkrRequest()
+    local p = Player(); if not p then return end
+    if not Tanker() then Msg("[CAS-1] Texaco 11 not available.", CFG.DUR_SHORT); return end
+    CD.awaiting = true
+    TkOpen(1)
+    MenuRebuild()
+    Pilot(string.format("Overlord, %s, request Texaco, angels %d, state %s.", CFG.CS, Angels(p), State(p)),
+        Voiced(S("OVERLORD", "p_ovl_req_tkr_a", PAS(p))))
+    TkrVector(p, 1)
+    QPlay()
+end
+
+local function A_TkrInit()
+    local p, t = Player(), Tanker(); if not (p and t and CD.tk) then return end
+    CD.tk.init = true
+    CD.awaiting = true; MenuRebuild()
+    local ta = Angels(t)
+    local rv = ta - CFG.TKR.RV_BELOW_ANGELS
+    local st, rq = State(p), Klb(CFG.TKR.FULL_LB - FuelLb(p))
+    Pilot(string.format("Texaco 11, %s, angels %d, TACAN 21 Yankee, nose cold, switches safe, state %s, request %s.",
+        CFG.CS, rv, st, rq),
+        Voiced(S("TEXACO", "p_tkr_init_a", PD(rv), 0.1, "p_tkr_init_b", "cv:p_state", PNum(st), 0.1,
+          "p_request", PNum(rq))))
+    local q = QnhDigits()
+    Q(string.format("[TEXACO] %s, Texaco 11, angels %d%s, %s available.", CFG.CS, ta,
+        q and (", altimeter " .. q:sub(1, 2) .. "." .. q:sub(3, 4)) or "", rq),
+        CFG.DUR_SHORT, CFG.REPLY_GAP, function() CD.awaiting = false; MenuRebuild() end, nil,
+        Voiced(S("TEXACO", "tkr_init_a", TD(ta), 0.1, q and { "t_altimeter", TD(q), 0.1 } or nil, TNum(rq), "t_available")))
+    QPlay()
+end
+
+local function A_Judy()
+    if not CD.tk then return end
+    CD.tk.judy = true
+    CD.awaiting = true; MenuRebuild()
+    Pilot(string.format("%s, Judy.", CFG.CS), Voiced(S("OVERLORD", "p_judy")))
+    Q(string.format("[OVERLORD] %s, Overlord, copy Judy. Texaco is yours.", CFG.CS),
+        CFG.DUR_SHORT, CFG.REPLY_GAP, function() CD.awaiting = false; MenuRebuild() end, nil,
+        Voiced(S("OVERLORD", "ovl_judy")))
+    QPlay()
+end
+
+local function A_TkrState()
+    local p = Player(); if not (p and CD.tk) then return end
+    CD.tk.state = true
+    CD.awaiting = true; MenuRebuild()
+    local st = State(p)
+    Pilot(string.format("%s, state %s.", CFG.CS, st), Voiced(S("TEXACO", "p_tkr_rb_a", "cv:p_state", PNum(st))))
+    Q(string.format("[TEXACO] %s, Texaco 11, clear to leave.", CFG.CS),
+        CFG.DUR_SHORT, CFG.REPLY_GAP, function()
+            if CD.tk then CD.tk.clear = true end
+            CD.awaiting = false
+            if CD.phase == "REFUEL" then SetPhase("TKR_DONE") end
+            MenuRebuild()
+        end, nil, Voiced(S("TEXACO", "tkr_clear")))
+    QPlay()
+end
+
+--- AR1 closed: off Texaco (or cancelled), back to CP TIGER; the JTAC-1 hand-off follows if inside 20 NM.
+local function A_OffTkrAR1()
+    local p = Player(); if not p then return end
+    CD.awaiting = true; MenuRebuild()
+    Pilot(string.format("Overlord, %s, off Texaco, angels %d, state %s, proceeding %s.",
+        CFG.CS, Angels(p), State(p), CFG.CP_NAME),
+        Voiced(S("OVERLORD", "p_ovl_off_tkr_a", PAS(p), 0.15, "p_ovl_off_tkr_b")))
+    local far = Dist2D(p:getPoint(), CFG.CP_POS) > CFG.JTAC_HANDOFF_NM
+    local done = function() CD.tk = nil; CD.ar1Done = true; CD.awaiting = false; MenuRebuild() end
+    if far then
+        Q(string.format("[OVERLORD] %s, Overlord, copy. Proceed %s, %s.", CFG.CS, CFG.CP_NAME,
+            BrgRng(p:getPoint(), CFG.CP_POS)), CFG.DUR_SHORT, CFG.REPLY_GAP, done, nil,
+            Voiced(S("OVERLORD", "ovl_off_tkr", OBR(p:getPoint(), CFG.CP_POS))))
+    else
+        Q(string.format("[OVERLORD] %s, Overlord, copy.", CFG.CS), CFG.DUR_SHORT, CFG.REPLY_GAP, done, nil,
+            Voiced(S("OVERLORD", "ovl_copy_51")))
+    end
+    QPlay()
+end
+
+--- Tick: OVERLORD tanker BRA calls until Judy; TEXACO "you received" after the last disconnect.
+local function TkrTick(p)
+    local tk = CD.tk
+    if not tk or not (CD.phase == "ENROUTE" or CD.phase == "REFUEL" or CD.phase == "TKR_DONE") then return end
+    local t = Tanker()
+    if tk.vec and not tk.judy and t and not CD.awaiting then
+        local d = Dist2D(p:getPoint(), t:getPoint())
+        for _, th in ipairs(CFG.TKR.BRA_NM) do
+            if d <= th and not tk.bra[th] then
+                for _, th2 in ipairs(CFG.TKR.BRA_NM) do if d <= th2 then tk.bra[th2] = true end end
+                Q(string.format("[OVERLORD] %s, Texaco %s.", CFG.CS, BrgRng(p:getPoint(), t:getPoint())),
+                    CFG.DUR_SHORT, 0, nil, nil,
+                    Voiced(S("OVERLORD", "ovl_tkr_bra", OBR(p:getPoint(), t:getPoint()))))
+                QPlay()
+                break
+            end
+        end
+    end
+    if tk.rcvd then return end
+    local A = _G.TRT and _G.TRT.AAR
+    if not (A and tk.aarN0) then return end
+    local onload
+    local Sn = A.session
+    if Sn and Sn.n > tk.aarN0 and Sn.lastStop and not Sn.openStart and #Sn.contacts > 0
+        and (Sn.dep.side or timer.getTime() - Sn.lastStop >= CFG.TKR.RCVD_WAIT) then
+        onload = 0
+        for _, c in ipairs(Sn.contacts) do
+            if c.fuelStart and c.fuelStop then onload = onload + math.max(0, c.fuelStop - c.fuelStart) end
+        end
+    elseif not Sn and A.last and A.last ~= tk.last0 and (A.nSession or 0) > tk.aarN0 and (A.last.contacts or 0) > 0 then
+        onload = A.last.onload
+    end
+    if not onload then return end
+    tk.rcvd = true
+    local x = Klb(onload)
+    Q(string.format("[TEXACO] %s, Texaco 11, you received %s.", CFG.CS, x), CFG.DUR_SHORT, 0,
+        function() MenuRebuild() end, nil, Voiced(S("TEXACO", "tkr_rcvd", TNum(x))))
+    QPlay()
+end
+
+local function TkrNext()
+    local tk = CD.tk
+    if not tk or not (CD.phase == "ENROUTE" or CD.phase == "REFUEL" or CD.phase == "TKR_DONE") then return nil end
+    local btn = BtnL("TKR")
+    if tk.clear then
+        return (tk.ar == 1) and ("Report off Texaco to OVERLORD (F10), then " .. CFG.CP_NAME .. ".")
+            or "Report RTB to OVERLORD (F10)."
+    end
+    if tk.rcvd then return "Report state to TEXACO 11 (F10), wait for clear to leave." end
+    if not tk.vec then return "Stand by, OVERLORD." end
+    local s = {}
+    if not tk.init then s[#s + 1] = "RV initial to TEXACO 11 " .. btn .. " (F10)" end
+    if not tk.judy then s[#s + 1] = "Judy to OVERLORD when visual (F10)" end
+    s[#s + 1] = "join left, 1,000 ft below, DCS radio menu: intent to refuel (TACAN 21Y). No radio calls on the join (EMCON 2)."
+    return table.concat(s, "; ")
+end
+
 local function A_Inflrep()
     local p = Player(); if not p then return end
     CD.awaiting = true; MenuRebuild()
@@ -1571,15 +1800,16 @@ local function A_Inflrep()
     -- INFLTREP is long — give it time on screen
     CD.queue[#CD.queue].dur  = CFG.DUR_LONG + 4
     CD.queue[#CD.queue].hold = 8
-    local t = Tanker()
-    local tkr = t and string.format("Texaco 11 %s, angels %d", BrgRng(p:getPoint(), t:getPoint()), Angels(t))
-                or "Texaco 11 on station"
-    Q(string.format("[OVERLORD] %s, Overlord, copy INFLTREP. %s, TACAN 21 Yankee. Texaco, %s.",
-        CFG.CS, tkr, Btn("TKR")), CFG.DUR_LONG, CFG.REPLY_GAP, function() SetPhase("REFUEL") end, nil,
-        t and S("OVERLORD", "ovl_inflrep_a", OBR(p:getPoint(), t:getPoint()), 0.08, "o_angels", OD(Angels(t)), 0.15,
-                "ovl_inflrep_b")
-          or S("OVERLORD", "ovl_inflrep_nt"))
-    Ack("OVERLORD", false, CFG.BTN.TKR)
+    if Tanker() then                                     -- v1.7.0: EMCON 2 RV vector + readback
+        TkOpen(2)
+        TkrVector(p, 2)
+    else
+        CD.tk = nil
+        Q(string.format("[OVERLORD] %s, Overlord, copy INFLTREP. Texaco 11 on station, TACAN 21 Yankee. Texaco, %s.",
+            CFG.CS, Btn("TKR")), CFG.DUR_LONG, CFG.REPLY_GAP, function() SetPhase("REFUEL") end, nil,
+            S("OVERLORD", "ovl_inflrep_nt"))
+        Ack("OVERLORD", false, CFG.BTN.TKR)
+    end
     QPlay()
 end
 
@@ -2011,6 +2241,20 @@ local function PhaseActions()
     if ph == "REFUEL" or ph == "TKR_DONE" then
         a[#a+1] = { (ph == "TKR_DONE") and "OVERLORD: RTB" or "OVERLORD: RTB (no tanker)", A_OvlRTB }
     end
+    -- v1.7.0 tanker RV (EMCON 2)
+    if ph == "ENROUTE" and not CD.tk and not CD.ar1Done and Tanker() then
+        a[#a+1] = { "OVERLORD: request Texaco (AR1 top-off)", A_TkrRequest }
+    end
+    local tk = CD.tk
+    if tk and tk.vec and (ph == "ENROUTE" or ph == "REFUEL" or ph == "TKR_DONE") then
+        if not tk.init and not tk.rcvd then a[#a+1] = { "TEXACO: RV initial (btn " .. CFG.BTN.TKR .. ")", A_TkrInit } end
+        if not tk.judy and not tk.rcvd then a[#a+1] = { "OVERLORD: Judy (tanker visual)", A_Judy } end
+        if tk.rcvd and not tk.state then a[#a+1] = { "TEXACO: state", A_TkrState } end
+        if tk.ar == 1 and ph == "ENROUTE" then
+            a[#a+1] = { tk.rcvd and "OVERLORD: off Texaco, proceeding " .. CFG.CP_NAME
+                        or "OVERLORD: off Texaco (cancel AR1)", A_OffTkrAR1 }
+        end
+    end
     if ph == "STRIKE_IN"  then a[#a+1] = { "STRIKE: check in inbound (btn " .. CFG.BTN.STRIKE .. ")", A_StrikeCheckInIn } end
     if RbAvail("J1") then a[#a+1] = { "POINTER 11: 9-line readback (4/6/8)", function() A_Readback("J1") end } end
     if RbAvail("J2") then a[#a+1] = { "EYEBALL 11: 9-line readback (4/6/8)", function() A_Readback("J2") end } end
@@ -2063,7 +2307,7 @@ end
 local function NextText()
     if CD.phase == "RECOVERY" or CD.phase == "DONE" then return nil end
     if JcOn() and (CD.phase == "JTAC1" or CD.phase == "JTAC2") then return nil end   -- v1.6.0
-    return NEXT[CD.phase]
+    return TkrNext() or NEXT[CD.phase]
 end
 
 MenuRebuild = function()
@@ -2261,7 +2505,7 @@ local function EvalPhase(pUnit, cUnit)
         end
 
     elseif ph == "ENROUTE" then
-        if Dist2D(pPos, CFG.CP_POS) <= CFG.JTAC_HANDOFF_NM then
+        if Dist2D(pPos, CFG.CP_POS) <= CFG.JTAC_HANDOFF_NM and not CD.tk and not CD.awaiting then  -- v1.7.0: not during AR1
             C_OvlContactPointer(pUnit); QPlay()
             SetPhase("JTAC1")
         end
@@ -2277,7 +2521,7 @@ local function EvalPhase(pUnit, cUnit)
         if CD.deadJ2 or JcTerm("J2") then SetPhase("J2_OFF") end
 
     elseif ph == "REFUEL" then
-        if CD.refuelDone then SetPhase("TKR_DONE") end   -- v1.6.5: silent (no Texaco call)
+        if CD.refuelDone then SetPhase("TKR_DONE") end   -- v1.7.0: fallback; normally "clear to leave"
     end
 
     -- Inbound: OVERLORD → Strike (also catches a skipped INFLTREP / tanker / RTB call)
@@ -2483,6 +2727,8 @@ local function CD_Tick(_, t)
     if not p then return t + CFG.TICK end
     if not CD.airChecked and CD.phase == "IDLE" then AirStartCheck(p, Carrier()) end   -- v1.6.1
     EvalPhase(p, Carrier())
+    local okK, errK = pcall(TkrTick, p)   -- v1.7.0
+    if not okK then env.info("[CD] tanker error: " .. tostring(errK)) end
     Remind(t)
     CapMonitor()
     ThreatMonitor(p:getPoint())
@@ -2531,7 +2777,7 @@ local function CD_Init()
     SetFlag(200, 0)
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.6.5 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.7.0 online — CAS-1 Syria")
 end
 
 CD_Init()
