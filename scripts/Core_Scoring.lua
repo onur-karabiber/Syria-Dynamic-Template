@@ -1,4 +1,10 @@
--- Core_Scoring | v1.4.2
+-- Core_Scoring | v1.4.3
+-- v1.4.3: player aerial refuel score disabled (PLAYER_REFUEL_SCORE = false). AAR test flights
+-- 2026-10-30 (TEST-AAR / TEST-AAR-S): the +7 fired when getFuel() rose by 0.2 of the internal
+-- capacity (~2,160 lb), i.e. about a third of a 6,500-6,900 lb onload, while the transfer was
+-- still running. AAR_Monitor.lua (scores on disconnect + onload) replaces it. The zone/0.2 detector
+-- still runs and still calls TRT.onRefuelComplete (unchanged behaviour for CD/TL); only the points
+-- are gone, and a "[Core_Scoring] player refuel detected (no score)" line is logged instead.
 -- v1.4.2: JTAC group bonus never fired (CAS-1 test 2026-10-28 night: BV51 and YE53 both
 -- wiped out by the hero, no "+5 JTAC TARGET GROUP DESTROYED"): victim:getGroup() on the
 -- unit of an S_EVENT_KILL returns nothing, so the group name was never found. The JTAC
@@ -586,6 +592,8 @@ do
         -- "TANKER_3_SAFE_ZONE",
     }
 
+    local PLAYER_REFUEL_SCORE = false   -- v1.4.3: off until AAR_Monitor.lua owns AAR scoring
+
     local REFUEL_UNITS = {}
     local lastFuel, baseline, rewarded = {}, {}, {}
     local playerRefuel = { inZone = false, baseline = nil, done = false }
@@ -627,7 +635,11 @@ do
         end
         if inside and playerRefuel.baseline and (f - playerRefuel.baseline) >= 0.2 then
             playerRefuel.done = true
-            TRT.addScore(7, "Aerial Refuel Complete: " .. PLAYER_NAME)
+            if PLAYER_REFUEL_SCORE then
+                TRT.addScore(7, "Aerial Refuel Complete: " .. PLAYER_NAME)
+            else
+                env.info("[Core_Scoring] player refuel detected (no score, PLAYER_REFUEL_SCORE=false): " .. PLAYER_NAME)
+            end
             if TRT.onRefuelComplete then TRT.onRefuelComplete(PLAYER_NAME) end
         end
     end
@@ -651,7 +663,7 @@ do
                                 rewarded[name] = true
                                 local okP, pn = pcall(u.getPlayerName, u)        -- v1.3.2
                                 if okP and pn then
-                                    TRT.addScore(7, "Aerial Refuel Complete: " .. name)
+                                    if PLAYER_REFUEL_SCORE then TRT.addScore(7, "Aerial Refuel Complete: " .. name) end
                                 else
                                     env.info("[Core_Scoring] AI refuel complete (no score): " .. name)
                                 end

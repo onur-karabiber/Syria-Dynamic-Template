@@ -1,4 +1,8 @@
--- AAR_Test_Logger | v1.0.0
+-- AAR_Test_Logger | v1.0.1
+-- v1.0.1: v1.0.0 measured "up" in the tanker's body axes; the tanker flies ~4 deg nose-up, which
+-- added ~5,000 ft of false height at 12 NM (TEST-AAR 2026-10-30). Now: up = hero MSL - tanker MSL
+-- (world axis); fwd/right are horizontal, along/across the tanker's ground heading; the velocity
+-- field is labelled gs (it was ground speed, not TAS); hero and tanker MSL are logged.
 -- Injected by tools/make_test_variant.py (--start AAR / AAR-S) as a "triggerOnce" DO SCRIPT.
 -- NOT part of the template build. Logs, for the AAR test flight (project doc
 -- claude/aar-test-flight-2026-10-30.md), the hero's position relative to the tanker in the
@@ -27,7 +31,7 @@ do
             log('TANKER-1 group not found, SILENCE not set')
         end
     end
-    log('v1.0.0 loaded, SILENCE=' .. tostring(SILENCE))
+    log('v1.0.1 loaded, SILENCE=' .. tostring(SILENCE))
 
     local function tick(_, t)
         local h, k = Unit.getByName(HERO), Unit.getByName(TKR_UNIT)
@@ -37,9 +41,13 @@ do
         local d = math.sqrt(rx * rx + rz * rz)
         if d > 20 * NM then return t + 10 end
         local P = k:getPosition()                         -- x fwd, y up, z right (unit vectors)
-        local fwd   = rx * P.x.x + ry * P.x.y + rz * P.x.z
-        local up    = rx * P.y.x + ry * P.y.y + rz * P.y.z
-        local right = rx * P.z.x + ry * P.z.y + rz * P.z.z
+        local hx, hz = P.x.x, P.x.z                       -- horizontal tanker heading (nose pitch removed)
+        local hn = math.sqrt(hx * hx + hz * hz)
+        if hn < 1e-6 then return t + 10 end
+        hx, hz = hx / hn, hz / hn
+        local fwd   = rx * hx + rz * hz
+        local right = -rx * hz + rz * hx                  -- DCS: x north, z east; right of heading (hx,hz) = (-hz, hx)
+        local up    = ry
         local vh, vk = h:getVelocity(), k:getVelocity()
         local r3 = math.sqrt(rx * rx + ry * ry + rz * rz)
         local clos = 0
@@ -52,9 +60,9 @@ do
         local okP, probe = pcall(function() return h:getDrawArgumentValue(PROBE_ARG) end)
         local tas = math.sqrt(vk.x * vk.x + vk.z * vk.z) * KT
         local hdg = (math.deg(math.atan2(P.x.z, P.x.x)) + 360) % 360
-        log(string.format('d=%.2fNM fwd=%.0fft right=%.0fft up=%.0fft clos=%.1fkt radar=%s tgt=%s probe=%s fuel=%.0f | tkr tas=%.0f alt=%.0f hdg=%03.0f',
+        log(string.format('d=%.2fNM fwd=%.0fft right=%.0fft up=%.0fft clos=%.1fkt radar=%s tgt=%s probe=%s fuel=%.0f | hero alt=%.0f gs=%.0f | tkr gs=%.0f alt=%.0f hdg=%03.0f',
             d / NM, fwd * FT, right * FT, up * FT, clos, radar, tgt, okP and string.format('%.2f', probe) or 'n/a',
-            fuelLb(h), tas, kp.y * FT, hdg))
+            fuelLb(h), hp.y * FT, math.sqrt(vh.x * vh.x + vh.z * vh.z) * KT, tas, kp.y * FT, hdg))
         return t + ((d < 2 * NM) and 2 or 10)
     end
     timer.scheduleFunction(tick, nil, timer.getTime() + 5)
