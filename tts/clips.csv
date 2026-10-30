@@ -580,7 +580,6 @@ ovl_rep_eye;OVERLORD;Hornet five one, Overlord. Eyeball one one reports an unaut
 ovl_ar1_a;OVERLORD;Hornet five one, Overlord, Texaco one one;tok:0.05
 o_maintain;OVERLORD;maintain;tok
 ovl_tkr_bra;OVERLORD;Hornet five one, Texaco;tok:0.05
-ovl_judy;OVERLORD;Hornet five one, Overlord, copy Judy. Texaco is yours.;tok
 ovl_off_tkr;OVERLORD;Hornet five one, Overlord, copy. Proceed C P Tiger,;tok:0.05
 ovl_copy_51;OVERLORD;Hornet five one, Overlord, copy.;tok
 p_ovl_req_tkr_a;PILOT;Overlord, Hornet five one, request Texaco,;tok:0.1

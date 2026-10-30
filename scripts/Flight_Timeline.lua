@@ -1,4 +1,7 @@
--- Flight_Timeline | v1.1.0
+-- Flight_Timeline | v1.1.1
+-- v1.1.1: T2 (CP TIGER) waits while AR1 is open (Comms_Director >= v1.7.0: phase ENROUTE and CD.ar1Done == false,
+--   i.e. neither "off Texaco" nor "skip AR1" yet). The AR1 racetrack passes inside CP_RADIUS_NM, so T2 and the CP
+--   fuel snapshot fired mid-refuel (TEST-AAR 2026-10-30: 7.9k lb). Older CD (ar1Done nil): unchanged.
 -- v1.1.0: phase-based fuel thresholds (project doc aar-plan v0.8 s.8, s.11, s.15):
 --   STATION (CD phases ENROUTE..TKR_DONE, tanker + LTAG): BINGO 4,100 lb, JOKER +1,000 (measured burn
 --     154-162 lb/min, VUL ~4,950 lb, VUL end -> tanker ~1,250 lb, 29 Oct log; the tanker -> LTAG leg is an estimate).
@@ -58,7 +61,7 @@ if TRT.TL then
 end
 
 local CFG = {
-    VERSION        = "1.1.0",
+    VERSION        = "1.1.1",
     PLAYER_UNIT    = TRT.PLAYER_NAME or "Player_01",
     GROUP          = "CAS-1",          -- ME group whose route builds the ATO
     CARRIER        = "CVN",
@@ -791,7 +794,12 @@ local function tick()
 
     -- CP
     local dCP = distNm(p, TL.ato.cpPos)
-    if not TL.cpReached and dCP <= CFG.CP_RADIUS_NM then
+    local ar1Open = cd and cd.phase == "ENROUTE" and cd.ar1Done == false      -- v1.1.1
+    if ar1Open and not TL.cpReached and dCP <= CFG.CP_RADIUS_NM and not TL.cpHeldLogged then
+        TL.cpHeldLogged = true
+        log(string.format("T2 held: inside %s NM of %s while AR1 is open", CFG.CP_RADIUS_NM, CFG.CP_NAME))
+    end
+    if not TL.cpReached and not ar1Open and dCP <= CFG.CP_RADIUS_NM then
         TL.cpReached = t
         setFlag(CFG.FLAGS.CP)
         snap("CP")

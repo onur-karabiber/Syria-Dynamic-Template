@@ -568,7 +568,6 @@
         ovl_ar1_a              = { ch = "OVERLORD", len = 2.21 },
         o_maintain             = { ch = "OVERLORD", len = 0.52 },
         ovl_tkr_bra            = { ch = "OVERLORD", len = 1.41 },
-        ovl_judy               = { ch = "OVERLORD", len = 3.10 },
         ovl_off_tkr            = { ch = "OVERLORD", len = 2.88 },
         ovl_copy_51            = { ch = "OVERLORD", len = 1.93 },
         p_ovl_req_tkr_a        = { ch = "PILOT", len = 2.45 },

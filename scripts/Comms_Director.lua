@@ -1,5 +1,8 @@
--- Comms_Director | v1.7.1
+-- Comms_Director | v1.7.2
 --[[
+  v1.7.2 - Judy reply: OVERLORD "Hornet 51, Overlord, copy." (clip ovl_copy_51). "Copy Judy, Texaco is yours" was
+           invented phraseology: Judy is a one-way receiver call (ATP-56 Annex 2P serial 3: no tanker reply;
+           brevity JUDY = controller minimizes transmissions). Clip ovl_judy removed (csv, AUDIO, ogg).
   v1.7.1 - AR1 hand-off hold (TEST-AAR, Onur, 2026-10-30): the AR1 anchor is ~11 NM from CP TIGER, inside the
            20 NM POINTER hand-off ring, so ENROUTE handed off to POINTER at once and "request Texaco" never
            showed. Now, while a tanker exists, the hand-off waits until AR1 is closed: "off Texaco" or the new
@@ -955,7 +958,6 @@ local CFG = {
         ovl_ar1_a              = { ch = "OVERLORD", len = 2.21 },
         o_maintain             = { ch = "OVERLORD", len = 0.52 },
         ovl_tkr_bra            = { ch = "OVERLORD", len = 1.41 },
-        ovl_judy               = { ch = "OVERLORD", len = 3.10 },
         ovl_off_tkr            = { ch = "OVERLORD", len = 2.88 },
         ovl_copy_51            = { ch = "OVERLORD", len = 1.93 },
         p_ovl_req_tkr_a        = { ch = "PILOT", len = 2.45 },
@@ -1721,9 +1723,9 @@ local function A_Judy()
     CD.tk.judy = true
     CD.awaiting = true; MenuRebuild()
     Pilot(string.format("%s, Judy.", CFG.CS), Voiced(S("OVERLORD", "p_judy")))
-    Q(string.format("[OVERLORD] %s, Overlord, copy Judy. Texaco is yours.", CFG.CS),
+    Q(string.format("[OVERLORD] %s, Overlord, copy.", CFG.CS),
         CFG.DUR_SHORT, CFG.REPLY_GAP, function() CD.awaiting = false; MenuRebuild() end, nil,
-        Voiced(S("OVERLORD", "ovl_judy")))
+        Voiced(S("OVERLORD", "ovl_copy_51")))
     QPlay()
 end
 
@@ -2834,7 +2836,7 @@ local function CD_Init()
     SetFlag(200, 0)
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.7.1 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.7.2 online — CAS-1 Syria")
 end
 
 CD_Init()
