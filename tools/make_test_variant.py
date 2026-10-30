@@ -1,4 +1,10 @@
-# make_test_variant.py | v1.1.0
+# make_test_variant.py | v1.2.0
+# v1.2.0: --start AAR / AAR-S (AAR test flight, project doc claude/aar-test-flight-2026-10-30.md):
+#         hero --aar-nm (12) NM BEHIND the tanker group's first point on the tanker's unit heading,
+#         same heading, --aar-alt-ft (20000) ft, --aar-kt (410 = ME speed, ~300 KIAS at FL200),
+#         internal fuel --aar-internal-lb (5770 lb; + full FPU-8A ~2230 = ~8000 lb), first point
+#         "AIRSTART AAR", route continues from the CP. tools/aar_test_logger.lua is injected as a
+#         triggerOnce DO SCRIPT ([AAR-TEST] log lines); AAR-S also sets AI SILENCE on the tanker.
 # v1.1.0: random RED air activations are switched off in the TEST variants (every trigger action
 #         a_activate_group for a late-activated RED plane / helicopter group is removed from
 #         trigrules and from the compiled trig.actions); --keep-red-air keeps them. The source
@@ -74,7 +80,68 @@ def strip_red_air(mission):
     print("  red air activations removed (%d): %s" % (len(gone), ", ".join(gone) or "none"))
 
 
+def lua_str(b):
+    """bytes -> body of a double-quoted Lua string literal."""
+    return b.replace(b"\\", b"\\\\").replace(b'"', b'\\"').replace(b"\r", b"").replace(b"\n", b"\\n")
+
+
+def add_do_script(mission, text, comment):
+    """Appends a triggerOnce rule (condition: none) with one DO SCRIPT action, in both the editor
+    rules (trigrules) and the compiled trig table, the way the ME writes 'SetSuperCarrier'."""
+    rules, trig = mission[b"trigrules"], mission[b"trig"]
+    n = max(list(rules.keys()) + list(trig[b"actions"].keys())) + 1
+    rules[n] = {b"actions": {1: {b"predicate": b"a_do_script", b"text": text}},
+                b"colorItem": b"0x00ff00ff", b"comment": comment.encode(), b"eventlist": b"",
+                b"predicate": b"triggerOnce", b"rules": {}}
+    trig[b"actions"][n] = b'a_do_script("' + lua_str(text) + b'"); mission.trig.func[%d]=nil;' % n
+    trig[b"conditions"][n] = b"return(true)"
+    trig[b"flag"][n] = True
+    trig[b"func"][n] = b"if mission.trig.conditions[%d]() then mission.trig.actions[%d]() end" % (n, n)
+    print("  trigger %d '%s' added (DO SCRIPT, %d bytes)" % (n, comment, len(text)))
+
+
+def build_aar(mission, a, key):
+    g = find_group(mission, b"plane", a.group)
+    tk = find_group(mission, b"plane", a.tanker_group)
+    if g is None or tk is None:
+        sys.exit("group not found: %s / %s" % (a.group, a.tanker_group))
+    unit = next((u for u in g[b"units"].values() if s(u.get(b"name")) == a.unit), None)
+    if unit is None:
+        sys.exit("unit not found in %s: %s" % (a.group, a.unit))
+    pts = [p for _, p in sorted(g[b"route"][b"points"].items())]
+    cp_i = next((i for i, p in enumerate(pts) if s(p.get(b"name", b"")) == a.cp_name), None)
+    if cp_i is None or cp_i < 1:
+        sys.exit("route point '%s' not found (or it is the first point)" % a.cp_name)
+    t1 = tk[b"route"][b"points"][1]
+    hdg = float(next(iter(tk[b"units"].values())).get(b"heading", 0.0)) % (2 * math.pi)
+    sx = t1[b"x"] - math.cos(hdg) * a.aar_nm * 1852
+    sy = t1[b"y"] - math.sin(hdg) * a.aar_nm * 1852
+    alt, spd = a.aar_alt_ft * 0.3048, a.aar_kt * 0.514444
+    for k in (b"parking", b"parking_id", b"parking_landing", b"parking_landing_id"):
+        unit.pop(k, None)
+    unit.update({b"x": sx, b"y": sy, b"alt": alt, b"alt_type": b"BARO", b"heading": hdg, b"psi": -hdg,
+                 b"speed": spd})
+    unit[b"payload"][b"fuel"] = round(a.aar_internal_lb / 2.20462, 1)
+    g[b"x"], g[b"y"] = sx, sy
+    p1 = pts[0]
+    for k in (b"linkUnit", b"helipadId", b"airdromeId", b"linkOffset"):
+        p1.pop(k, None)
+    p1.update({b"x": sx, b"y": sy, b"alt": alt, b"alt_type": b"BARO", b"type": b"Turning Point",
+               b"action": b"Turning Point", b"speed": spd, b"ETA": 0, b"ETA_locked": True,
+               b"name": b"AIRSTART AAR"})
+    keep = [p1] + pts[cp_i:]
+    g[b"route"][b"points"] = {i: p for i, p in enumerate(keep, 1)}
+    with open(os.path.join(HERE, "aar_test_logger.lua"), "rb") as f:
+        logger = f.read().replace(b"__SILENCE__", b"true" if key == "AAR-S" else b"false")
+    add_do_script(mission, logger, "AAR TEST LOGGER" + (" + TANKER SILENCE" if key == "AAR-S" else ""))
+    print("  %s: start %.0f / %.0f (ME x / y), %.1f NM behind %s, heading %03.0f true, %d ft, ME speed %d kt, "
+          "internal fuel %d lb" % (key, sx, sy, a.aar_nm, a.tanker_group, math.degrees(hdg), a.aar_alt_ft,
+                                   a.aar_kt, a.aar_internal_lb))
+
+
 def build(mission, a, key):
+    if key.startswith("AAR"):
+        return build_aar(mission, a, key)
     g = find_group(mission, b"plane", a.group)
     if g is None:
         sys.exit("plane group not found: " + a.group)
@@ -127,7 +194,12 @@ def build(mission, a, key):
 def main():
     ap = argparse.ArgumentParser(description="air-start TEST variants of a CAS .miz (written next to it)")
     ap.add_argument("miz")
-    ap.add_argument("--start", nargs="+", choices=["J1", "J2"], default=["J1", "J2"])
+    ap.add_argument("--start", nargs="+", choices=["J1", "J2", "AAR", "AAR-S"], default=["J1", "J2"])
+    ap.add_argument("--tanker-group", default="TANKER-1")
+    ap.add_argument("--aar-nm", type=float, default=12)
+    ap.add_argument("--aar-alt-ft", type=int, default=20000)
+    ap.add_argument("--aar-kt", type=int, default=410)
+    ap.add_argument("--aar-internal-lb", type=int, default=5770)
     ap.add_argument("--alt-ft", type=int, default=24000)
     ap.add_argument("--kt", type=int, default=410)
     ap.add_argument("--nm", type=float, default=30)
