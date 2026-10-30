@@ -1,4 +1,6 @@
--- AAR_Monitor | v1.1.0
+-- AAR_Monitor | v1.1.1
+-- v1.1.1: OVERTAKE graded (Onur, 2026-10-31): max closure inside 0.5 NM <= 10 kt 0, 10..25 kt -1, > 25 kt -2
+-- (was: > 25 kt -2, else 0). Thresholds: CFG.OVERTAKE_PLAN_KT (10) and CFG.OVERTAKE_BAD_KT (25).
 -- v1.1.0: LIVE (CFG.SCORING = true, CFG.CALL_REFUEL_COMPLETE = true). Adds the clipped session total to the
 -- score (TRT.addScore) and calls TRT.onRefuelComplete(player) at session end (hero > LEAVE_NM from the tanker
 -- after the last disconnect); Core_Scoring v1.4.4 no longer calls it for the player when TRT.AAR.callsRefuelComplete.
@@ -28,7 +30,7 @@
   Measurements and PROPOSED points ([V], plan section 10; total clipped to [CAP_MIN, CAP_MAX]):
     RV_VERT   at the first tick <= 1 NM: hero >= RV_MIN_BELOW_FT below the tanker      +2 / -2
     JOIN_SIDE at that tick: left of the tanker (right < 0)                              +1 / -1
-    OVERTAKE  max closure at 0.5 NM..contact (aft of the tanker), > 25 kt               -2 (<= 25: 0)
+    OVERTAKE  max closure at 0.5 NM..contact (aft of the tanker): <= 10 kt 0, 10..25 kt -1, > 25 kt -2
     OVERRUN   hero ahead of the tanker (fwd > OVERRUN_FT) inside 1 NM before contact    -2
     WEAPON    S_EVENT_SHOT by the hero with the tanker <= WEAPON_NM                     -5
     CONNECT   contacts - 1 = breaks: 0 breaks +2, each break -1 (floor -3)
@@ -55,7 +57,7 @@ if TRT.AAR then
 end
 
 local CFG = {
-    VERSION      = "1.1.0",
+    VERSION      = "1.1.1",
     PLAYER_UNIT  = TRT.PLAYER_NAME or "Player_01",
     TANKERS      = { "TANKER-1-1" },     -- unit names; the nearest existing one is used
     SCORING      = true,                 -- false = shadow (log + summary only)
@@ -216,7 +218,8 @@ local function evaluate(S)
         add("RV_VERT", 0, "no 1 NM snapshot")
     end
     if S.overtakeMax then
-        add("OVERTAKE", (S.overtakeMax > CFG.OVERTAKE_BAD_KT) and -2 or 0,
+        add("OVERTAKE", (S.overtakeMax > CFG.OVERTAKE_BAD_KT) and -2
+                        or (S.overtakeMax > CFG.OVERTAKE_PLAN_KT) and -1 or 0,
             string.format("max closure %.1f kt inside %.1f NM (%d s > %d kt)", S.overtakeMax,
                 CFG.OVERTAKE_FROM_NM, S.overtakeOver10, CFG.OVERTAKE_PLAN_KT))
     end

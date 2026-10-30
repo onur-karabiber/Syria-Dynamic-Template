@@ -1,4 +1,5 @@
-# make_kneeboard.py | v3.3.0
+# make_kneeboard.py | v3.3.1
+# v3.3.1: 07 AAR score line: overtake 10-25 kt -1, > 25 kt -2 (AAR_Monitor v1.1.1).
 # v3.3.0: 07 AAR and 08 FUEL cards (project doc aar-plan v0.8: TEST-AAR flights 2026-10-30; fuel ladder and
 #         thresholds = Flight_Timeline v1.1.0). 02 COMM: COMM1-08 ARCO 31 (252.30 AM, CVN recovery tanker).
 #         Altimeter note: the tanker altitude is true MSL; the mission is
@@ -357,7 +358,7 @@ def aar():
     c.line("Level or climb to 2 NM (below -500 ft = penalty)", "t", F10)
     c.line("Exit fuel >= 12 000 lb", "g", F10)
     c.rule(); c.head("AAR SCORE  (cap +/-10, at session end)")
-    c.line("RV vert +2/-2 · join side +1/-1 · overtake >25 kt -2", "t", F10)
+    c.line("RV vert +2/-2 · join side +1/-1 · overtake 10-25 kt -1, >25 -2", "t", F10)
     c.line("overrun -2 · weapon -5 · breaks +2..-3 · exit fuel +1/-2", "t", F10)
     c.line("depart +1/-2", "t", F10)
     return c
