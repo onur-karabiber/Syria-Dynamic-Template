@@ -1,4 +1,6 @@
--- AAR_Monitor | v1.0.0
+-- AAR_Monitor | v1.0.1
+-- v1.0.1: EXIT_FUEL row (fuel at the last disconnect >= EXIT_MIN_LB = 12,000 lb: +1, else -2) replaces the
+-- planned-onload idea (DCS cuts the flow when the tank is full, so onload only measured the arrival fuel).
 --[[
   Aerial refuelling (AAR) measurement - TRT Syria Dynamic Template (template-level module).
   Design: project doc claude/aar-plan-2026-10-30.md (v0.6, sections 10 and 18).
@@ -26,9 +28,10 @@
     OVERRUN   hero ahead of the tanker (fwd > OVERRUN_FT) inside 1 NM before contact    -2
     WEAPON    S_EVENT_SHOT by the hero with the tanker <= WEAPON_NM                     -5
     CONNECT   contacts - 1 = breaks: 0 breaks +2, each break -1 (floor -3)
+    EXIT_FUEL fuel at the last disconnect >= EXIT_MIN_LB (12,000 lb; a full tank = 13,043 lb)  +1 / -2
     DEPART    after the last disconnect, until LEAVE_NM: right side at 0.3 NM and never
               below DEPART_MIN_UP_FT relative to the tanker                              +1 / -2
-  Logged only (no points until a decision): onload per contact and total, contact duration, closure
+  Logged only (no points): onload per contact and total, contact duration, closure
   and geometry at contact, probe open/close distance, fuel at 1 NM / contact / disconnect / leave,
   time RV -> first contact.
   Not measured here: radar state (Unit.getRadar() is nil for the player), recovery TANK/BINGO,
@@ -48,7 +51,7 @@ if TRT.AAR then
 end
 
 local CFG = {
-    VERSION      = "1.0.0",
+    VERSION      = "1.0.1",
     PLAYER_UNIT  = TRT.PLAYER_NAME or "Player_01",
     TANKERS      = { "TANKER-1-1" },     -- unit names; the nearest existing one is used
     SCORING      = false,                -- shadow
@@ -71,6 +74,7 @@ local CFG = {
     WEAPON_NM         = 10,
     DEPART_SIDE_NM    = 0.3,
     DEPART_MIN_UP_FT  = -500,
+    EXIT_MIN_LB       = 12000,           -- fuel at the last disconnect (total, incl. external tank)
 
     -- pre-contact zones relative to the tanker unit (ft)
     ECH_L = { fwdMin = -400, fwdMax = 100, rightMin = -400, rightMax = -60 },
@@ -217,6 +221,11 @@ local function evaluate(S)
         local breaks = #S.contacts - 1
         add("CONNECT", (breaks == 0) and 2 or math.max(-3, -breaks),
             string.format("%d contact(s), %d break(s)", #S.contacts, breaks))
+        local last = S.contacts[#S.contacts]
+        if last and last.fuelStop then
+            add("EXIT_FUEL", (last.fuelStop >= CFG.EXIT_MIN_LB) and 1 or -2,
+                string.format("%.0f lb at the last disconnect (min %d)", last.fuelStop, CFG.EXIT_MIN_LB))
+        end
         local sideOk = S.dep.side == nil or S.dep.side > 0
         local upOk = S.dep.minUp == nil or S.dep.minUp >= CFG.DEPART_MIN_UP_FT
         add("DEPART", (sideOk and upOk) and 1 or -2,
