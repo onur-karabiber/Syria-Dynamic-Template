@@ -457,6 +457,11 @@ local CFG = {
         m_time_hack            = { ch = "MARSHAL", len = 1.21 },
         m_mark                 = { ch = "MARSHAL", len = 0.50 },
         m_time                 = { ch = "MARSHAL", len = 0.44 },
+        a_signal_tank          = { ch = "APPROACH", len = 0.92 },
+        a_signal_bingo         = { ch = "APPROACH", len = 1.46 },
+        a_akrotiri_bears       = { ch = "APPROACH", len = 1.10 },
+        a_for                  = { ch = "APPROACH", len = 0.40 },
+        p_bingo_akrotiri       = { ch = "PILOT", len = 1.25 },
     },
 
     -- AIRBOSS calls dropped in every case (CV_Comms makes them)
