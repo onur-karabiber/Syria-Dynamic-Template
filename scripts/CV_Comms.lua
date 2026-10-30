@@ -1,4 +1,13 @@
--- CV_Comms | v1.6.2
+-- CV_Comms | v1.7.0
+-- v1.7.0: fuel signals after a bolter / wave-off (plan: project doc aar-plan v0.9 s.8.2). Flight_Timeline >= v1.1.0
+--         latches TRT.TL.tank (below TANK) and TRT.TL.bingoRec (below recovery BINGO, field Akrotiri / LCRA).
+--         Bolter / wave-off with TANK latched: APPROACH "467, your signal tank." With BINGO latched: APPROACH
+--         "467, your signal bingo, bingo. Akrotiri bears BBB for RR." then PILOT "467, bingo, Akrotiri, state S.S."
+--         Once per level per recovery (CV.fuelSig). On the APPROACH channel (263.00), like the other 99 / pattern
+--         calls: heard only when tuned there. Needs the new clips of tts/cv_clips.csv (a_signal_tank, a_signal_bingo,
+--         a_akrotiri_bears, a_for, p_bingo_akrotiri): until they are rendered (python tts/make_clips.py --set cv, paste
+--         tts/cv_audio_table.lua into CFG.AUDIO) the call is subtitle-only ("missing clip" in the log). No diversion
+--         is flown by the script. CFG.FUEL_SIGNAL = false switches it off.
 -- v1.6.2: "see you at 10" offered from 30 NM (was 12; CAS-1 test 2026-10-28: too late).
 --         CASE II still only after the platform call.
 --[[
@@ -257,6 +266,8 @@ local CFG = {
     ONTOP_FT       = 15000,     -- "on top" offered above this
     DEP_FALLBACK_NM= 30,        -- no "on top" by then -> Departure clears to switch anyway
     BOLTER_FINAL_DME = 4,       -- R4: "at 4 DME, turn left to final bearing"
+    FUEL_SIGNAL    = true,      -- v1.7.0: "signal tank / signal bingo" after a bolter / wave-off
+    FIELD          = { name = "Akrotiri", lat = 34.590367, lon = 32.987783 },   -- LCRA, recovery bingo field
     ACLS_NM        = 6.5,       -- "ACLS lock on, say needles" (DME)
     NEEDLES_TIMEOUT= 15,        -- s without a needles answer -> "fly bullseye"
     BALL_NM        = 1.0,       -- Approach starts "...three-quarter mile, call the ball" (NM from stern;
@@ -1118,6 +1129,48 @@ local function CaseNow()
     return (f == 1 or f == 2 or f == 3) and f or 3
 end
 
+-- ── v1.7.0: fuel signals (TANK / BINGO) ─────────────────────────
+local function FieldBearing()
+    local u = Hero()
+    if not (u and coord and coord.LLtoLO and CFG.FIELD) then return nil end
+    local ok, fp = pcall(coord.LLtoLO, CFG.FIELD.lat, CFG.FIELD.lon, 0)
+    if not (ok and fp) then return nil end
+    local up, ab = u:getPoint(), AB()
+    local trueBrg = math.deg(math.atan2(fp.z - up.z, fp.x - up.x)) % 360
+    return Hdg3(trueBrg - ((ab and ab.magvar) or 0)), DistNM(up, fp)
+end
+
+local function C_FuelSignal()
+    if not CFG.FUEL_SIGNAL then return end
+    local tl = TRT.TL
+    if type(tl) ~= "table" then return end
+    local lvl = tl.bingoRec and "BINGO" or (tl.tank and "TANK" or nil)
+    if not lvl or CV.fuelSig == "BINGO" or CV.fuelSig == lvl then return end
+    CV.fuelSig = lvl
+    local m, lbs = Modex(), FuelLbs()
+    Log(string.format("fuel signal %s (state %s)", lvl, StateStr(lbs)))
+    if lvl == "TANK" then
+        Q("APPROACH", "APPROACH", Seq(D("a", m), CFG.P, "a_signal_tank"),
+            string.format("%s, your signal tank.", m), nil, 0.8)
+        return
+    end
+    local brg, dme = FieldBearing()
+    local fname = (CFG.FIELD and CFG.FIELD.name) or "Akrotiri"
+    local seq, text
+    if brg then
+        local d = tostring(math.floor(dme + 0.5))
+        seq  = Seq(D("a", m), CFG.P, "a_signal_bingo", "a_akrotiri_bears", D("a", brg), "a_for", D("a", d))
+        text = string.format("%s, your signal bingo, bingo. %s bears %s for %s.", m, fname, brg, d)
+    else
+        seq  = Seq(D("a", m), CFG.P, "a_signal_bingo")
+        text = string.format("%s, your signal bingo, bingo.", m)
+    end
+    Q("APPROACH", "APPROACH", seq, text, function()
+        Pilot("APPROACH", Seq(D("p", m), CFG.P, "p_bingo_akrotiri", "p_state", StateTokens(lbs)),
+            string.format("%s, bingo, %s, state %s.", m, fname, StateStr(lbs)))
+    end, 0.8)
+end
+
 -- ── R4: CASE III bolter / wave-off pattern ─────────────────────
 local function C_BolterStart()
     local m, ab = Modex(), AB()
@@ -1619,6 +1672,7 @@ end
 local function Reset(reason)
     CV.q, CV.clr, CV.case, CV.tRadar, CV.tBallAsk = {}, nil, nil, nil, nil
     CV.dep, CV.depActive, CV.sawGroove, CV.bolter = nil, false, false, nil
+    CV.fuelSig = nil
     CV.wasOutside = false
     SetPhase("IDLE")
     Log("reset (" .. reason .. ")")
@@ -1718,6 +1772,7 @@ local function Tick(_, t)
             Log("bolter / wave-off (AIRBOSS step " .. tostring(pd.step) .. ")")
             CV.sawGroove = false
             if CV.case == 3 then C_BolterStart() else SetPhase("BALLWAIT") end
+            C_FuelSignal()
         elseif CV.phase == "B_DOWNWIND" and not CV.busy and pd and CV.bolter then
             local ok, X = pcall(AB()._GetDistances, AB(), pd.unit)
             if ok and X and X <= 0 and math.abs(ADiff(MagHdg(u), CV.bolter.dw)) <= 45 then C_BolterAbeam() end

@@ -78,6 +78,11 @@ a_radar_contact;APPROACH;radar contact.;tok:0.15
 a_final_bearing;APPROACH;final bearing;tok
 a_roger;APPROACH;roger.;tok
 a_go1;APPROACH;update state, go button one.;tok
+a_signal_tank;APPROACH;your signal tank.;tok
+a_signal_bingo;APPROACH;your signal bingo, bingo.;tok:0.15
+a_akrotiri_bears;APPROACH;Akrotiri bears,;tok:0.08
+a_for;APPROACH;for,;tok:0.05
+p_bingo_akrotiri;PILOT;bingo, Akrotiri,;tok:0.1
 p_commencing;PILOT;commencing;tok:0.1
 p_approach;PILOT;Approach,;tok:0.1
 p_checking_in;PILOT;checking in;tok:0.1
