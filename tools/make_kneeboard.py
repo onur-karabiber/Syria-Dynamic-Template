@@ -1,4 +1,6 @@
-# make_kneeboard.py | v3.4.0
+# make_kneeboard.py | v3.4.1
+# v3.4.1: 08 FUEL thresholds = Flight_Timeline v1.1.3 (2 000 + 700 + 13 lb/NM; station 4 900 / 5 900,
+#         recovery ~4 100 / ~5 100); LTAG TACAN 21X DAN, ILS 05 109.3 IDAN; divert profile note.
 # v3.4.0: AAR on 29.92 / flight level (Comms_Director v1.7.4, ATP-56 2.2a): 03 and 07 say FL150; 07 ALTIMETER
 #         block rewritten, RV block names the OVERLORD vector and the F10 Judy item, overtake score 15-30 kt -1,
 #         > 30 kt -2 (AAR_Monitor v1.1.2). Mode 3 in the RV initial call = 01 SQUAWK 2042.
@@ -379,24 +381,26 @@ def fuel():
     c.kv("AR1 / AR2", "AR1 top-off pre-VUL · AR2 on call")
     c.kv("ONLOAD", "~2 900 lb/min", "g"); c.kv("EXIT FUEL", ">= 12 000 lb", "g")
     c.rule(); c.head("STATION  (CP +/-40 NM)  tanker + LTAG")
-    c.kv("JOKER", "5 100", "y"); c.kv("BINGO", "4 100", "r")
+    c.kv("JOKER", "5 900", "y"); c.kv("BINGO", "4 900", "r")
     c.kv("BINGO FIELD", "LTAG Incirlik", "o")
     c.line("LTAG TWR 360.100 UHF (manual) · F10 OVERLORD: bingo / divert", "t", F10)
+    c.line("LTAG TCN 21X DAN (tanker 21Y) · ILS 05 109.3 IDAN 049", "t", F10)
     c.line("007 T / 71.5 NM from the racetrack anchor", "t", F10)
     c.line("CP -> LTAG 80 NM (148 km)", "t", F10)
     c.line("AR2 if leaving station below RTB bingo + 1 000", "t", F10)
+    c.line("Divert: stay high, late idle descent (low = ~100 lb/min)", "o", F10)
     c.rule(); c.head("RTB  (after the tanker)")
-    c.line("BINGO = 2 000 + 11 lb/NM x nearer of LTAG / LCRA", "t", F10)
+    c.line("BINGO = 2 000 + 700 appr + 13 lb/NM x nearer of LTAG / LCRA", "t", F10)
     c.line("With >= 12 000 at exit this is rarely reached", "t", F10)
     c.rule(); c.head("RECOVERY  (Marshal -> trap)")
     c.kv("BINGO FIELD", "LCRA Akrotiri", "o")
     c.line("LCRA TWR 252.000 UHF (manual)", "t", F10)
     c.line("110 NM from CVN, ~028 T", "t", F10)
-    c.kv("TANK", "~4 200  (flag 3105)", "y"); c.kv("BINGO", "~3 200  (flag 3103)", "r")
+    c.kv("TANK", "~5 100  (flag 3105)", "y"); c.kv("BINGO", "~4 100  (flag 3103)", "r")
     c.rule(); c.head("FLAGS")
     c.line("3102 JOKER · 3103 BINGO · 3105 TANK", "t", F10)
-    c.line("[V] thresholds: estimates until the CP fuel of a full", "m", F10)
-    c.line("sortie and the burn on station are measured.", "m", F10)
+    c.line("Field formula: 2 diverts with A/G stores (31 Oct) [D].", "m", F10)
+    c.line("[V] CP fuel and burn on station: full sortie not measured.", "m", F10)
     return c
 
 if __name__ == "__main__":

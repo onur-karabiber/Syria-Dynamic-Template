@@ -1,4 +1,10 @@
--- Flight_Timeline | v1.1.2
+-- Flight_Timeline | v1.1.3
+-- v1.1.3: fuel model from two measured diverts CP -> LTAG (TEST-DIV, 2026-10-31, 2 Maverick + 4 GBU aboard;
+--   project doc aar-plan s.26; Onur's decision: one formula for every zone):
+--     field leg = FIELD_RESERVE_LB 2,000 + FIELD_APPROACH_LB 700 (last ~7 min below 10,000 ft: 686 / 709 lb)
+--                 + FIELD_BURN_LB_PER_NM 13 x NM (fit 12.0 / 14.5)
+--   STATION BINGO 4,100 -> 4,900 (tanker transfer 1,250 + 700 + 13 x 71.5 NM + 2,000 = 4,880), JOKER 5,900.
+--   RTB and RECOVERY use the same formula: recovery BINGO ~4,100 and TANK ~5,100 for LCRA at ~110 NM.
 -- v1.1.2: OVERLORD divert (Comms_Director >= v1.7.3, CD.divert): at the call T2 / T3 still open are VOID ("divert"),
 --   T4 settles with the seconds already spent below the station BINGO (a divert at BINGO costs nothing), ladder
 --   snapshot "DIVERT", a DIVERT line in the timeline / debrief (field, state, BINGO, at / above / below BINGO).
@@ -65,7 +71,7 @@ if TRT.TL then
 end
 
 local CFG = {
-    VERSION        = "1.1.2",
+    VERSION        = "1.1.3",
     PLAYER_UNIT    = TRT.PLAYER_NAME or "Player_01",
     GROUP          = "CAS-1",          -- ME group whose route builds the ATO
     CARRIER        = "CVN",
@@ -117,9 +123,10 @@ local CFG = {
     BURN_LB_PER_NM         = 11,       -- legacy single-formula value, kept for the card header only
     JOKER_MARGIN_LB        = 1000,
     BURN_ON_STATION_LB_MIN = 160,      -- [D] 29 Oct log: 154-162 lb/min FL140-FL240, only for the TOS estimate on the card
-    STATION_BINGO_LB       = 4100,     -- tanker transfer 1,250 + tanker -> LTAG ~860 [V] + 2,000 reserve
+    STATION_BINGO_LB       = 4900,     -- v1.1.3: tanker transfer 1,250 + (700 + 13 x 71.5 NM tanker -> LTAG) + 2,000
     FIELD_RESERVE_LB       = 2000,
-    FIELD_BURN_LB_PER_NM   = 11,       -- [V] same value as the tanker -> LTAG estimate (860 lb / 71.5 NM = 12)
+    FIELD_APPROACH_LB      = 700,      -- v1.1.3 [D] two diverts: 686 / 709 lb for the last ~7 min below 10,000 ft
+    FIELD_BURN_LB_PER_NM   = 13,       -- v1.1.3 [D] two diverts with A/G stores: 12.0 / 14.5 lb/NM (was 11 [V])
     TANK_MARGIN_LB         = 1000,     -- TANK = BINGO + this (RECOVERY)
     FIELDS = {                         -- decimal degrees, coord.LLtoLO at runtime
         LTAG = { lat = 37.00205,  lon = 35.426083 },   -- Incirlik  N37 00.123 E035 25.565
@@ -289,14 +296,15 @@ local function thresholds(p, cd, dCP)
             end
         end
         if not best then return nil end
-        return { zone = zone, bingo = CFG.FIELD_RESERVE_LB + best * CFG.FIELD_BURN_LB_PER_NM, field = bn, dField = best }
+        return { zone = zone, bingo = CFG.FIELD_RESERVE_LB + CFG.FIELD_APPROACH_LB + best * CFG.FIELD_BURN_LB_PER_NM,
+                 field = bn, dField = best }
     end
     -- RECOVERY: carrier -> LCRA
     local cv = Unit.getByName(CFG.CARRIER)
     local fp = fieldPos("LCRA")
     if not (cv and cv:isExist() and fp) then return nil end
     local d = distNm(cv:getPoint(), fp)
-    local b = CFG.FIELD_RESERVE_LB + d * CFG.FIELD_BURN_LB_PER_NM
+    local b = CFG.FIELD_RESERVE_LB + CFG.FIELD_APPROACH_LB + d * CFG.FIELD_BURN_LB_PER_NM
     return { zone = zone, bingo = b, tank = b + CFG.TANK_MARGIN_LB, field = "LCRA", dField = d }
 end
 
@@ -508,7 +516,7 @@ local function cardText()
     L[#L + 1] = string.format("FUEL (lb)  STATION BINGO %.1f JOKER %.1f (tanker + LTAG)", CFG.STATION_BINGO_LB / 1000,
         (CFG.STATION_BINGO_LB + CFG.JOKER_MARGIN_LB) / 1000)
     L[#L + 1] = string.format("RTB: %.1f + %.0f lb/NM to nearer of LTAG/LCRA   RECOVERY: LCRA, TANK = BINGO + %.1f",
-        CFG.FIELD_RESERVE_LB / 1000, CFG.FIELD_BURN_LB_PER_NM, CFG.TANK_MARGIN_LB / 1000)
+        (CFG.FIELD_RESERVE_LB + CFG.FIELD_APPROACH_LB) / 1000, CFG.FIELD_BURN_LB_PER_NM, CFG.TANK_MARGIN_LB / 1000)
     local u = hero()
     if u and TL.launched and not TL.landed then
         local lb = fuelLb(u)

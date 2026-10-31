@@ -1,4 +1,6 @@
-# make_test_variant.py | v1.3.0
+# make_test_variant.py | v1.3.1
+# v1.3.1: --div-internal-lb default 2000 -> 2800 (~5 000 lb total, just above the station BINGO 4 900 of
+#         Flight_Timeline v1.1.3).
 # v1.3.0: --start DIV (OVERLORD divert test, Comms_Director v1.7.3): the J2 start (over CP TIGER, heading to
 #         the JTAC-2 target, first point "AIRSTART J2 DIV" so CD still takes the J2 air start) with internal
 #         fuel --div-internal-lb (2000 lb; + full FPU-8A ~2230 = ~4 200 lb, just above the station BINGO 4 100).
@@ -206,7 +208,7 @@ def main():
     ap.add_argument("--aar-alt-ft", type=int, default=20000)
     ap.add_argument("--aar-kt", type=int, default=410)
     ap.add_argument("--aar-internal-lb", type=int, default=5770)
-    ap.add_argument("--div-internal-lb", type=int, default=2000)
+    ap.add_argument("--div-internal-lb", type=int, default=2800)
     ap.add_argument("--alt-ft", type=int, default=24000)
     ap.add_argument("--kt", type=int, default=410)
     ap.add_argument("--nm", type=float, default=30)
