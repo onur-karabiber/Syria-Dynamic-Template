@@ -1,0 +1,95 @@
+# fa_clips.csv | Field_Arrival v1.0.0 (divert arrival: Ankara -> Incirlik Approach / Tower / Ground)
+# id;agency;spoken text;mode
+#
+# Render:  python tts/make_clips.py --set fa
+#   -> src/Sounds/FA/<id>.ogg, AUDIO block in scripts/Field_Arrival.lua rewritten in place.
+# "Incirlik" is written "Injirlik" (Turkish c = j). "Dan" = the TACAN ident DAN, said as a word.
+# Pilot digits / squelch: CV_Comms set (cv:p_*, cv:sq_*); "minimum fuel", "flight level", "thousand":
+# Comms_Director set (cd:p_min_fuel, cd:p_fl, cd:p_thousand). Not rendered here.
+#
+# ── ANKARA CONTROL 240.8 ──
+ank_rc;ANKARA;Hornet five one, Ankara Control, radar contact.;tok:0.15
+ank_minfuel;ANKARA;Roger, minimum fuel.;tok:0.15
+ank_squawk;ANKARA;Squawk;tok
+ank_0;ANKARA;zero;tok
+ank_1;ANKARA;one;tok
+ank_2;ANKARA;two;tok
+ank_3;ANKARA;three;tok
+ank_4;ANKARA;four;tok
+ank_5;ANKARA;five;tok
+ank_6;ANKARA;six;tok
+ank_7;ANKARA;seven;tok
+ank_8;ANKARA;eight;tok
+ank_9;ANKARA;niner;tok
+ank_direct_dan;ANKARA;Proceed direct Dan,;tok:0.08
+ank_desc_fl;ANKARA;descend and maintain flight level;tok
+ank_climb_fl;ANKARA;climb and maintain flight level;tok
+ank_maint_fl;ANKARA;maintain flight level;tok
+ank_handoff;ANKARA;Hornet five one, contact Injirlik Approach, three five seven decimal five.;tok
+p_fa_ank_ci;PILOT>ANKARA;Ankara Control, Hornet five one, military, diverting Injirlik,;tok:0.1
+p_fa_squawk;PILOT>ANKARA;Squawk;tok
+p_fa_direct_dan;PILOT>ANKARA;direct Dan,;tok:0.08
+p_fa_desc_fl;PILOT>ANKARA;descend flight level;tok
+p_fa_climb_fl;PILOT>ANKARA;climb flight level;tok
+p_fa_maint_fl;PILOT>ANKARA;maintain flight level;tok
+p_fa_cs;PILOT>ANKARA;Hornet five one.;tok
+p_fa_ank_hand_rb;PILOT>ANKARA;Three five seven decimal five, Hornet five one.;tok
+#
+# ── INCIRLIK APPROACH 357.5 ──
+app_rc;LTAG_APP;Hornet five one, Injirlik Approach, radar contact.;tok:0.15
+app_minfuel;LTAG_APP;Roger, minimum fuel.;tok:0.15
+app_qnh;LTAG_APP;Injirlik Q N H;tok
+app_altimeter;LTAG_APP;altimeter;tok
+app_0;LTAG_APP;zero;tok
+app_1;LTAG_APP;one;tok
+app_2;LTAG_APP;two;tok
+app_3;LTAG_APP;three;tok
+app_4;LTAG_APP;four;tok
+app_5;LTAG_APP;five;tok
+app_6;LTAG_APP;six;tok
+app_7;LTAG_APP;seven;tok
+app_8;LTAG_APP;eight;tok
+app_9;LTAG_APP;niner;tok
+app_osl;LTAG_APP;Proceed direct Oslup, descend and maintain eight thousand. Expect I L S runway zero five via the one five D M E arc.;tok
+app_osl_low;LTAG_APP;Proceed direct Oslup. Expect I L S runway zero five via the one five D M E arc.;tok
+app_clr;LTAG_APP;Hornet five one, cleared I L S runway zero five approach via the one five D M E arc. Maintain three thousand eight hundred until established.;tok
+app_handoff;LTAG_APP;Hornet five one, contact Injirlik Tower, three six zero decimal one.;tok
+p_fa_app_ci;PILOT>APP;Injirlik Approach, Hornet five one,;tok:0.1
+p_fa_req_ils;PILOT>APP;request I L S runway zero five, full stop.;tok
+p_fa_app_rb;PILOT>APP;Direct Oslup, descend eight thousand, expect the arc,;tok:0.08
+p_fa_app_rb_low;PILOT>APP;Direct Oslup, expect the arc,;tok:0.08
+p_fa_altimeter;PILOT>APP;altimeter;tok
+p_fa_clr_rb;PILOT>APP;Cleared I L S runway zero five via the arc, three thousand eight hundred until established, Hornet five one.;tok
+p_fa_app_hand_rb;PILOT>APP;Three six zero decimal one, Hornet five one.;tok
+#
+# ── INCIRLIK TOWER 360.1 ──
+twr_hello;LTAG_TWR;Hornet five one, Injirlik Tower,;tok:0.1
+twr_wind;LTAG_TWR;wind;tok
+twr_at;LTAG_TWR;at;tok
+twr_calm;LTAG_TWR;wind calm,;tok:0.1
+twr_0;LTAG_TWR;zero;tok
+twr_1;LTAG_TWR;one;tok
+twr_2;LTAG_TWR;two;tok
+twr_3;LTAG_TWR;three;tok
+twr_4;LTAG_TWR;four;tok
+twr_5;LTAG_TWR;five;tok
+twr_6;LTAG_TWR;six;tok
+twr_7;LTAG_TWR;seven;tok
+twr_8;LTAG_TWR;eight;tok
+twr_9;LTAG_TWR;niner;tok
+twr_clr;LTAG_TWR;runway zero five, cleared to land.;tok
+twr_dearm;LTAG_TWR;After landing, taxi to the de-arm area.;tok
+twr_ground;LTAG_TWR;Hornet five one, contact Ground, one two one decimal niner.;tok
+p_fa_twr_ci;PILOT>TWR;Injirlik Tower, Hornet five one,;tok:0.1
+p_fa_ils_gear;PILOT>TWR;I L S runway zero five, gear down, full stop.;tok
+p_fa_ils_gear_ord;PILOT>TWR;I L S runway zero five, gear down, full stop, unexpended ordnance.;tok
+p_fa_ctl_rb;PILOT>TWR;Cleared to land runway zero five, Hornet five one.;tok
+p_fa_ctl_rb_dearm;PILOT>TWR;Cleared to land runway zero five, de-arm after landing, Hornet five one.;tok
+p_fa_twr_gnd_rb;PILOT>TWR;Ground, one two one decimal niner, Hornet five one.;tok
+#
+# ── INCIRLIK GROUND 121.9 ──
+gnd_taxi;LTAG_GND;Hornet five one, Injirlik Ground, taxi to transient parking.;tok
+gnd_taxi_dearm;LTAG_GND;Hornet five one, Injirlik Ground, taxi to the de-arm area, then transient parking.;tok
+p_fa_gnd_ci;PILOT>GND;Injirlik Ground, Hornet five one, clear of runway zero five, request taxi to transient parking.;tok
+p_fa_gnd_rb;PILOT>GND;Taxi to transient parking, Hornet five one.;tok
+p_fa_gnd_rb_dearm;PILOT>GND;De-arm, then transient parking, Hornet five one.;tok

@@ -1,4 +1,6 @@
-# make_kneeboard.py | v3.4.1
+# make_kneeboard.py | v3.5.0
+# v3.5.0: 09 DIVERT LTAG card (Field_Arrival v1.0.0 / Comms_Director v1.7.5): Ankara 240.8 -> Incirlik APP 357.5
+#         -> TWR 360.1 -> GND 121.9, ILS 05 via OSLUP + 15 DME arc, scoring. 08 points to it.
 # v3.4.1: 08 FUEL thresholds = Flight_Timeline v1.1.3 (2 000 + 700 + 13 lb/NM; station 4 900 / 5 900,
 #         recovery ~4 100 / ~5 100); LTAG TACAN 21X DAN, ILS 05 109.3 IDAN; divert profile note.
 # v3.4.0: AAR on 29.92 / flight level (Comms_Director v1.7.4, ATP-56 2.2a): 03 and 07 say FL150; 07 ALTIMETER
@@ -383,7 +385,7 @@ def fuel():
     c.rule(); c.head("STATION  (CP +/-40 NM)  tanker + LTAG")
     c.kv("JOKER", "5 900", "y"); c.kv("BINGO", "4 900", "r")
     c.kv("BINGO FIELD", "LTAG Incirlik", "o")
-    c.line("LTAG TWR 360.100 UHF (manual) · F10 OVERLORD: bingo / divert", "t", F10)
+    c.line("F10 OVERLORD: bingo / divert · LTAG chain: card 09", "t", F10)
     c.line("LTAG TCN 21X DAN (tanker 21Y) · ILS 05 109.3 IDAN 049", "t", F10)
     c.line("007 T / 71.5 NM from the racetrack anchor", "t", F10)
     c.line("CP -> LTAG 80 NM (148 km)", "t", F10)
@@ -403,6 +405,36 @@ def fuel():
     c.line("[V] CP fuel and burn on station: full sortie not measured.", "m", F10)
     return c
 
+def divert():
+    c = Card("09", "DIVERT LTAG", "CAS-1", "Incirlik")
+    c.head("RADIO  (set manually · check-ins on F10 > COMMS)")
+    c.kv("OVERLORD", "proceed direct · Ankara 240.8")
+    c.kv("ANKARA CTL", "240.8  check in, say MIN FUEL", "o")
+    c.line("squawk 4627 · direct DAN · FL150 (or present FL)", "t", F10)
+    c.kv("INCIRLIK APP", "357.5  (auto at 50 NM)", "o")
+    c.line("QNH + altimeter · direct OSLUP · 8 000 · expect arc", "t", F10)
+    c.line("20 DME: cleared ILS 05 via arc, 3 800 until est.", "t", F10)
+    c.kv("INCIRLIK TWR", "360.1  (auto on LOC ~9 NM)", "o")
+    c.line("check in before 1 NM: gear down, full stop", "t", F10)
+    c.line("A/G stores aboard: de-arm after landing", "t", F10)
+    c.kv("INCIRLIK GND", "121.9  (auto < 40 kt)", "o")
+    c.rule(); c.head("ILS RWY 05  (chart)")
+    c.kv("TACAN", "21X DAN"); c.kv("ILS", "109.3 IDAN · 049")
+    c.kv("OSLUP (IAF)", "R-180 / D15 · MHA 8 000")
+    c.kv("ARC", "15 DME · 3 800 · lead R-220")
+    c.kv("JAKUP (IF)", "R-229 / D15 · 3 800")
+    c.kv("GOMSE", "D8.6 · GS 2 300", "g"); c.kv("DA(H)", "369 (200)", "r")
+    c.kv("MISSED", "5 000 via R-049 to TOSIE", "y")
+    c.line("TA 10 000 ft · min fuel repeated to every controller", "t", F10)
+    c.rule(); c.head("SCORE  (Field_Arrival)")
+    c.line("altitude bust >300 ft, 5 s: -2 each (cap -4) · none +1", "t", F10)
+    c.line("arc: below 3 650 -2 · LOC at 3 650-4 100 +2", "t", F10)
+    c.line("GOMSE +/-150 +2 · +/-300 0 · else / off LOC -2", "t", F10)
+    c.line("cleared to land by 1 NM +1 · no -3", "t", F10)
+    c.line("fuel at touchdown >= 2 000 +1 · >= 1 500 0 · less -2", "t", F10)
+    c.line("[V] DAN position estimated (2.2 NM past THR 05).", "m", F10)
+    return c
+
 if __name__ == "__main__":
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     SCRIPTED = "--scripted-jtac" in sys.argv
@@ -414,6 +446,6 @@ if __name__ == "__main__":
         cards += [("04_JTAC1.png", jtac1_s), ("05_JTAC2.png", jtac2_s), ("06_AUTH.png", auth)]
     else:
         cards += [("04_JTAC1.png", jtac1), ("05_JTAC2.png", jtac2)]
-    cards += [("07_AAR.png", aar), ("08_FUEL.png", fuel)]
+    cards += [("07_AAR.png", aar), ("08_FUEL.png", fuel), ("09_DIVERT.png", divert)]
     for fn, mk in cards:
         mk().save(os.path.join(out, fn))

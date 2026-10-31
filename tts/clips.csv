@@ -629,3 +629,6 @@ p_vector;PILOT;vector;tok
 p_nose_cold;PILOT;nose cold, switches safe,;tok:0.1
 p_51;PILOT;Hornet five one.;tok
 p_min_fuel;PILOT;minimum fuel,;tok:0.1
+# v1.7.5 divert to Incirlik via Field_Arrival (Ankara Control hand-off)
+ovl_div_b_ltag_ank;OVERLORD;Proceed direct. Contact Ankara Control, two four zero decimal eight.;tok
+p_div_rb_ltag_ank;PILOT>OVERLORD;Hornet five one, proceeding direct, switching Ankara.;tok

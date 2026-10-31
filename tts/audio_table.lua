@@ -615,4 +615,6 @@
         p_nose_cold            = { ch = "PILOT", len = 1.79 },
         p_51                   = { ch = "PILOT", len = 0.89 },
         p_min_fuel             = { ch = "PILOT", len = 0.82 },
+        ovl_div_b_ltag_ank     = { ch = "OVERLORD", len = 3.56 },
+        p_div_rb_ltag_ank      = { ch = "OVERLORD", len = 2.76 },
     },

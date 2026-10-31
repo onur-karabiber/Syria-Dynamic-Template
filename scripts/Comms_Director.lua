@@ -1,5 +1,13 @@
--- Comms_Director | v1.7.4
+-- Comms_Director | v1.7.5
 --[[
+  v1.7.5 - Divert to Incirlik hands over to Field_Arrival (Onur, 2026-10-31; project doc
+           claude/divert-arrival-2026-10-31.md). With Field_Arrival loaded and a field it supports
+           (TRT.FA.Supports(key)), OVERLORD now says "Proceed direct. Contact Ankara Control, 240.8." and the
+           pilot "proceeding direct, switching Ankara"; after the readback TRT.FA.Start(key, { minFuel })
+           runs the Ankara -> Incirlik Approach -> Tower -> Ground chain (no native ATC). Fields without
+           Field_Arrival data (LCRA) keep the v1.7.4 tower hand-off. The next-call text yields to Field_Arrival
+           while it is active. Exports TRT.CD_AUDIO / TRT.CD_SND_DIR (clip sharing, as TRT.CV_AUDIO).
+           New clips: ovl_div_b_ltag_ank, p_div_rb_ltag_ank.
   v1.7.4 - AAR calls against ATP-56 (project doc claude/aar-realism-review-2026-10-31.md; Onur, 2026-10-31):
            * 29.92 / "flight level" for the AAR exchange [A 2.2a]: OVERLORD "Texaco 11 bears BBB for RR, flight
              level 150. Vector HHH, maintain flight level 140"; TEXACO no longer passes the mission QNH.
@@ -1033,6 +1041,9 @@ local CFG = {
         ovl_div_b_lcra         = { ch = "OVERLORD", len = 3.35 },
         p_div_rb_ltag          = { ch = "OVERLORD", len = 2.99 },
         p_div_rb_lcra          = { ch = "OVERLORD", len = 3.12 },
+        -- v1.7.5 Field_Arrival hand-off
+        ovl_div_b_ltag_ank     = { ch = "OVERLORD", len = 3.56 },
+        p_div_rb_ltag_ank      = { ch = "OVERLORD", len = 2.76 },
     },
 
     -- Air picture / threat / CAP net (v1.5.0)
@@ -1078,7 +1089,8 @@ local CFG = {
     DIVERT         = {       -- v1.7.3 OVERLORD divert branch
         BINGO_TOL_LB = 200,      -- "bingo" in the pilot call when fuel <= TL BINGO + this
         FIELDS = {               -- tower UHF from the DCS Syria terrain data (pydcs export) [K]
-            { key = "LTAG", name = "Incirlik", lat = 37.00205,  lon = 35.426083, twr = "360.100", clip = "ltag" },
+            { key = "LTAG", name = "Incirlik", lat = 37.00205,  lon = 35.426083, twr = "360.100", clip = "ltag",
+              ank = "240.800" },   -- v1.7.5 Field_Arrival hand-off (Ankara Control, AIP ENR 2.1)
             { key = "LCRA", name = "Akrotiri", lat = 34.590367, lon = 32.987783, twr = "252.000", clip = "lcra" },
         },
     },
@@ -1380,6 +1392,8 @@ local function Btn(k) return string.format("push button %d (%s)", CFG.BTN[k], CF
 local function BtnL(k) return string.format("btn %d / %s", CFG.BTN[k], CFG.FREQ[k]) end
 
 -- v1.6.0: shared radio queue for JTAC_Controller (text only for now; audio arg optional)
+_G.TRT.CD_AUDIO   = CFG.AUDIO      -- v1.7.5 shared token clips (Field_Arrival "cd:")
+_G.TRT.CD_SND_DIR = CFG.SND_DIR
 _G.TRT.CD_RADIO = { Q = function(...) return Q(...) end, QPlay = function() return QPlay() end, Msg = Msg,
     len = function(id) return (ClipOf(id)) end,                         -- v1.6.4
     has = function(id) return ClipOf(id) ~= nil end }
@@ -2043,14 +2057,24 @@ local function A_Divert()
     Pilot(string.format("Overlord, %s, %sdiverting %s, %sangels %d, state %s.", CFG.CS,
         isBingo and "bingo, " or "", f.name, minFuel and "minimum fuel, " or "", Angels(p), State(p)),
         Voiced(S("OVERLORD", (isBingo and "p_ovl_divb_" or "p_ovl_div_") .. f.clip, minFuel and "p_min_fuel" or nil, PAS(p))))
-    Q(string.format("[OVERLORD] %s, Overlord, copy divert. %s %s. Proceed direct. Contact %s tower, %s.",
-        CFG.CS, f.name, BrgRng(pos, f.pos), f.name, f.twr), CFG.DUR_LONG, CFG.REPLY_GAP,
+    local fa = _G.TRT and _G.TRT.FA                                  -- v1.7.5
+    local useFA = fa and fa.Supports and fa.Supports(f.key) and f.ank and true or false
+    local toTxt = useFA and string.format("Contact Ankara Control, %s.", f.ank)
+        or string.format("Contact %s tower, %s.", f.name, f.twr)
+    local sfx = useFA and "_ank" or ""
+    Q(string.format("[OVERLORD] %s, Overlord, copy divert. %s %s. Proceed direct. %s",
+        CFG.CS, f.name, BrgRng(pos, f.pos), toTxt), CFG.DUR_LONG, CFG.REPLY_GAP,
         function() SetPhase("DIVERT") end, nil,
-        Voiced(S("OVERLORD", "ovl_div_a", "o_" .. f.clip, OBR(pos, f.pos), 0.15, "ovl_div_b_" .. f.clip)))
+        Voiced(S("OVERLORD", "ovl_div_a", "o_" .. f.clip, OBR(pos, f.pos), 0.15, "ovl_div_b_" .. f.clip .. sfx)))
     local prev = CD.queue[#CD.queue]
     if prev then prev.hold = 0.1 end
-    Q(string.format("[%s] %s, proceeding direct, switching %s tower.", CFG.CS, CFG.CS, f.name),
-        CFG.DUR_PILOT + 2, 0.8, nil, CFG.PILOT_HOLD, Voiced(S("OVERLORD", "p_div_rb_" .. f.clip)))
+    Q(string.format("[%s] %s, proceeding direct, switching %s.", CFG.CS, CFG.CS, useFA and "Ankara" or (f.name .. " tower")),
+        CFG.DUR_PILOT + 2, 0.8,
+        useFA and function()
+            local ok, err = pcall(fa.Start, f.key, { minFuel = minFuel, isBingo = isBingo })
+            if not ok then env.info("[CD] Field_Arrival start failed: " .. tostring(err)) end
+        end or nil,
+        CFG.PILOT_HOLD, Voiced(S("OVERLORD", "p_div_rb_" .. f.clip .. sfx)))
     QPlay()
 end
 
@@ -2518,6 +2542,7 @@ end
 local function NextText()
     if CD.phase == "RECOVERY" or CD.phase == "DONE" then return nil end
     if JcOn() and (CD.phase == "JTAC1" or CD.phase == "JTAC2") then return nil end   -- v1.6.0
+    if CD.phase == "DIVERT" and _G.TRT.FA and _G.TRT.FA.active then return nil end   -- v1.7.5 Field_Arrival
     if CD.phase == "DIVERT" and CD.divert then   -- v1.7.3
         local f
         for _, x in ipairs(CFG.DIVERT.FIELDS) do if x.key == CD.divert.field then f = x end end
@@ -3007,7 +3032,7 @@ local function CD_Init()
     SetFlag(200, 0)
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.7.4 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.7.5 online — CAS-1 Syria")
 end
 
 CD_Init()

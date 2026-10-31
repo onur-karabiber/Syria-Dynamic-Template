@@ -1,4 +1,6 @@
-# make_clips.py | v1.10.0
+# make_clips.py | v1.11.0
+# Divert arrival: python tts/make_clips.py --set fa (tts/fa_clips.csv -> src/Sounds/FA/; the AUDIO block
+#            in scripts/Field_Arrival.lua is rewritten in place between its BEGIN AUDIO / END AUDIO markers)
 # tts/clips.csv -> src/Sounds/CAS1/<id>.ogg  (Piper TTS + ffmpeg radio chain)
 # CV comms:  python tts/make_clips.py --set cv   (tts/cv_clips.csv -> src/Sounds/CV/,
 #            table tts/cv_audio_table.lua -> paste into CV_Comms CFG.AUDIO)
@@ -9,6 +11,10 @@
 #            template build never packs it; the AUDIO block in scripts/Pilot_Banter.lua is
 #            rewritten in place between its BEGIN AUDIO / END AUDIO markers - no paste step)
 #
+# v1.11.0: --set fa (Field_Arrival v1.0.0). Radio chain, in-place Lua AUDIO block (INPLACE_SETS).
+#         Voices: ANKARA keeps bryce-medium; LTAG_APP / LTAG_TWR / LTAG_GND = libritts-high speakers
+#         200 / 250 / 300, picked by measurement on 2026-10-31 (median F0 106 / 218 / 120 Hz, one-word token
+#         "eight" 0.35 / 0.32 / 0.29 s: none collapses like ryan-medium 0.14 s). Not A/B listened yet.
 # v1.10.0: POINTER_JC voice (john-medium) for the JTAC_Controller v0.7.0 POINTER token clips (pj_*,
 #         rows from tools/jc_clips.py, agency POINTER_JC>POINTER). ryan-medium (POINTER) collapses
 #         one-word tokens ("eight" 0.15 s raw, unchanged by length_mult), so chained digits are not
@@ -94,6 +100,10 @@ VOICE = {
     'LTCC_DEP':  'en_GB-jenny_dioco-medium.onnx',          # female
     'ANKARA':    'en_US-bryce-medium.onnx',                # male
     'NICOSIA':   'en_GB-southern_english_female-medium.onnx',
+    # Field_Arrival (--set fa, v1.11.0). Incirlik controllers (USAF): three distinct libritts speakers.
+    'LTAG_APP':  ('en_US-libritts-high.onnx', 1.0, 200, 1.0),   # male, F0 ~106 Hz
+    'LTAG_TWR':  ('en_US-libritts-high.onnx', 1.0, 250, 1.0),   # female, F0 ~218 Hz
+    'LTAG_GND':  ('en_US-libritts-high.onnx', 1.0, 300, 1.0),   # male, F0 ~120 Hz
 }
 
 SETS = {   # --set name -> (csv, outdir, table)
@@ -104,11 +114,15 @@ SETS = {   # --set name -> (csv, outdir, table)
     'fc':   (os.path.join(ROOT, 'tts', 'fc_clips.csv'),
              os.path.join(ROOT, 'src', 'Sounds', 'FC'),
              os.path.join(ROOT, 'tts', 'fc_audio_table.lua')),
+    'fa':   (os.path.join(ROOT, 'tts', 'fa_clips.csv'),                       # v1.11.0
+             os.path.join(ROOT, 'src', 'Sounds', 'FA'),
+             os.path.join(ROOT, 'scripts', 'Field_Arrival.lua')),
     'pb':   (os.path.join(ROOT, 'tts', 'pb_clips.csv'),                       # v1.8.0
              os.path.join(ROOT, 'tools', 'pilot_banter', 'out', 'Sounds', 'PB'),
              os.path.join(ROOT, 'scripts', 'Pilot_Banter.lua')),
 }
 COCKPIT_SETS = {'pb'}   # v1.8.0: cockpit chain + in-place Lua AUDIO block (markers below)
+INPLACE_SETS = {'pb', 'fa'}   # v1.11.0: AUDIO block rewritten in place (radio chain unless cockpit)
 LUA_BEGIN = '-- BEGIN AUDIO'
 LUA_END   = '-- END AUDIO'
 TOK_PAD = 0.06   # s silence after a token clip (default, 'tok:<s>' overrides)
@@ -285,7 +299,7 @@ def main():
                 fmt = '        %-22s = { ch = "%s", len = %.2f },'
                 table.append(fmt % (cid, ch, d))
             print('OK       %-22s %5.1f s  %s' % (cid, d, agency))
-    if not a.out and a.set in COCKPIT_SETS:
+    if not a.out and a.set in INPLACE_SETS:
         write_lua_block(table_path, table)
         print('\n%d clip, AUDIO block rewritten: %s' % (len(table), table_path))
     elif not a.out:
