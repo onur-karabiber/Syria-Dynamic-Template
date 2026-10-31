@@ -1,5 +1,18 @@
--- Comms_Director | v1.7.2
+-- Comms_Director | v1.7.3
 --[[
+  v1.7.3 - OVERLORD divert branch (project doc aar-plan s.7, s.9). F10 "OVERLORD: bingo / divert (nearest field)"
+           in ENROUTE, JTAC1, J1_OFF, JTAC2, J2_OFF, REFUEL, TKR_DONE, RTB (OVERLORD control). Field = nearer of
+           Incirlik (LTAG) / Akrotiri (LCRA) from the hero, CFG.DIVERT.FIELDS. The pilot says "bingo" only when
+           the fuel is at or below the Flight_Timeline BINGO of the current zone (TRT.TL.thresholds, + BINGO_TOL_LB):
+             HORNET 51: Overlord, Hornet 51, [bingo,] diverting Incirlik, angels N, state X.Y.
+             OVERLORD:  Hornet 51, Overlord, copy divert. Incirlik bears BBB for RR. Cleared direct.
+                        Contact Incirlik tower, 360.1.
+             HORNET 51: Hornet 51, cleared direct, switching Incirlik tower.
+           -> phase DIVERT: no JTAC / tanker / Strike / Marshal hand-offs; landing (S_EVENT_LAND) -> DONE.
+           The landing itself is native DCS ATC. Tower UHF 360.100 (LTAG) / 252.000 (LCRA) from the DCS Syria
+           terrain data as exported by pydcs [K]; not checked in the ME. CD.divert = { t, field, name, lb, bingo,
+           isBingo, from, dNm } is read by Flight_Timeline >= v1.1.2. STRIKE_IN / INBOUND / RECOVERY: no item
+           (Strike / Marshal control; CV_Comms "signal bingo" covers the recovery).
   v1.7.2 - Judy reply: OVERLORD "Hornet 51, Overlord, copy." (clip ovl_copy_51). "Copy Judy, Texaco is yours" was
            invented phraseology: Judy is a one-way receiver call (ATP-56 Annex 2P serial 3: no tanker reply;
            brevity JUDY = controller minimizes transmissions). Clip ovl_judy removed (csv, AUDIO, ogg).
@@ -985,6 +998,18 @@ local CFG = {
         t_7                    = { ch = "TEXACO", len = 0.43 },
         t_8                    = { ch = "TEXACO", len = 0.25 },
         t_9                    = { ch = "TEXACO", len = 0.40 },
+        -- v1.7.3 divert
+        p_ovl_divb_ltag        = { ch = "PILOT", len = 3.10 },
+        p_ovl_div_ltag         = { ch = "PILOT", len = 2.11 },
+        p_ovl_divb_lcra        = { ch = "PILOT", len = 2.90 },
+        p_ovl_div_lcra         = { ch = "PILOT", len = 2.40 },
+        ovl_div_a              = { ch = "OVERLORD", len = 2.40 },
+        o_ltag                 = { ch = "OVERLORD", len = 0.49 },
+        o_lcra                 = { ch = "OVERLORD", len = 0.61 },
+        ovl_div_b_ltag         = { ch = "OVERLORD", len = 3.12 },
+        ovl_div_b_lcra         = { ch = "OVERLORD", len = 3.21 },
+        p_div_rb_ltag          = { ch = "OVERLORD", len = 2.66 },
+        p_div_rb_lcra          = { ch = "OVERLORD", len = 2.88 },
     },
 
     -- Air picture / threat / CAP net (v1.5.0)
@@ -1023,6 +1048,13 @@ local CFG = {
         BRA_NM   = { 20, 10, 5 },-- OVERLORD tanker bearing / range calls until Judy
         RCVD_WAIT = 30,          -- s after the last disconnect if no 0.3 NM departure was measured
         AR1_HOLD  = true,        -- v1.7.1 POINTER hand-off waits for AR1 closed (off Texaco / skip AR1)
+    },
+    DIVERT         = {       -- v1.7.3 OVERLORD divert branch
+        BINGO_TOL_LB = 200,      -- "bingo" in the pilot call when fuel <= TL BINGO + this
+        FIELDS = {               -- tower UHF from the DCS Syria terrain data (pydcs export) [K]
+            { key = "LTAG", name = "Incirlik", lat = 37.00205,  lon = 35.426083, twr = "360.100", clip = "ltag" },
+            { key = "LCRA", name = "Akrotiri", lat = 34.590367, lon = 32.987783, twr = "252.000", clip = "lcra" },
+        },
     },
     REMIND_FIRST   = 60,     -- s after a check-in becomes due before the first repeat
     REMIND_EVERY   = 120,    -- s between further repeats
@@ -1903,6 +1935,63 @@ local function A_OvlAbort()
     QPlay()
 end
 
+-- v1.7.3 OVERLORD divert branch ----------------------------------------------------------
+local DIV_PHASES = {
+    ENROUTE = true, JTAC1 = true, J1_OFF = true, JTAC2 = true,
+    J2_OFF = true, REFUEL = true, TKR_DONE = true, RTB = true,
+}
+
+--- Nearest divert field to pos: field, NM.
+local function DivertField(pos)
+    local best, bd
+    for _, f in ipairs(CFG.DIVERT.FIELDS) do
+        if not f.pos then
+            local ok, v = pcall(coord.LLtoLO, f.lat, f.lon, 0)
+            if ok and v then f.pos = v end
+        end
+        if f.pos then
+            local d = Dist2D(pos, f.pos)
+            if not bd or d < bd then best, bd = f, d end
+        end
+    end
+    return best, bd
+end
+
+--- Flight_Timeline BINGO for the hero's current zone (lb), nil without TL >= v1.1.2.
+local function BingoNow(p)
+    local tl = _G.TRT and _G.TRT.TL
+    if not (tl and tl.thresholds) then return nil end
+    local ok, thr = pcall(tl.thresholds, p:getPoint(), CD, nil)
+    return (ok and type(thr) == "table") and thr.bingo or nil
+end
+
+local function A_Divert()
+    local p = Player(); if not p then return end
+    local pos = p:getPoint()
+    local f, d = DivertField(pos)
+    if not f then Msg("[CAS-1] No divert field available.", CFG.DUR_SHORT); return end
+    local lb, bingo = FuelLb(p), BingoNow(p)
+    local isBingo = (bingo ~= nil) and lb <= bingo + CFG.DIVERT.BINGO_TOL_LB
+    CD.divert = { t = timer.getTime(), field = f.key, name = f.name, lb = lb, bingo = bingo,
+                  isBingo = isBingo, from = CD.phase, dNm = d }
+    env.info(string.format("[CD] DIVERT %s (%s) from %s, %.0f NM, state %.0f lb, bingo %s%s", f.key, f.name,
+        CD.phase, d, lb, bingo and string.format("%.0f", bingo) or "n/a", isBingo and " (bingo call)" or ""))
+    CD.tk = nil
+    CD.awaiting = true; MenuRebuild()
+    Pilot(string.format("Overlord, %s, %sdiverting %s, angels %d, state %s.", CFG.CS,
+        isBingo and "bingo, " or "", f.name, Angels(p), State(p)),
+        Voiced(S("OVERLORD", (isBingo and "p_ovl_divb_" or "p_ovl_div_") .. f.clip, PAS(p))))
+    Q(string.format("[OVERLORD] %s, Overlord, copy divert. %s %s. Cleared direct. Contact %s tower, %s.",
+        CFG.CS, f.name, BrgRng(pos, f.pos), f.name, f.twr), CFG.DUR_LONG, CFG.REPLY_GAP,
+        function() SetPhase("DIVERT") end, nil,
+        Voiced(S("OVERLORD", "ovl_div_a", "o_" .. f.clip, OBR(pos, f.pos), 0.15, "ovl_div_b_" .. f.clip)))
+    local prev = CD.queue[#CD.queue]
+    if prev then prev.hold = 0.1 end
+    Q(string.format("[%s] %s, cleared direct, switching %s tower.", CFG.CS, CFG.CS, f.name),
+        CFG.DUR_PILOT + 2, 0.8, nil, CFG.PILOT_HOLD, Voiced(S("OVERLORD", "p_div_rb_" .. f.clip)))
+    QPlay()
+end
+
 local function A_StrikeCheckInIn()
     local p = Player(); if not p then return end
     CD.awaiting = true; MenuRebuild()
@@ -2320,6 +2409,7 @@ local function PhaseActions()
     if ph == "ENROUTE" or ph == "JTAC1" or ph == "J1_OFF" or ph == "JTAC2" or ph == "J2_OFF" then
         a[#a+1] = { "OVERLORD: RTB (mission abort)", A_OvlAbort }
     end
+    if DIV_PHASES[ph] then a[#a+1] = { "OVERLORD: bingo / divert (nearest field)", A_Divert } end   -- v1.7.3
     if CD.feetPending and OVL_PHASES[ph] then
         a[#a+1] = { "OVERLORD: " .. ((CD.feetPending == "DRY") and "feet dry" or "feet wet"), A_FeetReport }
     end
@@ -2366,6 +2456,12 @@ end
 local function NextText()
     if CD.phase == "RECOVERY" or CD.phase == "DONE" then return nil end
     if JcOn() and (CD.phase == "JTAC1" or CD.phase == "JTAC2") then return nil end   -- v1.6.0
+    if CD.phase == "DIVERT" and CD.divert then   -- v1.7.3
+        local f
+        for _, x in ipairs(CFG.DIVERT.FIELDS) do if x.key == CD.divert.field then f = x end end
+        return string.format("Divert %s (%s): tower %s UHF, set manually. Native ATC (F10 > ATC). Land, taxi, shut down.",
+            CD.divert.name, CD.divert.field, f and f.twr or "?")
+    end
     return TkrNext() or NEXT[CD.phase]
 end
 
@@ -2485,6 +2581,8 @@ SetPhase = function(new)
             timer.scheduleFunction(function() Msg(txt, CFG.DUR_SHORT) end, nil, timer.getTime() + 8)
         else Msg(txt, CFG.DUR_SHORT) end
         TicBDA("J2")
+    elseif new == "DIVERT" and CD.divert then   -- v1.7.3
+        Msg("[CAS-1] " .. (NextText() or "Divert."), CFG.DUR_HANDOFF)
     elseif new == "RECOVERY" then
         env.info("[CD] RECOVERY phase — AIRBOSS active, CD standing down after Marshal hand-off.")
     end
@@ -2676,6 +2774,16 @@ function CD_EVENTS:onEvent(e)
         if not okS then env.info("[CD] shot handler error: " .. tostring(err)) end
         return
     end
+    if e and e.id == world.event.S_EVENT_LAND and e.initiator and CD.phase == "DIVERT" then   -- v1.7.3
+        local okL, nm = pcall(function() return e.initiator:getName() end)
+        if okL and nm == CFG.PLAYER_UNIT then
+            local pn = "?"
+            pcall(function() pn = e.place and e.place:getName() or "?" end)
+            env.info("[CD] divert landing at " .. tostring(pn))
+            SetPhase("DONE")
+        end
+        return
+    end
     if not e or e.id ~= world.event.S_EVENT_KILL then return end
     local ok, err = pcall(function()
         local k, v = e.initiator, e.target
@@ -2836,7 +2944,7 @@ local function CD_Init()
     SetFlag(200, 0)
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.7.2 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.7.3 online — CAS-1 Syria")
 end
 
 CD_Init()

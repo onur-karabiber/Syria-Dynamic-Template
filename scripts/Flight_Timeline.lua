@@ -1,4 +1,8 @@
--- Flight_Timeline | v1.1.1
+-- Flight_Timeline | v1.1.2
+-- v1.1.2: OVERLORD divert (Comms_Director >= v1.7.3, CD.divert): at the call T2 / T3 still open are VOID ("divert"),
+--   T4 settles with the seconds already spent below the station BINGO (a divert at BINGO costs nothing), ladder
+--   snapshot "DIVERT", a DIVERT line in the timeline / debrief (field, state, BINGO, at / above / below BINGO).
+--   Phase DIVERT uses the RTB zone (BINGO to the nearer of LTAG / LCRA). TL.thresholds is exported for CD.
 -- v1.1.1: T2 (CP TIGER) waits while AR1 is open (Comms_Director >= v1.7.0: phase ENROUTE and CD.ar1Done == false,
 --   i.e. neither "off Texaco" nor "skip AR1" yet). The AR1 racetrack passes inside CP_RADIUS_NM, so T2 and the CP
 --   fuel snapshot fired mid-refuel (TEST-AAR 2026-10-30: 7.9k lb). Older CD (ar1Done nil): unchanged.
@@ -61,7 +65,7 @@ if TRT.TL then
 end
 
 local CFG = {
-    VERSION        = "1.1.1",
+    VERSION        = "1.1.2",
     PLAYER_UNIT    = TRT.PLAYER_NAME or "Player_01",
     GROUP          = "CAS-1",          -- ME group whose route builds the ATO
     CARRIER        = "CVN",
@@ -139,7 +143,7 @@ local MISSION_PH = {
     JTAC2 = true, J2_OFF = true, REFUEL = true, TKR_DONE = true,
 }
 local STATION_PH = { JTAC1 = true, J1_OFF = true, JTAC2 = true }
-local END_PH = { RTB = true, STRIKE_IN = true, INBOUND = true, RECOVERY = true, DONE = true }
+local END_PH = { RTB = true, STRIKE_IN = true, INBOUND = true, RECOVERY = true, DONE = true, DIVERT = true }
 
 -- ══════════════════════════════════════════════════════════════
 --  STATE
@@ -261,7 +265,7 @@ local RTB_PH = { RTB = true, STRIKE_IN = true, INBOUND = true }
 local function zoneOf(cd, dCP)
     if cd then
         if cd.phase == "RECOVERY" then return "RECOVERY" end
-        if RTB_PH[cd.phase] then return "RTB" end
+        if RTB_PH[cd.phase] or cd.phase == "DIVERT" then return "RTB" end   -- v1.1.2
         if MISSION_PH[cd.phase] then return "STATION" end
         return nil
     end
@@ -295,6 +299,8 @@ local function thresholds(p, cd, dCP)
     local b = CFG.FIELD_RESERVE_LB + d * CFG.FIELD_BURN_LB_PER_NM
     return { zone = zone, bingo = b, tank = b + CFG.TANK_MARGIN_LB, field = "LCRA", dField = d }
 end
+
+TL.thresholds = thresholds   -- v1.1.2: read by Comms_Director (divert "bingo" call)
 
 local function snap(label, lb)
     if not lb then
@@ -546,6 +552,7 @@ local function timelineText(title)
     if TL.phaseT.J1_OFF then L[#L + 1] = "JTAC-1 complete   " .. clock(TL.phaseT.J1_OFF) end
     if TL.phaseT.J2_OFF then L[#L + 1] = "JTAC-2 complete   " .. clock(TL.phaseT.J2_OFF) end
     if TL.refuelT then L[#L + 1] = "Refuel contact    " .. clock(TL.refuelT) end
+    if TL.divertTxt then L[#L + 1] = TL.divertTxt end   -- v1.1.2
     if #TL.ladder > 0 then
         L[#L + 1] = "FUEL LADDER (lb)"
         for _, e in ipairs(TL.ladder) do
@@ -763,6 +770,21 @@ local function tick()
             TL.aborted = t
             log("MISSION ABORT " .. clock(t))
             voidOpen("mission abort")
+        end
+        if cd.divert and not TL.diverted then   -- v1.1.2
+            local dv = cd.divert
+            TL.diverted = t
+            local rel = "n/a"
+            if dv.bingo then
+                if dv.lb < dv.bingo - 200 then rel = "below BINGO"
+                elseif dv.lb <= dv.bingo + 200 then rel = "at BINGO"
+                else rel = "above BINGO" end
+            end
+            TL.divertTxt = string.format("DIVERT %s  %s  from %s, state %.1f, BINGO %s (%s)", clock(t), tostring(dv.field),
+                tostring(dv.from), (dv.lb or 0) / 1000, dv.bingo and string.format("%.1f", dv.bingo / 1000) or "n/a", rel)
+            log(TL.divertTxt)
+            snap("DIVERT", dv.lb)
+            voidOpen("divert")
         end
         if not TL.m.T3.state and not TL.aborted and cd.deadJ2 then
             local tj2 = absToElapsed(cd.j2 and cd.j2.tot) or t

@@ -607,3 +607,15 @@ t_6;TEXACO;six;tok
 t_7;TEXACO;seven;tok
 t_8;TEXACO;eight;tok
 t_9;TEXACO;niner;tok
+# v1.7.3 OVERLORD divert branch (Incirlik written "Injirlik" so Piper says the Turkish c = j)
+p_ovl_divb_ltag;PILOT;Overlord, Hornet five one, bingo, diverting Injirlik,;tok:0.1
+p_ovl_div_ltag;PILOT;Overlord, Hornet five one, diverting Injirlik,;tok:0.1
+p_ovl_divb_lcra;PILOT;Overlord, Hornet five one, bingo, diverting Akrotiri,;tok:0.1
+p_ovl_div_lcra;PILOT;Overlord, Hornet five one, diverting Akrotiri,;tok:0.1
+ovl_div_a;OVERLORD;Hornet five one, Overlord, copy divert.;tok:0.15
+o_ltag;OVERLORD;Injirlik;tok
+o_lcra;OVERLORD;Akrotiri;tok
+ovl_div_b_ltag;OVERLORD;Cleared direct. Contact Injirlik tower, three six zero decimal one.;tok
+ovl_div_b_lcra;OVERLORD;Cleared direct. Contact Akrotiri tower, two five two decimal zero.;tok
+p_div_rb_ltag;PILOT>OVERLORD;Hornet five one, cleared direct, switching Injirlik tower.;tok
+p_div_rb_lcra;PILOT>OVERLORD;Hornet five one, cleared direct, switching Akrotiri tower.;tok

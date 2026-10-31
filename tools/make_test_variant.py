@@ -1,4 +1,7 @@
-# make_test_variant.py | v1.2.0
+# make_test_variant.py | v1.3.0
+# v1.3.0: --start DIV (OVERLORD divert test, Comms_Director v1.7.3): the J2 start (over CP TIGER, heading to
+#         the JTAC-2 target, first point "AIRSTART J2 DIV" so CD still takes the J2 air start) with internal
+#         fuel --div-internal-lb (2000 lb; + full FPU-8A ~2230 = ~4 200 lb, just above the station BINGO 4 100).
 # v1.2.0: --start AAR / AAR-S (AAR test flight, project doc claude/aar-test-flight-2026-10-30.md):
 #         hero --aar-nm (12) NM BEHIND the tanker group's first point on the tanker's unit heading,
 #         same heading, --aar-alt-ft (20000) ft, --aar-kt (410 = ME speed, ~300 KIAS at FL200),
@@ -161,7 +164,7 @@ def build(mission, a, key):
         ux, uy = dx / d, dy / d
         sx, sy = cx - ux * a.nm * 1852, cy - uy * a.nm * 1852
         hdg = math.atan2(uy, ux)
-    else:
+    else:   # J2 and DIV
         tg = find_group(mission, b"vehicle", a.j2_target)
         if tg is None:
             sys.exit("vehicle group not found: " + a.j2_target)
@@ -184,7 +187,10 @@ def build(mission, a, key):
         p1.pop(k, None)
     p1.update({b"x": sx, b"y": sy, b"alt": alt, b"alt_type": b"BARO", b"type": b"Turning Point",
                b"action": b"Turning Point", b"speed": spd, b"ETA": 0, b"ETA_locked": True,
-               b"name": ("AIRSTART " + key).encode()})
+               b"name": ("AIRSTART J2 DIV" if key == "DIV" else "AIRSTART " + key).encode()})
+    if key == "DIV":
+        unit[b"payload"][b"fuel"] = round(a.div_internal_lb / 2.20462, 1)
+        print("  DIV: internal fuel %d lb" % a.div_internal_lb)
     keep = [p1] + pts[cp_i:]          # drop the departure point(s) before the CP
     g[b"route"][b"points"] = {i: p for i, p in enumerate(keep, 1)}
     print("  %s: start %.0f / %.0f (ME x / y), heading %03.0f true, %d ft, %d kt, route %d point(s)"
@@ -194,12 +200,13 @@ def build(mission, a, key):
 def main():
     ap = argparse.ArgumentParser(description="air-start TEST variants of a CAS .miz (written next to it)")
     ap.add_argument("miz")
-    ap.add_argument("--start", nargs="+", choices=["J1", "J2", "AAR", "AAR-S"], default=["J1", "J2"])
+    ap.add_argument("--start", nargs="+", choices=["J1", "J2", "AAR", "AAR-S", "DIV"], default=["J1", "J2"])
     ap.add_argument("--tanker-group", default="TANKER-1")
     ap.add_argument("--aar-nm", type=float, default=12)
     ap.add_argument("--aar-alt-ft", type=int, default=20000)
     ap.add_argument("--aar-kt", type=int, default=410)
     ap.add_argument("--aar-internal-lb", type=int, default=5770)
+    ap.add_argument("--div-internal-lb", type=int, default=2000)
     ap.add_argument("--alt-ft", type=int, default=24000)
     ap.add_argument("--kt", type=int, default=410)
     ap.add_argument("--nm", type=float, default=30)

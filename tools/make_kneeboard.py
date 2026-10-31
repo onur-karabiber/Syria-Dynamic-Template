@@ -1,4 +1,6 @@
-# make_kneeboard.py | v3.3.1
+# make_kneeboard.py | v3.3.2
+# v3.3.2: 08 FUEL: CP TIGER ~12 000 after AR1 (~8 000 without), divert towers LTAG 360.100 / LCRA 252.000 UHF
+#         and the F10 divert item (Comms_Director v1.7.3).
 # v3.3.1: 07 AAR score line: overtake 10-25 kt -1, > 25 kt -2 (AAR_Monitor v1.1.1).
 # v3.3.0: 07 AAR and 08 FUEL cards (project doc aar-plan v0.8: TEST-AAR flights 2026-10-30; fuel ladder and
 #         thresholds = Flight_Timeline v1.1.0). 02 COMM: COMM1-08 ARCO 31 (252.30 AM, CVN recovery tanker).
@@ -366,7 +368,7 @@ def aar():
 def fuel():
     c = Card("08", "FUEL", "CAS-1", "lb total")
     c.head("PLAN  (total incl. external tank)")
-    c.kv("RAMP", "13 043 (full)"); c.kv("CP TIGER", "~8 000 before VUL")
+    c.kv("RAMP", "13 043 (full)"); c.kv("CP TIGER", "~12 000 after AR1 [K] (~8 000 w/o)")
     c.kv("BURN", "~155 lb/min · 160 on station")
     c.kv("VUL 30 MIN", "~4 950 (JTAC-1 + JTAC-2)")
     c.kv("VUL END -> TKR", "~1 250 (7 min)")
@@ -375,6 +377,7 @@ def fuel():
     c.rule(); c.head("STATION  (CP +/-40 NM)  tanker + LTAG")
     c.kv("JOKER", "5 100", "y"); c.kv("BINGO", "4 100", "r")
     c.kv("BINGO FIELD", "LTAG Incirlik", "o")
+    c.line("LTAG TWR 360.100 UHF (manual) · F10 OVERLORD: bingo / divert", "t", F10)
     c.line("007 T / 71.5 NM from the racetrack anchor", "t", F10)
     c.line("CP -> LTAG 80 NM (148 km)", "t", F10)
     c.line("AR2 if leaving station below RTB bingo + 1 000", "t", F10)
@@ -383,6 +386,7 @@ def fuel():
     c.line("With >= 12 000 at exit this is rarely reached", "t", F10)
     c.rule(); c.head("RECOVERY  (Marshal -> trap)")
     c.kv("BINGO FIELD", "LCRA Akrotiri", "o")
+    c.line("LCRA TWR 252.000 UHF (manual)", "t", F10)
     c.line("110 NM from CVN, ~028 T", "t", F10)
     c.kv("TANK", "~4 200  (flag 3105)", "y"); c.kv("BINGO", "~3 200  (flag 3103)", "r")
     c.rule(); c.head("FLAGS")
