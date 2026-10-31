@@ -1,4 +1,5 @@
-# make_kneeboard.py | v3.5.1
+# make_kneeboard.py | v3.5.2
+# v3.5.2: 08 FUEL recovery: signal tank -> Arco 31 recovery tanker (CV_Comms v1.7.2).
 # v3.5.1: 07 AAR: F10 TEXACO branch items (execute overrun / breakaway / spokes, Comms_Director v1.7.6).
 # v3.5.0: 09 DIVERT LTAG card (Field_Arrival v1.0.0 / Comms_Director v1.7.5): Ankara 240.8 -> Incirlik APP 357.5
 #         -> TWR 360.1 -> GND 121.9, ILS 05 via OSLUP + 15 DME arc, scoring. 08 points to it.
@@ -400,6 +401,8 @@ def fuel():
     c.line("LCRA TWR 252.000 UHF (manual)", "t", F10)
     c.line("110 NM from CVN, ~028 T", "t", F10)
     c.kv("TANK", "~5 100  (flag 3105)", "y"); c.kv("BINGO", "~4 100  (flag 3103)", "r")
+    c.line("Signal tank: Arco 31 btn 8 · TCN 23Y · angels 7 overhead · take X.X", "t", F10)
+    c.line("then F10 APPROACH: tanking complete -> downwind / pattern", "t", F10)
     c.rule(); c.head("FLAGS")
     c.line("3102 JOKER · 3103 BINGO · 3105 TANK", "t", F10)
     c.line("Field formula: 2 diverts with A/G stores (31 Oct) [D].", "m", F10)

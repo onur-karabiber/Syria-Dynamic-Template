@@ -1,4 +1,16 @@
--- CV_Comms | v1.7.1
+-- CV_Comms | v1.7.2
+-- v1.7.2: recovery tanker after "signal tank" (Onur, 2026-10-31). If the tanker CFG.RTANKER.unit (CAS (L) /
+--         template: TANKER-3-1, Arco 31, A-6E, native RecoveryTanker task, 7,000 ft, 252.30 AM, TACAN 23Y) is alive
+--         and airborne, a bolter / wave-off below TANK no longer flies the bolter pattern first:
+--           PILOT "467, airborne." -> APPROACH "467, your signal tank. Arco 31 overhead Mother, angels 7, button 8,
+--           take 1.3." -> PILOT "467, tanking, state 4.8."   phase TANKING, TRT.CV.tanking = true,
+--           TRT.CV.tank = { give, target } (give = TL TANK + RTANKER.ABOVE_TANK_LB - fuel, rounded up to 100 lb,
+--           >= MIN_GIVE_LB). AAR_Monitor >= v1.1.4 watches the recovery tanker only now and scores TAKE.
+--         F10 "APPROACH: tanking complete" -> PILOT "467, tanking complete, state S.S." -> CASE III: APPROACH "take
+--         angels 1.2, when level, turn left to the downwind, heading DDD" (bolter-pattern downwind, then abeam,
+--         final, ball as before); CASE I / II: "roger, re-enter the pattern." -> BALLWAIT.
+--         Tanker missing / on deck: unchanged ("your signal tank." and the bolter pattern). AIRBOSS's own view of a
+--         player who leaves the pattern for the tanker is not handled here [V].
 -- v1.7.1: Marshal check-in reply ends with the recovery BINGO ("..., bingo 4.1, approach button 15." / CASE I
 --         "..., bingo 4.1, report see me."), as the controlling agency's initial response sets "state and Bingo fuel"
 --         [NAVAIR 00-80T-111 6.2.1, AV-8B / LHA; CV NATOPS not in the project]. Value = Flight_Timeline >= v1.1.3
@@ -240,7 +252,7 @@
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "1.7.1",   -- v1.7.1 (was a stale "1.6.2")
+    VERSION      = "1.7.2",
     PLAYER_UNIT  = "Player_01",
     CARRIER_UNIT = "CVN",
     MODEX        = "467",       -- fallback if AIRBOSS has no onboard number yet
@@ -273,6 +285,8 @@ local CFG = {
     BOLTER_FINAL_DME = 4,       -- R4: "at 4 DME, turn left to final bearing"
     FUEL_SIGNAL    = true,      -- v1.7.0: "signal tank / signal bingo" after a bolter / wave-off
     FIELD          = { name = "Akrotiri", lat = 34.590367, lon = 32.987783 },   -- LCRA, recovery bingo field
+    RTANKER        = { unit = "TANKER-3-1", cs = "Arco 31", btn = 8, freq = "252.30 AM", tacan = "23Y",   -- v1.7.2
+                       ABOVE_TANK_LB = 1000, MIN_GIVE_LB = 1000 },
     ACLS_NM        = 6.5,       -- "ACLS lock on, say needles" (DME)
     NEEDLES_TIMEOUT= 15,        -- s without a needles answer -> "fly bullseye"
     BALL_NM        = 1.0,       -- Approach starts "...three-quarter mile, call the ball" (NM from stern;
@@ -312,6 +326,13 @@ local CFG = {
         m_vfr                  = { ch = "MARSHAL", len = 1.40 },
         m_wx_imc               = { ch = "MARSHAL", len = 1.26 },
         m_altimeter            = { ch = "MARSHAL", len = 0.64 },
+        -- v1.7.2 recovery tanker
+        a_arco_a               = { ch = "APPROACH", len = 1.93 },
+        a_arco_b               = { ch = "APPROACH", len = 0.90 },
+        a_point                = { ch = "APPROACH", len = 0.45 },
+        a_reenter              = { ch = "APPROACH", len = 1.38 },
+        p_tanking              = { ch = "PILOT", len = 0.54 },
+        p_tank_done            = { ch = "PILOT", len = 0.76 },
         -- v1.7.1 recovery bingo
         m_bingo                = { ch = "MARSHAL", len = 0.44 },
         m_point                = { ch = "MARSHAL", len = 0.47 },
@@ -1184,6 +1205,77 @@ local function C_FuelSignal()
     end, 0.8)
 end
 
+-- ── v1.7.2 recovery tanker ──────────────────────────────────────
+local function RTanker()
+    local c = CFG.RTANKER
+    local u = c and Unit.getByName(c.unit)
+    if not u then return nil end
+    local okE, ex = pcall(u.isExist, u); if not (okE and ex) then return nil end
+    local okA, air = pcall(u.inAir, u); if not (okA and air) then return nil end
+    local okL, l = pcall(u.getLife, u); if okL and type(l) == "number" and l < 1 then return nil end
+    return u
+end
+
+--- Bolter / wave-off below TANK with the recovery tanker up: send the hero to the tanker. true if handled.
+local function C_TankSignal()
+    if not CFG.FUEL_SIGNAL then return false end
+    local tl, u, rt = TRT.TL, Hero(), RTanker()
+    if type(tl) ~= "table" or not (tl.tank and u and rt) or tl.bingoRec then return false end
+    if CV.fuelSig == "TANK" or CV.fuelSig == "BINGO" then return false end
+    local okT, thr = pcall(tl.thresholds, u:getPoint(), { phase = "RECOVERY" }, nil)
+    if not (okT and type(thr) == "table" and thr.tank) then return false end
+    local m, lbs = Modex(), FuelLbs()
+    local target = thr.tank + CFG.RTANKER.ABOVE_TANK_LB
+    local give = math.max(CFG.RTANKER.MIN_GIVE_LB, math.ceil((target - lbs) / 100) * 100)
+    local gs = StateStr(give)
+    local gi, gf = gs:match("^(%d+)%.(%d)$")
+    local angels = math.floor(rt:getPoint().y * 3.28084 / 1000 + 0.5)
+    local ab = AB()
+    local fbN = ab and ab:GetFinalBearing(true) or 0
+    CV.bolter = { dw = tonumber(Hdg3(fbN + 180)), fb = Hdg3(fbN) }   -- for the re-entry downwind
+    CV.fuelSig = "TANK"
+    CV.tanking, CV.tank = true, { give = give, target = target, lbs0 = lbs, t0 = timer.getTime() }
+    CV.q = {}
+    SetPhase("TANKING")
+    Log(string.format("signal tank -> recovery tanker %s: state %s, give %s, target %.0f", CFG.RTANKER.unit,
+        StateStr(lbs), gs, target))
+    Pilot("APPROACH", Seq(D("p", m), CFG.P, "p_airborne"), string.format("%s, airborne.", m), function()
+        Q("APPROACH", "APPROACH",
+            Seq(D("a", m), CFG.P, "a_signal_tank", CFG.P, "a_arco_a", D("a", angels), CFG.P, "a_arco_b",
+                D("a", gi), "a_point", D("a", gf)),
+            string.format("%s, your signal tank. %s overhead Mother, angels %d, button %d, take %s.", m,
+                CFG.RTANKER.cs, angels, CFG.RTANKER.btn, gs),
+            function()
+                Pilot("APPROACH", Seq(D("p", m), CFG.P, "p_tanking", "p_state", StateTokens(lbs)),
+                    string.format("%s, tanking, state %s.", m, StateStr(lbs)))
+            end, 0.8)
+    end)
+    return true
+end
+
+local function A_TankDone()
+    local m, lbs = Modex(), FuelLbs()
+    CV.tanking = false
+    Log(string.format("tanking complete, state %s", StateStr(lbs)))
+    Pilot("APPROACH", Seq(D("p", m), CFG.P, "p_tank_done", "p_state", StateTokens(lbs)),
+        string.format("%s, tanking complete, state %s.", m, StateStr(lbs)), function()
+            if CV.case == 3 and CV.bolter then
+                local dw = string.format("%03d", CV.bolter.dw)
+                Q("APPROACH", "APPROACH", Seq(D("a", m), CFG.P, "a_take_12", "a_downwind", D("a", dw)),
+                    string.format("%s, take angels 1.2, when level, turn left to the downwind, heading %s.", m, dw),
+                    function()
+                        Pilot("APPROACH", D("p", m), string.format("%s.", m))
+                        SetPhase("B_DOWNWIND")
+                    end, 0.8)
+            else
+                Q("APPROACH", "APPROACH", Seq(D("a", m), CFG.P, "a_reenter"),
+                    string.format("%s, roger, re-enter the pattern.", m),
+                    function() SetPhase("BALLWAIT") end, 0.8)
+            end
+        end)
+    MenuRebuild()
+end
+
 -- ── R4: CASE III bolter / wave-off pattern ─────────────────────
 local function C_BolterStart()
     local m, ab = Modex(), AB()
@@ -1341,6 +1433,8 @@ local function Actions()
     elseif ph == "NEEDLES" then
         a[#a + 1] = { "APPROACH: needles up and on", function() A_Needles(true) end }
         a[#a + 1] = { "APPROACH: needles negative", function() A_Needles(false) end }
+    elseif ph == "TANKING" then                                         -- v1.7.2
+        a[#a + 1] = { "APPROACH: tanking complete (state)", A_TankDone }
     elseif ph == "BALL" then
         a[#a + 1] = { "PADDLES: ball (Hornet ball, state)", function() A_Ball(false) end }
         a[#a + 1] = { "PADDLES: Clara", A_Clara }
@@ -1392,6 +1486,9 @@ local function NextText()
         BALLWAIT     = "Wait for \"call the ball\".",
         BALL         = "Call the ball or Clara.",
         GROOVE       = "Fly the ball.",
+        TANKING      = CV.tank and string.format("Recovery tanker %s: button %d (%s), TACAN %s, overhead Mother. "
+            .. "DCS radio menu: intent to refuel. Take %s, then F10 APPROACH: tanking complete.", CFG.RTANKER.cs,
+            CFG.RTANKER.btn, CFG.RTANKER.freq, CFG.RTANKER.tacan, StateStr(CV.tank.give)) or nil,
     }
     if T[ph] then return T[ph] end
     if ph:sub(1, 2) == "B_" then return "Bolter pattern: upwind, downwind, abeam." end
@@ -1702,6 +1799,7 @@ local function Reset(reason)
     CV.q, CV.clr, CV.case, CV.tRadar, CV.tBallAsk = {}, nil, nil, nil, nil
     CV.dep, CV.depActive, CV.sawGroove, CV.bolter = nil, false, false, nil
     CV.fuelSig = nil
+    CV.tanking, CV.tank = false, nil   -- v1.7.2
     CV.wasOutside = false
     SetPhase("IDLE")
     Log("reset (" .. reason .. ")")
@@ -1800,8 +1898,10 @@ local function Tick(_, t)
                or pd.step == AIRBOSS.PatternStep.BULLSEYE or pd.step == AIRBOSS.PatternStep.DIRTYUP) then
             Log("bolter / wave-off (AIRBOSS step " .. tostring(pd.step) .. ")")
             CV.sawGroove = false
-            if CV.case == 3 then C_BolterStart() else SetPhase("BALLWAIT") end
-            C_FuelSignal()
+            if not C_TankSignal() then                                   -- v1.7.2
+                if CV.case == 3 then C_BolterStart() else SetPhase("BALLWAIT") end
+                C_FuelSignal()
+            end
         elseif CV.phase == "B_DOWNWIND" and not CV.busy and pd and CV.bolter then
             local ok, X = pcall(AB()._GetDistances, AB(), pd.unit)
             if ok and X and X <= 0 and math.abs(ADiff(MagHdg(u), CV.bolter.dw)) <= 45 then C_BolterAbeam() end

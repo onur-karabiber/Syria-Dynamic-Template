@@ -186,3 +186,10 @@ m_time;MARSHAL;time;tok
 # v1.7.1 Marshal reply: recovery bingo
 m_bingo;MARSHAL;bingo;tok
 m_point;MARSHAL;point;tok
+# v1.7.2 recovery tanker after signal tank
+a_arco_a;APPROACH;Arco three one overhead Mother, angels;tok
+a_arco_b;APPROACH;button eight, take;tok
+a_point;APPROACH;point;tok
+a_reenter;APPROACH;roger, re-enter the pattern.;tok
+p_tanking;PILOT;tanking,;tok:0.1
+p_tank_done;PILOT;tanking complete,;tok:0.1

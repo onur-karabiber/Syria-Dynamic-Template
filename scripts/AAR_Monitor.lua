@@ -1,4 +1,8 @@
--- AAR_Monitor | v1.1.3
+-- AAR_Monitor | v1.1.4
+-- v1.1.4: recovery tanker (CV_Comms >= v1.7.2). CFG.TANKERS entries may be { unit, kind = "RECOVERY" }; such a tanker
+--   is watched only while TRT.CV.tanking (after "signal tank" with the tanker available), so passes over the boat do
+--   not open sessions. A RECOVERY session scores TAKE instead of EXIT_FUEL: onload vs the give CV_Comms asked for
+--   (TRT.CV.tank.give): within -300 / +1,000 lb +1, short -1, over (trap weight) -2. Other rows unchanged.
 -- v1.1.3: tanker attitude at contact / disconnect (log only, no points) [ATP-56 2.28e(4)-(5): contacts and
 --   disconnects not during tanker attitude changes; steady turns allowed by day]. The tanker bank is sampled every
 --   tick; at each S_EVENT_REFUELING / _STOP the change over ATT_WIN_S before and after the event is measured
@@ -64,9 +68,11 @@ if TRT.AAR then
 end
 
 local CFG = {
-    VERSION      = "1.1.3",
+    VERSION      = "1.1.4",
     PLAYER_UNIT  = TRT.PLAYER_NAME or "Player_01",
-    TANKERS      = { "TANKER-1-1" },     -- unit names; the nearest existing one is used
+    TANKERS      = { "TANKER-1-1",       -- unit names; the nearest existing (eligible) one is used
+                     { unit = "TANKER-3-1", kind = "RECOVERY" } },   -- v1.1.4 Arco 31, only while TRT.CV.tanking
+    TAKE_SHORT_LB = 300, TAKE_OVER_LB = 1000,   -- v1.1.4 RECOVERY: onload vs give
     SCORING      = true,                 -- false = shadow (log + summary only)
     SHADOW_MSG   = true,                 -- show the session summary on screen
     CALL_REFUEL_COMPLETE = true,         -- TRT.onRefuelComplete at session end (only with SCORING)
@@ -137,18 +143,25 @@ end
 
 local function fmt(v, f) if v == nil then return "n/a" end return string.format(f or "%.0f", v) end
 
+local curKind = "AR"   -- v1.1.4 kind of the tanker last returned by tanker()
 local function tanker()
-    local best, bd
+    local best, bd, bk
     local h = hero()
-    for _, n in ipairs(CFG.TANKERS) do
-        local k = Unit.getByName(n)
+    for _, e in ipairs(CFG.TANKERS) do
+        local n, kind = e, "AR"
+        if type(e) == "table" then n, kind = e.unit, e.kind or "AR" end
+        local ok = (kind ~= "RECOVERY") or (TRT.CV and TRT.CV.tanking)
+        local k = ok and Unit.getByName(n) or nil
         if k and k:isExist() then
-            if not h then return k end
-            local hp, kp = h:getPoint(), k:getPoint()
-            local d = (hp.x - kp.x) ^ 2 + (hp.z - kp.z) ^ 2
-            if not bd or d < bd then best, bd = k, d end
+            local d = 0
+            if h then
+                local hp, kp = h:getPoint(), k:getPoint()
+                d = (hp.x - kp.x) ^ 2 + (hp.z - kp.z) ^ 2
+            end
+            if not bd or d < bd then best, bd, bk = k, d, kind end
         end
     end
+    curKind = bk or "AR"
     return best
 end
 
@@ -211,7 +224,7 @@ end
 local function newSession(r, f)
     AAR.nSession = AAR.nSession + 1
     local S = {
-        n = AAR.nSession, t0 = now(), phase = "RV", phaseT = {},
+        n = AAR.nSession, t0 = now(), phase = "RV", phaseT = {}, kind = curKind,
         fuelRV = f,
         contacts = {}, openStart = nil,
         stops = 0, lastStop = nil,
@@ -222,7 +235,8 @@ local function newSession(r, f)
         firstContactT = nil,
     }
     AAR.session = S
-    log(string.format("S%d RV: d=%.1f NM up=%.0f ft fuel=%s lb", S.n, r.dNm, r.up, fmt(f)))
+    log(string.format("S%d RV%s: d=%.1f NM up=%.0f ft fuel=%s lb", S.n, (S.kind == "RECOVERY") and " (recovery tanker)" or "",
+        r.dNm, r.up, fmt(f)))
     return S
 end
 
@@ -263,7 +277,16 @@ local function evaluate(S)
         add("CONNECT", (breaks == 0) and 2 or math.max(-3, -breaks),
             string.format("%d contact(s), %d break(s)", #S.contacts, breaks))
         local last = S.contacts[#S.contacts]
-        if last and last.fuelStop then
+        local give = (S.kind == "RECOVERY") and TRT.CV and TRT.CV.tank and TRT.CV.tank.give or nil
+        if give then                                             -- v1.1.4 recovery tanker: TAKE
+            local on = 0
+            for _, c in ipairs(S.contacts) do
+                if c.fuelStart and c.fuelStop then on = on + math.max(0, c.fuelStop - c.fuelStart) end
+            end
+            local pts = (on > give + CFG.TAKE_OVER_LB) and -2 or ((on < give - CFG.TAKE_SHORT_LB) and -1 or 1)
+            add("TAKE", pts, string.format("onload %.0f lb, give %.0f lb%s", on, give,
+                (pts == -2) and " (over: trap weight)" or ((pts == -1) and " (short)" or "")))
+        elseif last and last.fuelStop then
             add("EXIT_FUEL", (last.fuelStop >= CFG.EXIT_MIN_LB) and 1 or -2,
                 string.format("%.0f lb at the last disconnect (min %d)", last.fuelStop, CFG.EXIT_MIN_LB))
         end
@@ -485,4 +508,4 @@ end
 world.addEventHandler(H)
 
 log(string.format("v%s loaded (shadow=%s) hero=%s tankers=%s", CFG.VERSION, tostring(not CFG.SCORING), CFG.PLAYER_UNIT,
-    table.concat(CFG.TANKERS, ",")))
+    (function() local t = {} for _, e in ipairs(CFG.TANKERS) do t[#t + 1] = (type(e) == "table") and (e.unit .. "/" .. (e.kind or "AR")) or e end return table.concat(t, ",") end)()))
