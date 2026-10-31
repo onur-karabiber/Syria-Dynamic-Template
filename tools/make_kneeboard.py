@@ -1,4 +1,5 @@
-# make_kneeboard.py | v3.5.0
+# make_kneeboard.py | v3.5.1
+# v3.5.1: 07 AAR: F10 TEXACO branch items (execute overrun / breakaway / spokes, Comms_Director v1.7.6).
 # v3.5.0: 09 DIVERT LTAG card (Field_Arrival v1.0.0 / Comms_Director v1.7.5): Ankara 240.8 -> Incirlik APP 357.5
 #         -> TWR 360.1 -> GND 121.9, ILS 05 via OSLUP + 15 DME arc, scoring. 08 points to it.
 # v3.4.1: 08 FUEL thresholds = Flight_Timeline v1.1.3 (2 000 + 700 + 13 lb/NM; station 4 900 / 5 900,
@@ -362,7 +363,7 @@ def aar():
     c.line("PROBE EXTEND · astern, LEFT drogue (~91 ft aft, 47 ft left)", "t", F10)
     c.line("Closure 3-5 kt · flow ~2 900 lb/min · ~2 min from 6 500", "t", F10)
     c.line("Tank full: auto disconnect (13 043). Else F10 Abort refuel", "t", F10)
-    c.line("Doubt: BREAKAWAY x3", "r", F10)
+    c.line("Doubt: F10 TEXACO breakaway (x3) · overrun · spokes", "r", F10)
     c.rule(); c.head("LEAVE")
     c.line("PROBE RETRACT · Echelon RIGHT · >= 1 NM lateral", "t", F10)
     c.line("Level or climb to 2 NM (below -500 ft = penalty)", "t", F10)

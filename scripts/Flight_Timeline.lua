@@ -1,4 +1,6 @@
--- Flight_Timeline | v1.1.3
+-- Flight_Timeline | v1.1.4
+-- v1.1.4: tanker lost (Comms_Director >= v1.7.6, CD.tkrLost): the STATION BINGO is no longer the tanker value
+--   (4,900) but the direct field value to LTAG from the hero (2,000 + 700 + 13 lb/NM x NM), JOKER = that + 1,000.
 -- v1.1.3: fuel model from two measured diverts CP -> LTAG (TEST-DIV, 2026-10-31, 2 Maverick + 4 GBU aboard;
 --   project doc aar-plan s.26; Onur's decision: one formula for every zone):
 --     field leg = FIELD_RESERVE_LB 2,000 + FIELD_APPROACH_LB 700 (last ~7 min below 10,000 ft: 686 / 709 lb)
@@ -71,7 +73,7 @@ if TRT.TL then
 end
 
 local CFG = {
-    VERSION        = "1.1.3",
+    VERSION        = "1.1.4",
     PLAYER_UNIT    = TRT.PLAYER_NAME or "Player_01",
     GROUP          = "CAS-1",          -- ME group whose route builds the ATO
     CARRIER        = "CVN",
@@ -284,6 +286,12 @@ local function thresholds(p, cd, dCP)
     local zone = zoneOf(cd, dCP)
     if not zone then return nil end
     if zone == "STATION" then
+        local fp = (cd and cd.tkrLost) and fieldPos("LTAG") or nil          -- v1.1.4 no tanker: direct to LTAG
+        if fp then
+            local d = distNm(p, fp)
+            local b = CFG.FIELD_RESERVE_LB + CFG.FIELD_APPROACH_LB + d * CFG.FIELD_BURN_LB_PER_NM
+            return { zone = zone, bingo = b, joker = b + CFG.JOKER_MARGIN_LB, field = "LTAG", dField = d }
+        end
         return { zone = zone, bingo = CFG.STATION_BINGO_LB, joker = CFG.STATION_BINGO_LB + CFG.JOKER_MARGIN_LB, field = "LTAG" }
     end
     if zone == "RTB" then

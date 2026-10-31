@@ -1,4 +1,8 @@
--- AAR_Monitor | v1.1.2
+-- AAR_Monitor | v1.1.3
+-- v1.1.3: tanker attitude at contact / disconnect (log only, no points) [ATP-56 2.28e(4)-(5): contacts and
+--   disconnects not during tanker attitude changes; steady turns allowed by day]. The tanker bank is sampled every
+--   tick; at each S_EVENT_REFUELING / _STOP the change over ATT_WIN_S before and after the event is measured
+--   ("ATTITUDE CHANGE" when >= ATT_DEG). Summary row TKR_ATT (0 points). Exports AAR.tankerBank().
 -- v1.1.2: OVERTAKE loosened (Onur, 2026-10-31): <= 15 kt 0, 15..30 kt -1, > 30 kt -2. The ATP-56 10 kt limit
 --   [A 2.2d(2)(c)] applies to a radar closure without visual; a visual join has no number in ATP-56, and the
 --   tanker sits in cloud at FL150 in some weather, so the score is a training proxy, not the doctrine value.
@@ -60,7 +64,7 @@ if TRT.AAR then
 end
 
 local CFG = {
-    VERSION      = "1.1.2",
+    VERSION      = "1.1.3",
     PLAYER_UNIT  = TRT.PLAYER_NAME or "Player_01",
     TANKERS      = { "TANKER-1-1" },     -- unit names; the nearest existing one is used
     SCORING      = true,                 -- false = shadow (log + summary only)
@@ -91,6 +95,7 @@ local CFG = {
     ASTERN = { fwdMin = -300, fwdMax = -30, rightMin = -130, rightMax = 40 },
     PROBE_OUT = 0.9, PROBE_ARG = 22,
 
+    ATT_WIN_S = 3, ATT_DEG = 5,          -- v1.1.3 tanker bank change window / threshold (log only)
     CAP_MIN = -10, CAP_MAX = 10,
     FLAGS = { CONTACT = 3200, DONE = 3201 },
 }
@@ -175,6 +180,27 @@ local function rel(h, k)
     }
 end
 
+--- v1.1.3 tanker bank (deg, sign irrelevant here) from the unit's right vector.
+local function bankOf(k)
+    local ok, P = pcall(k.getPosition, k)
+    if not (ok and P and P.z) then return nil end
+    local s = math.max(-1, math.min(1, P.z.y))
+    return math.deg(math.asin(s))
+end
+AAR.bankHist = {}
+local function bankSample(k)
+    local b = bankOf(k); if not b then return end
+    local H, t = AAR.bankHist, now()
+    H[#H + 1] = { t = t, b = b }
+    while #H > 0 and t - H[1].t > 12 do table.remove(H, 1) end
+end
+local function bankAt(tAgo)          -- newest sample at least tAgo s old
+    local H, t, best = AAR.bankHist, now(), nil
+    for i = #H, 1, -1 do if t - H[i].t >= tAgo then best = H[i]; break end end
+    return best and best.b or nil
+end
+function AAR.tankerBank() local k = tanker(); return k and bankOf(k) or nil end
+
 local function inBox(r, b)
     return r.fwd >= b.fwdMin and r.fwd <= b.fwdMax and r.right >= b.rightMin and r.right <= b.rightMax
 end
@@ -190,7 +216,7 @@ local function newSession(r, f)
         contacts = {}, openStart = nil,
         stops = 0, lastStop = nil,
         join = nil, overtakeMax = nil, overtakeOver10 = 0, overruns = 0, overrunT = -999,
-        weapons = 0,
+        weapons = 0, attChg = 0, attEvt = 0,
         probeOpenNm = nil, probeCloseNm = nil,
         dep = { sideNm = nil, side = nil, minUp = nil, minUpNm = nil },
         firstContactT = nil,
@@ -228,6 +254,10 @@ local function evaluate(S)
     end
     add("OVERRUN", (S.overruns > 0) and -2 or 0, string.format("%d overrun(s)", S.overruns))
     add("WEAPON", (S.weapons > 0) and -5 or 0, string.format("%d shot(s) near the tanker", S.weapons))
+    if (S.attEvt or 0) > 0 then
+        add("TKR_ATT", 0, string.format("%d of %d contact/disconnect(s) during a tanker attitude change (log only)",
+            S.attChg or 0, S.attEvt))
+    end
     if #S.contacts > 0 then
         local breaks = #S.contacts - 1
         add("CONNECT", (breaks == 0) and 2 or math.max(-3, -breaks),
@@ -299,6 +329,7 @@ end
 local function tick(_, t)
     local h, k = hero(), tanker()
     if not (h and k) then return t + CFG.TICK_FAR end
+    bankSample(k)                                            -- v1.1.3
     local r = rel(h, k)
     if not r then return t + CFG.TICK_FAR end
     local S = AAR.session
@@ -397,6 +428,24 @@ function H:onEvent(e)
         if not S then return end
         local f = h and fuelLb(h)
         local r = (h and k) and rel(h, k) or nil
+        if k then                                            -- v1.1.3 tanker attitude around the event
+            local what = (e.id == world.event.S_EVENT_REFUELING) and "contact" or "disconnect"
+            local b0, bPrev = bankOf(k), bankAt(CFG.ATT_WIN_S - 0.5)
+            local Ss = S
+            Ss.attEvt = (Ss.attEvt or 0) + 1
+            timer.scheduleFunction(function()
+                local k2 = tanker()
+                local b1 = k2 and bankOf(k2) or nil
+                local dPre = (b0 and bPrev) and math.abs(b0 - bPrev) or 0
+                local dPost = (b0 and b1) and math.abs(b1 - b0) or 0
+                local chg = math.max(dPre, dPost) >= CFG.ATT_DEG
+                if chg then Ss.attChg = (Ss.attChg or 0) + 1 end
+                log(string.format("S%d %s tanker bank %s -> %s -> %s deg (-%d/+%d s)%s", Ss.n, what,
+                    fmt(bPrev, "%.1f"), fmt(b0, "%.1f"), fmt(b1, "%.1f"), CFG.ATT_WIN_S, CFG.ATT_WIN_S,
+                    chg and "  ATTITUDE CHANGE [ATP-56 2.28e(5)]" or ""))
+                return nil
+            end, nil, now() + CFG.ATT_WIN_S)
+        end
         if e.id == world.event.S_EVENT_REFUELING then
             local c = { tStart = now(), fuelStart = f }
             if r then c.fwd, c.right, c.up, c.clos, c.probe = r.fwd, r.right, r.up, r.clos, r.probe end

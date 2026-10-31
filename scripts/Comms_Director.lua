@@ -1,5 +1,19 @@
--- Comms_Director | v1.7.5
+-- Comms_Director | v1.7.6
 --[[
+  v1.7.6 - AAR branch calls and tanker loss (Onur, 2026-10-31; project doc claude/aar-realism-review-2026-10-31.md):
+           * F10 "TEXACO: execute overrun" (RV / join, before the first contact): pilot "Texaco 11, execute
+             overrun" [A 2.4a]. When the hero is again >= CFG.TKR.OVR_BEHIND_NM behind the tanker, TEXACO
+             "Hornet 51, terminate overrun" [A 2.4c]. An AAR_Monitor overrun without the call -> on-screen hint.
+           * F10 "TEXACO: breakaway" (inside 1 NM, until "you received"): pilot "Texaco 11, breakaway x3"
+             (tanker callsign first, 2P note 10). When out of contact and >= CFG.TKR.BKW_CLEAR_NM from the tanker
+             (or after CFG.TKR.BKW_MAX_S) TEXACO "terminate emergency separation" + pilot ack [A 2.32, 2P s.13-15].
+           * F10 "TEXACO: spokes" (after a contact): pilot "Hornet 51, spokes" -> TEXACO "copy spokes. Disconnect,
+             check engine instruments." [A 2.28f, 2P s.16]. Hint: damage -> divert.
+           * Tanker loss: the tanker unit gone (or life < 1) after it existed -> OVERLORD, once, in an OVERLORD
+             phase where the tanker mattered: AR1 open -> "Texaco 11 is off station, no tanker available. Proceed
+             CP TIGER." (AR1 closed); RV open / REFUEL / J2_OFF -> "... Say intentions." INFLTREP with the tanker
+             lost -> "copy INFLTREP. No tanker available. Say intentions." CD.tkrLost is read by Flight_Timeline
+             >= v1.1.4 (station BINGO becomes the direct LTAG value).
   v1.7.5 - Divert to Incirlik hands over to Field_Arrival (Onur, 2026-10-31; project doc
            claude/divert-arrival-2026-10-31.md). With Field_Arrival loaded and a field it supports
            (TRT.FA.Supports(key)), OVERLORD now says "Proceed direct. Contact Ankara Control, 240.8." and the
@@ -1019,6 +1033,16 @@ local CFG = {
         t_7                    = { ch = "TEXACO", len = 0.43 },
         t_8                    = { ch = "TEXACO", len = 0.25 },
         t_9                    = { ch = "TEXACO", len = 0.40 },
+        -- v1.7.6 overrun / breakaway / spokes / tanker lost
+        p_tkr_overrun          = { ch = "PILOT", len = 2.15 },
+        p_tkr_breakaway        = { ch = "PILOT", len = 2.29 },
+        p_spokes               = { ch = "PILOT", len = 1.51 },
+        tkr_term_overrun       = { ch = "TEXACO", len = 1.76 },
+        tkr_term_bkw           = { ch = "TEXACO", len = 2.05 },
+        tkr_spokes             = { ch = "TEXACO", len = 4.22 },
+        ovl_tkr_lost_cp        = { ch = "OVERLORD", len = 5.07 },
+        ovl_tkr_lost_si        = { ch = "OVERLORD", len = 4.67 },
+        ovl_inflrep_lost       = { ch = "OVERLORD", len = 4.08 },
         -- v1.7.4 flight level / vector / Mode 3 / ack / minimum fuel
         o_fl                   = { ch = "OVERLORD", len = 0.57 },
         o_vector               = { ch = "OVERLORD", len = 0.42 },
@@ -1085,6 +1109,9 @@ local CFG = {
         MODE3     = "2042",      -- v1.7.4 RV initial call (kneeboard 01 SQUAWK)
         VEC_MIN_MS = 128.6,      -- v1.7.4 own speed floor for the intercept vector (250 kt)
         VEC_MAX_S  = 900,        -- v1.7.4 lead only if the intercept is within 15 min (else pure pursuit)
+        OVR_BEHIND_NM = 0.25,    -- v1.7.6 "terminate overrun" when the hero is this far behind the tanker
+        BKW_CLEAR_NM  = 0.25,    -- v1.7.6 "terminate emergency separation" when out of contact and this far away
+        BKW_MAX_S     = 30,      -- v1.7.6 ... or this long after the breakaway call
     },
     DIVERT         = {       -- v1.7.3 OVERLORD divert branch
         BINGO_TOL_LB = 200,      -- "bingo" in the pilot call when fuel <= TL BINGO + this
@@ -1714,6 +1741,26 @@ local function TD(v) local t = {}; for c in tostring(v):gmatch("%d") do t[#t + 1
 local function PNum(s) local i, f = s:match("^(%d+)%.(%d)$"); return { PD(i or "0"), "cv:p_point", PD(f or "0") } end
 local function TNum(s) local i, f = s:match("^(%d+)%.(%d)$"); return { TD(i or "0"), "t_point", TD(f or "0") } end
 
+--- v1.7.6: tanker unit exists and is not dead.
+local function TkAlive()
+    local t = Tanker()
+    if not t then return false end
+    local okE, ex = pcall(t.isExist, t)
+    if not (okE and ex) then return false end
+    local okL, l = pcall(t.getLife, t)
+    return not (okL and type(l) == "number" and l < 1)
+end
+
+--- v1.7.6: hero position along the tanker's velocity (NM, + ahead, - behind) and 2-D distance (NM).
+local function TkAlong(p, t)
+    local P, T = p:getPoint(), t:getPoint()
+    local v = t:getVelocity() or { x = 0, z = 0 }
+    local vs = math.sqrt(v.x * v.x + v.z * v.z)
+    local d = Dist2D(P, T)
+    if vs < 1 then return 0, d end
+    return ((P.x - T.x) * v.x + (P.z - T.z) * v.z) / vs / 1852, d
+end
+
 --- v1.7.4: flight level of a unit (true altitude rounded to 1,000 ft), e.g. 150.
 local function FL(u) return math.floor(u:getPoint().y * 3.28084 / 1000 + 0.5) * 10 end
 
@@ -1853,7 +1900,7 @@ end
 
 --- v1.7.1: AR1 still open (not flown, not skipped) while a tanker exists -> POINTER hand-off waits.
 local function Ar1Pending()
-    return CFG.TKR.AR1_HOLD and not CD.ar1Done and Tanker() ~= nil
+    return CFG.TKR.AR1_HOLD and not CD.ar1Done and Tanker() ~= nil and not CD.tkrLost
 end
 
 --- v1.7.1: no AR1 top-off wanted.
@@ -1888,6 +1935,114 @@ local function A_OffTkrAR1()
 end
 
 --- Tick: OVERLORD tanker BRA calls until Judy; TEXACO "you received" after the last disconnect.
+-- v1.7.6 AAR branch calls ------------------------------------------------------------------------
+local function AarS() local A = _G.TRT and _G.TRT.AAR; return A and A.session or nil end
+
+local function A_Overrun()
+    local tk = CD.tk; if not tk then return end
+    tk.ovr, tk.ovrCalled = true, true
+    env.info("[CD] AAR: execute overrun called")
+    Pilot(string.format("Texaco 11, execute overrun."), Voiced(S("TEXACO", "p_tkr_overrun")))
+    table.insert(CD.queue, 1, table.remove(CD.queue))   -- urgent: ahead of queued calls (callbacks kept)
+    MenuRebuild(); QPlay()
+end
+
+local function A_Breakaway()
+    local tk = CD.tk; if not tk then return end
+    tk.bkw, tk.bkwT = true, timer.getTime()
+    env.info("[CD] AAR: breakaway called by the receiver")
+    Pilot(string.format("Texaco 11, breakaway, breakaway, breakaway."), Voiced(S("TEXACO", "p_tkr_breakaway")))
+    table.insert(CD.queue, 1, table.remove(CD.queue))   -- urgent: ahead of queued calls (callbacks kept)
+    MenuRebuild(); QPlay()
+end
+
+local function A_Spokes()
+    local tk = CD.tk; if not tk then return end
+    tk.spokes = true
+    env.info("[CD] AAR: spokes called")
+    Pilot(string.format("%s, spokes.", CFG.CS), Voiced(S("TEXACO", "p_spokes")))
+    Q(string.format("[TEXACO] %s, Texaco 11, copy spokes. Disconnect, check engine instruments.", CFG.CS),
+        CFG.DUR_SHORT, CFG.REPLY_GAP, function()
+            Msg("[CAS-1] Spokes: check engine instruments. Damage or doubt: F10 OVERLORD: bingo / divert.", CFG.DUR_HANDOFF)
+        end, nil, Voiced(S("TEXACO", "tkr_spokes")))
+    MenuRebuild(); QPlay()
+end
+
+--- Which branch items are available now (also the menu-rebuild signature).
+local function TkBranch()
+    local tk = CD.tk
+    if not (tk and tk.vec and not tk.rcvd) then return {} end
+    local Sn, b = AarS(), {}
+    local contacts = Sn and #Sn.contacts or 0
+    if contacts == 0 and not tk.ovr then b.ovr = true end
+    if Sn and Sn.join and not tk.bkw then b.bkw = true end
+    if contacts > 0 and not tk.spokes then b.spk = true end
+    return b
+end
+
+local function TkBranchSig()
+    local b = TkBranch()
+    return (b.ovr and "o" or "") .. (b.bkw and "b" or "") .. (b.spk and "s" or "")
+end
+
+--- Overrun hint / terminate, breakaway terminate, menu refresh.
+local function TkBranchTick(p)
+    local tk, t = CD.tk, Tanker()
+    if not (tk and t) then return end
+    local Sn = AarS()
+    if Sn and (Sn.overruns or 0) > (tk.ovrSeen or 0) then
+        tk.ovrSeen = Sn.overruns
+        if not tk.ovr then
+            Msg("[CAS-1] Overrun: pass at least 1,000 ft below the tanker, slow down. F10 TEXACO: execute overrun.", CFG.DUR_SHORT)
+        end
+    end
+    local along, d = TkAlong(p, t)
+    if tk.ovr and along <= -CFG.TKR.OVR_BEHIND_NM then
+        tk.ovr = false
+        Q(string.format("[TEXACO] %s, terminate overrun.", CFG.CS), CFG.DUR_SHORT, 0, nil, nil,
+            Voiced(S("TEXACO", "tkr_term_overrun")))
+        QPlay()
+    end
+    if tk.bkw and not tk.bkwDone then
+        local inContact = Sn and Sn.openStart ~= nil
+        if (not inContact and d >= CFG.TKR.BKW_CLEAR_NM) or timer.getTime() - (tk.bkwT or 0) >= CFG.TKR.BKW_MAX_S then
+            tk.bkwDone = true
+            Q(string.format("[TEXACO] %s, terminate emergency separation.", CFG.CS), CFG.DUR_SHORT, 0, nil, nil,
+                Voiced(S("TEXACO", "tkr_term_bkw")))
+            local prev = CD.queue[#CD.queue]
+            if prev then prev.hold = 0.1 end
+            Q(string.format("[%s] %s.", CFG.CS, CFG.CS), CFG.DUR_PILOT, 0.8, nil, CFG.PILOT_HOLD,
+                Voiced(S("TEXACO", "p_51")))
+            QPlay()
+        end
+    end
+    local sig = TkBranchSig()
+    if sig ~= (tk.brSig or "") then tk.brSig = sig; MenuRebuild() end
+end
+
+--- v1.7.6: tanker lost after it existed -> OVERLORD call (once).
+local function TkrLostTick()
+    if CD.tkrLost then return end
+    if TkAlive() then CD.tkrSeen = true; return end
+    if not CD.tkrSeen then return end
+    CD.tkrLost = true
+    local ph, wasOpen = CD.phase, CD.tk ~= nil
+    env.info(string.format("[CD] tanker lost (%s) in phase %s%s", CFG.TANKER_UNIT, ph, wasOpen and ", RV open" or ""))
+    CD.tk = nil
+    local ar1 = (ph == "ENROUTE") and not CD.ar1Done
+    if ar1 then CD.ar1Done = true end
+    if not OVL_PHASES[ph] or not (ar1 or wasOpen or ph == "REFUEL" or ph == "J2_OFF") then MenuRebuild(); return end
+    CD.awaiting = false
+    if ar1 then
+        Q(string.format("[OVERLORD] %s, Overlord, Texaco 11 is off station, no tanker available. Proceed %s.",
+            CFG.CS, CFG.CP_NAME), CFG.DUR_LONG, 0, nil, nil, Voiced(S("OVERLORD", "ovl_tkr_lost_cp")))
+    else
+        Q(string.format("[OVERLORD] %s, Overlord, Texaco 11 is off station, no tanker available. Say intentions.",
+            CFG.CS), CFG.DUR_LONG, 0, nil, nil, Voiced(S("OVERLORD", "ovl_tkr_lost_si")))
+    end
+    MenuRebuild(); QPlay()
+end
+
 local function TkrTick(p)
     local tk = CD.tk
     if not tk or not (CD.phase == "ENROUTE" or CD.phase == "REFUEL" or CD.phase == "TKR_DONE") then return end
@@ -1965,9 +2120,14 @@ local function A_Inflrep()
     -- INFLTREP is long — give it time on screen
     CD.queue[#CD.queue].dur  = CFG.DUR_LONG + 4
     CD.queue[#CD.queue].hold = 8
-    if Tanker() then                                     -- v1.7.0: EMCON 2 RV vector + readback
+    if TkAlive() then                                    -- v1.7.0: EMCON 2 RV vector + readback (v1.7.6 alive)
         TkOpen(2)
         TkrVector(p, 2)
+    elseif CD.tkrLost then                               -- v1.7.6
+        CD.tk = nil
+        Q(string.format("[OVERLORD] %s, Overlord, copy INFLTREP. No tanker available. Say intentions.", CFG.CS),
+            CFG.DUR_LONG, CFG.REPLY_GAP, function() SetPhase("REFUEL") end, nil,
+            Voiced(S("OVERLORD", "ovl_inflrep_lost")))
     else
         CD.tk = nil
         Q(string.format("[OVERLORD] %s, Overlord, copy INFLTREP. Texaco 11 on station, TACAN 21 Yankee. Texaco, %s.",
@@ -2488,6 +2648,10 @@ local function PhaseActions()
             a[#a+1] = { tk.rcvd and "OVERLORD: off Texaco, proceeding " .. CFG.CP_NAME
                         or "OVERLORD: off Texaco (cancel AR1)", A_OffTkrAR1 }
         end
+        local br = TkBranch()                                    -- v1.7.6
+        if br.ovr then a[#a+1] = { "TEXACO: execute overrun", A_Overrun } end
+        if br.bkw then a[#a+1] = { "TEXACO: breakaway (emergency)", A_Breakaway } end
+        if br.spk then a[#a+1] = { "TEXACO: spokes (drogue damaged)", A_Spokes } end
     end
     if ph == "STRIKE_IN"  then a[#a+1] = { "STRIKE: check in inbound (btn " .. CFG.BTN.STRIKE .. ")", A_StrikeCheckInIn } end
     if RbAvail("J1") then a[#a+1] = { "POINTER 11: 9-line readback (4/6/8)", function() A_Readback("J1") end } end
@@ -2549,6 +2713,10 @@ local function NextText()
         return string.format("Divert %s (%s): tower %s UHF, set manually. Native ATC (F10 > ATC).%s Land, taxi, shut down.",
             CD.divert.name, CD.divert.field, f and f.twr or "?",
             CD.divert.minFuel and " Tell tower: minimum fuel." or "")
+    end
+    if CD.tkrLost and (CD.phase == "REFUEL" or CD.phase == "J2_OFF") then   -- v1.7.6
+        return (CD.phase == "J2_OFF") and "Tanker off station. Pass INFLTREP to OVERLORD (F10), then RTB or divert."
+            or "Tanker off station: OVERLORD RTB (no tanker) or bingo / divert (F10)."
     end
     return TkrNext() or NEXT[CD.phase]
 end
@@ -2983,6 +3151,8 @@ local function CD_Tick(_, t)
     if not CD.airChecked and CD.phase == "IDLE" then AirStartCheck(p, Carrier()) end   -- v1.6.1
     EvalPhase(p, Carrier())
     local okK, errK = pcall(TkrTick, p)   -- v1.7.0
+    if okK then okK, errK = pcall(TkBranchTick, p) end   -- v1.7.6
+    if okK then okK, errK = pcall(TkrLostTick) end        -- v1.7.6
     if not okK then env.info("[CD] tanker error: " .. tostring(errK)) end
     Remind(t)
     CapMonitor()
@@ -3032,7 +3202,7 @@ local function CD_Init()
     SetFlag(200, 0)
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.7.5 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.7.6 online — CAS-1 Syria")
 end
 
 CD_Init()

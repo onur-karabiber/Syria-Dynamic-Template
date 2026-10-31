@@ -632,3 +632,13 @@ p_min_fuel;PILOT;minimum fuel,;tok:0.1
 # v1.7.5 divert to Incirlik via Field_Arrival (Ankara Control hand-off)
 ovl_div_b_ltag_ank;OVERLORD;Proceed direct. Contact Ankara Control, two four zero decimal eight.;tok
 p_div_rb_ltag_ank;PILOT>OVERLORD;Hornet five one, proceeding direct, switching Ankara.;tok
+# v1.7.6 AAR branch calls (overrun / breakaway / spokes) and tanker loss
+p_tkr_overrun;PILOT;Texaco one one, execute overrun.;tok
+p_tkr_breakaway;PILOT;Texaco one one, breakaway, breakaway, breakaway.;tok
+p_spokes;PILOT;Hornet five one, spokes.;tok
+tkr_term_overrun;TEXACO;Hornet five one, terminate overrun.;tok
+tkr_term_bkw;TEXACO;Hornet five one, terminate emergency separation.;tok
+tkr_spokes;TEXACO;Hornet five one, Texaco one one, copy spokes. Disconnect, check engine instruments.;tok
+ovl_tkr_lost_cp;OVERLORD;Hornet five one, Overlord, Texaco one one is off station, no tanker available. Proceed C P Tiger.;tok
+ovl_tkr_lost_si;OVERLORD;Hornet five one, Overlord, Texaco one one is off station, no tanker available. Say intentions.;tok
+ovl_inflrep_lost;OVERLORD;Hornet five one, Overlord, copy INFLTREP. No tanker available. Say intentions.;tok

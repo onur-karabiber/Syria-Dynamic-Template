@@ -1,4 +1,9 @@
--- CV_Comms | v1.7.0
+-- CV_Comms | v1.7.1
+-- v1.7.1: Marshal check-in reply ends with the recovery BINGO ("..., bingo 4.1, approach button 15." / CASE I
+--         "..., bingo 4.1, report see me."), as the controlling agency's initial response sets "state and Bingo fuel"
+--         [NAVAIR 00-80T-111 6.2.1, AV-8B / LHA; CV NATOPS not in the project]. Value = Flight_Timeline >= v1.1.3
+--         thresholds() in the RECOVERY zone (2,000 + 700 + 13 lb/NM x carrier -> LCRA). No TL -> no bingo part.
+--         New Marshal clips m_bingo, m_point.
 -- v1.7.0: fuel signals after a bolter / wave-off (plan: project doc aar-plan v0.9 s.8.2). Flight_Timeline >= v1.1.0
 --         latches TRT.TL.tank (below TANK) and TRT.TL.bingoRec (below recovery BINGO, field Akrotiri / LCRA).
 --         Bolter / wave-off with TANK latched: APPROACH "467, your signal tank." With BINGO latched: APPROACH
@@ -235,7 +240,7 @@
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "1.6.2",
+    VERSION      = "1.7.1",   -- v1.7.1 (was a stale "1.6.2")
     PLAYER_UNIT  = "Player_01",
     CARRIER_UNIT = "CVN",
     MODEX        = "467",       -- fallback if AIRBOSS has no onboard number yet
@@ -307,6 +312,9 @@ local CFG = {
         m_vfr                  = { ch = "MARSHAL", len = 1.40 },
         m_wx_imc               = { ch = "MARSHAL", len = 1.26 },
         m_altimeter            = { ch = "MARSHAL", len = 0.64 },
+        -- v1.7.1 recovery bingo
+        m_bingo                = { ch = "MARSHAL", len = 0.44 },
+        m_point                = { ch = "MARSHAL", len = 0.47 },
         m_case1                = { ch = "MARSHAL", len = 1.20 },
         m_case2                = { ch = "MARSHAL", len = 2.53 },
         m_case3                = { ch = "MARSHAL", len = 2.38 },
@@ -1211,6 +1219,20 @@ local function C_BolterAbeam()
         end)
 end
 
+--- v1.7.1: recovery BINGO "X.Y" (Flight_Timeline thresholds, RECOVERY zone); nil without TL.
+local function RecBingo()
+    local tl, u = TRT.TL, Hero()
+    if not (tl and tl.thresholds and u) then return nil end
+    local ok, thr = pcall(tl.thresholds, u:getPoint(), { phase = "RECOVERY" }, nil)
+    if not (ok and type(thr) == "table" and thr.bingo) then return nil end
+    return StateStr(thr.bingo)
+end
+local function BingoSeq(b)
+    if not b then return {} end
+    local i, f = b:match("^(%d+)%.(%d)$")
+    return Seq(CFG.P, "m_bingo", D("m", i), "m_point", D("m", f))
+end
+
 --- Marshal reply (from the _MarshalCallArrived override).
 local function MarshalReply(case, brc, altitude, tcharlie, qfe)
     local ab, m = AB(), Modex()
@@ -1223,6 +1245,8 @@ local function MarshalReply(case, brc, altitude, tcharlie, qfe)
     local eat    = string.format("%02d", math.floor(eatAbs / 60) % 60)
     CV.case = case
     CV.replied = true
+    local bg = RecBingo()                                       -- v1.7.1
+    local bgTxt = bg and (", bingo " .. bg) or ""
 
     -- LSO radio follows the case (ball call on approach freq in CASE III)
     local lso = (case == 3) and CFG.CHAN.APPROACH or CFG.CHAN.TOWER
@@ -1232,9 +1256,9 @@ local function MarshalReply(case, brc, altitude, tcharlie, qfe)
         CV.clr = { brc = B, angels = tostring(angels), alt = alt4 }
         Ctl("MARSHAL", "MARSHAL",
             Seq(D("m", m), CFG.P, "m_vfr", "m_altimeter", D("m", alt4), CFG.P, "m_case1",
-                "m_brc", D("m", B), CFG.P, "m_report_see_me"),
-            string.format("%s, Mother is VFR, altimeter %s, CASE I recovery, BRC %s, report see me.",
-                m, altTxt, B),
+                "m_brc", D("m", B), BingoSeq(bg), CFG.P, "m_report_see_me"),
+            string.format("%s, Mother is VFR, altimeter %s, CASE I recovery, BRC %s%s, report see me.",
+                m, altTxt, B, bgTxt),
             function()
                 Pilot("MARSHAL", Seq(D("p", m), CFG.P, "p_wilco"),
                     string.format("%s, wilco.", m))
@@ -1261,10 +1285,10 @@ local function MarshalReply(case, brc, altitude, tcharlie, qfe)
     Ctl("MARSHAL", "MARSHAL",
         Seq(D("m", m), CFG.P, "m_wx_imc", "m_altimeter", D("m", alt4), CFG.P, head, CFG.P,
             D("m", m), CFG.P, "m_marshal_on", D("m", radial), "m_radial", CFG.P, D("m", dme), "m_dme",
-            CFG.P, "m_angels", D("m", angels), CFG.P, "m_eat", D("m", eat), CFG.P, "m_btn15"),
+            CFG.P, "m_angels", D("m", angels), CFG.P, "m_eat", D("m", eat), BingoSeq(bg), CFG.P, "m_btn15"),
         string.format("%s, Mother's weather IMC, altimeter %s, %s %s, marshal on the %s radial, %s DME, angels %d, "
-            .. "expected approach time %s, approach button 15.",
-            m, altTxt, headTxt, m, radial, dme, angels, eat))
+            .. "expected approach time %s%s, approach button 15.",
+            m, altTxt, headTxt, m, radial, dme, angels, eat, bgTxt))
     SetPhase("READBACK")
 end
 

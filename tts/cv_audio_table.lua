@@ -170,4 +170,6 @@
         m_time_hack            = { ch = "MARSHAL", len = 1.21 },
         m_mark                 = { ch = "MARSHAL", len = 0.50 },
         m_time                 = { ch = "MARSHAL", len = 0.44 },
+        m_bingo                = { ch = "MARSHAL", len = 0.44 },
+        m_point                = { ch = "MARSHAL", len = 0.47 },
     },

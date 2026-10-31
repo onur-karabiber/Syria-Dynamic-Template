@@ -183,3 +183,6 @@ m_new_eat;MARSHAL;new expected approach time;tok
 m_time_hack;MARSHAL;stand by for time hack.;tok
 m_mark;MARSHAL;mark,;tok:0.1
 m_time;MARSHAL;time;tok
+# v1.7.1 Marshal reply: recovery bingo
+m_bingo;MARSHAL;bingo;tok
+m_point;MARSHAL;point;tok
