@@ -1,5 +1,8 @@
--- Comms_Director | v1.7.7
+-- Comms_Director | v1.7.8
 --[[
+  v1.7.8 - Pilot_Banter v2.0.0 (CAS (L) only) talks much more: ChatPump holds unsolicited calls while
+           TRT.PB.busyUntil is in the future (the pilot's own line ends first; a line is <= ~15 s, CHAT_TTL
+           still applies). Replies and every queued exchange are unchanged. Without Pilot_Banter: no change.
   v1.7.7 - TEST-AAR 2026-10-31 (Onur): a 10 s first contact, a 33 s gap, then the fill. "You received 0.5" came
            30 s after the first disconnect, 3 s before the reconnect, and hid the breakaway / spokes items.
            Now: CFG.TKR.RCVD_WAIT 30 -> 60 s, and a new contact after "you received" (before "TEXACO: state")
@@ -3021,6 +3024,8 @@ end
 
 local function ChatPump(now)
     if CD.qPlaying or #CD.queue > 0 then return end
+    local pb = _G.TRT and _G.TRT.PB                      -- v1.7.8
+    if pb and type(pb.busyUntil) == "number" and timer.getTime() < pb.busyUntil then return end
     while #CD.chat > 0 do
         local it = table.remove(CD.chat, 1)
         if now - it.t0 <= CFG.CHAT_TTL then
@@ -3216,7 +3221,7 @@ local function CD_Init()
     SetFlag(200, 0)
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.7.7 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.7.8 online — CAS-1 Syria")
 end
 
 CD_Init()
