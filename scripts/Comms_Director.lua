@@ -1,5 +1,10 @@
--- Comms_Director | v1.7.6
+-- Comms_Director | v1.7.7
 --[[
+  v1.7.7 - TEST-AAR 2026-10-31 (Onur): a 10 s first contact, a 33 s gap, then the fill. "You received 0.5" came
+           30 s after the first disconnect, 3 s before the reconnect, and hid the breakaway / spokes items.
+           Now: CFG.TKR.RCVD_WAIT 30 -> 60 s, and a new contact after "you received" (before "TEXACO: state")
+           withdraws the report: the menu goes back to the contact items and TEXACO reports the session total
+           again after the last disconnect.
   v1.7.6 - AAR branch calls and tanker loss (Onur, 2026-10-31; project doc claude/aar-realism-review-2026-10-31.md):
            * F10 "TEXACO: execute overrun" (RV / join, before the first contact): pilot "Texaco 11, execute
              overrun" [A 2.4a]. When the hero is again >= CFG.TKR.OVR_BEHIND_NM behind the tanker, TEXACO
@@ -1104,7 +1109,7 @@ local CFG = {
         RV_BELOW_ANGELS = 1,     -- RV altitude = tanker angels - 1 (ATP-56 RV: receiver 1,000 ft below)
         FULL_LB  = 13000,        -- "request" = FULL_LB - fuel (DCS stops the flow at ~13,043 lb)
         BRA_NM   = { 20, 10, 5 },-- OVERLORD tanker bearing / range calls until Judy
-        RCVD_WAIT = 30,          -- s after the last disconnect if no 0.3 NM departure was measured
+        RCVD_WAIT = 60,          -- s after the last disconnect if no 0.3 NM departure was measured (v1.7.7: was 30)
         AR1_HOLD  = true,        -- v1.7.1 POINTER hand-off waits for AR1 closed (off Texaco / skip AR1)
         MODE3     = "2042",      -- v1.7.4 RV initial call (kneeboard 01 SQUAWK)
         VEC_MIN_MS = 128.6,      -- v1.7.4 own speed floor for the intercept vector (250 kt)
@@ -2061,14 +2066,23 @@ local function TkrTick(p)
             end
         end
     end
+    if tk.rcvd and not tk.state and tk.rcvdN then          -- v1.7.7 reconnect after "you received"
+        local A0 = _G.TRT and _G.TRT.AAR
+        local S0 = A0 and A0.session
+        if S0 and S0.openStart and #S0.contacts > tk.rcvdN then
+            tk.rcvd, tk.rcvdN = nil, nil
+            env.info("[CD] reconnect after 'you received': report withdrawn, repeated after the last disconnect")
+            MenuRebuild()
+        end
+    end
     if tk.rcvd then return end
     local A = _G.TRT and _G.TRT.AAR
     if not (A and tk.aarN0) then return end
-    local onload
+    local onload, nC
     local Sn = A.session
     if Sn and Sn.n > tk.aarN0 and Sn.lastStop and not Sn.openStart and #Sn.contacts > 0
         and (Sn.dep.side or timer.getTime() - Sn.lastStop >= CFG.TKR.RCVD_WAIT) then
-        onload = 0
+        onload, nC = 0, #Sn.contacts
         for _, c in ipairs(Sn.contacts) do
             if c.fuelStart and c.fuelStop then onload = onload + math.max(0, c.fuelStop - c.fuelStart) end
         end
@@ -2076,7 +2090,7 @@ local function TkrTick(p)
         onload = A.last.onload
     end
     if not onload then return end
-    tk.rcvd = true
+    tk.rcvd, tk.rcvdN = true, nC   -- nC nil when the session already ended (no withdrawal then)
     local x = Klb(onload)
     Q(string.format("[TEXACO] %s, Texaco 11, you received %s.", CFG.CS, x), CFG.DUR_SHORT, 0,
         function() MenuRebuild() end, nil, Voiced(S("TEXACO", "tkr_rcvd", TNum(x))))
@@ -3202,7 +3216,7 @@ local function CD_Init()
     SetFlag(200, 0)
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.7.6 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.7.7 online — CAS-1 Syria")
 end
 
 CD_Init()
