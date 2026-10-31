@@ -1,4 +1,6 @@
-# refresh_scripts.py | v1.3.0
+# refresh_scripts.py | v1.3.1
+# v1.3.1: --kneeboard is repeatable (generated cards + static pages, e.g. kneeboard/cas_l_static/);
+#         .png and .jpg pages are synced.
 # v1.3.0: kneeboard entries go to KNEEBOARD/IMAGES/ (upper case, as the ME writes them; DCS did not
 #         show pages under KNEEBOARD/images/). Existing KNEEBOARD/images/* entries are moved there.
 # v1.2.0: --kneeboard DIR also syncs KNEEBOARD/images/*.png from DIR (e.g. the output of
@@ -36,7 +38,7 @@ def first_line(b):
     return b.split(b"\n", 1)[0].decode("utf-8", "replace").strip()
 
 
-def main(src, dry, sound_sets=(), kb_dir=None):
+def main(src, dry, sound_sets=(), kb_dirs=()):
     with zipfile.ZipFile(src) as z:
         mapres = dcslua.parse(z.read(PREFIX + "mapResource"))[1]
         luas = sorted({v.decode() for v in mapres.values()
@@ -80,9 +82,9 @@ def main(src, dry, sound_sets=(), kb_dir=None):
                 else:
                     added[arc] = data
                     print("sound:   %s (new)" % arc)
-        if kb_dir:                                              # v1.2.0
+        for kb_dir in kb_dirs:                                  # v1.2.0 / v1.3.1
             for f in sorted(os.listdir(kb_dir)):
-                if not f.lower().endswith(".png"):
+                if not f.lower().endswith((".png", ".jpg")):
                     continue
                 arc = KB + f
                 data = open(os.path.join(kb_dir, f), "rb").read()
@@ -129,16 +131,16 @@ def main(src, dry, sound_sets=(), kb_dir=None):
 
 
 if __name__ == "__main__":
-    argv, sets, args, kb = sys.argv[1:], [], [], None
+    argv, sets, args, kb = sys.argv[1:], [], [], []
     i = 0
     while i < len(argv):
         if argv[i] == "--sounds" and i + 1 < len(argv):
             sets.append(argv[i + 1]); i += 2; continue
         if argv[i] == "--kneeboard" and i + 1 < len(argv):
-            kb = argv[i + 1]; i += 2; continue
+            kb.append(argv[i + 1]); i += 2; continue
         if argv[i] != "--dry-run":
             args.append(argv[i])
         i += 1
     if len(args) != 1:
-        sys.exit('usage: refresh_scripts.py "<mission.miz>" [--dry-run] [--sounds SET ...] [--kneeboard DIR]')
+        sys.exit('usage: refresh_scripts.py "<mission.miz>" [--dry-run] [--sounds SET ...] [--kneeboard DIR ...]')
     sys.exit(main(args[0], "--dry-run" in argv, sets, kb))
