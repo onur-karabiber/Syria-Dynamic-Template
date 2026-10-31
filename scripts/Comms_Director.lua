@@ -1,5 +1,18 @@
--- Comms_Director | v1.7.3
+-- Comms_Director | v1.7.4
 --[[
+  v1.7.4 - AAR calls against ATP-56 (project doc claude/aar-realism-review-2026-10-31.md; Onur, 2026-10-31):
+           * 29.92 / "flight level" for the AAR exchange [A 2.2a]: OVERLORD "Texaco 11 bears BBB for RR, flight
+             level 150. Vector HHH, maintain flight level 140"; TEXACO no longer passes the mission QNH.
+             FL = tanker true altitude rounded to 1,000 ft (the tanker AI holds TRUE MSL; on 29.92 the cockpit
+             shows ~+300 ft in this mission's cold air).
+           * RV Alpha vectors [A 2A.2, 2A.3]: magnetic heading (5 deg steps) to intercept the point 1 NM behind the
+             tanker (straight-line lead on the tanker velocity, own speed >= 250 kt), in the first call and in the
+             20 / 10 / 5 NM updates ("Hornet 51, vector HHH, Texaco bears BBB for RR"). Pilot readback carries it.
+           * RV initial: pilot adds "Mode 3 <CFG.TKR.MODE3>" (kneeboard squawk 2042); TEXACO answers "RV Alpha,
+             flight level 150, R.R available" [A 2O-1 e, 2P serial 2, 2A.2d].
+           * "Clear to leave" acknowledged by the pilot ("Hornet 51.") [A 2P serial 19].
+           * Divert: OVERLORD "Proceed direct" (was the ATC word "Cleared direct"); below BINGO - 200 lb the pilot
+             adds "minimum fuel" [OPNAV M-3710.7 6.2.6]; the next-call hint tells the pilot to repeat it to tower.
   v1.7.3 - OVERLORD divert branch (project doc aar-plan s.7, s.9). F10 "OVERLORD: bingo / divert (nearest field)"
            in ENROUTE, JTAC1, J1_OFF, JTAC2, J2_OFF, REFUEL, TKR_DONE, RTB (OVERLORD control). Field = nearer of
            Incirlik (LTAG) / Akrotiri (LCRA) from the hero, CFG.DIVERT.FIELDS. The pilot says "bingo" only when
@@ -978,11 +991,11 @@ local CFG = {
         p_ovl_off_tkr_b        = { ch = "PILOT", len = 1.12 },
         p_tkr_rb_a             = { ch = "PILOT", len = 0.92 },
         p_tkr_rb_b             = { ch = "PILOT", len = 0.86 },
-        p_tkr_init_a           = { ch = "PILOT", len = 2.52 },
-        p_tkr_init_b           = { ch = "PILOT", len = 2.92 },
+        p_tkr_init_a           = { ch = "PILOT", len = 2.76 },
+        p_tkr_init_b           = { ch = "PILOT", len = 2.32 },
         p_request              = { ch = "PILOT", len = 0.58 },
         p_judy                 = { ch = "PILOT", len = 1.45 },
-        tkr_init_a             = { ch = "TEXACO", len = 2.51 },
+        tkr_init_a             = { ch = "TEXACO", len = 3.73 },
         tkr_rcvd               = { ch = "TEXACO", len = 2.33 },
         tkr_clear              = { ch = "TEXACO", len = 2.79 },
         t_altimeter            = { ch = "TEXACO", len = 0.58 },
@@ -998,6 +1011,16 @@ local CFG = {
         t_7                    = { ch = "TEXACO", len = 0.43 },
         t_8                    = { ch = "TEXACO", len = 0.25 },
         t_9                    = { ch = "TEXACO", len = 0.40 },
+        -- v1.7.4 flight level / vector / Mode 3 / ack / minimum fuel
+        o_fl                   = { ch = "OVERLORD", len = 0.57 },
+        o_vector               = { ch = "OVERLORD", len = 0.42 },
+        ovl_vec_a              = { ch = "OVERLORD", len = 1.21 },
+        o_texaco               = { ch = "OVERLORD", len = 0.50 },
+        p_fl                   = { ch = "PILOT", len = 0.68 },
+        p_vector               = { ch = "PILOT", len = 0.45 },
+        p_nose_cold            = { ch = "PILOT", len = 1.79 },
+        p_51                   = { ch = "PILOT", len = 0.89 },
+        p_min_fuel             = { ch = "PILOT", len = 0.82 },
         -- v1.7.3 divert
         p_ovl_divb_ltag        = { ch = "PILOT", len = 3.10 },
         p_ovl_div_ltag         = { ch = "PILOT", len = 2.11 },
@@ -1006,10 +1029,10 @@ local CFG = {
         ovl_div_a              = { ch = "OVERLORD", len = 2.40 },
         o_ltag                 = { ch = "OVERLORD", len = 0.49 },
         o_lcra                 = { ch = "OVERLORD", len = 0.61 },
-        ovl_div_b_ltag         = { ch = "OVERLORD", len = 3.12 },
-        ovl_div_b_lcra         = { ch = "OVERLORD", len = 3.21 },
-        p_div_rb_ltag          = { ch = "OVERLORD", len = 2.66 },
-        p_div_rb_lcra          = { ch = "OVERLORD", len = 2.88 },
+        ovl_div_b_ltag         = { ch = "OVERLORD", len = 3.24 },
+        ovl_div_b_lcra         = { ch = "OVERLORD", len = 3.35 },
+        p_div_rb_ltag          = { ch = "OVERLORD", len = 2.99 },
+        p_div_rb_lcra          = { ch = "OVERLORD", len = 3.12 },
     },
 
     -- Air picture / threat / CAP net (v1.5.0)
@@ -1048,6 +1071,9 @@ local CFG = {
         BRA_NM   = { 20, 10, 5 },-- OVERLORD tanker bearing / range calls until Judy
         RCVD_WAIT = 30,          -- s after the last disconnect if no 0.3 NM departure was measured
         AR1_HOLD  = true,        -- v1.7.1 POINTER hand-off waits for AR1 closed (off Texaco / skip AR1)
+        MODE3     = "2042",      -- v1.7.4 RV initial call (kneeboard 01 SQUAWK)
+        VEC_MIN_MS = 128.6,      -- v1.7.4 own speed floor for the intercept vector (250 kt)
+        VEC_MAX_S  = 900,        -- v1.7.4 lead only if the intercept is within 15 min (else pure pursuit)
     },
     DIVERT         = {       -- v1.7.3 OVERLORD divert branch
         BINGO_TOL_LB = 200,      -- "bingo" in the pilot call when fuel <= TL BINGO + this
@@ -1674,11 +1700,41 @@ local function TD(v) local t = {}; for c in tostring(v):gmatch("%d") do t[#t + 1
 local function PNum(s) local i, f = s:match("^(%d+)%.(%d)$"); return { PD(i or "0"), "cv:p_point", PD(f or "0") } end
 local function TNum(s) local i, f = s:match("^(%d+)%.(%d)$"); return { TD(i or "0"), "t_point", TD(f or "0") } end
 
---- Mission QNH as 4 digits ("2984"), nil if unreadable.
-local function QnhDigits()
-    local ok, q = pcall(function() return env.mission.weather.qnh end)
-    if not ok or type(q) ~= "number" or q <= 0 then return nil end
-    return string.format("%04d", math.floor(q / 25.4 * 100 + 0.5))
+--- v1.7.4: flight level of a unit (true altitude rounded to 1,000 ft), e.g. 150.
+local function FL(u) return math.floor(u:getPoint().y * 3.28084 / 1000 + 0.5) * 10 end
+
+--- v1.7.4 RV Alpha vector: magnetic heading (5 deg steps, 360 for north) to intercept the point 1 NM behind
+-- the tanker, leading the tanker's current velocity; pure pursuit of that point when no intercept exists
+-- within CFG.TKR.VEC_MAX_S (receiver not faster than the tanker).
+local function TkrVecHdg(p, t)
+    local P, T = p:getPoint(), t:getPoint()
+    local tv = t:getVelocity() or { x = 0, z = 0 }
+    local ts = math.sqrt(tv.x * tv.x + tv.z * tv.z)
+    local ax, az = T.x, T.z
+    if ts > 1 then ax, az = T.x - tv.x / ts * 1852, T.z - tv.z / ts * 1852 end
+    local pv = p:getVelocity() or { x = 0, z = 0 }
+    local sp = math.max(math.sqrt(pv.x * pv.x + pv.z * pv.z), CFG.TKR.VEC_MIN_MS)
+    local dx, dz = ax - P.x, az - P.z
+    local qa = tv.x * tv.x + tv.z * tv.z - sp * sp
+    local qb = 2 * (dx * tv.x + dz * tv.z)
+    local qc = dx * dx + dz * dz
+    local tt
+    if math.abs(qa) < 1e-6 then
+        if qb < 0 then tt = -qc / qb end
+    else
+        local disc = qb * qb - 4 * qa * qc
+        if disc >= 0 then
+            local r = math.sqrt(disc)
+            for _, x in ipairs({ (-qb - r) / (2 * qa), (-qb + r) / (2 * qa) }) do
+                if x > 0 and (not tt or x < tt) then tt = x end
+            end
+        end
+    end
+    local gx, gz = ax, az
+    if tt and tt <= CFG.TKR.VEC_MAX_S then gx, gz = ax + tv.x * tt, az + tv.z * tt end   -- else pure pursuit
+    local h = (Bearing(P, { x = gx, z = gz }) - CFG.MAGVAR) % 360
+    h = (math.floor(h / 5 + 0.5) * 5) % 360
+    return (h == 0) and 360 or h
 end
 
 local function TkOpen(ar)
@@ -1694,11 +1750,12 @@ end
 local function TkrVector(p, ar)
     local t = Tanker()
     if not t then return false end
-    local ta = Angels(t)
-    local rv = ta - CFG.TKR.RV_BELOW_ANGELS
+    local ta = FL(t)
+    local rv = ta - CFG.TKR.RV_BELOW_ANGELS * 10
+    local hd = string.format("%03d", TkrVecHdg(p, t))
     local head = (ar == 2) and "copy INFLTREP. " or ""
-    Q(string.format("[OVERLORD] %s, Overlord, %sTexaco 11 %s, angels %d. Maintain angels %d. TACAN 21 Yankee. Texaco, %s.",
-        CFG.CS, head, BrgRng(p:getPoint(), t:getPoint()), ta, rv, Btn("TKR")),
+    Q(string.format("[OVERLORD] %s, Overlord, %sTexaco 11 %s, flight level %d. Vector %s, maintain flight level %d. TACAN 21 Yankee. Texaco, %s.",
+        CFG.CS, head, BrgRng(p:getPoint(), t:getPoint()), ta, hd, rv, Btn("TKR")),
         CFG.DUR_LONG, CFG.REPLY_GAP, function()
             if ar == 2 then SetPhase("REFUEL") else CD.awaiting = false end
             if CD.tk then CD.tk.vec = true end
@@ -1710,12 +1767,12 @@ local function TkrVector(p, ar)
             MenuRebuild()
         end, nil,
         Voiced(S("OVERLORD", (ar == 2) and "ovl_inflrep_a" or "ovl_ar1_a", OBR(p:getPoint(), t:getPoint()), 0.08,
-          "o_angels", OD(ta), 0.15, "o_maintain", "o_angels", OD(rv), 0.15, "ovl_inflrep_b")))
+          "o_fl", OD(ta), 0.15, "o_vector", OD(hd), 0.1, "o_maintain", "o_fl", OD(rv), 0.15, "ovl_inflrep_b")))
     local prev = CD.queue[#CD.queue]
     if prev then prev.hold = 0.1 end
-    Q(string.format("[%s] %s, angels %d, push button %d.", CFG.CS, CFG.CS, rv, CFG.BTN.TKR),
+    Q(string.format("[%s] %s, vector %s, flight level %d, push button %d.", CFG.CS, CFG.CS, hd, rv, CFG.BTN.TKR),
         CFG.DUR_PILOT, 0.8, nil, CFG.PILOT_HOLD,
-        Voiced(S("OVERLORD", "p_tkr_rb_a", "cv:p_angels", PD(rv), "p_tkr_rb_b")))
+        Voiced(S("OVERLORD", "p_tkr_rb_a", "p_vector", PD(hd), 0.1, "p_fl", PD(rv), "p_tkr_rb_b")))
     return true
 end
 
@@ -1735,18 +1792,17 @@ local function A_TkrInit()
     local p, t = Player(), Tanker(); if not (p and t and CD.tk) then return end
     CD.tk.init = true
     CD.awaiting = true; MenuRebuild()
-    local ta = Angels(t)
-    local rv = ta - CFG.TKR.RV_BELOW_ANGELS
+    local ta = FL(t)
+    local rv = ta - CFG.TKR.RV_BELOW_ANGELS * 10
     local st, rq = State(p), Klb(CFG.TKR.FULL_LB - FuelLb(p))
-    Pilot(string.format("Texaco 11, %s, angels %d, TACAN 21 Yankee, nose cold, switches safe, state %s, request %s.",
-        CFG.CS, rv, st, rq),
-        Voiced(S("TEXACO", "p_tkr_init_a", PD(rv), 0.1, "p_tkr_init_b", "cv:p_state", PNum(st), 0.1,
-          "p_request", PNum(rq))))
-    local q = QnhDigits()
-    Q(string.format("[TEXACO] %s, Texaco 11, angels %d%s, %s available.", CFG.CS, ta,
-        q and (", altimeter " .. q:sub(1, 2) .. "." .. q:sub(3, 4)) or "", rq),
+    local m3 = CFG.TKR.MODE3
+    Pilot(string.format("Texaco 11, %s, flight level %d, TACAN 21 Yankee, Mode 3 %s, nose cold, switches safe, state %s, request %s.",
+        CFG.CS, rv, m3, st, rq),
+        Voiced(S("TEXACO", "p_tkr_init_a", PD(rv), 0.1, "p_tkr_init_b", PD(m3), 0.1, "p_nose_cold",
+          "cv:p_state", PNum(st), 0.1, "p_request", PNum(rq))))
+    Q(string.format("[TEXACO] %s, Texaco 11, RV Alpha, flight level %d, %s available.", CFG.CS, ta, rq),
         CFG.DUR_SHORT, CFG.REPLY_GAP, function() CD.awaiting = false; MenuRebuild() end, nil,
-        Voiced(S("TEXACO", "tkr_init_a", TD(ta), 0.1, q and { "t_altimeter", TD(q), 0.1 } or nil, TNum(rq), "t_available")))
+        Voiced(S("TEXACO", "tkr_init_a", TD(ta), 0.1, TNum(rq), "t_available")))
     QPlay()
 end
 
@@ -1774,6 +1830,10 @@ local function A_TkrState()
             if CD.phase == "REFUEL" then SetPhase("TKR_DONE") end
             MenuRebuild()
         end, nil, Voiced(S("TEXACO", "tkr_clear")))
+    local prev = CD.queue[#CD.queue]
+    if prev then prev.hold = 0.1 end
+    Q(string.format("[%s] %s.", CFG.CS, CFG.CS), CFG.DUR_PILOT, 0.8, nil, CFG.PILOT_HOLD,
+        Voiced(S("TEXACO", "p_51")))   -- v1.7.4 acknowledge "clear to leave" [A 2P serial 19]
     QPlay()
 end
 
@@ -1823,9 +1883,10 @@ local function TkrTick(p)
         for _, th in ipairs(CFG.TKR.BRA_NM) do
             if d <= th and not tk.bra[th] then
                 for _, th2 in ipairs(CFG.TKR.BRA_NM) do if d <= th2 then tk.bra[th2] = true end end
-                Q(string.format("[OVERLORD] %s, Texaco %s.", CFG.CS, BrgRng(p:getPoint(), t:getPoint())),
+                local hd = string.format("%03d", TkrVecHdg(p, t))   -- v1.7.4
+                Q(string.format("[OVERLORD] %s, vector %s, Texaco %s.", CFG.CS, hd, BrgRng(p:getPoint(), t:getPoint())),
                     CFG.DUR_SHORT, 0, nil, nil,
-                    Voiced(S("OVERLORD", "ovl_tkr_bra", OBR(p:getPoint(), t:getPoint()))))
+                    Voiced(S("OVERLORD", "ovl_vec_a", OD(hd), 0.1, "o_texaco", OBR(p:getPoint(), t:getPoint()))))
                 QPlay()
                 break
             end
@@ -1972,22 +2033,23 @@ local function A_Divert()
     if not f then Msg("[CAS-1] No divert field available.", CFG.DUR_SHORT); return end
     local lb, bingo = FuelLb(p), BingoNow(p)
     local isBingo = (bingo ~= nil) and lb <= bingo + CFG.DIVERT.BINGO_TOL_LB
+    local minFuel = (bingo ~= nil) and lb < bingo - CFG.DIVERT.BINGO_TOL_LB   -- v1.7.4 [OPNAV M-3710.7 6.2.6]
     CD.divert = { t = timer.getTime(), field = f.key, name = f.name, lb = lb, bingo = bingo,
-                  isBingo = isBingo, from = CD.phase, dNm = d }
+                  isBingo = isBingo, minFuel = minFuel, from = CD.phase, dNm = d }
     env.info(string.format("[CD] DIVERT %s (%s) from %s, %.0f NM, state %.0f lb, bingo %s%s", f.key, f.name,
         CD.phase, d, lb, bingo and string.format("%.0f", bingo) or "n/a", isBingo and " (bingo call)" or ""))
     CD.tk = nil
     CD.awaiting = true; MenuRebuild()
-    Pilot(string.format("Overlord, %s, %sdiverting %s, angels %d, state %s.", CFG.CS,
-        isBingo and "bingo, " or "", f.name, Angels(p), State(p)),
-        Voiced(S("OVERLORD", (isBingo and "p_ovl_divb_" or "p_ovl_div_") .. f.clip, PAS(p))))
-    Q(string.format("[OVERLORD] %s, Overlord, copy divert. %s %s. Cleared direct. Contact %s tower, %s.",
+    Pilot(string.format("Overlord, %s, %sdiverting %s, %sangels %d, state %s.", CFG.CS,
+        isBingo and "bingo, " or "", f.name, minFuel and "minimum fuel, " or "", Angels(p), State(p)),
+        Voiced(S("OVERLORD", (isBingo and "p_ovl_divb_" or "p_ovl_div_") .. f.clip, minFuel and "p_min_fuel" or nil, PAS(p))))
+    Q(string.format("[OVERLORD] %s, Overlord, copy divert. %s %s. Proceed direct. Contact %s tower, %s.",
         CFG.CS, f.name, BrgRng(pos, f.pos), f.name, f.twr), CFG.DUR_LONG, CFG.REPLY_GAP,
         function() SetPhase("DIVERT") end, nil,
         Voiced(S("OVERLORD", "ovl_div_a", "o_" .. f.clip, OBR(pos, f.pos), 0.15, "ovl_div_b_" .. f.clip)))
     local prev = CD.queue[#CD.queue]
     if prev then prev.hold = 0.1 end
-    Q(string.format("[%s] %s, cleared direct, switching %s tower.", CFG.CS, CFG.CS, f.name),
+    Q(string.format("[%s] %s, proceeding direct, switching %s tower.", CFG.CS, CFG.CS, f.name),
         CFG.DUR_PILOT + 2, 0.8, nil, CFG.PILOT_HOLD, Voiced(S("OVERLORD", "p_div_rb_" .. f.clip)))
     QPlay()
 end
@@ -2459,8 +2521,9 @@ local function NextText()
     if CD.phase == "DIVERT" and CD.divert then   -- v1.7.3
         local f
         for _, x in ipairs(CFG.DIVERT.FIELDS) do if x.key == CD.divert.field then f = x end end
-        return string.format("Divert %s (%s): tower %s UHF, set manually. Native ATC (F10 > ATC). Land, taxi, shut down.",
-            CD.divert.name, CD.divert.field, f and f.twr or "?")
+        return string.format("Divert %s (%s): tower %s UHF, set manually. Native ATC (F10 > ATC).%s Land, taxi, shut down.",
+            CD.divert.name, CD.divert.field, f and f.twr or "?",
+            CD.divert.minFuel and " Tell tower: minimum fuel." or "")
     end
     return TkrNext() or NEXT[CD.phase]
 end
@@ -2944,7 +3007,7 @@ local function CD_Init()
     SetFlag(200, 0)
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.7.3 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.7.4 online — CAS-1 Syria")
 end
 
 CD_Init()

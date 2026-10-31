@@ -1,4 +1,7 @@
-# make_kneeboard.py | v3.3.2
+# make_kneeboard.py | v3.4.0
+# v3.4.0: AAR on 29.92 / flight level (Comms_Director v1.7.4, ATP-56 2.2a): 03 and 07 say FL150; 07 ALTIMETER
+#         block rewritten, RV block names the OVERLORD vector and the F10 Judy item, overtake score 15-30 kt -1,
+#         > 30 kt -2 (AAR_Monitor v1.1.2). Mode 3 in the RV initial call = 01 SQUAWK 2042.
 # v3.3.2: 08 FUEL: CP TIGER ~12 000 after AR1 (~8 000 without), divert towers LTAG 360.100 / LCRA 252.000 UHF
 #         and the F10 divert item (Comms_Director v1.7.3).
 # v3.3.1: 07 AAR score line: overtake 10-25 kt -1, > 25 kt -2 (AAR_Monitor v1.1.1).
@@ -163,7 +166,7 @@ def route():
         d.text((42, y), name, font=F13, fill=COL[col]); c.y += 15
         d.text((50, c.y), grid, font=F11, fill=TXT); d.text((190, c.y), note, font=F11, fill=GRY); c.y += 14
     c.rule(); c.head("TANKER / EGRESS")
-    c.kv("TEXACO 11", "YE 0694 6582 · angels 15", "g"); c.kv("FREQ", "252.10 · btn 7 (COMM1-07)")
+    c.kv("TEXACO 11", "YE 0694 6582 · FL150", "g"); c.kv("FREQ", "252.10 · btn 7 (COMM1-07)")
     c.kv("TACAN", "21Y · TCN: T/R + A/A (range)", "o")
     c.kv("EGRESS", "Feet wet → RTB 043°M rev")
     c.rule(); c.head("RETURN CORRIDOR")
@@ -335,15 +338,16 @@ def aar():
     c = Card("07", "AAR", "TEXACO 11", "KC-130")
     c.head("TANKER")
     c.kv("FREQ / TACAN", "252.10 · btn 7 · 21Y (A/A)", "g")
-    c.kv("RACETRACK", "225°T 25 NM · left · angels 15")
+    c.kv("RACETRACK", "225°T 25 NM · left · FL150")
     c.kv("SPEED", "~250 KIAS · GS 305-325 kt")
-    c.rule(); c.head("ALTIMETER  [V]", "o")
-    c.line("Tanker 15 000 ft = TRUE MSL. Mission QNH 29.84.", "t", F10)
-    c.line("Cold air (10 C) = indicated reads ~+300 ft: level with", "t", F10)
-    c.line("the tanker ~15 300 ind. RV 1 000 below ~14 300 ind.", "o", F10)
-    c.rule(); c.head("RV  (Overlord vector -> Judy)")
-    c.line("1 NM behind, 1 000 ft below, same heading", "t", F10)
-    c.line("Judy = voice call (no F10 item). EMCON 2: initial call only", "t", F10)
+    c.rule(); c.head("ALTIMETER  29.92 (ATP-56 2.2a)", "o")
+    c.line("AAR on 29.92: tanker FL150, RV FL140 (calls say flight level)", "t", F10)
+    c.line("Tanker AI holds 15 000 ft TRUE. In this mission (QNH 29.84,", "t", F10)
+    c.line("10 C) 29.92 shows it ~+300 ft high: ~15 300 ind. [V]", "o", F10)
+    c.rule(); c.head("RV ALPHA  (Overlord vectors -> Judy)")
+    c.line("Fly the vector: to 1 NM behind, 1 000 ft below the tanker", "t", F10)
+    c.line("RV initial: FL, TACAN, Mode 3 2042, nose cold, state, request", "t", F10)
+    c.line("Radar contact: F10 Judy. EMCON 2: join and contact silent", "t", F10)
     c.line("Closure: tanker GS +8..10 kt (about +3 KIAS) to 1 500 ft,", "t", F10)
     c.line("then match. Max 10 kt inside 1/2 NM. No visual: stop 1 500 ft", "t", F10)
     c.rule(); c.head("JOIN  (before 1 NM)")
@@ -360,7 +364,7 @@ def aar():
     c.line("Level or climb to 2 NM (below -500 ft = penalty)", "t", F10)
     c.line("Exit fuel >= 12 000 lb", "g", F10)
     c.rule(); c.head("AAR SCORE  (cap +/-10, at session end)")
-    c.line("RV vert +2/-2 · join side +1/-1 · overtake 10-25 kt -1, >25 -2", "t", F10)
+    c.line("RV vert +2/-2 · join side +1/-1 · overtake 15-30 kt -1, >30 -2", "t", F10)
     c.line("overrun -2 · weapon -5 · breaks +2..-3 · exit fuel +1/-2", "t", F10)
     c.line("depart +1/-2", "t", F10)
     return c

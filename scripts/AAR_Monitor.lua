@@ -1,4 +1,7 @@
--- AAR_Monitor | v1.1.1
+-- AAR_Monitor | v1.1.2
+-- v1.1.2: OVERTAKE loosened (Onur, 2026-10-31): <= 15 kt 0, 15..30 kt -1, > 30 kt -2. The ATP-56 10 kt limit
+--   [A 2.2d(2)(c)] applies to a radar closure without visual; a visual join has no number in ATP-56, and the
+--   tanker sits in cloud at FL150 in some weather, so the score is a training proxy, not the doctrine value.
 -- v1.1.1: OVERTAKE graded (Onur, 2026-10-31): max closure inside 0.5 NM <= 10 kt 0, 10..25 kt -1, > 25 kt -2
 -- (was: > 25 kt -2, else 0). Thresholds: CFG.OVERTAKE_PLAN_KT (10) and CFG.OVERTAKE_BAD_KT (25).
 -- v1.1.0: LIVE (CFG.SCORING = true, CFG.CALL_REFUEL_COMPLETE = true). Adds the clipped session total to the
@@ -30,7 +33,7 @@
   Measurements and PROPOSED points ([V], plan section 10; total clipped to [CAP_MIN, CAP_MAX]):
     RV_VERT   at the first tick <= 1 NM: hero >= RV_MIN_BELOW_FT below the tanker      +2 / -2
     JOIN_SIDE at that tick: left of the tanker (right < 0)                              +1 / -1
-    OVERTAKE  max closure at 0.5 NM..contact (aft of the tanker): <= 10 kt 0, 10..25 kt -1, > 25 kt -2
+    OVERTAKE  max closure at 0.5 NM..contact (aft of the tanker): <= 15 kt 0, 15..30 kt -1, > 30 kt -2 (v1.1.2)
     OVERRUN   hero ahead of the tanker (fwd > OVERRUN_FT) inside 1 NM before contact    -2
     WEAPON    S_EVENT_SHOT by the hero with the tanker <= WEAPON_NM                     -5
     CONNECT   contacts - 1 = breaks: 0 breaks +2, each break -1 (floor -3)
@@ -57,7 +60,7 @@ if TRT.AAR then
 end
 
 local CFG = {
-    VERSION      = "1.1.1",
+    VERSION      = "1.1.2",
     PLAYER_UNIT  = TRT.PLAYER_NAME or "Player_01",
     TANKERS      = { "TANKER-1-1" },     -- unit names; the nearest existing one is used
     SCORING      = true,                 -- false = shadow (log + summary only)
@@ -72,8 +75,8 @@ local CFG = {
     JOIN_NM      = 1.0,
 
     RV_MIN_BELOW_FT   = 900,             -- plan 1000 ft, 100 ft tolerance
-    OVERTAKE_BAD_KT   = 25,
-    OVERTAKE_PLAN_KT  = 10,
+    OVERTAKE_BAD_KT   = 30,     -- v1.1.2 (was 25)
+    OVERTAKE_PLAN_KT  = 15,     -- v1.1.2 (was 10)
     OVERTAKE_FROM_NM  = 0.5,
     OVERRUN_FT        = 300,
     OVERRUN_NM        = 1.0,

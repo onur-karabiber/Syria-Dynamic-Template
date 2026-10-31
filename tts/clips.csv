@@ -587,11 +587,11 @@ p_ovl_off_tkr_a;PILOT;Overlord, Hornet five one, off Texaco,;tok:0.1
 p_ovl_off_tkr_b;PILOT;proceeding C P Tiger.;tok
 p_tkr_rb_a;PILOT;Hornet five one,;tok:0.1
 p_tkr_rb_b;PILOT;push button seven.;tok
-p_tkr_init_a;PILOT;Texaco one one, Hornet five one, angels;tok
-p_tkr_init_b;PILOT;TACAN two one Yankee, nose cold, switches safe,;tok:0.1
+p_tkr_init_a;PILOT;Texaco one one, Hornet five one, flight level;tok
+p_tkr_init_b;PILOT;TACAN two one Yankee, Mode three;tok
 p_request;PILOT;request;tok
 p_judy;PILOT;Hornet five one, Judy.;tok
-tkr_init_a;TEXACO;Hornet five one, Texaco one one, angels;tok
+tkr_init_a;TEXACO;Hornet five one, Texaco one one, R V Alpha, flight level;tok
 tkr_rcvd;TEXACO;Hornet five one, Texaco one one, you received;tok
 tkr_clear;TEXACO;Hornet five one, Texaco one one, clear to leave.;tok
 t_altimeter;TEXACO;altimeter;tok
@@ -615,7 +615,17 @@ p_ovl_div_lcra;PILOT;Overlord, Hornet five one, diverting Akrotiri,;tok:0.1
 ovl_div_a;OVERLORD;Hornet five one, Overlord, copy divert.;tok:0.15
 o_ltag;OVERLORD;Injirlik;tok
 o_lcra;OVERLORD;Akrotiri;tok
-ovl_div_b_ltag;OVERLORD;Cleared direct. Contact Injirlik tower, three six zero decimal one.;tok
-ovl_div_b_lcra;OVERLORD;Cleared direct. Contact Akrotiri tower, two five two decimal zero.;tok
-p_div_rb_ltag;PILOT>OVERLORD;Hornet five one, cleared direct, switching Injirlik tower.;tok
-p_div_rb_lcra;PILOT>OVERLORD;Hornet five one, cleared direct, switching Akrotiri tower.;tok
+ovl_div_b_ltag;OVERLORD;Proceed direct. Contact Injirlik tower, three six zero decimal one.;tok
+ovl_div_b_lcra;OVERLORD;Proceed direct. Contact Akrotiri tower, two five two decimal zero.;tok
+p_div_rb_ltag;PILOT>OVERLORD;Hornet five one, proceeding direct, switching Injirlik tower.;tok
+p_div_rb_lcra;PILOT>OVERLORD;Hornet five one, proceeding direct, switching Akrotiri tower.;tok
+# v1.7.4 AAR calls vs ATP-56 (flight level, RV Alpha vector, Mode 3, clear-to-leave ack) and divert minimum fuel
+o_fl;OVERLORD;flight level;tok
+o_vector;OVERLORD;vector;tok
+ovl_vec_a;OVERLORD;Hornet five one, vector;tok:0.05
+o_texaco;OVERLORD;Texaco;tok
+p_fl;PILOT;flight level;tok
+p_vector;PILOT;vector;tok
+p_nose_cold;PILOT;nose cold, switches safe,;tok:0.1
+p_51;PILOT;Hornet five one.;tok
+p_min_fuel;PILOT;minimum fuel,;tok:0.1
