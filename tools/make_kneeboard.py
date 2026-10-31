@@ -1,4 +1,6 @@
-# make_kneeboard.py | v3.5.2
+# make_kneeboard.py | v3.5.3
+# v3.5.3: 07 score line: contact closure <= 5 kt +1/-1 (AAR_Monitor v1.1.5, NFM-000 9.2.2.1); 08 recovery tanker via
+#         Departure btn 2 (CV_Comms v1.7.3).
 # v3.5.2: 08 FUEL recovery: signal tank -> Arco 31 recovery tanker (CV_Comms v1.7.2).
 # v3.5.1: 07 AAR: F10 TEXACO branch items (execute overrun / breakaway / spokes, Comms_Director v1.7.6).
 # v3.5.0: 09 DIVERT LTAG card (Field_Arrival v1.0.0 / Comms_Director v1.7.5): Ankara 240.8 -> Incirlik APP 357.5
@@ -372,7 +374,7 @@ def aar():
     c.rule(); c.head("AAR SCORE  (cap +/-10, at session end)")
     c.line("RV vert +2/-2 · join side +1/-1 · overtake 15-30 kt -1, >30 -2", "t", F10)
     c.line("overrun -2 · weapon -5 · breaks +2..-3 · exit fuel +1/-2", "t", F10)
-    c.line("depart +1/-2", "t", F10)
+    c.line("depart +1/-2 · contact closure <= 5 kt +1/-1 (NFM 9.2.2.1)", "t", F10)
     return c
 
 def fuel():
@@ -401,8 +403,8 @@ def fuel():
     c.line("LCRA TWR 252.000 UHF (manual)", "t", F10)
     c.line("110 NM from CVN, ~028 T", "t", F10)
     c.kv("TANK", "~5 100  (flag 3105)", "y"); c.kv("BINGO", "~4 100  (flag 3103)", "r")
-    c.line("Signal tank: Arco 31 btn 8 · TCN 23Y · angels 7 overhead · take X.X", "t", F10)
-    c.line("then F10 APPROACH: tanking complete -> downwind / pattern", "t", F10)
+    c.line("Signal tank: Departure btn 2 -> Arco 31 btn 8 · TCN 23Y · angels 7", "t", F10)
+    c.line("take X.X, then F10 DEPARTURE: tanking complete -> Approach 15", "t", F10)
     c.rule(); c.head("FLAGS")
     c.line("3102 JOKER · 3103 BINGO · 3105 TANK", "t", F10)
     c.line("Field formula: 2 diverts with A/G stores (31 Oct) [D].", "m", F10)

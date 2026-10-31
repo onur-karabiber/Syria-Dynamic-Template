@@ -193,3 +193,13 @@ a_point;APPROACH;point;tok
 a_reenter;APPROACH;roger, re-enter the pattern.;tok
 p_tanking;PILOT;tanking,;tok:0.1
 p_tank_done;PILOT;tanking complete,;tok:0.1
+# v1.7.3 tanker steering via Departure
+a_switch_dep;APPROACH;switch Departure, button two.;tok
+p_switching;PILOT;switching.;tok
+d_departure;DEPARTURE;Departure,;tok:0.05
+d_arco_bears;DEPARTURE;Arco three one bears;tok
+d_for;DEPARTURE;for,;tok:0.05
+d_angels;DEPARTURE;angels;tok
+d_btn8_take;DEPARTURE;button eight, take;tok
+d_point;DEPARTURE;point;tok
+d_switch_app;DEPARTURE;contact Approach, button one five.;tok

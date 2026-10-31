@@ -1,4 +1,12 @@
--- CV_Comms | v1.7.2
+-- CV_Comms | v1.7.3
+-- v1.7.3: tanker steering moves to DEPARTURE (CATCC: the Departure controller tracks tanker location and package
+--         status and the low-state aircraft; community CV-procedures doc, project doc aar-plan s.30 [K]). Now:
+--           PILOT "467, airborne." -> APPROACH "467, your signal tank. Switch Departure, button 2."
+--           -> PILOT "467, switching." -> DEPARTURE "467, Departure, Arco 31 bears BBB for R, angels 7, button 8,
+--           take 1.3." -> PILOT "467, tanking, state 4.8."
+--         F10 "DEPARTURE: tanking complete" -> PILOT (Departure) "tanking complete, state S.S" -> DEPARTURE "467,
+--         roger, contact Approach, button 15." -> PILOT "switching." -> APPROACH re-entry as in v1.7.2.
+--         "take X.X" stays unsourced [G].
 -- v1.7.2: recovery tanker after "signal tank" (Onur, 2026-10-31). If the tanker CFG.RTANKER.unit (CAS (L) /
 --         template: TANKER-3-1, Arco 31, A-6E, native RecoveryTanker task, 7,000 ft, 252.30 AM, TACAN 23Y) is alive
 --         and airborne, a bolter / wave-off below TANK no longer flies the bolter pattern first:
@@ -252,7 +260,7 @@
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "1.7.2",
+    VERSION      = "1.7.3",
     PLAYER_UNIT  = "Player_01",
     CARRIER_UNIT = "CVN",
     MODEX        = "467",       -- fallback if AIRBOSS has no onboard number yet
@@ -326,6 +334,16 @@ local CFG = {
         m_vfr                  = { ch = "MARSHAL", len = 1.40 },
         m_wx_imc               = { ch = "MARSHAL", len = 1.26 },
         m_altimeter            = { ch = "MARSHAL", len = 0.64 },
+        -- v1.7.3 tanker steering via Departure
+        a_switch_dep           = { ch = "APPROACH", len = 1.59 },
+        p_switching            = { ch = "PILOT", len = 0.57 },
+        d_departure            = { ch = "DEPARTURE", len = 0.51 },
+        d_arco_bears           = { ch = "DEPARTURE", len = 1.28 },
+        d_for                  = { ch = "DEPARTURE", len = 0.26 },
+        d_angels               = { ch = "DEPARTURE", len = 0.56 },
+        d_btn8_take            = { ch = "DEPARTURE", len = 0.82 },
+        d_point                = { ch = "DEPARTURE", len = 0.39 },
+        d_switch_app           = { ch = "DEPARTURE", len = 1.72 },
         -- v1.7.2 recovery tanker
         a_arco_a               = { ch = "APPROACH", len = 1.93 },
         a_arco_b               = { ch = "APPROACH", len = 0.90 },
@@ -1230,7 +1248,10 @@ local function C_TankSignal()
     local gs = StateStr(give)
     local gi, gf = gs:match("^(%d+)%.(%d)$")
     local angels = math.floor(rt:getPoint().y * 3.28084 / 1000 + 0.5)
+    local up, tp = u:getPoint(), rt:getPoint()
     local ab = AB()
+    local tBrg = Hdg3(math.deg(math.atan2(tp.z - up.z, tp.x - up.x)) - ((ab and ab.magvar) or 0))
+    local tRng = tostring(math.max(1, math.floor(DistNM(up, tp) + 0.5)))
     local fbN = ab and ab:GetFinalBearing(true) or 0
     CV.bolter = { dw = tonumber(Hdg3(fbN + 180)), fb = Hdg3(fbN) }   -- for the re-entry downwind
     CV.fuelSig = "TANK"
@@ -1240,14 +1261,20 @@ local function C_TankSignal()
     Log(string.format("signal tank -> recovery tanker %s: state %s, give %s, target %.0f", CFG.RTANKER.unit,
         StateStr(lbs), gs, target))
     Pilot("APPROACH", Seq(D("p", m), CFG.P, "p_airborne"), string.format("%s, airborne.", m), function()
-        Q("APPROACH", "APPROACH",
-            Seq(D("a", m), CFG.P, "a_signal_tank", CFG.P, "a_arco_a", D("a", angels), CFG.P, "a_arco_b",
-                D("a", gi), "a_point", D("a", gf)),
-            string.format("%s, your signal tank. %s overhead Mother, angels %d, button %d, take %s.", m,
-                CFG.RTANKER.cs, angels, CFG.RTANKER.btn, gs),
+        Q("APPROACH", "APPROACH", Seq(D("a", m), CFG.P, "a_signal_tank", CFG.P, "a_switch_dep"),
+            string.format("%s, your signal tank. Switch Departure, %s.", m, ChanLbl("DEPARTURE")),
             function()
-                Pilot("APPROACH", Seq(D("p", m), CFG.P, "p_tanking", "p_state", StateTokens(lbs)),
-                    string.format("%s, tanking, state %s.", m, StateStr(lbs)))
+                Pilot("APPROACH", Seq(D("p", m), CFG.P, "p_switching"), string.format("%s, switching.", m), function()
+                    Q("DEPARTURE", "DEPARTURE",
+                        Seq(D("d", m), CFG.P, "d_departure", "d_arco_bears", D("d", tBrg), "d_for", D("d", tRng), CFG.P,
+                            "d_angels", D("d", angels), CFG.P, "d_btn8_take", D("d", gi), "d_point", D("d", gf)),
+                        string.format("%s, Departure, %s bears %s for %s, angels %d, button %d, take %s.", m,
+                            CFG.RTANKER.cs, tBrg, tRng, angels, CFG.RTANKER.btn, gs),
+                        function()
+                            Pilot("DEPARTURE", Seq(D("p", m), CFG.P, "p_tanking", "p_state", StateTokens(lbs)),
+                                string.format("%s, tanking, state %s.", m, StateStr(lbs)))
+                        end, 0.8)
+                end)
             end, 0.8)
     end)
     return true
@@ -1257,8 +1284,11 @@ local function A_TankDone()
     local m, lbs = Modex(), FuelLbs()
     CV.tanking = false
     Log(string.format("tanking complete, state %s", StateStr(lbs)))
-    Pilot("APPROACH", Seq(D("p", m), CFG.P, "p_tank_done", "p_state", StateTokens(lbs)),
+    Pilot("DEPARTURE", Seq(D("p", m), CFG.P, "p_tank_done", "p_state", StateTokens(lbs)),
         string.format("%s, tanking complete, state %s.", m, StateStr(lbs)), function()
+          Q("DEPARTURE", "DEPARTURE", Seq(D("d", m), CFG.P, "d_roger", CFG.P, "d_switch_app"),
+            string.format("%s, roger. Contact Approach, %s.", m, ChanLbl("APPROACH")), function()
+           Pilot("APPROACH", Seq(D("p", m), CFG.P, "p_switching"), string.format("%s, switching.", m), function()
             if CV.case == 3 and CV.bolter then
                 local dw = string.format("%03d", CV.bolter.dw)
                 Q("APPROACH", "APPROACH", Seq(D("a", m), CFG.P, "a_take_12", "a_downwind", D("a", dw)),
@@ -1272,6 +1302,8 @@ local function A_TankDone()
                     string.format("%s, roger, re-enter the pattern.", m),
                     function() SetPhase("BALLWAIT") end, 0.8)
             end
+           end)
+          end, 0.8)
         end)
     MenuRebuild()
 end
@@ -1434,7 +1466,7 @@ local function Actions()
         a[#a + 1] = { "APPROACH: needles up and on", function() A_Needles(true) end }
         a[#a + 1] = { "APPROACH: needles negative", function() A_Needles(false) end }
     elseif ph == "TANKING" then                                         -- v1.7.2
-        a[#a + 1] = { "APPROACH: tanking complete (state)", A_TankDone }
+        a[#a + 1] = { string.format("DEPARTURE: tanking complete (state) %s", ChanLbl("DEPARTURE")), A_TankDone }
     elseif ph == "BALL" then
         a[#a + 1] = { "PADDLES: ball (Hornet ball, state)", function() A_Ball(false) end }
         a[#a + 1] = { "PADDLES: Clara", A_Clara }
@@ -1487,7 +1519,7 @@ local function NextText()
         BALL         = "Call the ball or Clara.",
         GROOVE       = "Fly the ball.",
         TANKING      = CV.tank and string.format("Recovery tanker %s: button %d (%s), TACAN %s, overhead Mother. "
-            .. "DCS radio menu: intent to refuel. Take %s, then F10 APPROACH: tanking complete.", CFG.RTANKER.cs,
+            .. "DCS radio menu: intent to refuel. Take %s, then F10 DEPARTURE: tanking complete.", CFG.RTANKER.cs,
             CFG.RTANKER.btn, CFG.RTANKER.freq, CFG.RTANKER.tacan, StateStr(CV.tank.give)) or nil,
     }
     if T[ph] then return T[ph] end

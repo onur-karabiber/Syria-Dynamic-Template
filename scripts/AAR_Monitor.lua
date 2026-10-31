@@ -1,4 +1,7 @@
--- AAR_Monitor | v1.1.4
+-- AAR_Monitor | v1.1.5
+-- v1.1.5: CONTACT_CLOS row (Onur, 2026-10-31): the highest closure measured at S_EVENT_REFUELING over the session's
+--   contacts <= CONTACT_CLOS_KT (5 kt) +1, else -1 [A1-F18AC-NFM-000 9.2.2.1: "minimum closure rate on the drogue
+--   not to exceed 5 knots"]. Closure = 3-D relative velocity along the line of sight at the event tick.
 -- v1.1.4: recovery tanker (CV_Comms >= v1.7.2). CFG.TANKERS entries may be { unit, kind = "RECOVERY" }; such a tanker
 --   is watched only while TRT.CV.tanking (after "signal tank" with the tanker available), so passes over the boat do
 --   not open sessions. A RECOVERY session scores TAKE instead of EXIT_FUEL: onload vs the give CV_Comms asked for
@@ -45,6 +48,7 @@
     OVERRUN   hero ahead of the tanker (fwd > OVERRUN_FT) inside 1 NM before contact    -2
     WEAPON    S_EVENT_SHOT by the hero with the tanker <= WEAPON_NM                     -5
     CONNECT   contacts - 1 = breaks: 0 breaks +2, each break -1 (floor -3)
+    CONTACT_CLOS highest closure at a contact <= 5 kt (NFM-000 9.2.2.1)              +1 / -1 (v1.1.5)
     EXIT_FUEL fuel at the last disconnect >= EXIT_MIN_LB (12,000 lb; a full tank = 13,043 lb)  +1 / -2
     DEPART    after the last disconnect, until LEAVE_NM: right side at 0.3 NM and never
               below DEPART_MIN_UP_FT relative to the tanker                              +1 / -2
@@ -68,11 +72,12 @@ if TRT.AAR then
 end
 
 local CFG = {
-    VERSION      = "1.1.4",
+    VERSION      = "1.1.5",
     PLAYER_UNIT  = TRT.PLAYER_NAME or "Player_01",
     TANKERS      = { "TANKER-1-1",       -- unit names; the nearest existing (eligible) one is used
                      { unit = "TANKER-3-1", kind = "RECOVERY" } },   -- v1.1.4 Arco 31, only while TRT.CV.tanking
     TAKE_SHORT_LB = 300, TAKE_OVER_LB = 1000,   -- v1.1.4 RECOVERY: onload vs give
+    CONTACT_CLOS_KT = 5,                        -- v1.1.5 NFM-000 9.2.2.1
     SCORING      = true,                 -- false = shadow (log + summary only)
     SHADOW_MSG   = true,                 -- show the session summary on screen
     CALL_REFUEL_COMPLETE = true,         -- TRT.onRefuelComplete at session end (only with SCORING)
@@ -273,6 +278,14 @@ local function evaluate(S)
             S.attChg or 0, S.attEvt))
     end
     if #S.contacts > 0 then
+        local cmax                                               -- v1.1.5 closure at contact
+        for _, c in ipairs(S.contacts) do
+            if c.clos and (not cmax or c.clos > cmax) then cmax = c.clos end
+        end
+        if cmax then
+            add("CONTACT_CLOS", (cmax <= CFG.CONTACT_CLOS_KT) and 1 or -1,
+                string.format("max closure at contact %.1f kt (limit %d, NFM-000 9.2.2.1)", cmax, CFG.CONTACT_CLOS_KT))
+        end
         local breaks = #S.contacts - 1
         add("CONNECT", (breaks == 0) and 2 or math.max(-3, -breaks),
             string.format("%d contact(s), %d break(s)", #S.contacts, breaks))
