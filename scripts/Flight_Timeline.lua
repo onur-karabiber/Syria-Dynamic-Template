@@ -1,4 +1,7 @@
--- Flight_Timeline | v1.1.5
+-- Flight_Timeline | v1.1.6
+-- v1.1.6: tanker-queue credit (Onur 2026-11-01, Traffic.lua): TL.credit.tanker (s) is written by Traffic while the
+--   hero waits for a hose behind AI receivers; credit() = threat + fail + tanker. A random queue is not the
+--   pilot's doing, so it moves the plan times like the threat / failure credit.
 -- v1.1.5: (1) recovery TANK capped at max-trap fuel (NFM-000 4.1.7: carrier landing 33,000 lb unrestricted):
 --   MAX_TRAP_FUEL = MAX_TRAP_GW_LB 33,000 - ZFW_LB; TANK = max(BINGO, min(BINGO + TANK_MARGIN_LB, MAX_TRAP_FUEL)).
 --   ZFW_LB 28,700 measured 2026-10-31 (CAS (L) full sortie, A/C WT 37,178 - fuel 8,460 = 28,718, recovery stores
@@ -81,7 +84,7 @@ if TRT.TL then
 end
 
 local CFG = {
-    VERSION        = "1.1.5",
+    VERSION        = "1.1.6",
     PLAYER_UNIT    = TRT.PLAYER_NAME or "Player_01",
     GROUP          = "CAS-1",          -- ME group whose route builds the ATO
     CARRIER        = "CVN",
@@ -170,7 +173,7 @@ local END_PH = { RTB = true, STRIKE_IN = true, INBOUND = true, RECOVERY = true, 
 local TL = {
     startAbs = timer.getAbsTime() - timer.getTime(),
     ato = nil,
-    credit = { threat = 0, fail = 0 },
+    credit = { threat = 0, fail = 0, tanker = 0 },   -- v1.1.6 tanker (Traffic.lua)
     fails = {},              -- { id, at, done }
     missiles = {},           -- { w, t0, desc }
     engaged = false, engagedWhy = nil,
@@ -202,7 +205,7 @@ local function hero()
     return nil
 end
 
-local function credit() return TL.credit.threat + TL.credit.fail end
+local function credit() return TL.credit.threat + TL.credit.fail + (TL.credit.tanker or 0) end   -- v1.1.6
 
 local function clock(t)
     if not t then return "--:--:--" end
@@ -562,8 +565,8 @@ local function cardText()
 end
 
 local function timelineText(title)
-    local L = { title or string.format("CAS-1 TIMELINE   credit %s (threat %s, failure %s)", mmss(credit()),
-        mmss(TL.credit.threat), mmss(TL.credit.fail)) }
+    local L = { title or string.format("CAS-1 TIMELINE   credit %s (threat %s, failure %s, tanker %s)", mmss(credit()),
+        mmss(TL.credit.threat), mmss(TL.credit.fail), mmss(TL.credit.tanker or 0)) }
     for _, code in ipairs(ORDER) do
         local r = TL.m[code]
         local st

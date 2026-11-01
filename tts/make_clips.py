@@ -1,4 +1,6 @@
-# make_clips.py | v1.12.1
+# make_clips.py | v1.12.2
+# v1.12.2: voices AI41 / AI42 (Traffic.lua AI receivers Hornet 41 / 42 at the tanker): libritts-high speakers
+#          300 / 200 (the LTAG_GND / LTAG_APP men; never on the air together with Incirlik). Not A/B listened.
 # v1.12.1: voice TOWER (CV Tower / Air Boss, libritts-high speaker 120) for the CV_Comms v1.7.4 t_* clips.
 # Divert arrival: python tts/make_clips.py --set fa (tts/fa_clips.csv -> src/Sounds/FA/; the AUDIO block
 #            in scripts/Field_Arrival.lua is rewritten in place between its BEGIN AUDIO / END AUDIO markers)
@@ -97,6 +99,8 @@ VOICE = {
     'CHECK31':   'en_US-ryan-high.onnx',      # v1.7.0 CAP-1 lead (Comms_Director CAP net)
     'CHECK21':   'en_US-john-medium.onnx',    # v1.7.0 CAP-2 lead
     'VIPER21':   'en_US-bryce-medium.onnx',   # v1.7.0 INTER-2 lead
+    'AI41':      ('en_US-libritts-high.onnx', 1.0, 300, 1.0),  # v1.12.2 Traffic AI receiver Hornet 41
+    'AI42':      ('en_US-libritts-high.onnx', 1.0, 200, 1.0),  # v1.12.2 Traffic AI receiver Hornet 42
     # Field_Comms (--set fc). Civil / foreign ATC is cast British so the switch
     # to Strike (US Navy, joe) lands as an audible change of world; Cyprus ATC
     # English is British-influenced anyway. No Turkish Piper voice exists.

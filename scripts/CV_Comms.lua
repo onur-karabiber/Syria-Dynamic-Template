@@ -1,4 +1,7 @@
--- CV_Comms | v1.7.4
+-- CV_Comms | v1.7.5
+-- v1.7.5: (Onur 2026-11-01, Traffic.lua) AI marshal arrivals are no longer silenced: the _MarshalCallArrived
+--         override answers the hero with the TTS Marshal as before and hands every other modex to AIRBOSS's
+--         own call (Raynor voice). Two Marshal voices on 261.00 is accepted.
 -- v1.7.4: (1) fuel signals in CASE I/II (ZIPLIP). Before, bolter / wave-off detection ran only in phase GROOVE
 --         (CASE III), so the 2026-10-31 CASE II sortie got no signal after three wave-offs. Now also in phase
 --         ZIPLIP (AIRBOSS step Groove* -> Bolter Pattern). The hero is on button 1, so the call comes from TOWER
@@ -240,7 +243,7 @@
                      -> "update state, go button 1" -> pilot state -> ZIPLIP
     * AIRBOSS instance overrides (MOOSE file untouched; installed when TRT.Airboss
       exists):
-        _MarshalCallArrived            -> CV Marshal reply (hero only; AI silent)
+        _MarshalCallArrived            -> CV Marshal reply (hero only; AI: AIRBOSS Raynor, v1.7.5)
         _MarshalCallClearedForRecovery -> text only for the hero (no Raynor voice;
                                           CASE I/II ZIPLIP, CASE II/III EAT = R2)
         MessageToPlayer(sender MARSHAL)-> text only (AIRBOSS plays Raynor modex /
@@ -271,7 +274,7 @@
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "1.7.4",
+    VERSION      = "1.7.5",
     PLAYER_UNIT  = "Player_01",
     CARRIER_UNIT = "CVN",
     MODEX        = "467",       -- fallback if AIRBOSS has no onboard number yet
@@ -1814,7 +1817,9 @@ local function InstallHooks()
     -- 1) Marshal reply
     local origArrived = ab._MarshalCallArrived
     ab._MarshalCallArrived = function(self, modex, case, brc, altitude, charlie, qfe)
-        if not IsHeroModex(modex) then return end      -- AI flights: silent
+        if not IsHeroModex(modex) then                 -- v1.7.5: AI flights -> AIRBOSS (Raynor)
+            return origArrived(self, modex, case, brc, altitude, charlie, qfe)
+        end
         local pd = HeroPD()
         local ok, err = pcall(MarshalReply, case, brc, altitude, pd and pd.Tcharlie, qfe)
         if not ok then

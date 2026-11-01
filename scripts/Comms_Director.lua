@@ -1,5 +1,8 @@
--- Comms_Director | v1.7.9
+-- Comms_Director | v1.7.10
 --[[
+  v1.7.10 - Traffic.lua (Onur, 2026-11-01): TEXACO's RV Alpha reply appends TRT.Traffic.TkrRemark() when AI
+            receivers are queued at the tanker ("Two receivers ahead of you, join echelon left."). The queue's
+            own Texaco / AI calls go through TRT.CD_RADIO; their clips are in CFG.AUDIO (tq_*, a41_*, a42_*).
   v1.7.9 - Onur, 2026-11-01:
            * TEXACO "you received X" CFG.TKR.RCVD_FULL_S (5) s after the disconnect when the hero is full
              (>= CFG.TKR.RCVD_FULL_LB). A partial fill keeps the v1.7.7 rule (0.3 NM sideways departure or
@@ -1032,6 +1035,14 @@ local CFG = {
         p_n10                  = { ch = "OVERLORD", len = 0.43 },
         p_n15                  = { ch = "OVERLORD", len = 0.55 },
         p_n19                  = { ch = "OVERLORD", len = 0.56 },
+        -- v1.7.10 Traffic.lua AI receivers at the tanker
+        tq_rmk1                = { ch = "TEXACO", len = 1.03 },
+        tq_rmk2                = { ch = "TEXACO", len = 2.06 },
+        tq_rcvd41              = { ch = "TEXACO", len = 2.21 },
+        tq_rcvd42              = { ch = "TEXACO", len = 2.26 },
+        tq_ctl                 = { ch = "TEXACO", len = 0.62 },
+        a41_ack                = { ch = "TEXACO", len = 0.90 },
+        a42_ack                = { ch = "TEXACO", len = 0.76 },
         p_ovl_req_tkr_a        = { ch = "PILOT", len = 2.45 },
         p_ovl_off_tkr_a        = { ch = "PILOT", len = 2.34 },
         p_ovl_off_tkr_b        = { ch = "PILOT", len = 1.12 },
@@ -1918,9 +1929,13 @@ local function A_TkrInit()
         CFG.CS, rv, m3, st, rq),
         Voiced(S("TEXACO", "p_tkr_init_a", PD(rv), 0.1, "p_tkr_init_b", PD(m3), 0.1, "p_nose_cold",
           "cv:p_state", PNum(st), 0.1, "p_request", PNum(rq))))
-    Q(string.format("[TEXACO] %s, Texaco 11, RV Alpha, flight level %d, %s available.", CFG.CS, ta, rq),
+    local trf = _G.TRT and _G.TRT.Traffic                          -- v1.7.10 AI receivers queued
+    local okR, rmk = pcall(function() return trf and trf.TkrRemark and trf.TkrRemark() end)
+    if not okR or type(rmk) ~= "table" then rmk = nil end
+    Q(string.format("[TEXACO] %s, Texaco 11, RV Alpha, flight level %d, %s available.%s", CFG.CS, ta, rq,
+        rmk and (" " .. rmk.text) or ""),
         CFG.DUR_SHORT, CFG.REPLY_GAP, function() CD.awaiting = false; MenuRebuild() end, nil,
-        Voiced(S("TEXACO", "tkr_init_a", TD(ta), 0.1, TNum(rq), "t_available")))
+        Voiced(S("TEXACO", "tkr_init_a", TD(ta), 0.1, TNum(rq), "t_available", rmk and 0.15 or nil, rmk and rmk.clip or nil)))
     QPlay()
 end
 
@@ -3366,7 +3381,7 @@ local function CD_Init()
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
     timer.scheduleFunction(MudTick, nil, timer.getTime() + 10)   -- v1.7.9
-    env.info("[CD] Comms_Director v1.7.9 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.7.10 online — CAS-1 Syria")
 end
 
 CD_Init()
