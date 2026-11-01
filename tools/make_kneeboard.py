@@ -1,4 +1,7 @@
-# make_kneeboard.py | v3.5.3
+# make_kneeboard.py | v3.5.4
+# v3.5.4: 08 FUEL from the 31 Oct full sortie [D]: CP 12 300, station burn ~200 lb/min, VUL ~6 900; recovery
+#         MAX TRAP 4 300 (33 000 - ZFW 28 700), TANK capped at max trap (Flight_Timeline v1.1.5); signal tank from
+#         Tower btn 1 in CASE I/II, back to Tower after tanking (CV_Comms v1.7.4).
 # v3.5.3: 07 score line: contact closure <= 5 kt +1/-1 (AAR_Monitor v1.1.5, NFM-000 9.2.2.1); 08 recovery tanker via
 #         Departure btn 2 (CV_Comms v1.7.3).
 # v3.5.2: 08 FUEL recovery: signal tank -> Arco 31 recovery tanker (CV_Comms v1.7.2).
@@ -380,9 +383,9 @@ def aar():
 def fuel():
     c = Card("08", "FUEL", "CAS-1", "lb total")
     c.head("PLAN  (total incl. external tank)")
-    c.kv("RAMP", "13 043 (full)"); c.kv("CP TIGER", "~12 000 after AR1 [K] (~8 000 w/o)")
-    c.kv("BURN", "~155 lb/min · 160 on station")
-    c.kv("VUL 30 MIN", "~4 950 (JTAC-1 + JTAC-2)")
+    c.kv("RAMP", "13 043 (full)"); c.kv("CP TIGER", "~12 300 after AR1 [D] (~8 000 w/o)")
+    c.kv("BURN", "~155 lb/min cruise · ~200 on station")
+    c.kv("VUL 33 MIN", "~6 900 (JTAC-1 + JTAC-2, threats)")
     c.kv("VUL END -> TKR", "~1 250 (7 min)")
     c.kv("AR1 / AR2", "AR1 top-off pre-VUL · AR2 on call")
     c.kv("ONLOAD", "~2 900 lb/min", "g"); c.kv("EXIT FUEL", ">= 12 000 lb", "g")
@@ -402,13 +405,15 @@ def fuel():
     c.kv("BINGO FIELD", "LCRA Akrotiri", "o")
     c.line("LCRA TWR 252.000 UHF (manual)", "t", F10)
     c.line("110 NM from CVN, ~028 T", "t", F10)
-    c.kv("TANK", "~5 100  (flag 3105)", "y"); c.kv("BINGO", "~4 100  (flag 3103)", "r")
-    c.line("Signal tank: Departure btn 2 -> Arco 31 btn 8 · TCN 23Y · angels 7", "t", F10)
-    c.line("take X.X, then F10 DEPARTURE: tanking complete -> Approach 15", "t", F10)
+    c.kv("MAX TRAP", "4 300  (33 000 - ZFW 28 700)", "o")
+    c.kv("TANK", "BINGO+1 000, max 4 300 (3105)", "y"); c.kv("BINGO", "~3 600-4 100 (3103)", "r")
+    c.line("Signal tank: CASE I/II Tower btn 1 · III Approach -> Dep btn 2", "t", F10)
+    c.line("Arco 31 btn 8 · TCN 23Y · angels 7 · take X.X", "t", F10)
+    c.line("F10 DEPARTURE: tanking complete -> Approach 15 / Tower 1", "t", F10)
     c.rule(); c.head("FLAGS")
     c.line("3102 JOKER · 3103 BINGO · 3105 TANK", "t", F10)
     c.line("Field formula: 2 diverts with A/G stores (31 Oct) [D].", "m", F10)
-    c.line("[V] CP fuel and burn on station: full sortie not measured.", "m", F10)
+    c.line("CP fuel, station burn, ZFW: full sortie 31 Oct [D].", "m", F10)
     return c
 
 def divert():

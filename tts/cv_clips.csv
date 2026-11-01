@@ -203,3 +203,19 @@ d_angels;DEPARTURE;angels;tok
 d_btn8_take;DEPARTURE;button eight, take;tok
 d_point;DEPARTURE;point;tok
 d_switch_app;DEPARTURE;contact Approach, button one five.;tok
+t_0;TOWER;zero;tok
+t_1;TOWER;one;tok
+t_2;TOWER;two;tok
+t_3;TOWER;three;tok
+t_4;TOWER;four;tok
+t_5;TOWER;five;tok
+t_6;TOWER;six;tok
+t_7;TOWER;seven;tok
+t_8;TOWER;eight;tok
+t_9;TOWER;niner;tok
+t_signal_tank;TOWER;your signal tank.;tok
+t_signal_bingo;TOWER;your signal bingo, bingo.;tok:0.15
+t_akrotiri_bears;TOWER;Akrotiri bears,;tok:0.08
+t_for;TOWER;for,;tok:0.05
+t_switch_dep;TOWER;switch Departure, button two.;tok
+d_switch_twr;DEPARTURE;contact Tower, button one.;tok

@@ -1,4 +1,5 @@
-# make_clips.py | v1.12.0
+# make_clips.py | v1.12.1
+# v1.12.1: voice TOWER (CV Tower / Air Boss, libritts-high speaker 120) for the CV_Comms v1.7.4 t_* clips.
 # Divert arrival: python tts/make_clips.py --set fa (tts/fa_clips.csv -> src/Sounds/FA/; the AUDIO block
 #            in scripts/Field_Arrival.lua is rewritten in place between its BEGIN AUDIO / END AUDIO markers)
 # tts/clips.csv -> src/Sounds/CAS1/<id>.ogg  (Piper TTS + ffmpeg radio chain)
@@ -92,6 +93,7 @@ VOICE = {
     'PILOT_IN':  ('en_US-libritts-high.onnx', 1.0, 851, 1.35), # v1.8.0 same pilot, natural speed (--set pb)
     'MARSHAL':   ('en_US-libritts-high.onnx', 1.0, 736, 1.0),  # v1.6.0, was hfc_male (norman: garbage on 1-word tokens)
     'APPROACH':  ('en_US-libritts-high.onnx', 1.0, 69, 1.0),   # v1.6.0, was kusal
+    'TOWER':     ('en_US-libritts-high.onnx', 1.0, 120, 1.0),  # v1.12.1 CV Tower / Air Boss (CV_Comms v1.7.4 ZIPLIP fuel signals)
     'CHECK31':   'en_US-ryan-high.onnx',      # v1.7.0 CAP-1 lead (Comms_Director CAP net)
     'CHECK21':   'en_US-john-medium.onnx',    # v1.7.0 CAP-2 lead
     'VIPER21':   'en_US-bryce-medium.onnx',   # v1.7.0 INTER-2 lead

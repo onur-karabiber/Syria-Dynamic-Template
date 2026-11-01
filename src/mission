@@ -451,8 +451,26 @@ mission =
 														{
 															["auto"] = false,
 															["enabled"] = true,
-															["id"] = "Follow",
+															["id"] = "WrappedAction",
 															["number"] = 1,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "SetUnlimitedFuel",
+																	["params"] = 
+																	{
+																		["value"] = true,
+																	},
+																},
+															},
+														},
+														[2] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "Follow",
+															["number"] = 2,
 															["params"] = 
 															{
 																["groupId"] = 2158,
@@ -464,24 +482,6 @@ mission =
 																	["x"] = 0,
 																	["y"] = 137.16,
 																	["z"] = 1219.2,
-																},
-															},
-														},
-														[2] = 
-														{
-															["auto"] = false,
-															["enabled"] = true,
-															["id"] = "WrappedAction",
-															["number"] = 2,
-															["params"] = 
-															{
-																["action"] = 
-																{
-																	["id"] = "SetUnlimitedFuel",
-																	["params"] = 
-																	{
-																		["value"] = true,
-																	},
 																},
 															},
 														},
@@ -13724,31 +13724,10 @@ mission =
 														},
 														[2] = 
 														{
-															["auto"] = false,
-															["enabled"] = true,
-															["id"] = "RecoveryTanker",
-															["number"] = 2,
-															["params"] = 
-															{
-																["altitude"] = 2133.6,
-																["altitudeEdited"] = true,
-																["groupId"] = 2158,
-																["lastWptIndex"] = 3,
-																["lastWptIndexFlag"] = true,
-																["lastWptIndexFlagChangedManually"] = true,
-																["speed"] = 138.88888888889,
-																["targetTypes"] = 
-																{
-																	[1] = "Ships",
-																},
-															},
-														},
-														[3] = 
-														{
 															["auto"] = true,
 															["enabled"] = true,
 															["id"] = "WrappedAction",
-															["number"] = 3,
+															["number"] = 2,
 															["params"] = 
 															{
 																["action"] = 
@@ -13770,12 +13749,12 @@ mission =
 																},
 															},
 														},
-														[4] = 
+														[3] = 
 														{
 															["auto"] = true,
 															["enabled"] = true,
 															["id"] = "WrappedAction",
-															["number"] = 4,
+															["number"] = 3,
 															["params"] = 
 															{
 																["action"] = 
@@ -13786,6 +13765,27 @@ mission =
 																		["name"] = 35,
 																		["value"] = true,
 																	},
+																},
+															},
+														},
+														[4] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "RecoveryTanker",
+															["number"] = 4,
+															["params"] = 
+															{
+																["altitude"] = 2133.6,
+																["altitudeEdited"] = true,
+																["groupId"] = 2158,
+																["lastWptIndex"] = 3,
+																["lastWptIndexFlag"] = true,
+																["lastWptIndexFlagChangedManually"] = true,
+																["speed"] = 138.88888888889,
+																["targetTypes"] = 
+																{
+																	[1] = "Ships",
 																},
 															},
 														},
@@ -13823,28 +13823,8 @@ mission =
 														{
 															["auto"] = false,
 															["enabled"] = true,
-															["id"] = "RecoveryTanker",
-															["number"] = 1,
-															["params"] = 
-															{
-																["altitude"] = 2133.6,
-																["groupId"] = 2158,
-																["lastWptIndex"] = 3,
-																["lastWptIndexFlag"] = true,
-																["lastWptIndexFlagChangedManually"] = true,
-																["speed"] = 138.88888888889,
-																["targetTypes"] = 
-																{
-																	[1] = "Ships",
-																},
-															},
-														},
-														[2] = 
-														{
-															["auto"] = false,
-															["enabled"] = true,
 															["id"] = "WrappedAction",
-															["number"] = 2,
+															["number"] = 1,
 															["params"] = 
 															{
 																["action"] = 
@@ -13865,12 +13845,12 @@ mission =
 																},
 															},
 														},
-														[3] = 
+														[2] = 
 														{
 															["auto"] = false,
 															["enabled"] = true,
 															["id"] = "WrappedAction",
-															["number"] = 3,
+															["number"] = 2,
 															["params"] = 
 															{
 																["action"] = 
@@ -13884,12 +13864,12 @@ mission =
 																},
 															},
 														},
-														[4] = 
+														[3] = 
 														{
 															["auto"] = false,
 															["enabled"] = true,
 															["id"] = "WrappedAction",
-															["number"] = 4,
+															["number"] = 3,
 															["params"] = 
 															{
 																["action"] = 
@@ -13899,6 +13879,26 @@ mission =
 																	{
 																		["value"] = true,
 																	},
+																},
+															},
+														},
+														[4] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "RecoveryTanker",
+															["number"] = 4,
+															["params"] = 
+															{
+																["altitude"] = 2133.6,
+																["groupId"] = 2158,
+																["lastWptIndex"] = 3,
+																["lastWptIndexFlag"] = true,
+																["lastWptIndexFlagChangedManually"] = true,
+																["speed"] = 138.88888888889,
+																["targetTypes"] = 
+																{
+																	[1] = "Ships",
 																},
 															},
 														},

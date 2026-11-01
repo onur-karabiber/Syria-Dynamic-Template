@@ -1,4 +1,12 @@
--- Flight_Timeline | v1.1.4
+-- Flight_Timeline | v1.1.5
+-- v1.1.5: (1) recovery TANK capped at max-trap fuel (NFM-000 4.1.7: carrier landing 33,000 lb unrestricted):
+--   MAX_TRAP_FUEL = MAX_TRAP_GW_LB 33,000 - ZFW_LB; TANK = max(BINGO, min(BINGO + TANK_MARGIN_LB, MAX_TRAP_FUEL)).
+--   ZFW_LB 28,700 measured 2026-10-31 (CAS (L) full sortie, A/C WT 37,178 - fuel 8,460 = 28,718, recovery stores
+--   aboard) -> max trap 4,300; recovery BINGO ~4,100 -> TANK 4,300 (was BINGO + 1,000 ~5,100, above max trap:
+--   groove fuel 4,650 = ~370 lb over). DCS mission scripting cannot read gross weight; per mission/loadout set
+--   ZFW_LB = A/C WT - fuel read in the jet. thresholds() returns maxTrap (read by CV_Comms >= v1.7.4 for the give).
+--   (2) BURN_ON_STATION_LB_MIN 160 -> 200 (same sortie: 207 lb/min average over 33 min with evasion; Onur 200)
+--   and BINGO_CALIBRATED = true (T4 is computed; still shadow while SCORING = false).
 -- v1.1.4: tanker lost (Comms_Director >= v1.7.6, CD.tkrLost): the STATION BINGO is no longer the tanker value
 --   (4,900) but the direct field value to LTAG from the hero (2,000 + 700 + 13 lb/NM x NM), JOKER = that + 1,000.
 -- v1.1.3: fuel model from two measured diverts CP -> LTAG (TEST-DIV, 2026-10-31, 2 Maverick + 4 GBU aboard;
@@ -73,7 +81,7 @@ if TRT.TL then
 end
 
 local CFG = {
-    VERSION        = "1.1.4",
+    VERSION        = "1.1.5",
     PLAYER_UNIT    = TRT.PLAYER_NAME or "Player_01",
     GROUP          = "CAS-1",          -- ME group whose route builds the ATO
     CARRIER        = "CVN",
@@ -84,7 +92,7 @@ local CFG = {
 
     SCORING        = false,            -- v1.0.0: shadow mode (log + text only)
     SHADOW_MSG     = true,             -- show "[TL shadow]" lines on screen
-    BINGO_CALIBRATED = false,          -- T4 scores only when true
+    BINGO_CALIBRATED = true,           -- T4 scores only when true (v1.1.5: CP fuel + station burn measured)
     FUEL_CALLS     = false,            -- on-screen JOKER / BINGO text (off while numbers are placeholders)
 
     TICK           = 2,                -- s
@@ -124,12 +132,14 @@ local CFG = {
     ARR_RESERVE_LB         = 3000,
     BURN_LB_PER_NM         = 11,       -- legacy single-formula value, kept for the card header only
     JOKER_MARGIN_LB        = 1000,
-    BURN_ON_STATION_LB_MIN = 160,      -- [D] 29 Oct log: 154-162 lb/min FL140-FL240, only for the TOS estimate on the card
+    BURN_ON_STATION_LB_MIN = 200,      -- v1.1.5 [D] 31 Oct full sortie: 207 lb/min avg (combat/evasion); was 160 (29 Oct, no threats). TOS estimate only
     STATION_BINGO_LB       = 4900,     -- v1.1.3: tanker transfer 1,250 + (700 + 13 x 71.5 NM tanker -> LTAG) + 2,000
     FIELD_RESERVE_LB       = 2000,
     FIELD_APPROACH_LB      = 700,      -- v1.1.3 [D] two diverts: 686 / 709 lb for the last ~7 min below 10,000 ft
     FIELD_BURN_LB_PER_NM   = 13,       -- v1.1.3 [D] two diverts with A/G stores: 12.0 / 14.5 lb/NM (was 11 [V])
-    TANK_MARGIN_LB         = 1000,     -- TANK = BINGO + this (RECOVERY)
+    TANK_MARGIN_LB         = 1000,     -- TANK = BINGO + this (RECOVERY), capped at max-trap fuel (v1.1.5)
+    MAX_TRAP_GW_LB         = 33000,    -- v1.1.5 NFM-000 4.1.7 carrier landing, unrestricted
+    ZFW_LB                 = 28700,    -- v1.1.5 [D] A/C WT - fuel on recovery, CAS-1 stores (37,178 - 8,460)
     FIELDS = {                         -- decimal degrees, coord.LLtoLO at runtime
         LTAG = { lat = 37.00205,  lon = 35.426083 },   -- Incirlik  N37 00.123 E035 25.565
         LCRA = { lat = 34.590367, lon = 32.987783 },   -- Akrotiri  N34 35.422 E032 59.267
@@ -313,7 +323,9 @@ local function thresholds(p, cd, dCP)
     if not (cv and cv:isExist() and fp) then return nil end
     local d = distNm(cv:getPoint(), fp)
     local b = CFG.FIELD_RESERVE_LB + CFG.FIELD_APPROACH_LB + d * CFG.FIELD_BURN_LB_PER_NM
-    return { zone = zone, bingo = b, tank = b + CFG.TANK_MARGIN_LB, field = "LCRA", dField = d }
+    local maxTrap = CFG.MAX_TRAP_GW_LB - CFG.ZFW_LB                         -- v1.1.5
+    local tank = math.max(b, math.min(b + CFG.TANK_MARGIN_LB, maxTrap))
+    return { zone = zone, bingo = b, tank = tank, maxTrap = maxTrap, field = "LCRA", dField = d }
 end
 
 TL.thresholds = thresholds   -- v1.1.2: read by Comms_Director (divert "bingo" call)
@@ -523,8 +535,9 @@ local function cardText()
     L[#L + 1] = string.format("VUL END (JTAC-2 done)     %s   +%d", clock(A.VUL + c), CFG.T3_PTS_GOOD)
     L[#L + 1] = string.format("FUEL (lb)  STATION BINGO %.1f JOKER %.1f (tanker + LTAG)", CFG.STATION_BINGO_LB / 1000,
         (CFG.STATION_BINGO_LB + CFG.JOKER_MARGIN_LB) / 1000)
-    L[#L + 1] = string.format("RTB: %.1f + %.0f lb/NM to nearer of LTAG/LCRA   RECOVERY: LCRA, TANK = BINGO + %.1f",
-        (CFG.FIELD_RESERVE_LB + CFG.FIELD_APPROACH_LB) / 1000, CFG.FIELD_BURN_LB_PER_NM, CFG.TANK_MARGIN_LB / 1000)
+    L[#L + 1] = string.format("RTB: %.1f + %.0f lb/NM to nearer of LTAG/LCRA   RECOVERY: LCRA, TANK = BINGO + %.1f, max MAX TRAP %.1f",
+        (CFG.FIELD_RESERVE_LB + CFG.FIELD_APPROACH_LB) / 1000, CFG.FIELD_BURN_LB_PER_NM, CFG.TANK_MARGIN_LB / 1000,
+        (CFG.MAX_TRAP_GW_LB - CFG.ZFW_LB) / 1000)
     local u = hero()
     if u and TL.launched and not TL.landed then
         local lb = fuelLb(u)
@@ -535,7 +548,8 @@ local function cardText()
                 L[#L + 1] = string.format("NOW: state %.1f  BINGO %.1f  JOKER %.1f  TOS ~%d min", lb / 1000, thr.bingo / 1000,
                     thr.joker / 1000, tos)
             elseif thr.zone == "RECOVERY" then
-                L[#L + 1] = string.format("NOW: state %.1f  TANK %.1f  BINGO %.1f  (Akrotiri)", lb / 1000, thr.tank / 1000, thr.bingo / 1000)
+                L[#L + 1] = string.format("NOW: state %.1f  MAX TRAP %.1f  TANK %.1f  BINGO %.1f  (Akrotiri)", lb / 1000,
+                    thr.maxTrap / 1000, thr.tank / 1000, thr.bingo / 1000)
             else
                 L[#L + 1] = string.format("NOW: state %.1f  BINGO %.1f  (nearest %s)", lb / 1000, thr.bingo / 1000, thr.field)
             end

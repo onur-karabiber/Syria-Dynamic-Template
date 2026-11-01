@@ -1,4 +1,9 @@
--- Core_Scoring | v1.4.4
+-- Core_Scoring | v1.4.5
+-- v1.4.5: landing score is confirmed LAND_CONFIRM_S (8 s) after S_EVENT_LAND. 2026-10-31: the hero hit an
+-- SH-60B parked on the CVN landing area; S_EVENT_LAND fired at touchdown and +5 "Successful carrier landing" was
+-- awarded for the crash (Deck_Park saw the loss 2 s later). Now S_EVENT_CRASH / DEAD / EJECTION / PILOT_DEAD /
+-- UNIT_LOST inside the window, or a unit that no longer exists / has life < 1, cancels the award (logged
+-- "landing NOT scored"). Land-based landings use the same check.
 -- v1.4.4: the player's TRT.onRefuelComplete call is skipped when AAR_Monitor owns it
 -- (TRT.AAR.callsRefuelComplete, AAR_Monitor >= v1.1.0 live). Without the Monitor (or in its shadow mode) it fires as before.
 -- v1.4.3: player aerial refuel score disabled (PLAYER_REFUEL_SCORE = false). AAR test flights
@@ -705,27 +710,58 @@ do
         ["TOMCAT-2-1"] = true, ["TOMCAT-1-1"] = true, [PLAYER_NAME] = true,
     }
     local LANDING_DONE = {}
+    local LAND_CONFIRM_S = 8          -- v1.4.5
+    local PENDING = {}                -- name -> { kind, lost }
     local LEH = {}
+    local EV = world.event
+    local LOST_EV = { [EV.S_EVENT_CRASH] = true, [EV.S_EVENT_DEAD] = true, [EV.S_EVENT_EJECTION] = true,
+                      [EV.S_EVENT_PILOT_DEAD] = true }
+    if EV.S_EVENT_UNIT_LOST then LOST_EV[EV.S_EVENT_UNIT_LOST] = true end
 
-    function LEH:onEvent(e)
-        if not e or e.id ~= world.event.S_EVENT_LAND or not e.initiator then return end
-        local unit = e.initiator
-        local n = unit:getName()
-        if not TARGET_UNITS[n] or LANDING_DONE[n] then return end
-
-        local carrier = TRT.uCarrier()
-        if carrier and TRT.distToCarrierNm(unit, carrier) <= TRAP_RADIUS_NM then
-            LANDING_DONE[n] = true
+    local function confirm(n)
+        local p = PENDING[n]
+        PENDING[n] = nil
+        if not p or LANDING_DONE[n] then return nil end
+        local u = Unit.getByName(n)
+        local alive = u and u:isExist() and (u:getLife() or 0) >= 1
+        if p.lost or not alive then
+            env.info(string.format("[Core_Scoring] %s landing NOT scored: aircraft lost within %d s (%s)", p.kind,
+                LAND_CONFIRM_S, n))
+            return nil
+        end
+        LANDING_DONE[n] = true
+        if p.kind == "carrier" then
             TRT.addScore(5, "Successful carrier landing")
             if TRT.onCarrierLanding then TRT.onCarrierLanding(n) end
-            return
-        end
-
-        local place = e.place
-        if place and place.getCategory and place:getCategory() == Object.Category.BASE then
-            LANDING_DONE[n] = true
+        else
             TRT.addScore(2, "Successful land-based landing")
         end
+        return nil
+    end
+
+    function LEH:onEvent(e)
+        if not e or not e.initiator then return end
+        if LOST_EV[e.id] then
+            local ok, n = pcall(function() return e.initiator:getName() end)
+            if ok and n and PENDING[n] then PENDING[n].lost = true end
+            return
+        end
+        if e.id ~= EV.S_EVENT_LAND then return end
+        local unit = e.initiator
+        local n = unit:getName()
+        if not TARGET_UNITS[n] or LANDING_DONE[n] or PENDING[n] then return end
+
+        local kind
+        local carrier = TRT.uCarrier()
+        if carrier and TRT.distToCarrierNm(unit, carrier) <= TRAP_RADIUS_NM then
+            kind = "carrier"
+        else
+            local place = e.place
+            if place and place.getCategory and place:getCategory() == Object.Category.BASE then kind = "land-based" end
+        end
+        if not kind then return end
+        PENDING[n] = { kind = kind, lost = false }
+        timer.scheduleFunction(function() confirm(n) end, nil, timer.getTime() + LAND_CONFIRM_S)
     end
     world.addEventHandler(LEH)
 end

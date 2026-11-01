@@ -1,4 +1,4 @@
--- Airboss_Start.lua | v1.0.6
+-- Airboss_Start.lua | v1.0.7
 -- TRT Syria Recovery Framework - MOOSE AIRBOSS bootstrap
 -- Carrier unit (ME): "CVN"
 -- Recovery ops: CASE II
@@ -6,6 +6,14 @@
 -- LOAD ORDER: after MOOSE / mist / Skynet, before the four TRT scoring scripts.
 -- Loaded via: ME "Do Script File" (ResKey_Action_301), embedded by build.py.
 --
+-- v1.0.7: (1) foul-deck culprit logged: instance wrap of _AddToDebrief writes
+--   "Airboss_Start | FOUL DECK by <unit> (<type>) ..." to dcs.log (AIRBOSS only
+--   logs it at trace level / F10 debrief). (2) SetUnlimitedFuel safety net for
+--   CFG_UNLIMITED_FUEL groups (Plane_Guard-1, TANKER-3), set by script 5 s after
+--   start. Cause (2026-10-31 sortie): in the ME task list SetUnlimitedFuel stood
+--   AFTER Follow / RecoveryTanker, which never complete, so it never ran; the
+--   SH-60B ran dry after ~2 h 20 min, landed on the landing area -> 3x WOFD and
+--   a deck collision. ME order fixed by tools/patch_task_order.py v1.0.0.
 -- v1.0.6: AIRBOSS's own F10 tree ("Airboss" > Help / Kneeboard / Request ...) is
 --   replaced by F10 > CARRIER (Menu_Manager v1.0.0, provider "AIRBOSS"). Instance
 --   override of _AddF10Commands only records the player unit name; the items are
@@ -215,10 +223,52 @@ else
   env.info("Airboss_Start | TRT.Menu missing -> original AIRBOSS F10 menu kept")
 end
 
+-- v1.0.7 (1): foul-deck culprit to dcs.log.
+do
+  local origDebrief = TRT.Airboss._AddToDebrief
+  TRT.Airboss._AddToDebrief = function(self, playerData, hint, step)
+    if type(hint) == "string" and hint:find("Foul deck waveoff due to aircraft", 1, true) then
+      local name = hint:match("aircraft (.-)!") or "?"
+      local u = Unit.getByName(name)
+      local typ, gname, d = "?", "?", -1
+      if u and u:isExist() then
+        typ = u:getTypeName() or "?"
+        local g = u:getGroup(); gname = g and g:getName() or "?"
+        local cv = Unit.getByName("CVN")
+        if cv and cv:isExist() then
+          local a, b = u:getPoint(), cv:getPoint()
+          d = math.sqrt((a.x - b.x)^2 + (a.z - b.z)^2)
+        end
+      end
+      env.info(string.format("Airboss_Start | FOUL DECK by %s (%s, group %s, %.0f m from CVN) -> waveoff %s",
+        name, typ, gname, d, tostring(playerData and playerData.name)))
+    end
+    return origDebrief(self, playerData, hint, step)
+  end
+end
+
+-- v1.0.7 (2): SetUnlimitedFuel safety net (ME order fixed too; this covers a .miz
+-- that was not re-patched). Missing groups are skipped silently in the log line.
+local CFG_UNLIMITED_FUEL = { "Plane_Guard-1", "TANKER-3" }
+timer.scheduleFunction(function()
+  local done = {}
+  for _, gn in ipairs(CFG_UNLIMITED_FUEL) do
+    local g = Group.getByName(gn)
+    if g and g:isExist() then
+      local ok = pcall(function()
+        g:getController():setCommand({ id = "SetUnlimitedFuel", params = { value = true } })
+      end)
+      done[#done + 1] = gn .. (ok and "" or "(ERR)")
+    end
+  end
+  env.info("Airboss_Start | SetUnlimitedFuel: " .. (#done > 0 and table.concat(done, ", ") or "none found"))
+  return nil
+end, nil, timer.getTime() + 5)
+
 -- Start the FSM.
 TRT.Airboss:Start()
 
-env.info(string.format("Airboss_Start | v1.0.6 | F10 > CARRIER | TACAN/ICLS WSH | onboard-number fix | HOLD stack1 angels 10 / 25 DME | CVN | CASE %d | TACAN 72X | ICLS 12 | MARSHAL 261.00 AM | LSO 262.00 AM", 2))
+env.info(string.format("Airboss_Start | v1.0.7 | foul-deck log | unlimited fuel net | F10 > CARRIER | TACAN/ICLS WSH | onboard-number fix | HOLD stack1 angels 10 / 25 DME | CVN | CASE %d | TACAN 72X | ICLS 12 | MARSHAL 261.00 AM | LSO 262.00 AM", 2))
 
 -- ============================================================================
 -- SYNC NOTE: Airboss_CaseSync.lua (load AFTER this file) listens on flag 100

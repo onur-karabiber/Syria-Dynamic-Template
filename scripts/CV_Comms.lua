@@ -1,4 +1,15 @@
--- CV_Comms | v1.7.3
+-- CV_Comms | v1.7.4
+-- v1.7.4: (1) fuel signals in CASE I/II (ZIPLIP). Before, bolter / wave-off detection ran only in phase GROOVE
+--         (CASE III), so the 2026-10-31 CASE II sortie got no signal after three wave-offs. Now also in phase
+--         ZIPLIP (AIRBOSS step Groove* -> Bolter Pattern). The hero is on button 1, so the call comes from TOWER
+--         (Air Boss voice, t_* clips): "467, your signal tank. Switch Departure, button 2." / "your signal bingo,
+--         bingo. Akrotiri bears BBB for RR." No pilot "airborne" call (ZIPLIP). After the tanking: DEPARTURE
+--         "467, roger. Contact Tower, button 1." -> PILOT "switching." -> phase ZIPLIP (fly the pattern).
+--         (2) TANK / BINGO are judged on the fuel at the bolter (TL thresholds), not only on the TL latch: TL
+--         latched TANK 2 s after the first bolter on 2026-10-31 and the signal was missed.
+--         (3) give with a max-trap cap (Flight_Timeline >= v1.1.5 thresholds().maxTrap): target =
+--         min(TANK + ABOVE_TANK_LB, maxTrap + ABOVE_TRAP_LB 500) (~500 lb burn from the tanker to the groove),
+--         MIN_GIVE_LB 1,000 -> 500.
 -- v1.7.3: tanker steering moves to DEPARTURE (CATCC: the Departure controller tracks tanker location and package
 --         status and the low-state aircraft; community CV-procedures doc, project doc aar-plan s.30 [K]). Now:
 --           PILOT "467, airborne." -> APPROACH "467, your signal tank. Switch Departure, button 2."
@@ -260,7 +271,7 @@
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "1.7.3",
+    VERSION      = "1.7.4",
     PLAYER_UNIT  = "Player_01",
     CARRIER_UNIT = "CVN",
     MODEX        = "467",       -- fallback if AIRBOSS has no onboard number yet
@@ -294,7 +305,7 @@ local CFG = {
     FUEL_SIGNAL    = true,      -- v1.7.0: "signal tank / signal bingo" after a bolter / wave-off
     FIELD          = { name = "Akrotiri", lat = 34.590367, lon = 32.987783 },   -- LCRA, recovery bingo field
     RTANKER        = { unit = "TANKER-3-1", cs = "Arco 31", btn = 8, freq = "252.30 AM", tacan = "23Y",   -- v1.7.2
-                       ABOVE_TANK_LB = 1000, MIN_GIVE_LB = 1000 },
+                       ABOVE_TANK_LB = 1000, MIN_GIVE_LB = 500, ABOVE_TRAP_LB = 500 },   -- v1.7.4
     ACLS_NM        = 6.5,       -- "ACLS lock on, say needles" (DME)
     NEEDLES_TIMEOUT= 15,        -- s without a needles answer -> "fly bullseye"
     BALL_NM        = 1.0,       -- Approach starts "...three-quarter mile, call the ball" (NM from stern;
@@ -509,6 +520,23 @@ local CFG = {
         a_akrotiri_bears       = { ch = "APPROACH", len = 1.10 },
         a_for                  = { ch = "APPROACH", len = 0.40 },
         p_bingo_akrotiri       = { ch = "PILOT", len = 1.25 },
+        -- v1.7.4 TOWER (Air Boss) voice, ZIPLIP fuel signals; DEPARTURE back to Tower
+        t_0                    = { ch = "TOWER", len = 0.51 },
+        t_1                    = { ch = "TOWER", len = 0.38 },
+        t_2                    = { ch = "TOWER", len = 0.33 },
+        t_3                    = { ch = "TOWER", len = 0.36 },
+        t_4                    = { ch = "TOWER", len = 0.37 },
+        t_5                    = { ch = "TOWER", len = 0.33 },
+        t_6                    = { ch = "TOWER", len = 0.52 },
+        t_7                    = { ch = "TOWER", len = 0.42 },
+        t_8                    = { ch = "TOWER", len = 0.48 },
+        t_9                    = { ch = "TOWER", len = 0.44 },
+        t_signal_tank          = { ch = "TOWER", len = 0.70 },
+        t_signal_bingo         = { ch = "TOWER", len = 1.31 },
+        t_akrotiri_bears       = { ch = "TOWER", len = 0.95 },
+        t_for                  = { ch = "TOWER", len = 0.36 },
+        t_switch_dep           = { ch = "TOWER", len = 1.35 },
+        d_switch_twr           = { ch = "DEPARTURE", len = 1.61 },
     },
 
     -- AIRBOSS calls dropped in every case (CV_Comms makes them)
@@ -1192,17 +1220,39 @@ local function FieldBearing()
     return Hdg3(trueBrg - ((ab and ab.magvar) or 0)), DistNM(up, fp)
 end
 
+--- v1.7.4: who gives the fuel signal: TOWER (Air Boss) while ZIPLIP on button 1, else APPROACH.
+local function SigCh()
+    if CV.phase == "ZIPLIP" then return "TOWER", "t" end
+    return "APPROACH", "a"
+end
+
+--- v1.7.4: TANK / BINGO from the fuel now (TL thresholds, RECOVERY), or the TL latch.
+-- @return tank (bool), bingo (bool), thr (table or nil)
+local function FuelLevel()
+    local tl, u = TRT.TL, Hero()
+    if type(tl) ~= "table" then return false, false, nil end
+    local thr
+    if u and type(tl.thresholds) == "function" then
+        local ok, r = pcall(tl.thresholds, u:getPoint(), { phase = "RECOVERY" }, nil)
+        if ok and type(r) == "table" then thr = r end
+    end
+    local lbs = FuelLbs()
+    local bingo = tl.bingoRec or (thr and thr.bingo and lbs and lbs < thr.bingo) or false
+    local tank  = tl.tank or (thr and thr.tank and lbs and lbs < thr.tank) or false
+    return tank, bingo, thr
+end
+
 local function C_FuelSignal()
     if not CFG.FUEL_SIGNAL then return end
-    local tl = TRT.TL
-    if type(tl) ~= "table" then return end
-    local lvl = tl.bingoRec and "BINGO" or (tl.tank and "TANK" or nil)
+    local tank, bingo = FuelLevel()
+    local lvl = bingo and "BINGO" or (tank and "TANK" or nil)
     if not lvl or CV.fuelSig == "BINGO" or CV.fuelSig == lvl then return end
     CV.fuelSig = lvl
     local m, lbs = Modex(), FuelLbs()
-    Log(string.format("fuel signal %s (state %s)", lvl, StateStr(lbs)))
+    local ch, v = SigCh()
+    Log(string.format("fuel signal %s (state %s, %s)", lvl, StateStr(lbs), ch))
     if lvl == "TANK" then
-        Q("APPROACH", "APPROACH", Seq(D("a", m), CFG.P, "a_signal_tank"),
+        Q(ch, ch, Seq(D(v, m), CFG.P, v .. "_signal_tank"),
             string.format("%s, your signal tank.", m), nil, 0.8)
         return
     end
@@ -1211,14 +1261,14 @@ local function C_FuelSignal()
     local seq, text
     if brg then
         local d = tostring(math.floor(dme + 0.5))
-        seq  = Seq(D("a", m), CFG.P, "a_signal_bingo", "a_akrotiri_bears", D("a", brg), "a_for", D("a", d))
+        seq  = Seq(D(v, m), CFG.P, v .. "_signal_bingo", v .. "_akrotiri_bears", D(v, brg), v .. "_for", D(v, d))
         text = string.format("%s, your signal bingo, bingo. %s bears %s for %s.", m, fname, brg, d)
     else
-        seq  = Seq(D("a", m), CFG.P, "a_signal_bingo")
+        seq  = Seq(D(v, m), CFG.P, v .. "_signal_bingo")
         text = string.format("%s, your signal bingo, bingo.", m)
     end
-    Q("APPROACH", "APPROACH", seq, text, function()
-        Pilot("APPROACH", Seq(D("p", m), CFG.P, "p_bingo_akrotiri", "p_state", StateTokens(lbs)),
+    Q(ch, ch, seq, text, function()
+        Pilot(ch, Seq(D("p", m), CFG.P, "p_bingo_akrotiri", "p_state", StateTokens(lbs)),
             string.format("%s, bingo, %s, state %s.", m, fname, StateStr(lbs)))
     end, 0.8)
 end
@@ -1237,13 +1287,15 @@ end
 --- Bolter / wave-off below TANK with the recovery tanker up: send the hero to the tanker. true if handled.
 local function C_TankSignal()
     if not CFG.FUEL_SIGNAL then return false end
-    local tl, u, rt = TRT.TL, Hero(), RTanker()
-    if type(tl) ~= "table" or not (tl.tank and u and rt) or tl.bingoRec then return false end
+    local u, rt = Hero(), RTanker()
+    local tank, bingo, thr = FuelLevel()                                -- v1.7.4
+    if not (tank and u and rt) or bingo then return false end
     if CV.fuelSig == "TANK" or CV.fuelSig == "BINGO" then return false end
-    local okT, thr = pcall(tl.thresholds, u:getPoint(), { phase = "RECOVERY" }, nil)
-    if not (okT and type(thr) == "table" and thr.tank) then return false end
+    if not (thr and thr.tank) then return false end
     local m, lbs = Modex(), FuelLbs()
     local target = thr.tank + CFG.RTANKER.ABOVE_TANK_LB
+    if thr.maxTrap then target = math.min(target, thr.maxTrap + CFG.RTANKER.ABOVE_TRAP_LB) end   -- v1.7.4
+    local zip = (CV.phase == "ZIPLIP")                                  -- v1.7.4 CASE I/II: Tower, no "airborne"
     local give = math.max(CFG.RTANKER.MIN_GIVE_LB, math.ceil((target - lbs) / 100) * 100)
     local gs = StateStr(give)
     local gi, gf = gs:match("^(%d+)%.(%d)$")
@@ -1255,16 +1307,17 @@ local function C_TankSignal()
     local fbN = ab and ab:GetFinalBearing(true) or 0
     CV.bolter = { dw = tonumber(Hdg3(fbN + 180)), fb = Hdg3(fbN) }   -- for the re-entry downwind
     CV.fuelSig = "TANK"
-    CV.tanking, CV.tank = true, { give = give, target = target, lbs0 = lbs, t0 = timer.getTime() }
+    CV.tanking, CV.tank = true, { give = give, target = target, lbs0 = lbs, t0 = timer.getTime(), zip = zip }
     CV.q = {}
     SetPhase("TANKING")
-    Log(string.format("signal tank -> recovery tanker %s: state %s, give %s, target %.0f", CFG.RTANKER.unit,
-        StateStr(lbs), gs, target))
-    Pilot("APPROACH", Seq(D("p", m), CFG.P, "p_airborne"), string.format("%s, airborne.", m), function()
-        Q("APPROACH", "APPROACH", Seq(D("a", m), CFG.P, "a_signal_tank", CFG.P, "a_switch_dep"),
+    Log(string.format("signal tank -> recovery tanker %s: state %s, give %s, target %.0f%s", CFG.RTANKER.unit,
+        StateStr(lbs), gs, target, zip and " (ZIPLIP, Tower)" or ""))
+    local ch, v = zip and "TOWER" or "APPROACH", zip and "t" or "a"
+    local function signal()
+        Q(ch, ch, Seq(D(v, m), CFG.P, v .. "_signal_tank", CFG.P, v .. "_switch_dep"),
             string.format("%s, your signal tank. Switch Departure, %s.", m, ChanLbl("DEPARTURE")),
             function()
-                Pilot("APPROACH", Seq(D("p", m), CFG.P, "p_switching"), string.format("%s, switching.", m), function()
+                Pilot(ch, Seq(D("p", m), CFG.P, "p_switching"), string.format("%s, switching.", m), function()
                     Q("DEPARTURE", "DEPARTURE",
                         Seq(D("d", m), CFG.P, "d_departure", "d_arco_bears", D("d", tBrg), "d_for", D("d", tRng), CFG.P,
                             "d_angels", D("d", angels), CFG.P, "d_btn8_take", D("d", gi), "d_point", D("d", gf)),
@@ -1276,14 +1329,29 @@ local function C_TankSignal()
                         end, 0.8)
                 end)
             end, 0.8)
-    end)
+    end
+    if zip then signal()
+    else Pilot("APPROACH", Seq(D("p", m), CFG.P, "p_airborne"), string.format("%s, airborne.", m), signal) end
     return true
 end
 
 local function A_TankDone()
     local m, lbs = Modex(), FuelLbs()
     CV.tanking = false
-    Log(string.format("tanking complete, state %s", StateStr(lbs)))
+    local zip = CV.tank and CV.tank.zip                                 -- v1.7.4
+    Log(string.format("tanking complete, state %s%s", StateStr(lbs), zip and " -> Tower (ZIPLIP)" or ""))
+    if zip then
+        Pilot("DEPARTURE", Seq(D("p", m), CFG.P, "p_tank_done", "p_state", StateTokens(lbs)),
+            string.format("%s, tanking complete, state %s.", m, StateStr(lbs)), function()
+              Q("DEPARTURE", "DEPARTURE", Seq(D("d", m), CFG.P, "d_roger", CFG.P, "d_switch_twr"),
+                string.format("%s, roger. Contact Tower, %s.", m, ChanLbl("TOWER")), function()
+                  Pilot("DEPARTURE", Seq(D("p", m), CFG.P, "p_switching"), string.format("%s, switching.", m),
+                    function() SetPhase("ZIPLIP") end)
+                end, 0.8)
+            end)
+        MenuRebuild()
+        return
+    end
     Pilot("DEPARTURE", Seq(D("p", m), CFG.P, "p_tank_done", "p_state", StateTokens(lbs)),
         string.format("%s, tanking complete, state %s.", m, StateStr(lbs)), function()
           Q("DEPARTURE", "DEPARTURE", Seq(D("d", m), CFG.P, "d_roger", CFG.P, "d_switch_app"),
@@ -1924,13 +1992,17 @@ local function Tick(_, t)
             C_AclsLock()
         elseif CV.phase == "NEEDLES" and not CV.busy and timer.getTime() - CV.tPhase >= CFG.NEEDLES_TIMEOUT then
             C_FlyBullseye()
-        elseif CV.phase == "GROOVE" and pd and type(pd.step) == "string" and pd.step:sub(1, 6) == "Groove" then
+        elseif (CV.phase == "GROOVE" or CV.phase == "ZIPLIP") and pd and type(pd.step) == "string"
+               and pd.step:sub(1, 6) == "Groove" then                     -- v1.7.4 also ZIPLIP (CASE I/II)
             CV.sawGroove = true
-        elseif CV.phase == "GROOVE" and CV.sawGroove and pd and (pd.step == AIRBOSS.PatternStep.BOLTER
+        elseif (CV.phase == "GROOVE" or CV.phase == "ZIPLIP") and CV.sawGroove and pd
+               and (pd.step == AIRBOSS.PatternStep.BOLTER
                or pd.step == AIRBOSS.PatternStep.BULLSEYE or pd.step == AIRBOSS.PatternStep.DIRTYUP) then
-            Log("bolter / wave-off (AIRBOSS step " .. tostring(pd.step) .. ")")
+            Log("bolter / wave-off (AIRBOSS step " .. tostring(pd.step) .. ", " .. CV.phase .. ")")
             CV.sawGroove = false
-            if not C_TankSignal() then                                   -- v1.7.2
+            if CV.phase == "ZIPLIP" then                                 -- v1.7.4: pattern stays with AIRBOSS
+                if not C_TankSignal() then C_FuelSignal() end
+            elseif not C_TankSignal() then                               -- v1.7.2
                 if CV.case == 3 then C_BolterStart() else SetPhase("BALLWAIT") end
                 C_FuelSignal()
             end
