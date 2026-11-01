@@ -626,4 +626,8 @@
         ovl_tkr_lost_cp        = { ch = "OVERLORD", len = 5.07 },
         ovl_tkr_lost_si        = { ch = "OVERLORD", len = 4.67 },
         ovl_inflrep_lost       = { ch = "OVERLORD", len = 4.08 },
+        p_mud                  = { ch = "OVERLORD", len = 0.36 },
+        p_n10                  = { ch = "OVERLORD", len = 0.43 },
+        p_n15                  = { ch = "OVERLORD", len = 0.55 },
+        p_n19                  = { ch = "OVERLORD", len = 0.56 },
     },

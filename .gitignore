@@ -17,3 +17,6 @@ src/l10n/DEFAULT/*.lua
 
 # TTS ses modelleri (büyük, yeniden indirilebilir)
 tts/voices/
+
+# Third-party charts (Jeppesen etc., copyright) stay local: kneeboard pages only, never pushed to the public repo
+kneeboard/cas_l_static/*_LCRA_*

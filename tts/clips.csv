@@ -642,3 +642,8 @@ tkr_spokes;TEXACO;Hornet five one, Texaco one one, copy spokes. Disconnect, chec
 ovl_tkr_lost_cp;OVERLORD;Hornet five one, Overlord, Texaco one one is off station, no tanker available. Proceed C P Tiger.;tok
 ovl_tkr_lost_si;OVERLORD;Hornet five one, Overlord, Texaco one one is off station, no tanker available. Say intentions.;tok
 ovl_inflrep_lost;OVERLORD;Hornet five one, Overlord, copy INFLTREP. No tanker available. Say intentions.;tok
+# v1.7.9 MUD calls (RWR ground threat): "Hornet five one, mud <type>, <bearing>" = jp_cs + p_mud + type + cv:p_ digits
+p_mud;PILOT>OVERLORD;mud;tok
+p_n10;PILOT>OVERLORD;ten;tok
+p_n15;PILOT>OVERLORD;fifteen;tok
+p_n19;PILOT>OVERLORD;nineteen;tok

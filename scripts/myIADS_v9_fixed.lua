@@ -1,3 +1,6 @@
+-- myIADS | v9.1.0
+-- v9.1.0 (2026-11-01): "WARNING: NEW SAM ACTIVITY DETECTED" is no longer shown on screen (Onur:
+--   no meta warnings for the pilot; the RWR and OVERLORD tell him). The ambush start stays in dcs.log.
 ----------------------------------------------------------------
 -- v9: ÇOK KATMANLI, RASTGELE AMBUSH SİSTEMİ
 --
@@ -259,7 +262,7 @@ function ambushGo()
     end
 
     ambushFired = true
-    trigger.action.outText("WARNING: NEW SAM ACTIVITY DETECTED", 6)
+    -- v9.1.0: no on-screen warning (was outText "WARNING: NEW SAM ACTIVITY DETECTED")
     env.info("[IADS] AMBUSH PHASE STARTED")
 
     for _, profile in ipairs(AMBUSH_PROFILES) do

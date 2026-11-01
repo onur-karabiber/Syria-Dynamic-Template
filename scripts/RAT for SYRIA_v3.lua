@@ -1,5 +1,6 @@
--- DEBUG: script load check
-trigger.action.outText("Civil Random Air Traffic (RAT) activated", 5)
+-- RAT for SYRIA | v3.0.1
+-- v3.0.1 (2026-11-01): load check moved from the screen to dcs.log (no system banners for the pilot).
+env.info("[RAT for SYRIA] v3.0.1 Civil Random Air Traffic (RAT) activated")
 
 ----------------------------------------------------------------
 -- CIVIL RAT – SPLIT DEPARTURE / DESTINATION (FAIL-SAFE)

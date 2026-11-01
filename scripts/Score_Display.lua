@@ -1,6 +1,8 @@
--- Score_Display | v1.2.2
+-- Score_Display | v1.2.3
 --[[
   Picture score cards (CAS (L) only; not part of the template build).
+
+  v1.2.3: plane captain cards 30 % smaller: CFG.PC.size 24 -> 17 (% of window; Onur 2026-11-01).
 
   v1.2.2: S3 / S3W redesigned cards added (all 23 plane captain steps now have a card).
 
@@ -61,7 +63,7 @@
 _G.TRT = _G.TRT or {}
 local TRT = _G.TRT
 
-local VERSION = "1.2.2"
+local VERSION = "1.2.3"
 
 local CFG = {
     DIR         = "ScoreCards/",
@@ -77,7 +79,7 @@ local CFG = {
     PC_OK       = true,                    -- v1.2.0: check_ok sound on detected PC steps
     CRT         = { dur = 6,  h = 0, v = 0, size = 22, units = 1 },
     MED         = { dur = 12, h = 1, v = 1, size = 50, units = 1 },
-    PC          = { dir = "PlaneCaptain/", dur = 600, h = 0, v = 0, size = 24, units = 1,
+    PC          = { dir = "PlaneCaptain/", dur = 600, h = 0, v = 0, size = 17, units = 1,   -- v1.2.3: was 24
                     -- must match tools/score_cards/out/PlaneCaptain (make_pc_cards.py IDS present)
                     IDS = { "S00", "S0P", "S2", "S2W", "S3", "S3W", "S4", "S_END",
                             "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10",

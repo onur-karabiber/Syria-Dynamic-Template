@@ -1,5 +1,7 @@
--- TrapTraining | v7.5.0-TRT.2
+-- TrapTraining | v7.5.0-TRT.3
 -- Bankler's CASE 1 Recovery Trainer v7.5.0 (third-party) with TRT patches:
+-- TRT.3 (Onur 2026-11-01): the one-time "Running Bankler's CASE 1 Recovery Trainer v ..." banner goes
+--   to dcs.log instead of the screen. "Welcome back ... Initial! TCN 72X, BRC 355." stays (recovery info).
 -- TRT.2 (decision 2026-10-28): Bankler LSO voice off. lsoActive = false. The trainer's
 --   LSO clips (Reset.wav, PaddlesContact_1.wav, YoureHi/Power/ComeLeft/RightForLineup_1-3)
 --   are not embedded in any .miz, so the calls were silent anyway, and AIRBOSS/Raynor
@@ -726,7 +728,7 @@ function Init(id, patternModeZone)
 	env.info("Created playerData object for " .. playerData.unit.UnitName)
 
 	if(not playerData.hasShownVersionMessage) then
-		SendMessageToPlayer("Running Bankler's CASE 1 Recovery Trainer v " .. scriptVersion, 3, playerData)
+		env.info("Running Bankler's CASE 1 Recovery Trainer v " .. scriptVersion .. " (TRT.3: banner to dcs.log only)")
 		playerData.hasShownVersionMessage = true
 	end
 	

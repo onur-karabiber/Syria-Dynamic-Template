@@ -1,4 +1,6 @@
--- Carrier_Geometry | v1.1.1
+-- Carrier_Geometry | v1.1.2
+-- v1.1.2: load message moved from the screen to dcs.log (Onur 2026-11-01: no system
+--         banners for the pilot).
 -- Distance_Flag_v3 + Radial_Flag_v1 birlesimi. Ayni Unit lookup, ayni tick,
 -- iki flag. Flag ID'leri (6550, 6551) eskisiyle ayni - mevcut ME trigger'lar
 -- bozulmaz. Bu dosya yuklendiginde eski iki dosyayi loadfile zincirinden
@@ -7,12 +9,12 @@
 -- "Player_01"). Core_Scoring'e yukleme sirasi bagimliligi yok; .miz basina
 -- override yapiliyorsa o Do Script satiri bu script'ten ONCE calismali.
 
--- DEBUG: script loading check (one-time)
-trigger.action.outText("Carrier geometry measuring activated", 5)
+-- Load check (one-time): dcs.log only (v1.1.2)
+env.info("[Carrier_Geometry] v1.1.2 measuring activated")
 
 do
   local playerName = (_G.TRT and _G.TRT.PLAYER_NAME) or "Player_01"
-  env.info("[Carrier_Geometry] v1.1.1 player unit: " .. playerName)
+  env.info("[Carrier_Geometry] v1.1.2 player unit: " .. playerName)
   local cvnName    = "CVN"
 
   local distFlagId = 6550   -- DME (NM)

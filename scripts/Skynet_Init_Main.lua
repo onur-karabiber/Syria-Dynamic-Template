@@ -1,4 +1,5 @@
--- Skynet_Init_Main | v1.1.1
+-- Skynet_Init_Main | v1.1.2
+-- v1.1.2: SHOW_TEXT false - "IADS is ready" goes to dcs.log only (Onur 2026-11-01).
 ----------------------------------------------------------------
 -- SKYNET IADS - CUSTOM INIT (PREFIX + COMMAND CENTER)
 -- Skynet version: 3.3.0
@@ -43,7 +44,7 @@ local CFG = {
     RETRY_TIMEOUT  = 60,  -- seconds
 
     -- Minimal on-screen sanity check
-    SHOW_TEXT      = true,
+    SHOW_TEXT      = false,   -- v1.1.2: dcs.log only
     TEXT_TIME      = 8,
 }
 

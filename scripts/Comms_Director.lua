@@ -1,5 +1,17 @@
--- Comms_Director | v1.7.8
+-- Comms_Director | v1.7.9
 --[[
+  v1.7.9 - Onur, 2026-11-01:
+           * TEXACO "you received X" CFG.TKR.RCVD_FULL_S (5) s after the disconnect when the hero is full
+             (>= CFG.TKR.RCVD_FULL_LB). A partial fill keeps the v1.7.7 rule (0.3 NM sideways departure or
+             RCVD_WAIT 60 s). The v1.7.7 reconnect withdrawal is unchanged.
+           * MUD calls (CFG.MUD): the first time a SAM site's radar tracks the hero (Unit.getRadar target =
+             hero; fallback: a fire-control radar emitting with the hero inside CFG.MUD.TYPES[..].trNm and in
+             terrain LOS) the pilot calls on the frequency he is working: "Hornet 51, mud six, 090."
+             (brevity MUD: RWR ground threat displayed, type and magnetic bearing). One call per site, again only
+             after the site was silent for REARM_S. Put at the head of the radio queue. OVERLORD answers
+             "Hornet 51, Overlord, copy."; Strike / JTACs do not answer. No calls in DEPARTURE / RECOVERY.
+             Not verified in DCS [V]: getRadar() target for AI SAM radars; the trNm values are approximate.
+             Every detection is logged: [CD] MUD ...
   v1.7.8 - Pilot_Banter v2.0.0 (CAS (L) only) talks much more: ChatPump holds unsolicited calls while
            TRT.PB.busyUntil is in the future (the pilot's own line ends first; a line is <= ~15 s, CHAT_TTL
            still applies). Replies and every queued exchange are unchanged. Without Pilot_Banter: no change.
@@ -1016,6 +1028,10 @@ local CFG = {
         ovl_tkr_bra            = { ch = "OVERLORD", len = 1.41 },
         ovl_off_tkr            = { ch = "OVERLORD", len = 2.88 },
         ovl_copy_51            = { ch = "OVERLORD", len = 1.93 },
+        p_mud                  = { ch = "OVERLORD", len = 0.36 },   -- v1.7.9 MUD calls
+        p_n10                  = { ch = "OVERLORD", len = 0.43 },
+        p_n15                  = { ch = "OVERLORD", len = 0.55 },
+        p_n19                  = { ch = "OVERLORD", len = 0.56 },
         p_ovl_req_tkr_a        = { ch = "PILOT", len = 2.45 },
         p_ovl_off_tkr_a        = { ch = "PILOT", len = 2.34 },
         p_ovl_off_tkr_b        = { ch = "PILOT", len = 1.12 },
@@ -1113,6 +1129,8 @@ local CFG = {
         FULL_LB  = 13000,        -- "request" = FULL_LB - fuel (DCS stops the flow at ~13,043 lb)
         BRA_NM   = { 20, 10, 5 },-- OVERLORD tanker bearing / range calls until Judy
         RCVD_WAIT = 60,          -- s after the last disconnect if no 0.3 NM departure was measured (v1.7.7: was 30)
+        RCVD_FULL_S  = 5,        -- v1.7.9: s after the last disconnect when the hero is full
+        RCVD_FULL_LB = 12700,    -- v1.7.9: "full" (DCS stops the flow at ~13,043 lb, FULL_LB 13000)
         AR1_HOLD  = true,        -- v1.7.1 POINTER hand-off waits for AR1 closed (off Texaco / skip AR1)
         MODE3     = "2042",      -- v1.7.4 RV initial call (kneeboard 01 SQUAWK)
         VEC_MIN_MS = 128.6,      -- v1.7.4 own speed floor for the intercept vector (250 kt)
@@ -1128,6 +1146,37 @@ local CFG = {
               ank = "240.800" },   -- v1.7.5 Field_Arrival hand-off (Ankara Control, AIP ENR 2.1)
             { key = "LCRA", name = "Akrotiri", lat = 34.590367, lon = 32.987783, twr = "252.000", clip = "lcra" },
         },
+    },
+    MUD = {                  -- v1.7.9 RWR ground threat calls
+        ON        = true,
+        TICK      = 2,           -- s
+        RESCAN_S  = 60,          -- s between scans for RED radar units (late activations)
+        MIN_GAP_S = 20,          -- s between two MUD calls
+        REARM_S   = 600,         -- s without a spike from a site before it may be called again
+        EYE_M     = 6,           -- m antenna height for the LOS fallback
+        -- unit type -> RWR type (spoken) and trNm = fallback range (NM) for a fire-control radar that is ON
+        -- (no trNm: search radar, called only when getRadar() reports the hero as its target)
+        TYPES = {
+            ["SNR_75V"]                = { sym = "2",  trNm = 24 },
+            ["snr s-125 tr"]           = { sym = "3",  trNm = 13 },
+            ["p-19 s-125 sr"]          = { sym = "3" },
+            ["Kub 1S91 str"]           = { sym = "6",  trNm = 13 },
+            ["Osa 9A33 ln"]            = { sym = "8",  trNm = 5.5 },
+            ["Tor 9A331"]              = { sym = "15", trNm = 6.5 },
+            ["CHAP_TorM2"]             = { sym = "15", trNm = 8 },
+            ["2S6 Tunguska"]           = { sym = "19", trNm = 4.5 },
+            ["S-300PS 40B6M tr"]       = { sym = "10", trNm = 40 },
+            ["S-300PS 5H63C 30H6_tr"]  = { sym = "10", trNm = 40 },
+            ["S-300PS 64H6E sr"]       = { sym = "10" },
+            ["S-300PS 40B6MD sr"]      = { sym = "10" },
+            ["S-300PS 40B6MD sr_19J6"] = { sym = "10" },
+        },
+        SYM_TOK = { ["10"] = "p_n10", ["15"] = "p_n15", ["19"] = "p_n19" },   -- else cv:p_<digit>
+        -- CD phase -> frequency the hero is working (no entry = no call)
+        CH = { STRIKE_OUT = "STRIKE", STRIKE_CHK = "STRIKE", STRIKE_IN = "STRIKE", INBOUND = "STRIKE",
+               OVL_OUT = "OVERLORD", ENROUTE = "OVERLORD", REFUEL = "OVERLORD", TKR_DONE = "OVERLORD",
+               RTB = "OVERLORD", J1_OFF = "OVERLORD", J2_OFF = "OVERLORD", DIVERT = "OVERLORD",
+               JTAC1 = "POINTER", JTAC2 = "EYEBALL" },
     },
     REMIND_FIRST   = 60,     -- s after a check-in becomes due before the first repeat
     REMIND_EVERY   = 120,    -- s between further repeats
@@ -2084,7 +2133,9 @@ local function TkrTick(p)
     local onload, nC
     local Sn = A.session
     if Sn and Sn.n > tk.aarN0 and Sn.lastStop and not Sn.openStart and #Sn.contacts > 0
-        and (Sn.dep.side or timer.getTime() - Sn.lastStop >= CFG.TKR.RCVD_WAIT) then
+        and (Sn.dep.side or timer.getTime() - Sn.lastStop >= CFG.TKR.RCVD_WAIT
+             or (timer.getTime() - Sn.lastStop >= CFG.TKR.RCVD_FULL_S and Player()
+                 and FuelLb(Player()) >= CFG.TKR.RCVD_FULL_LB)) then   -- v1.7.9: full -> 5 s
         onload, nC = 0, #Sn.contacts
         for _, c in ipairs(Sn.contacts) do
             if c.fuelStart and c.fuelStop then onload = onload + math.max(0, c.fuelStop - c.fuelStart) end
@@ -2799,6 +2850,99 @@ local function CorridorCheck(pPos, cPos)
 end
 
 -- ══════════════════════════════════════════════════════════════
+--  MUD CALLS (v1.7.9): RWR ground threat, first track per SAM site
+-- ══════════════════════════════════════════════════════════════
+local MUD = { units = nil, scanT = -1e9, last = -1e9, sites = {}, n = 0 }
+CD.mud = MUD
+
+local function MudScan()
+    local list = {}
+    local ok, groups = pcall(coalition.getGroups, coalition.side.RED, Group.Category.GROUND)
+    if not ok or type(groups) ~= "table" then return end
+    for _, g in ipairs(groups) do
+        local okU, units = pcall(g.getUnits, g)
+        if okU and type(units) == "table" then
+            for _, u in ipairs(units) do
+                local okT, tn = pcall(u.getTypeName, u)
+                local ty = okT and CFG.MUD.TYPES[tn]
+                if ty then
+                    list[#list + 1] = { u = u, type = tn, grp = g:getName(), sym = ty.sym, trNm = ty.trNm }
+                end
+            end
+        end
+    end
+    if not MUD.units or #list ~= #MUD.units then env.info(string.format("[CD] MUD: %d RED radar units", #list)) end
+    MUD.units = list
+end
+
+local function MudCall(ch, r, uPos, pPos, how, dNm)
+    local brg = string.format("%03d", math.floor(BrgMag(pPos, uPos) + 0.5) % 360)
+    local symTok = CFG.MUD.SYM_TOK[r.sym] or PD(r.sym)
+    MUD.n = MUD.n + 1
+    env.info(string.format("[CD] MUD call #%d: %s (%s, %s) %s, %.1f NM, %s, on %s", MUD.n, r.sym, r.grp, r.type,
+        brg, dNm, how, ch))
+    local items = { { text = string.format("[%s] %s, mud %s, %s.", CFG.CS, CFG.CS, r.sym, brg),
+                      dur = CFG.DUR_PILOT, after = 0.5, hold = CFG.PILOT_HOLD,
+                      audio = Voiced(S(ch, "jp_cs", "p_mud", symTok, 0.1, PD(brg))) } }
+    if ch == "OVERLORD" then
+        items[2] = { text = string.format("[OVERLORD] %s, Overlord, copy.", CFG.CS), dur = CFG.DUR_SHORT,
+                     after = CFG.REPLY_GAP, audio = Voiced(S("OVERLORD", "ovl_copy_51")) }
+    end
+    for i = #items, 1, -1 do table.insert(CD.queue, 1, items[i]) end   -- threat call first
+    QPlay()
+end
+
+local function MudTick()
+    local t = timer.getTime()
+    local ok, err = pcall(function()
+        if not CFG.MUD.ON then return end
+        local p = Player(); if not (p and p:inAir()) then return end
+        local ch = CFG.MUD.CH[CD.phase]; if not ch then return end
+        if not MUD.units or t - MUD.scanT >= CFG.MUD.RESCAN_S then MUD.scanT = t; MudScan() end
+        if not MUD.units then return end
+        local pPos, pName = p:getPoint(), p:getName()
+        local best
+        for _, r in ipairs(MUD.units) do
+            local u = r.u
+            if u and u:isExist() and u:isActive() then
+                local okR, on, tgt = pcall(u.getRadar, u)
+                if okR and on then
+                    local uPos = u:getPoint()
+                    local dNm = Dist2D(uPos, pPos)
+                    local how
+                    if tgt then
+                        local okN, tn = pcall(tgt.getName, tgt)
+                        if okN and tn == pName then how = "track" end
+                    end
+                    if not how and r.trNm and dNm <= r.trNm
+                        and land.isVisible({ x = uPos.x, y = uPos.y + CFG.MUD.EYE_M, z = uPos.z }, pPos) then
+                        how = "range+LOS"
+                    end
+                    if how then
+                        local s = MUD.sites[r.grp]
+                        if not s then
+                            s = {}; MUD.sites[r.grp] = s
+                            env.info(string.format("[CD] MUD spike: %s %s (%s) %.1f NM, %s", r.sym, r.grp, r.type, dNm, how))
+                        end
+                        if s.called and s.lastSeen and t - s.lastSeen > CFG.MUD.REARM_S then s.called = nil end
+                        s.lastSeen = t
+                        if not s.called and (not best or dNm < best.d) then
+                            best = { r = r, d = dNm, how = how, pos = uPos, s = s }
+                        end
+                    end
+                end
+            end
+        end
+        if best and t - MUD.last >= CFG.MUD.MIN_GAP_S then
+            MUD.last, best.s.called = t, t
+            MudCall(ch, best.r, best.pos, pPos, best.how, best.d)
+        end
+    end)
+    if not ok then env.info("[CD] MUD error: " .. tostring(err)) end
+    return t + CFG.MUD.TICK
+end
+
+-- ══════════════════════════════════════════════════════════════
 --  FEET DRY / WET MONITOR
 -- ══════════════════════════════════════════════════════════════
 local function SurfaceCheck(pPos)
@@ -3221,7 +3365,8 @@ local function CD_Init()
     SetFlag(200, 0)
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
-    env.info("[CD] Comms_Director v1.7.8 online — CAS-1 Syria")
+    timer.scheduleFunction(MudTick, nil, timer.getTime() + 10)   -- v1.7.9
+    env.info("[CD] Comms_Director v1.7.9 online — CAS-1 Syria")
 end
 
 CD_Init()

@@ -1,4 +1,6 @@
--- Departure | v1.0.2
+-- Departure | v1.0.3
+-- v1.0.3: the arming text is shown once per departure case ("DEPARTURE: CASE 3" on birth); the re-arm
+-- at takeoff is silent unless the case changed meanwhile (Onur 2026-11-01: fewer system banners).
 -- CASE-adaptive departure scoring. Replaces CASE_III_Departure.lua and
 -- CASE_IorII_Departure.lua. Case is snapshotted at ARM time (takeoff) -
 -- a departure procedure doesn't switch profile mid-transit in practice,
@@ -33,6 +35,8 @@ local III_SPD_START_DIST_NM = 0.8
 local FINAL_DIST_NM = 7
 local NEAR_CARRIER_NM = 0.25
 
+local announcedCase = nil   -- v1.0.3
+
 local DEP = {
     active = false, done = false, case = nil,
     good = false, bad = false,
@@ -53,7 +57,11 @@ local function armDeparture()
     DEP.active = true
     DEP.case = TRT.getCurrentCase()
     DEP.lastCheckTime = timer.getTime()
-    trigger.action.outText("DEPARTURE: ARMED (CASE " .. DEP.case .. ")", 6)
+    env.info("[Departure] armed, CASE " .. tostring(DEP.case))
+    if DEP.case ~= announcedCase then          -- v1.0.3
+        announcedCase = DEP.case
+        trigger.action.outText("DEPARTURE: CASE " .. DEP.case, 6)
+    end
 end
 
 local function nearCarrier(u)
@@ -176,4 +184,4 @@ timer.scheduleFunction(function()
     return timer.getTime() + 1
 end, nil, timer.getTime() + 1)
 
-env.info("[Departure] v1.0.2 loaded. Player unit: " .. PLAYER_NAME)
+env.info("[Departure] v1.0.3 loaded. Player unit: " .. PLAYER_NAME)

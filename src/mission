@@ -165245,7 +165245,7 @@ mission =
 		["total"] = 0,
 	},
 	["sortie"] = "DictKey_sortie_5",
-	["start_time"] = 25200,
+	["start_time"] = 21600,
 	["theatre"] = "Syria",
 	["trig"] = 
 	{

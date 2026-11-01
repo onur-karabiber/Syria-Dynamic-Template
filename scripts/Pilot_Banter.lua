@@ -1,5 +1,15 @@
--- Pilot_Banter | v2.0.0
+-- Pilot_Banter | v2.1.0
 --[[
+  v2.1.0 (Onur, 2026-11-01):
+    * FENCE IN no longer drops in a busy radio: flight 2026-10-31 fired it at the AR1 exit (CP Tiger 14 NM)
+      and dropped it after 122 s ("radio CD": Texaco exit, OVERLORD hand-off, Pointer check-in back to
+      back). Now TTL 420 s, needs 5 s of radio silence instead of 12 (.quietS), and may speak in the gaps of
+      the JTAC check-in / situation update / game plan (.jcok), never during the 9-line, readback or attack.
+      Being older in the queue, it still comes before the attack check.
+    * Oxygen mask breathing (CFG.OXY): Sounds/PBO/oxy_breath_01..12.ogg (one recording cut at breath
+      minima, played in order, looped) while OBOGS is ON (cockpit arg 365 > 0.5 [V]) and an engine is above
+      CFG.OXY.RPM_MIN; held while the pilot talks to himself. Without a cockpit read: airborne only.
+      F10 INFO > "Breathing: On/Off". OBOGS switch changes are logged ([PB] OBOGS ...).
   v2.0.0 (Onur, 2026-10-31): much more self-talk, and spoken checks that read the real state.
     * Composite lines: a line is a list of clips (header, value, comment) chained at runtime,
       e.g. "Fuel check..." + "nine point eight" + "Joker's..." + "five point nine" + "Good margin."
@@ -75,7 +85,7 @@ if TRT.PB then
 end
 
 local CFG = {
-    VERSION      = "2.0.0",
+    VERSION      = "2.1.0",
     LEVEL        = "NORMAL",       -- start level: OFF | QUIET | NORMAL | CHATTY
     LEVELS = {
         QUIET  = { cruise = { 120, 240 }, muse = 0.30, max = 80 },
@@ -98,6 +108,14 @@ local CFG = {
     SUB_DUR      = 5,
     NOISE_SYNTH  = true,           -- synthesized cough / throat / sniff / breath (snd_*) in the noise mix
     NOISE_P      = 0.12,           -- share of cruise items that are noises
+    OXY = {                        -- v2.1.0 oxygen mask breathing
+        ON      = true,            -- start state (F10 INFO > Breathing)
+        DIR     = "Sounds/PBO/",
+        N       = 12,              -- oxy_breath_01 .. _12, played in this order (one recording)
+        LEN     = { 6.00, 3.50, 4.80, 3.05, 3.80, 2.80, 3.20, 2.90, 2.55, 2.90, 1.90, 2.45 },
+        RPM_MIN = 60,              -- % N2; OBOGS needs engine bleed air
+        IDLE_TICK = 0.5,           -- s between checks while not breathing
+    },
     UTC_OFFSET   = 3,              -- h, mission local time - UTC (sun elevation) [V]
     CANOPY_ARG   = 38,
     CANOPY_OPEN  = 0.80,
@@ -184,7 +202,8 @@ local CFG = {
         shutdown     = { p = 0.85, delay = 17,  ttl = 20, cd = 600, gap = 12, any = true },
         -- v2.0.0
         cruise_item    = { p = 1.00, delay = 0,   ttl = 20, cd = 0,   quiet = true },
-        fence_in       = { p = 1.00, delay = 2,   ttl = 120, cd = 0,  quiet = true, prio = true },
+        fence_in       = { p = 1.00, delay = 2,   ttl = 420, cd = 0,  quietS = 5, prio = true, gap = 8,
+                           jcok = { CHECKIN = true, SITREP = true, GAMEPLAN = true } },   -- v2.1.0
         fence_out      = { p = 1.00, delay = 15,  ttl = 120, cd = 0,  quiet = true, prio = true },
         attack_check   = { p = 1.00, delay = 3,   ttl = 40, cd = 60,  quiet = true, prio = true, jtac = true, gap = 8 },
         joker_call     = { p = 1.00, delay = 1,   ttl = 60, cd = 0,   prio = true, gap = 5, jtac = true },
@@ -1148,6 +1167,7 @@ local CK_MAP = {
     radar  = { arg = 440, trust = true },    -- OFF 0 / STBY 0.1 / OPR 0.2 / EMERG 0.3 (DCS-BIOS step table)
     disp   = { arg = 517, trust = true },    -- BYPASS 0 / ON 0.1 / OFF 0.2 (DCS-BIOS step table)
     caut   = { arg = 13,  trust = true },    -- MASTER CAUTION light
+    obogs  = { arg = 365, trust = true },    -- v2.1.0 OBOGS control switch, 1 = ON (DCS-BIOS OBOGS_SW) [V]
 }
 
 local HERO = TRT.PLAYER_NAME or "Player_01"
@@ -1405,6 +1425,7 @@ local function CkInterpret(raw)
     local d = num(CK_MAP.disp.arg)
     if d and CK_MAP.disp.trust then v.disp = (d < 0.05 and "bypass") or (d < 0.15 and "on") or "off" end
     local c = num(CK_MAP.caut.arg); if c and CK_MAP.caut.trust then v.caution = c > 0.5 end
+    local ob = num(CK_MAP.obogs.arg); if ob and CK_MAP.obogs.trust then v.obogs = ob > 0.5 end   -- v2.1.0
     if type(raw.rpmL) == "number" and raw.rpmL >= 0 then v.rpmL = raw.rpmL end
     if type(raw.rpmR) == "number" and raw.rpmR >= 0 then v.rpmR = raw.rpmR end
     local b = tonumber(raw.bingo)
@@ -1970,7 +1991,8 @@ local function Blocked(name)
     if t < PB.busyUntil then return "own line" end
     local r = RadioBusy()
     if r then return "radio " .. r end
-    if m.quiet and t - PB.lastRadio < CFG.RADIO_QUIET_S then return "radio recent" end
+    local qs = m.quietS or (m.quiet and CFG.RADIO_QUIET_S)          -- v2.1.0 .quietS per moment
+    if qs and t - PB.lastRadio < qs then return "radio recent" end
     if t - PB.lastLine < (m.gap or CFG.MIN_GAP) then return "gap" end
     if not m.any then
         local cv = TRT.CV
@@ -1981,7 +2003,8 @@ local function Blocked(name)
         if tl and tl.engaged then return "engaged" end
         if not m.jtac then
             if JcActive() then
-                local j = JcBusy(); if j then return j end
+                local j = JcBusy()
+                if j and not (m.jcok and m.jcok[j:match("(%S+)$") or ""]) then return j end   -- v2.1.0 .jcok
             else
                 local cd = TRT.CD
                 if cd and cd.phase and CFG.SILENT_CD[cd.phase] then return "CD " .. cd.phase end
@@ -2162,6 +2185,60 @@ local function HookJC()
     Log("JTAC_Controller events subscribed")
 end
 
+-- ── v2.1.0: oxygen mask breathing (OBOGS) ──
+local OXY = { on = CFG.OXY.ON, idx = 0, nextT = 0, active = false, why = nil, obogs = nil }
+PB.oxy = OXY
+
+local function OxyWanted(u)
+    if not OXY.on then return false, "off (F10)" end
+    if not u then return false, "no hero" end
+    local ck = Cockpit()
+    if ck then
+        if ck.obogs ~= OXY.obogs then
+            Log(string.format("OBOGS arg %d %s -> %s", CK_MAP.obogs.arg, tostring(OXY.obogs), tostring(ck.obogs)))
+            OXY.obogs = ck.obogs
+        end
+        if ck.obogs == nil then return false, "OBOGS unreadable" end
+        if not ck.obogs then return false, "OBOGS off" end
+        local rpm = math.max(ck.rpmL or 0, ck.rpmR or 0)
+        if rpm < CFG.OXY.RPM_MIN then return false, string.format("OBOGS on, rpm %.0f", rpm) end
+        return true, "OBOGS on"
+    end
+    if CK.avail == false then                        -- no cockpit read: airborne = OBOGS assumed on
+        if InAir(u) then return true, "airborne, no cockpit read" end
+        return false, "on deck, no cockpit read"
+    end
+    return false, "no cockpit yet"
+end
+
+local function OxyStep()
+    local t = now()
+    local nextAt = t + CFG.OXY.IDLE_TICK
+    local ok, err = pcall(function()
+        local u = Hero()
+        local want, why = OxyWanted(u)
+        if want ~= OXY.active then
+            Log("oxygen breathing " .. (want and "ON" or "OFF") .. " (" .. why .. ")")
+            OXY.active = want
+            if want then OXY.nextT = t end
+        end
+        OXY.why = why
+        if not want then return end
+        if t < OXY.nextT then nextAt = OXY.nextT; return end
+        if t < PB.busyUntil then nextAt = math.min(PB.busyUntil, t + 0.25); return end   -- talking: hold
+        local okG, gid = pcall(function() return u:getGroup():getID() end)
+        if not okG or not gid then return end
+        OXY.idx = OXY.idx % CFG.OXY.N + 1
+        local file = string.format("%soxy_breath_%02d.ogg", CFG.OXY.DIR, OXY.idx)
+        local okS, e2 = pcall(trigger.action.outSoundForGroup, gid, file)
+        if not okS then Log("oxygen play error: " .. tostring(e2)) end
+        OXY.nextT = t + CFG.OXY.LEN[OXY.idx]
+        nextAt = OXY.nextT
+    end)
+    if not ok then Log("oxygen error: " .. tostring(err)) end
+    return math.max(nextAt, t + 0.05)
+end
+
 -- ── F10 ──
 local function SetLevel(l)
     PB.level, PB.on = l, l ~= "OFF"
@@ -2177,7 +2254,12 @@ local function MenuItems()
         if l == PB.level then lab = lab .. " (current)" end
         sub[#sub + 1] = { lab, function() SetLevel(l) end }
     end
-    return { { "Pilot thoughts: " .. PB.level, sub = sub } }
+    local oxySub = {                                   -- v2.1.0
+        { "On" .. (OXY.on and " (current)" or ""), function() OXY.on = true; Log("breathing -> on (F10)") end },
+        { "Off" .. (OXY.on and "" or " (current)"), function() OXY.on = false; Log("breathing -> off (F10)") end },
+    }
+    return { { "Pilot thoughts: " .. PB.level, sub = sub },
+             { "Breathing: " .. (OXY.on and "On" or "Off"), sub = oxySub } }
 end
 local function RegisterMenu()
     if PB.menu or not (TRT.Menu and TRT.Menu.Register) then return end
@@ -2504,6 +2586,7 @@ for _ in pairs(CFG.AUDIO) do nClips = nClips + 1 end
 for _ in pairs(GROUPS) do nGroups = nGroups + 1 end
 local seed = Seed()
 timer.scheduleFunction(Tick, nil, now() + 2)
+timer.scheduleFunction(OxyStep, nil, now() + 6)   -- v2.1.0
 timer.scheduleFunction(function() Cockpit(); return nil end, nil, now() + 5)
 Log(string.format("Pilot_Banter v%s loaded: hero %s, %d clips in %d groups, seed %d, level %s",
     CFG.VERSION, HERO, nClips, nGroups, seed, PB.level))

@@ -1,4 +1,6 @@
-# install_pilot_banter.py | v1.0.0
+# install_pilot_banter.py | v1.1.0
+# v1.1.0: also installs Sounds/PBO/*.ogg (Pilot_Banter v2.1.0 oxygen breathing, CFG.OXY) from out/Sounds/PBO/;
+#         checks that CFG.OXY.N matches the oxy_breath_NN.ogg files there.
 # Installs / updates Pilot_Banter in a .miz IN PLACE, after a backup (CAS (L) only).
 #
 #   python tools/pilot_banter/install_pilot_banter.py "<path>/Close Air Support (L).miz"
@@ -31,7 +33,8 @@ sys.path.insert(0, REPO)
 import dcslua  # noqa: E402
 
 SCRIPT = "Pilot_Banter.lua"
-ASSET_DIRS = (("Sounds/PB", os.path.join(HERE, "out", "Sounds", "PB")),)
+ASSET_DIRS = (("Sounds/PB", os.path.join(HERE, "out", "Sounds", "PB")),
+              ("Sounds/PBO", os.path.join(HERE, "out", "Sounds", "PBO")))   # v1.1.0 breathing
 ASSET_PREFIXES = tuple(a + "/" for a, _ in ASSET_DIRS)
 ANCHORS = (b"Flight_Timeline.lua", b"Score_Display.lua", b"Core_Scoring.lua")
 
@@ -67,9 +70,16 @@ def main(src):
         sys.exit("AUDIO / clips mismatch. no .ogg: %s | no AUDIO key: %s"
                  % (sorted(keys - oggs), sorted(oggs - keys)))
 
+    src_lua = open(lua_path, encoding="utf-8").read()              # v1.1.0 breathing chunks
+    mo = re.search(r"OXY = \{.*?\bN\s*=\s*(\d+)", src_lua, re.S)
+    pbo = ASSET_DIRS[1][1]
+    oxy = sorted(f for f in os.listdir(pbo) if re.match(r"oxy_breath_\d\d\.ogg$", f)) if os.path.isdir(pbo) else []
+    if mo and int(mo.group(1)) != len(oxy):
+        sys.exit("CFG.OXY.N = %s but %d oxy_breath_NN.ogg in %s" % (mo.group(1), len(oxy), pbo))
+
     add = {"l10n/DEFAULT/" + SCRIPT: lua_path}
     for arc, d in ASSET_DIRS:
-        for f in sorted(os.listdir(d)):
+        for f in (sorted(os.listdir(d)) if os.path.isdir(d) else []):
             if f.lower().endswith(".ogg"):
                 add[arc + "/" + f] = os.path.join(d, f)
 

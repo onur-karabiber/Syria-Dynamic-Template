@@ -1,4 +1,5 @@
--- Airboss_Start.lua | v1.0.7
+-- Airboss_Start.lua | v1.0.8
+-- v1.0.8: SetWelcomePlayers(false) - no "AIRBOSS CVN: Welcome, Flight Student ..." banner (Onur 2026-11-01).
 -- TRT Syria Recovery Framework - MOOSE AIRBOSS bootstrap
 -- Carrier unit (ME): "CVN"
 -- Recovery ops: CASE II
@@ -95,6 +96,9 @@ TRT.Airboss:AddRecoveryWindow(nil, "23:59:00+3", 2, 0)
 
 -- Single-carrier menu simplification (one carrier in this template).
 TRT.Airboss:SetMenuSingleCarrier()
+
+-- v1.0.8: no welcome banner for players (MOOSE AIRBOSS:SetWelcomePlayers, default true).
+TRT.Airboss:SetWelcomePlayers(false)
 
 -- SOUND FILES. Root folder "Sounds/" is a NEW top-level folder embedded at
 -- the .miz's root (sibling of l10n/, mission, options, warehouses) -- see
@@ -268,7 +272,7 @@ end, nil, timer.getTime() + 5)
 -- Start the FSM.
 TRT.Airboss:Start()
 
-env.info(string.format("Airboss_Start | v1.0.7 | foul-deck log | unlimited fuel net | F10 > CARRIER | TACAN/ICLS WSH | onboard-number fix | HOLD stack1 angels 10 / 25 DME | CVN | CASE %d | TACAN 72X | ICLS 12 | MARSHAL 261.00 AM | LSO 262.00 AM", 2))
+env.info(string.format("Airboss_Start | v1.0.8 | no welcome | foul-deck log | unlimited fuel net | F10 > CARRIER | TACAN/ICLS WSH | onboard-number fix | HOLD stack1 angels 10 / 25 DME | CVN | CASE %d | TACAN 72X | ICLS 12 | MARSHAL 261.00 AM | LSO 262.00 AM", 2))
 
 -- ============================================================================
 -- SYNC NOTE: Airboss_CaseSync.lua (load AFTER this file) listens on flag 100
