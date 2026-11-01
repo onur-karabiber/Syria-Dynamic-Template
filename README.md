@@ -90,6 +90,14 @@ An AI JTAC (a ground group with a `FAC_AttackGroup` task, e.g. `JTAC-1`) lases o
 * **Known limits:** the audit uses `land.isVisible` (terrain only) with assumed eye heights of 2.5 m. Whether buildings, trees or vehicles between JTAC and target affect JTAC lasing is **not verified**. The cause-and-effect link above rests on a small number of test pairs; DCS does not document the JTAC detection logic.
 * The audit script is wired into the mission start trigger (`mapResource` key `ResKey_Action_312`).
 
+### 6. ELINT (Hound)
+`scripts/HoundElint_0.5.2.lua` is Hound ELINT v0.5.2 (uriba107/DCS-Hound, `include/HoundElint.lua`, commit `710eb6d`), vendored unchanged. `scripts/Elint_Init.lua` configures it: BLUE platforms locate non-BLUE radars **only while they emit** (Skynet-dark sites stay unknown until they light up; a site that has engaged once stays on the F10 map). Output: F10 map markers, `F10 > INFO > Show: ELINT picture` (nearest sites: magnetic bearing/range from `Player_01`, lat/lon DDM, elevation, +- error, age) and one line when a new site is located. Hound's own radio menu, controller and ATIS are not used (voice needs SRS).
+
+* **Platforms:** ME statics `ELINT_TWR_1`, `ELINT_TWR_2` (type `Comms tower M` or `TV tower`, a BLUE country) and `OVERLORD-1-1` (E-2C). Missing names are skipped and retried. Two towers are needed to fix the low-band EWRs (55G6, 1L13): the E-2C cannot resolve them, and a single static platform gives a bearing only, no position.
+* **Wiring (ME):** `Do Script File HoundElint_0.5.2.lua` in trigger `MOOSE` after `SAM_FireGate.lua`; `Do Script File Elint_Init.lua` at the end of `OWN_SCRIPTS`. Then extract and build as usual.
+* **Check:** `[ELINT] AUDIT` lines (~5 s after start) list, per platform, how many radar units/groups are in LOS with a usable bearing, then which groups are heard by two or more platforms (can be fixed), by one only (bearing only, unless that one is a moving aircraft) and by none. `CFG.SURVEY.ENABLED = true` runs the same test on a grid around candidate tower sites without placing statics and logs the best point per candidate.
+* Hound prints "Hound ELINT (0.5.2) is loaded." on screen for 15 s at mission start (vendor code, left unchanged).
+
 ### Scripting Guidelines
 **Strict Requirement:** Every Lua script update or creation within this repository must feature the script title and version number as the top comment line. 
 
