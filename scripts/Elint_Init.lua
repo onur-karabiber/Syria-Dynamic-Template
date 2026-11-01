@@ -1,4 +1,5 @@
--- Elint_Init | v1.0.0
+-- Elint_Init | v1.0.1
+-- v1.0.1: load-order note only (tools/add_elint.py puts both files at the end of OWN_SCRIPTS). No code change.
 --[[
   Hound ELINT bootstrap — TRT Syria Dynamic Template (template-level module)
 
@@ -39,8 +40,8 @@
   +box/2 for statics, then +box again for every non-aerial platform). The audit
   line prints that height for each real tower; copy it into CFG.SURVEY.ANT_M.
 
-  Load order (ME): HoundElint_0.5.2.lua in trigger "MOOSE" after SAM_FireGate.lua;
-  Elint_Init.lua at the end of trigger "OWN_SCRIPTS" (needs Menu_Manager + Hound).
+  Load order (ME): HoundElint_0.5.2.lua anywhere before Elint_Init.lua; Elint_Init.lua after
+  Menu_Manager. tools/add_elint.py appends both, in that order, to trigger "OWN_SCRIPTS".
   API: TRT.ELINT = { version, CFG, hound, picture() }
 ]]
 
@@ -52,7 +53,7 @@ if TRT.ELINT then
 end
 
 local CFG = {
-    VERSION         = "1.0.0",
+    VERSION         = "1.0.1",
     COALITION       = coalition.side.BLUE,
     PLAYER_UNIT     = "Player_01",
     PLATFORMS       = { "ELINT_TWR_1", "ELINT_TWR_2", "OVERLORD-1-1" },
