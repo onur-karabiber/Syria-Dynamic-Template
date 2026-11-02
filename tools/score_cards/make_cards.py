@@ -1,4 +1,7 @@
-# make_cards.py | v0.4.0
+# make_cards.py | v0.4.1
+# v0.4.1: total centred in the large screen both ways (Onur 2026-11-02: it sat against the top edge): centre
+#         (437, 565) src px = middle of the corner marks; ink 200 so 4 characters (x 129..745) stay clear of the
+#         small screen (x >= 762) that overlaps the large screen's lower right.
 # v0.4.0: Onur's scoreboard art v7 (2026-11-02, src_art/score_table_v7_src.png, 1074x942, transparent): total in
 #         the upper part of the large screen (clear of the small screen that overlaps its lower right), last delta
 #         centred in the small screen. Digits / colours as v0.3.0. Card 700 px wide.
@@ -59,10 +62,10 @@ CARDS = {
 
 # Digit sets: which card, glyphs, centre/height as fractions of the box.
 SETS = {
-    # v0.4.0 total: large screen, above the small screen (src px cx 437, baseline 545, ink 230: 4 chars span
-    # x 83..791 inside the corner marks 50..825); delta: small screen (cx 912, baseline 727, ink 72)
+    # v0.4.1 total: centre of the large screen (src px cx 437, baseline 665, ink 200); delta: small screen
+    # (cx 912, baseline 727, ink 72)
     "crt_t": dict(card="crt", glyphs="0123456789m", font="ShareTechMono-Regular.ttf",
-                  cx=437 / 1074, base=545 / 942, h=230 / 942, style="dot", pitch=4, rgb=(170, 255, 150)),
+                  cx=437 / 1074, base=665 / 942, h=200 / 942, style="dot", pitch=4, rgb=(170, 255, 150)),
     "crt_dp": dict(card="crt", glyphs="0123456789p", font="ShareTechMono-Regular.ttf",
                    cx=912 / 1074, base=727 / 942, h=72 / 942, style="dot", pitch=3, rgb=(170, 255, 150)),
     "crt_dn": dict(card="crt", glyphs="0123456789m", font="ShareTechMono-Regular.ttf",
