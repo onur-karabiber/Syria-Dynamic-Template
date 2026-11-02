@@ -1,4 +1,8 @@
-# make_report_cards.py | v1.1.0
+# make_report_cards.py | v1.2.0
+# v1.2.0: card restyled to the badge art (Onur 2026-11-02: the palettes did not match): black panels with
+#         chamfered corners, phosphor green (55,245,40) / red (245,20,10) as in the badges, Oswald (OFL,
+#         fonts/Oswald-*.ttf from @fontsource/oswald 5.3.0) instead of ShareTechMono / BlackOpsOne. Layout,
+#         field slots and file names unchanged (Flight_Report.lua untouched).
 # v1.1.0: Onur's badge art (2026-11-02, square 1254 px): badges are square, 116 px on the card (strip y 594..714).
 #         --import-badges DIR copies art named by the badge title ("Bankler 75.png", "Heavy at The Ramp.png", ...)
 #         to src_art/badges/<ID>.png, downscaled to 400 px (repo size); unknown / missing names are listed.
@@ -33,17 +37,20 @@ BADGE_ART = os.path.join(HERE, "src_art", "badges")
 LUA = os.path.join(REPO, "scripts", "Flight_Report.lua")
 
 W, H = 1280, 720
-MONO = os.path.join(FONTS, "ShareTechMono-Regular.ttf")
-HEAD = os.path.join(FONTS, "BlackOpsOne-Regular.ttf")
-STEN = os.path.join(FONTS, "StardosStencil-Bold.ttf")
+MONO = os.path.join(FONTS, "Oswald-Medium.ttf")      # v1.2.0 labels
+HEAD = os.path.join(FONTS, "Oswald-Bold.ttf")        # titles, grade / LSO words
+STEN = os.path.join(FONTS, "Oswald-Bold.ttf")        # stamp
+DIGI = os.path.join(FONTS, "Oswald-SemiBold.ttf")    # digit layers
 
-C_BG = (10, 18, 28, 236)
-C_LINE = (70, 110, 140, 255)
-C_LABEL = (150, 185, 205, 255)
-C_TEXT = (230, 238, 242, 255)
-C_POS = (95, 255, 140, 255)
-C_NEG = (255, 90, 74, 255)
-C_AMB = (255, 196, 70, 255)
+# v1.2.0 badge palette (sampled from Onur's art: green ~ (55,245,40), red ~ (245,10,5), black)
+C_BG = (2, 6, 2, 240)
+C_LINE = (55, 245, 40, 255)
+C_GRID = (20, 80, 16, 255)
+C_LABEL = (40, 190, 30, 255)
+C_TEXT = (205, 255, 195, 255)
+C_POS = (55, 245, 40, 255)
+C_NEG = (245, 20, 10, 255)
+C_AMB = (205, 255, 195, 255)     # neutral (losses, (OK), SAT): pale phosphor, no amber in the badge palette
 
 GROUPS = ["Launch & departure", "Mission timing", "Aerial refuelling", "VUL / CAS procedure", "Targets",
           "Threat avoidance", "ROE / friendly fire", "Recovery", "Trap & deck", "Divert", "Mission events"]
@@ -147,21 +154,29 @@ def check_lua():
         sys.exit("Flight_Report.lua and this script disagree: fields %s, badges %s" % (bad, missing))
 
 
+def chamfer(d, box, c, outline=None, width=1, fill=None):
+    """Polygon with 45-degree cut corners (the badge frames)."""
+    x0, y0, x1, y1 = box
+    pts = [(x0 + c, y0), (x1 - c, y0), (x1, y0 + c), (x1, y1 - c), (x1 - c, y1), (x0 + c, y1), (x0, y1 - c), (x0, y0 + c)]
+    d.polygon(pts, fill=fill, outline=outline, width=width)
+
+
 def frame():
     im = canvas()
     d = ImageDraw.Draw(im)
-    d.rounded_rectangle((4, 4, W - 5, H - 5), 22, fill=C_BG, outline=C_LINE, width=3)
-    d.text((40, 26), "FLIGHT REPORT", font=font(HEAD, 44), fill=C_TEXT)
-    d.text((44, 82), "HORNET 51  ·  CAS-1  ·  F/A-18C", font=font(MONO, 22), fill=C_LABEL)
-    d.line((30, 128, W - 30, 128), fill=C_LINE, width=2)
+    chamfer(d, (4, 4, W - 5, H - 5), 28, outline=C_LINE, width=4, fill=C_BG)
+    chamfer(d, (18, 16, 870, 118), 16, outline=C_LINE, width=3)
+    chamfer(d, (884, 16, 1262, 118), 16, outline=C_LINE, width=3)
+    for box in ((18, 130, 422, 584), (432, 130, 870, 584), (884, 130, 1262, 584)):
+        chamfer(d, box, 16, outline=C_LABEL, width=2)
+    d.text((40, 20), "FLIGHT REPORT", font=font(HEAD, 54), fill=C_POS)
+    d.text((44, 84), "HORNET 51  ·  CAS-1  ·  F/A-18C", font=font(MONO, 22), fill=C_LABEL)
     lab = font(MONO, 22)
     d.text((44, 138), "TOTAL", font=lab, fill=C_LABEL)
     d.text((44, 276), "EARNED", font=lab, fill=C_LABEL)
     d.text((44, 368), "PENALTIES", font=lab, fill=C_LABEL)
     d.text((44, 460), "MISSION LOSSES", font=lab, fill=C_LABEL)
     d.text((44, 532), "(not in the total)", font=font(MONO, 16), fill=C_LABEL)
-    d.line((430, 140, 430, 580), fill=C_LINE, width=1)
-    d.line((880, 140, 880, 580), fill=C_LINE, width=1)
     d.text((446, 138), "GROUP", font=font(MONO, 18), fill=C_LABEL)
     d.text((710, 138), "EARNED", font=font(MONO, 18), fill=C_LABEL)
     d.text((806, 138), "PEN.", font=font(MONO, 18), fill=C_LABEL)
@@ -169,14 +184,13 @@ def frame():
     for i, g in enumerate(GROUPS):
         y = ROW0 + i * ROWH
         d.text((446, y + 2), g, font=gf, fill=C_TEXT)
-        d.line((444, y + ROWH - 6, 866, y + ROWH - 6), fill=(40, 60, 80, 255), width=1)
+        d.line((444, y + ROWH - 6, 858, y + ROWH - 6), fill=C_GRID, width=1)
     d.text((896, 138), "CARRIER", font=font(MONO, 22), fill=C_LABEL)
     for y, t in ((266, "PASS PTS"), (306, "WIRE"), (346, "GROOVE s")):
         d.text((896, y), t, font=gf, fill=C_LABEL)
     d.text((896, 392), "BANKLER (not in the total)", font=font(MONO, 16), fill=C_LABEL)
     d.text((1068, 418), "/", font=font(MONO, 34), fill=C_LABEL)
     d.text((1210, 418), "%", font=font(MONO, 34), fill=C_AMB)
-    d.line((30, 588, W - 30, 588), fill=C_LINE, width=2)
     d.text((44, 556), "F10 > INFO > FLIGHT REPORT: score detail", font=font(MONO, 14), fill=C_LABEL)
     save(im, "frame.png")
     return im
@@ -203,9 +217,9 @@ def stamp(n, text):
     sw, sh = 330, 104
     s = Image.new("RGBA", (sw, sh), (0, 0, 0, 0))
     d = ImageDraw.Draw(s)
-    col = (225, 40, 40, 235)
-    d.rounded_rectangle((4, 4, sw - 5, sh - 5), 10, outline=col, width=5)
-    f = font(STEN, 30)
+    col = C_NEG
+    chamfer(d, (3, 3, sw - 4, sh - 4), 14, outline=col, width=5, fill=(10, 0, 0, 225))
+    f = font(STEN, 32)
     bb = d.multiline_textbbox((0, 0), text, font=f, align="center", spacing=2)
     d.multiline_text(((sw - (bb[2] - bb[0])) / 2 - bb[0], (sh - (bb[3] - bb[1])) / 2 - bb[1]), text, font=f,
                      fill=col, align="center", spacing=2)
@@ -219,7 +233,7 @@ def stamp(n, text):
 def glyphs():
     n = 0
     for fld, (slots, right, top, h, col, gl) in FIELDS.items():
-        f = font(MONO, int(h * 1.18))
+        f = font(DIGI, int(h * 1.18))
         cell = int(h * 0.62)
         for slot in range(slots):
             cx = right - (slots - slot - 0.5) * cell
