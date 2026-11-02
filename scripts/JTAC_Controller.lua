@@ -1,5 +1,16 @@
--- JTAC_Controller | v0.8.0
+-- JTAC_Controller | v0.8.1
 --[[
+  v0.8.1 (CAS (L) sortie 2026-11-02, Onur):
+    * JC.unauthKill(weapon, victim) for Core_Scoring >= v1.4.6: true when the kill came from a weapon
+      released without CLEARED HOT, after an abort or after control was terminated (same weapon object,
+      or that weapon's last tracked point within CFG.UNAUTH_KILL_M of the victim and impact no more than
+      CFG.UNAUTH_KILL_S ago). Such kills score nothing (2026-11-02: +12 for the unauthorized GBU-12).
+    * Troops in contact: the TIC JTAC's check-in is offered only after Comms_Director's TIC exchange has
+      been played (TRT.CD.ticState.ready, CD >= v1.7.11). 2026-11-02: "EYEBALL 11: check in" appeared with
+      the OVERLORD hand-off, the pilot pressed it before the TIC call, and his check-in transmission
+      queued behind the TIC exchange (played 57 s after the press). Meanwhile the menu ran ahead
+      (game plan / 9-line / remarks pressed before any of them was heard). The hand-off waits up to
+      CFG.TIC_WAIT_S (then proceeds anyway).
   v0.8.0 (TEST flight #5, 2026-10-29/30, Onur):
     * F10 order in ATTACK: F1 is always the next call of the normal flow
       (OFF -> SHIFT -> IP INBOUND -> TEN SECONDS -> LASER ON -> SPOT -> TALLY/CAPTURED -> IN),
@@ -144,7 +155,7 @@ if TRT.JC then env.info("[JC] already loaded, second copy ignored") return end
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "0.8.0",
+    VERSION      = "0.8.1",
     VOICE        = true,      -- v0.7.0 spoken transmissions (needs Comms_Director >= v1.6.4)
     PLAYER_UNIT  = "Player_01",
     CS           = "HORNET 51",
@@ -170,6 +181,9 @@ local CFG = {
     LASER_SRC    = { x = 0, y = 3, z = 0 },
     EYE_M        = 2.5,
     IMPACT_WAIT_S = 3,
+    UNAUTH_KILL_M = 150,         -- v0.8.1 m from the unauthorized weapon's last point to the victim (3D)
+    UNAUTH_KILL_S = 15,          -- v0.8.1 s after its impact a kill can still be attributed to it
+    TIC_WAIT_S    = 120,         -- v0.8.1 max s the TIC JTAC's hand-off waits for the CD TIC exchange
     THREAT_NM    = 8,
     -- v0.4.0: threats to the run-in (typical envelopes, NM / ft MSL; not verified against DCS models)
     THREAT = {
@@ -248,7 +262,8 @@ local DIR8_TXT = { "north", "northeast", "east", "southeast", "south", "southwes
 -- ══════════════════════════════════════════════════════════════
 --  STATE
 -- ══════════════════════════════════════════════════════════════
-local JC = { version = CFG.VERSION, active = true, CFG = CFG, st = {}, subs = {}, queue = {}, qBusy = false }
+local JC = { version = CFG.VERSION, active = true, CFG = CFG, st = {}, subs = {}, queue = {}, qBusy = false,
+    unauthW = {} }   -- v0.8.1 { id, rec } of every weapon released without clearance
 TRT.JC = JC
 for _, k in ipairs(CFG.ORDER) do JC.st[k] = { phase = "IDLE" } end
 
@@ -1635,6 +1650,24 @@ local function Assess(k)
     if st.nine then st.nine.aim = nau:getName() end
 end
 
+--- v0.8.1: was this kill made by a weapon released without clearance? (Core_Scoring >= v1.4.6)
+function JC.unauthKill(w, victim)
+    if #JC.unauthW == 0 then return false end
+    local wid
+    if w then local ok, v = pcall(function() return w.id_ end); if ok then wid = v end end
+    local okP, vp = pcall(function() return victim:getPoint() end)
+    local now = timer.getTime()
+    for _, x in ipairs(JC.unauthW) do
+        if wid ~= nil and x.id == wid then return true end
+        local r = x.rec
+        if okP and vp and r.last and (not r.impT or now - r.impT <= CFG.UNAUTH_KILL_S) then
+            local dx, dy, dz = vp.x - r.last.x, (vp.y or 0) - (r.last.y or 0), vp.z - r.last.z
+            if math.sqrt(dx * dx + dy * dy + dz * dz) <= CFG.UNAUTH_KILL_M then return true end
+        end
+    end
+    return false
+end
+
 local function TrackWeapon(k, w, rec)
     local pass = JC.st[k].pass
     timer.scheduleFunction(function(_, t)
@@ -1644,6 +1677,7 @@ local function TrackWeapon(k, w, rec)
             if okp and p then rec.last = p end
             return t + 0.1
         end
+        rec.impT = rec.impT or timer.getTime()   -- v0.8.1
         if pass then
             pass.pending = pass.pending - 1
             if rec.last then pass.impacts[#pass.impacts + 1] = rec.last end
@@ -1698,6 +1732,11 @@ local function OnShot(w)
         tostring(rec.laser), st.phase))
     Emit("RELEASE", rec)
     a.released, a.offPending = true, true
+    if st.phase == "TERMINATED" or rec.afterAbort or not rec.cleared then   -- v0.8.1: kills score nothing
+        local okI, wid = pcall(function() return w.id_ end)
+        JC.unauthW[#JC.unauthW + 1] = { id = okI and wid or nil, rec = rec }
+        rec.unauth = true
+    end
     if st.phase == "TERMINATED" then
         Log("RELEASE after TERMINATED " .. k)
     elseif rec.afterAbort or not rec.cleared then
@@ -1972,7 +2011,16 @@ local function Tick(_, now)
             local st = JC.st[k]
             if st.phase == "IDLE" and u then
                 if CFG.HANDOFF == "CD" and cd then
-                    if cd.phase == J(k).cdPhase then Handoff(k) end
+                    -- v0.8.1: the TIC JTAC is checked in with only after CD's TIC exchange has been played
+                    local ts = cd.ticState
+                    local ticWait = cd.tic == k and ts and ts.key == k and not ts.ready
+                    if ticWait and cd.phase == J(k).cdPhase then
+                        st.ticWaitT = st.ticWaitT or now
+                        if now - st.ticWaitT > CFG.TIC_WAIT_S then
+                            Log("TIC wait timeout " .. k .. ", hand-off anyway"); ticWait = false
+                        end
+                    end
+                    if cd.phase == J(k).cdPhase and not ticWait then Handoff(k) end
                 else
                     local tp = Centroid(TargetUnits(k))
                     if tp and NM(D2(u:getPoint(), tp)) <= CFG.HANDOFF_NM then Handoff(k) end

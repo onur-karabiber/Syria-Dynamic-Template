@@ -1,4 +1,8 @@
--- TrapTraining | v7.5.0-TRT.3
+-- TrapTraining | v7.5.0-TRT.4
+-- TRT.4 (CAS (L) sortie 2026-11-02, Onur): the reset ship 'Oliver Hazzard Perry' does not exist in CAS (L)
+--   (units deleted), so the InitZone monitor was skipped and the "Return 4 nm aft (over the trailing ship)"
+--   hint pointed at nothing. Without the anchor ship the InitZone is now a moving zone on the carrier,
+--   INIT_AFT_M (4 nm) astern, same radius / altitude rule; the hint then says "4 nm astern of the carrier".
 -- Bankler's CASE 1 Recovery Trainer v7.5.0 (third-party) with TRT patches:
 -- TRT.3 (Onur 2026-11-01): the one-time "Running Bankler's CASE 1 Recovery Trainer v ..." banner goes
 --   to dcs.log instead of the screen. "Welcome back ... Initial! TCN 72X, BRC 355." stays (recovery info).
@@ -292,8 +296,23 @@ function LogInitMonitorMissingOnce(key, message)
 	end
 end
 
-function CreateInitMonitorMovingZone(zoneName, anchorUnitName, fallbackRadius)
+INIT_AFT_M = 7408  -- TRT.4: 4 nm astern of the carrier when the trailing ship is missing
+initMonitorNoTrailingShip = false
+
+function RestartHint()
+	if(initMonitorNoTrailingShip) then
+		return "Return 4 nm astern of the carrier (below 1,300 ft) to restart the exercise."
+	end
+	return "Return 4 nm aft (over the trailing ship) to restart the exercise."
+end
+
+function CreateInitMonitorMovingZone(zoneName, anchorUnitName, fallbackRadius, aftOfCarrierM)
 	local anchorUnit = UNIT:FindByName(anchorUnitName)
+	if(not anchorUnit and aftOfCarrierM and carrier) then
+		LogInitMonitorMissingOnce("missing_anchor_" .. anchorUnitName, "TrapTraining init monitor: Anchor unit '" .. anchorUnitName .. "' not found; zone '" .. zoneName .. "' = " .. aftOfCarrierM .. " m astern of the carrier (TRT.4)")
+		initMonitorNoTrailingShip = true
+		return ZONE_UNIT:New( zoneName .. "_Monitor", carrier, fallbackRadius, { dx = -aftOfCarrierM, dy = 0, relative_to_unit = true } )
+	end
 	if(not anchorUnit) then
 		LogInitMonitorMissingOnce("missing_anchor_" .. anchorUnitName, "TrapTraining init monitor: Anchor unit '" .. anchorUnitName .. "' not found; skipping zone '" .. zoneName .. "'")
 		return nil
@@ -313,7 +332,7 @@ function CreateInitMonitorMovingZone(zoneName, anchorUnitName, fallbackRadius)
 	return ZONE_UNIT:New( zoneName .. "_Monitor", anchorUnit, radius )
 end
 
-initMonitorNormalZone = CreateInitMonitorMovingZone(initMonitorNormalZoneName, initMonitorNormalAnchorUnitName, initMonitorNormalFallbackRadius)
+initMonitorNormalZone = CreateInitMonitorMovingZone(initMonitorNormalZoneName, initMonitorNormalAnchorUnitName, initMonitorNormalFallbackRadius, INIT_AFT_M)
 initMonitorPatternZone = CreateInitMonitorMovingZone(initMonitorPatternZoneName, initMonitorPatternAnchorUnitName, initMonitorPatternFallbackRadius)
 
 initMonitorNormalWasTrue = {}
@@ -728,7 +747,7 @@ function Init(id, patternModeZone)
 	env.info("Created playerData object for " .. playerData.unit.UnitName)
 
 	if(not playerData.hasShownVersionMessage) then
-		env.info("Running Bankler's CASE 1 Recovery Trainer v " .. scriptVersion .. " (TRT.3: banner to dcs.log only)")
+		env.info("Running Bankler's CASE 1 Recovery Trainer v " .. scriptVersion .. " (TRT.4)")
 		playerData.hasShownVersionMessage = true
 	end
 	
@@ -776,7 +795,7 @@ function PrintTestSummary(playerData)
 	
 	SendMessageToPlayer("Bankler (Chevy 1-1)'s 4 passes: 68 (4w), 64 (3W), 40 (Bolter), 45 (2W), 64 (3W), 40 (Bolter), 45 (2W), 64 (3W), 40 (Bolter), 45 (2W), 64 (3W), 40 (Bolter), 45 (2W) (TOTAL: 238)", 8, playerData)
 	
-	SendMessageToPlayer("Return 4 nm aft (over the trailing ship) to restart the exercise.", 8, playerData)
+	SendMessageToPlayer(RestartHint(), 8, playerData)
 end
 
 function SendInFlightFeedbackToPlayer(message, duration, playerData)
@@ -2147,7 +2166,7 @@ function PrintFinalScore(playerData, duration, wire)
 			SendMessageToPlayer("Fly straight along the BRC at least 0.5 nm to restart the exercise.", 8, playerData)
 		end
 	else
-		SendMessageToPlayer( "Return 4 nm aft (over the trailing ship) to restart the exercise.", 20, playerData )
+		SendMessageToPlayer( RestartHint(), 20, playerData )
 	end
 
 	local wireText = ""

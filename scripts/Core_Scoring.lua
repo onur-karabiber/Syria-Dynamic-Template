@@ -1,4 +1,12 @@
--- Core_Scoring | v1.4.5
+-- Core_Scoring | v1.4.6
+-- v1.4.6 (CAS (L) sortie 2026-11-02, Onur):
+--   * No kill points for a weapon released without clearance / after an abort. 2026-11-02: the GBU-12
+--     released without CLEARED HOT (-15 ROE) still earned +10 +2 for its kills (net -3). The kill handler
+--     now asks JTAC_Controller (TRT.JC.unauthKill(weapon, victim), >= v0.8.1) and logs
+--     "kill NOT scored (unauthorized release)" instead; no JTAC group bonus from such a kill either.
+--   * JTAC group bonus also for the JTAC_Controller target groups (TRT.JC.CFG.JTACS[*].targets). The ME
+--     FAC_AttackGroup scan only found the native JTAC targets (BASE YE55, BV53) while the scripted JTACs
+--     worked BV51 / YE53, so no +5 fired. Merged 2 s after load and again at the first kill.
 -- v1.4.5: landing score is confirmed LAND_CONFIRM_S (8 s) after S_EVENT_LAND. 2026-10-31: the hero hit an
 -- SH-60B parked on the CVN landing area; S_EVENT_LAND fired at touchdown and +5 "Successful carrier landing" was
 -- awarded for the crash (Deck_Park saw the loss 2 s later). Now S_EVENT_CRASH / DEAD / EJECTION / PILOT_DEAD /
@@ -336,6 +344,7 @@ end
 -- v1.4.0: JTAC target groups = groupId of every FAC_AttackGroup task in the ME data
 local JTAC_TARGETS, jtacBonusDone = {}, {}
 local JTAC_UNIT_GROUP = {}   -- v1.4.2: unit name -> JTAC target group name (ME data)
+local AddJtacTarget          -- v1.4.6: (group name) -> true if new; maps its ME units
 do
     local byId = {}
     local function each(fn)
@@ -374,7 +383,36 @@ do
     end)
     env.info("[Core_Scoring] JTAC target groups (" .. #names .. "): " .. table.concat(names, ", ")
         .. (ok and "" or " [scan error]"))
+    AddJtacTarget = function(gname)
+        if type(gname) ~= "string" or JTAC_TARGETS[gname] then return false end
+        JTAC_TARGETS[gname] = true
+        pcall(function()
+            each(function(g)
+                local gn = g.name and (env.getValueDictByKey(g.name) or g.name)
+                if gn == gname then
+                    for _, u in pairs(g.units or {}) do
+                        if u.name then JTAC_UNIT_GROUP[env.getValueDictByKey(u.name) or u.name] = gn end
+                    end
+                end
+            end)
+        end)
+        return true
+    end
 end
+
+-- v1.4.6: JTAC_Controller target groups (it loads after this file)
+local function MergeJcTargets()
+    local jc = TRT.JC
+    if not (jc and jc.CFG and type(jc.CFG.JTACS) == "table") then return end
+    local added = {}
+    for _, j in pairs(jc.CFG.JTACS) do
+        for _, gn in ipairs(j.targets or {}) do
+            if AddJtacTarget(gn) then added[#added + 1] = gn end
+        end
+    end
+    if #added > 0 then env.info("[Core_Scoring] JTAC target groups + JTAC_Controller: " .. table.concat(added, ", ")) end
+end
+timer.scheduleFunction(function() pcall(MergeJcTargets) end, nil, timer.getTime() + 2)
 
 do
     local killHandled = {}
@@ -423,6 +461,19 @@ do
                 if okGC then groupCategory = gc end
             end
         end
+
+        -- v1.4.6: weapon released without clearance / after an abort earns nothing
+        local jc = TRT.JC
+        if jc and type(jc.unauthKill) == "function" then
+            local okU, unauth = pcall(jc.unauthKill, e.weapon, victim)
+            if okU and unauth then
+                killHandled[victimName] = true
+                deadSeen[victimName] = nil
+                env.info("[Core_Scoring] kill NOT scored (unauthorized release): " .. victimName)
+                return
+            end
+        end
+        pcall(MergeJcTargets)
 
         local delta, source = resolveEnemyScore(victimName, typeName, groupCategory, isStatic)
         killHandled[victimName] = true
@@ -855,4 +906,4 @@ do
     timer.scheduleFunction(watchCaseChange, nil, timer.getTime() + 1)
 end
 
-env.info("[Core_Scoring] v1.4.1 loaded. Player unit: " .. PLAYER_NAME)
+env.info("[Core_Scoring] v1.4.6 loaded. Player unit: " .. PLAYER_NAME)

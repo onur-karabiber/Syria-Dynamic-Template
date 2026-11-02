@@ -1,5 +1,20 @@
--- Comms_Director | v1.7.10
+-- Comms_Director | v1.7.11
 --[[
+  v1.7.11 - CAS (L) sortie 2026-11-02 (Onur):
+            * MUD call on a JTAC frequency gets a JTAC "Hornet 51, copy." (JTAC_Controller voice, TRT.JC.voice);
+              before, only OVERLORD answered and a MUD on Pointer / Eyeball went unanswered.
+            * Strike corridor call reworded: "You are off the inbound corridor. Intercept the zero five zero
+              radial inbound." ("Turn now to zero five zero" read as heading 050, away from Mother).
+            * At the Strike -> Marshal hand-off (~50 NM) a hero still outside the corridor gets
+              "You are inside fifty miles and still off the corridor. Intercept the zero five zero radial now."
+              (str_corridor_mz) before "Marshal, push button 16". Not scored. 2026-11-02: corridor called at
+              78 NM, hero entered the Marshal Zone on R-079 with no further call.
+            * CD.speedCall(kind) for Overspeed_Penalty v7.5.0: while the hero is still on Strike (STRIKE_IN /
+              INBOUND), Strike calls "check speed, three fifty knots maximum inside fifty miles" (warn) and
+              "you are still fast ... that goes in the debrief" (brass, first penalty). Marshal / Approach
+              phases are CV_Comms' (TRT.CV.speedCall).
+            * TIC: CD.ticState.ready = true once the JTAC's "check in when ready for nine-line" has played;
+              JTAC_Controller >= v0.8.1 offers the TIC JTAC's check-in only then.
   v1.7.10 - Traffic.lua (Onur, 2026-11-01): TEXACO's RV Alpha reply appends TRT.Traffic.TkrRemark() when AI
             receivers are queued at the tanker ("Two receivers ahead of you, join echelon left."). The queue's
             own Texaco / AI calls go through TRT.CD_RADIO; their clips are in CFG.AUDIO (tq_*, a41_*, a42_*).
@@ -481,7 +496,10 @@ local CFG = {
         ovl_say_status_tkr     = { ch = "OVERLORD", len = 3.50 },
         eye_abort              = { ch = "EYEBALL", len = 3.98 },
         eye_manpads            = { ch = "EYEBALL", len = 5.91 },
-        str_corridor           = { ch = "STRIKE", len = 3.72 },
+        str_corridor           = { ch = "STRIKE", len = 4.99 },   -- v1.7.11 reworded
+        str_corridor_mz        = { ch = "STRIKE", len = 5.44 },   -- v1.7.11
+        str_speed              = { ch = "STRIKE", len = 4.24 },   -- v1.7.11
+        str_speed_brass        = { ch = "STRIKE", len = 4.83 },   -- v1.7.11
         p_ovl_feet_dry         = { ch = "OVERLORD", len = 2.09 },
         p_ovl_feet_wet         = { ch = "OVERLORD", len = 1.97 },
         p_ovl_picture          = { ch = "OVERLORD", len = 2.74 },
@@ -1715,9 +1733,36 @@ local function C_Manpads()
 end
 
 local function C_CorridorDev()
-    Msg(string.format("[STRIKE] %s, Strike. You are off route. Turn now to zero five zero.", CFG.CS), CFG.DUR_URGENT + 1)
+    Msg(string.format("[STRIKE] %s, Strike. You are off the inbound corridor. Intercept the zero five zero radial inbound.",
+        CFG.CS), CFG.DUR_URGENT + 1)
     Tx("str_corridor", true)
     SetFlag(204, 1)
+end
+
+--- v1.7.11: still outside the corridor at the Marshal hand-off (queued before "Marshal, push button 16")
+local function C_CorridorMz(radial)
+    env.info(string.format("[CD] corridor: Marshal hand-off on R-%03d (corridor R-%03d +/-%d)", radial,
+        (CFG.CORRIDOR_TRUE - CFG.MAGVAR) % 360, CFG.CORRIDOR_HALF))
+    Q(string.format("[STRIKE] %s, Strike. You are inside fifty miles and still off the corridor. "
+        .. "Intercept the zero five zero radial now.", CFG.CS), CFG.DUR_URGENT + 1, 0, nil, nil, "str_corridor_mz")
+end
+
+--- v1.7.11: Marshal Zone speed call while the hero is still on Strike (Overspeed_Penalty >= v7.5.0).
+--- Returns true when Strike made the call; Marshal / Approach phases belong to CV_Comms.
+function CD.speedCall(kind)
+    if CD.phase ~= "STRIKE_IN" and CD.phase ~= "INBOUND" then return false end
+    if kind == "warn" then
+        Q(string.format("[STRIKE] %s, Strike. Check speed. Three fifty knots maximum inside fifty miles.", CFG.CS),
+            CFG.DUR_URGENT, 0, nil, nil, "str_speed")
+    elseif kind == "brass" then
+        Q(string.format("[STRIKE] %s, Strike. You are still fast. Slow to three fifty knots now. That goes in the debrief.",
+            CFG.CS), CFG.DUR_URGENT, 0, nil, nil, "str_speed_brass")
+    else
+        return false
+    end
+    env.info("[CD] speed call (Strike): " .. kind)
+    QPlay()
+    return true
 end
 
 -- ══════════════════════════════════════════════════════════════
@@ -2478,7 +2523,10 @@ TicHandoff = function(key)
                     .. "Readback: F10 > COMMS.", j.disp), CFG.DUR_HANDOFF)
             end
             local s = CD.ticState
-            if s then s.next = timer.getTime() + math.random(CFG.TIC.GAP_MIN, CFG.TIC.GAP_MAX) end
+            if s then
+                s.next = timer.getTime() + math.random(CFG.TIC.GAP_MIN, CFG.TIC.GAP_MAX)
+                s.ready = true   -- v1.7.11: JTAC_Controller may now offer the check-in
+            end
         end, nil, S(j.ch, j.k .. "_tic_ack"))
 end
 
@@ -2902,6 +2950,13 @@ local function MudCall(ch, r, uPos, pPos, how, dNm)
     if ch == "OVERLORD" then
         items[2] = { text = string.format("[OVERLORD] %s, Overlord, copy.", CFG.CS), dur = CFG.DUR_SHORT,
                      after = CFG.REPLY_GAP, audio = Voiced(S("OVERLORD", "ovl_copy_51")) }
+    elseif ch == "POINTER" or ch == "EYEBALL" then   -- v1.7.11: the JTAC acknowledges too
+        local key = (ch == "POINTER") and "J1" or "J2"
+        local txt = string.format("%s, copy.", CFG.CS)
+        local jc = TRT.JC
+        local seq = jc and type(jc.voice) == "function" and (jc.voice("J", key, txt)) or nil
+        items[2] = { text = string.format("[%s] %s", JT[key].cs, txt), dur = CFG.DUR_SHORT,
+                     after = CFG.REPLY_GAP, audio = seq }
     end
     for i = #items, 1, -1 do table.insert(CD.queue, 1, items[i]) end   -- threat call first
     QPlay()
@@ -3130,6 +3185,10 @@ local function EvalPhase(pUnit, cUnit)
         if (ph == "INBOUND" and d <= CFG.RECOVERY_NM)
             or (ph ~= "INBOUND" and d <= CFG.RECOVERY_FORCE_NM) then
             QClear()
+            local brgT = Bearing(cPos, pPos)                                     -- v1.7.11
+            if math.abs(ADiff(brgT, CFG.CORRIDOR_TRUE)) > CFG.CORRIDOR_HALF then
+                C_CorridorMz(math.floor(brgT - CFG.MAGVAR + 0.5) % 360)
+            end
             C_StrikeSwitchMarshal(); QPlay()
             SetPhase("RECOVERY")
         end
@@ -3381,7 +3440,7 @@ local function CD_Init()
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
     timer.scheduleFunction(MudTick, nil, timer.getTime() + 10)   -- v1.7.9
-    env.info("[CD] Comms_Director v1.7.10 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.7.11 online — CAS-1 Syria")
 end
 
 CD_Init()

@@ -219,3 +219,8 @@ t_akrotiri_bears;TOWER;Akrotiri bears,;tok:0.08
 t_for;TOWER;for,;tok:0.05
 t_switch_dep;TOWER;switch Departure, button two.;tok
 d_switch_twr;DEPARTURE;contact Tower, button one.;tok
+# v1.7.6 Marshal Zone speed (Overspeed_Penalty v7.5.0 hook): "<modex>, Marshal, check speed ..."
+m_spd_warn;MARSHAL;Marshal. Check speed. Three fifty knots maximum in the marshal zone.;tok
+m_spd_brass;MARSHAL;you are still fast. Slow to three fifty knots now. That goes in the debrief.;tok
+a_spd_warn;APPROACH;Approach. Check speed. Three fifty knots maximum.;tok
+a_spd_brass;APPROACH;you are still fast. Slow to three fifty knots now. That goes in the debrief.;tok

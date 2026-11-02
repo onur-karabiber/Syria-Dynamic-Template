@@ -1,4 +1,10 @@
--- CV_Comms | v1.7.5
+-- CV_Comms | v1.7.6
+-- v1.7.6: (CAS (L) sortie 2026-11-02, Onur) CV.speedCall(kind) for Overspeed_Penalty v7.5.0: the controller the
+--         hero is on calls a Marshal Zone speed violation. Marshal phases (CHECKIN .. PENETRATION):
+--         "467, Marshal. Check speed. Three fifty knots maximum in the marshal zone." (warn) and
+--         "467, you are still fast. Slow to three fifty knots now. That goes in the debrief." (brass, first
+--         penalty); APP_* phases the same from Approach. Other phases: false (Strike / text only).
+--         New clips m_spd_warn, m_spd_brass, a_spd_warn, a_spd_brass.
 -- v1.7.5: (Onur 2026-11-01, Traffic.lua) AI marshal arrivals are no longer silenced: the _MarshalCallArrived
 --         override answers the hero with the TTS Marshal as before and hands every other modex to AIRBOSS's
 --         own call (Raynor voice). Two Marshal voices on 261.00 is accepted.
@@ -274,7 +280,7 @@
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "1.7.5",
+    VERSION      = "1.7.6",
     PLAYER_UNIT  = "Player_01",
     CARRIER_UNIT = "CVN",
     MODEX        = "467",       -- fallback if AIRBOSS has no onboard number yet
@@ -368,6 +374,10 @@ local CFG = {
         -- v1.7.1 recovery bingo
         m_bingo                = { ch = "MARSHAL", len = 0.44 },
         m_point                = { ch = "MARSHAL", len = 0.47 },
+        m_spd_warn             = { ch = "MARSHAL", len = 4.05 },   -- v1.7.6
+        m_spd_brass            = { ch = "MARSHAL", len = 3.51 },   -- v1.7.6
+        a_spd_warn             = { ch = "APPROACH", len = 3.02 },  -- v1.7.6
+        a_spd_brass            = { ch = "APPROACH", len = 3.64 },  -- v1.7.6
         m_case1                = { ch = "MARSHAL", len = 1.20 },
         m_case2                = { ch = "MARSHAL", len = 2.53 },
         m_case3                = { ch = "MARSHAL", len = 2.38 },
@@ -736,6 +746,25 @@ end
 
 local function Pilot(ch, seq, text, fn) Q("PILOT", ch, seq, text, fn, 0.2) end
 local function Ctl(who, ch, seq, text, fn) Q(who, ch, seq, text, fn, CFG.REPLY_GAP) end
+
+-- v1.7.6: Marshal Zone speed call (Overspeed_Penalty >= v7.5.0); true if Marshal / Approach made it
+local SPD_MARSHAL = { CHECKIN = true, CHECKIN_SENT = true, READBACK = true, ESTABLISH = true, HOLDING = true,
+                      PENETRATION = true }
+function CV.speedCall(kind)
+    if kind ~= "warn" and kind ~= "brass" then return false end
+    local who, v
+    if SPD_MARSHAL[CV.phase] then who, v = "MARSHAL", "m"
+    elseif type(CV.phase) == "string" and CV.phase:sub(1, 3) == "APP" then who, v = "APPROACH", "a"
+    else return false end
+    local m = Modex()
+    local text = (kind == "warn")
+        and string.format("%s, %s. Check speed. Three fifty knots maximum%s.", m,
+            (who == "MARSHAL") and "Marshal" or "Approach", (who == "MARSHAL") and " in the marshal zone" or "")
+        or string.format("%s, you are still fast. Slow to three fifty knots now. That goes in the debrief.", m)
+    Q(who, who, Seq(D(v, m), CFG.P, v .. "_spd_" .. kind), text, nil, 0.3)
+    Log("speed call (" .. who .. "): " .. kind)
+    return true
+end
 
 -- ══════════════════════════════════════════════════════════════
 --  F10 MENU

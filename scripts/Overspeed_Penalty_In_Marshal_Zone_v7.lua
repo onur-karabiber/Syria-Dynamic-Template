@@ -1,4 +1,13 @@
--- Overspeed_Penalty_In_Marshal_Zone | v7.4.0
+-- Overspeed_Penalty_In_Marshal_Zone | v7.5.0
+-- v7.5.0 (CAS (L) sortie 2026-11-02, Onur): the penalties now go through TRT.addScore (Core_Scoring), so the
+--   score cards (Score_Display hooks TRT.addScore) and the [Core_Scoring] SCORE log lines show them. Before,
+--   flag 1908 was decremented directly: 19 points left the total (45 -> 26) with no card, and the pilot
+--   was not sure he had been penalised. Penalties are batched: the first one at once, then the run's
+--   accumulated points every MSG_EVERY s and at the end of the run (one card / text each, not one per 5 s).
+--   Without Core_Scoring the flag is decremented as before.
+--   Voice: the controller the hero is working calls the violation (TRT.CV.speedCall = Marshal / Approach,
+--   else TRT.CD.speedCall = Strike): "check speed" with the warning, "you are still fast ... debrief" with
+--   the first penalty. Text-only fallback when neither module answers.
 -- v7.4.0: the limit is indicated (calibrated) airspeed, not ground speed (Onur, 2026-10-30).
 --   Navy speed restrictions are given in KIAS (CV NATOPS 2004 glossary: 8-nm DME fix
 --   "1,200 feet, 250 KIAS"). The 350 kt value itself was NOT found in the public (incomplete)
@@ -48,6 +57,31 @@ local function isExempt(unit)
     return math.sqrt((a.x - b.x)^2 + (a.z - b.z)^2) / 1852 <= EXEMPT_NM
 end
 
+-- v7.5.0: score through Core_Scoring (cards + log); flag fallback
+local pendingPts = 0
+local function flush(reason)
+    if pendingPts <= 0 then return end
+    local n = pendingPts
+    pendingPts = 0
+    if _G.TRT and type(_G.TRT.addScore) == "function" then
+        _G.TRT.addScore(-n, string.format("MARSHAL ZONE SPEED > 350 KIAS%s", reason or ""))
+    else
+        trigger.action.setUserFlag(PENALTY_FLAG, trigger.misc.getUserFlag(PENALTY_FLAG) - n)
+    end
+end
+
+--- v7.5.0: voice call by the controlling agency; true if one of them took it
+local function voice(kind, n)
+    local T = _G.TRT
+    for _, m in ipairs({ T and T.CV, T and T.CD }) do
+        if m and type(m.speedCall) == "function" then
+            local ok, done = pcall(m.speedCall, kind, n)
+            if ok and done then return true end
+        end
+    end
+    return false
+end
+
 local warningShown    = false
 local warningTime     = nil
 local lastPenaltyTime = nil
@@ -84,7 +118,9 @@ local function sendGroupMessage(grp, msg, duration)
 end
 
 local function closeRun(unit)
+    flush(string.format(" (run total -%d)", runPenalties))
     if runPenalties > 0 and unit and unit:isExist() then
+        env.info(string.format("[OVERSPEED] run ended: %d penalties", runPenalties))
         local grp = unit:getGroup()
         if grp then
             sendGroupMessage(grp, string.format(
@@ -122,6 +158,8 @@ local function checkMarshalSpeed()
                         "Otherwise, you will start receiving penalty points shortly.",
                         15)
                 end
+                env.info(string.format("[OVERSPEED] warning: %.0f KCAS", speed / 0.514444))
+                voice("warn", 0)
                 warningShown    = true
                 warningTime     = now
                 lastPenaltyTime = now
@@ -129,15 +167,11 @@ local function checkMarshalSpeed()
 
             if warningTime and (now - warningTime) >= WARNING_DELAY then
                 if lastPenaltyTime and (now - lastPenaltyTime) >= PENALTY_INTERVAL then
-                    local currentVal = trigger.misc.getUserFlag(PENALTY_FLAG)
-                    local newVal     = currentVal - 1
-                    trigger.action.setUserFlag(PENALTY_FLAG, newVal)
+                    pendingPts   = pendingPts + 1          -- v7.5.0: batched, see flush()
                     runPenalties = runPenalties + 1
-                    local grp = unit:getGroup()
-                    if grp and (not lastMsgTime or (now - lastMsgTime) >= MSG_EVERY) then
-                        sendGroupMessage(grp, string.format(
-                            "PENALTY: Speed violation in Marshal Zone! %d so far (-%d). Total Score: %d",
-                            runPenalties, runPenalties, newVal), 8)
+                    if runPenalties == 1 then voice("brass", 1) end
+                    if not lastMsgTime or (now - lastMsgTime) >= MSG_EVERY then
+                        flush(string.format(" (%d so far)", runPenalties))
                         lastMsgTime = now
                     end
                     lastPenaltyTime = now
@@ -155,3 +189,4 @@ local function checkMarshalSpeed()
 end
 
 timer.scheduleFunction(checkMarshalSpeed, nil, timer.getTime() + 5)
+env.info("[OVERSPEED] Overspeed_Penalty_In_Marshal_Zone v7.5.0 loaded")

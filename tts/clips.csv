@@ -20,7 +20,11 @@ ovl_say_status;OVERLORD;Hornet five one, Overlord. Say status.
 ovl_say_status_tkr;OVERLORD;Hornet five one, Overlord. Say status, advise when ready for tanker.
 eye_abort;EYEBALL;Hornet five one, abort, abort, abort. Civilian vehicle in target area.
 eye_manpads;EYEBALL;Hornet five one, MANPADS launch observed one klick east of the target. Remain at or above hard deck, two zero thousand MSL.
-str_corridor;STRIKE;Hornet five one, Strike. You are off route. Turn now to zero five zero.
+str_corridor;STRIKE;Hornet five one, Strike. You are off the inbound corridor. Intercept the zero five zero radial inbound.
+# v1.7.11 Comms_Director: corridor at the Marshal hand-off, Marshal Zone speed (Overspeed_Penalty v7.5.0 hook)
+str_corridor_mz;STRIKE;Hornet five one, Strike. You are inside fifty miles and still off the corridor. Intercept the zero five zero radial now.
+str_speed;STRIKE;Hornet five one, Strike. Check speed. Three fifty knots maximum inside fifty miles.
+str_speed_brass;STRIKE;Hornet five one, Strike. You are still fast. Slow to three fifty knots now. That goes in the debrief.
 # HORNET 51 (pilot) — static part only; angels, state, MGRS, TOT stay on-screen
 p_ovl_feet_dry;PILOT>OVERLORD;Overlord, Hornet five one, feet dry.
 p_ovl_feet_wet;PILOT>OVERLORD;Overlord, Hornet five one, feet wet.

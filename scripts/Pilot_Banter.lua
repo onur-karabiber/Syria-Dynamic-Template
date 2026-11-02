@@ -1,5 +1,11 @@
--- Pilot_Banter | v2.1.0
+-- Pilot_Banter | v2.1.1
 --[[
+  v2.1.1 (CAS (L) sortie 2026-11-02, Onur): "taking gas" fuel values were ~200 lb above the cockpit
+      fuel indication while fuel was flowing (pilot report: says 5,400 while the gauge still reads 5,200).
+      getFuel() leads the indication during a transfer (~45-48 lb/s in contact here); the spoken value is
+      now getFuel minus the measured transfer rate x CFG.AAR_GAUGE_LAG_S. LAG_S = 4.5 s is calibrated from
+      that single report (200 lb / ~45 lb/s), not measured on the gauge [V]. Rate = fuel change over the
+      last CFG.AAR_RATE_WIN_S s of contact samples (0 before two samples -> raw value).
   v2.1.0 (Onur, 2026-11-01):
     * FENCE IN no longer drops in a busy radio: flight 2026-10-31 fired it at the AR1 exit (CP Tiger 14 NM)
       and dropped it after 122 s ("radio CD": Texaco exit, OVERLORD hand-off, Pointer check-in back to
@@ -85,7 +91,7 @@ if TRT.PB then
 end
 
 local CFG = {
-    VERSION      = "2.1.0",
+    VERSION      = "2.1.1",
     LEVEL        = "NORMAL",       -- start level: OFF | QUIET | NORMAL | CHATTY
     LEVELS = {
         QUIET  = { cruise = { 120, 240 }, muse = 0.30, max = 80 },
@@ -136,6 +142,8 @@ local CFG = {
     AAR_CLOSURE_KT = 15,           -- "too much closure" inside AAR_CLOSURE_NM
     AAR_CLOSURE_NM = 0.5,
     AAR_TAKING_S = 50,             -- s between fuel reads in contact
+    AAR_GAUGE_LAG_S = 4.5,         -- v2.1.1 s the cockpit fuel indication trails getFuel() in contact [V]
+    AAR_RATE_WIN_S  = 6,           -- v2.1.1 s of contact samples for the transfer rate
     BURN_WIN_S   = 300,            -- s window for the burn rate
     MENU_SECTION = "INFO",
     MENU_ORDER   = 90,
@@ -1805,7 +1813,17 @@ B.aar_check = function(u)
 end
 B.aar_closure = function() return { G("aar_closure") } end
 B.aar_steady  = function() return { G("aar_steady") } end
-B.aar_taking  = function(u) local s = Seq():pair(G("aar_taking"), VFuel(FuelLb(u))); return (s.n > 0) and s:list() or nil end
+--- v2.1.1: fuel as the gauge shows it in contact (getFuel leads it while fuel flows)
+local function FuelLbGauge(u)
+    local lb = FuelLb(u)
+    local h = PB.w and PB.w.aarHist
+    if not (lb and h and #h >= 2) then return lb end
+    local a, b = h[1], h[#h]
+    if b.t - a.t < 1 then return lb end
+    local rate = math.max(0, (b.lb - a.lb) / (b.t - a.t))
+    return lb - rate * CFG.AAR_GAUGE_LAG_S
+end
+B.aar_taking  = function(u) local s = Seq():pair(G("aar_taking"), VFuel(FuelLbGauge(u))); return (s.n > 0) and s:list() or nil end
 B.aar_disc    = function(u) local s = Seq():pair(G("disc_h"), VFuel(FuelLb(u))); return (s.n > 0) and s:list() or nil end
 B.aar_post = function(u)
     local s = Seq():add(G("post_aar_h"))
@@ -2345,10 +2363,17 @@ local function WatchAAR(u, air)
         if S.phase == "JOIN" and not W.aarJoin then W.aarJoin = true; Fire("aar_check", "AAR S" .. S.n .. " JOIN") end
         if S.phase == "ASTERN" and not W.aarAstern then W.aarAstern = true; Fire("aar_steady", "AAR astern") end
         if S.openStart then
+            local lb = FuelLb(u)                                   -- v2.1.1 transfer-rate samples
+            if lb then
+                W.aarHist = W.aarHist or {}
+                local h = W.aarHist
+                h[#h + 1] = { t = now(), lb = lb }
+                while #h > 2 and h[#h].t - h[1].t > CFG.AAR_RATE_WIN_S do table.remove(h, 1) end
+            end
             if not W.aarTakeT then W.aarTakeT = now() - CFG.AAR_TAKING_S + 25 end
             if now() - W.aarTakeT >= CFG.AAR_TAKING_S then W.aarTakeT = now(); Fire("aar_taking", "AAR contact") end
         else
-            W.aarTakeT = nil
+            W.aarTakeT, W.aarHist = nil, nil
         end
         if not W.aarClos and type(S.contacts) == "table" and #S.contacts == 0 and S.join then
             local k = Tanker()

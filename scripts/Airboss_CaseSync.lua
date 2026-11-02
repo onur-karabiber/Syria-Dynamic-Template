@@ -1,6 +1,11 @@
--- Airboss_CaseSync.lua | v1.0.7
+-- Airboss_CaseSync.lua | v1.0.8
 -- TRT Syria Recovery Framework - syncs TRT.Airboss recovery case to ME flag 100
 --
+-- v1.0.8: global SetSuperCarrier() stub until TrapTraining.lua defines the real one. The ME trigger
+--   "SetSuperCarrier" (a_do_script "SetSuperCarrier(true)") fired ~6 s after birth in CAS (L)
+--   2026-11-02, before TrapTraining was loaded: "attempt to call global 'SetSuperCarrier' (a nil
+--   value)". The stub does what Bankler's does (carrierTCN 72X / 74X); this file already forces 72X
+--   for Bankler, so the trigger is redundant either way. TrapTraining overwrites the stub on load.
 -- v1.0.7: ApplyRecoveryCase exported as TRT.CaseSync.ApplyRecoveryCase (idempotent);
 --   Recovery_Approach v1.0.4 calls it when it arms, before announcing the case.
 -- v1.0.6: departure and recovery case are both planned in the ME:
@@ -224,4 +229,7 @@ end
 
 timer.scheduleFunction(CheckFlag100, nil, timer.getTime() + 5)
 
-env.info("Airboss_CaseSync | v1.0.7 | listening on flag 100")
+if type(_G.SetSuperCarrier) ~= "function" then   -- v1.0.8
+  function _G.SetSuperCarrier(enabled) _G.carrierTCN = enabled and "72X" or "74X" end
+end
+env.info("Airboss_CaseSync | v1.0.8 | listening on flag 100")

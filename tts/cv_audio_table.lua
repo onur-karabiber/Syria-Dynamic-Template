@@ -203,4 +203,8 @@
         t_for                  = { ch = "TOWER", len = 0.36 },
         t_switch_dep           = { ch = "TOWER", len = 1.35 },
         d_switch_twr           = { ch = "DEPARTURE", len = 1.61 },
+        m_spd_warn             = { ch = "MARSHAL", len = 4.05 },
+        m_spd_brass            = { ch = "MARSHAL", len = 3.51 },
+        a_spd_warn             = { ch = "APPROACH", len = 3.02 },
+        a_spd_brass            = { ch = "APPROACH", len = 3.64 },
     },
