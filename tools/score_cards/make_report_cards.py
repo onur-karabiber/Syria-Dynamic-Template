@@ -1,4 +1,8 @@
-# make_report_cards.py | v1.3.1
+# make_report_cards.py | v1.4.0
+# v1.4.0: (Onur 2026-11-02) LSO box carries AIRBOSS's long grade: the grade word (lso_<code>.png, left) plus
+#         grade.details on a 3 x 34 character grid (lx_<glyph>_<k>.png, k = row * LX_COLS + col, glyph names
+#         in LX_GLYPHS); badges centred under the card: 15 half-pitch positions (badge_<ID>_<pos>.png,
+#         n badges use pos 8-n, 10-n, ...). Flight_Report.lua >= v1.1.0 (LX_* / BADGE_POS checked).
 # v1.3.1: Onur's metal bezel (src_art/report_frame_src.png, 2026-11-02) replaces the drawn bezel and rivets;
 #         layout refitted inside it; carrier panel gets an explicit "LSO GRADE" row; NG shows "-- NO GRADE".
 # v1.3.0: CRT pixel look of the Plane Captain cards (Onur 2026-11-02): metal bezel with rivets, black
@@ -22,7 +26,9 @@
 #   <field>_<glyph>_<slot>.png      digits; glyph 0-9 | p (+) | m (-) | d (.); slot 0..N-1 left to right,
 #                                   the value is right-aligned (Flight_Report.lua Field()); FIELDS below must
 #                                   match CFG.FIELDS / GROUP_SLOTS there (checked by check_lua()).
-#   badge_<ID>_<slot>.png           slot 0..7, below the card; art from src_art/badges/<ID>.png, else a placeholder
+#   lx_<glyph>_<k>.png              LSO long-grade characters, grid LX_ROWS x LX_COLS in the LSO box
+#   badge_<ID>_<pos>.png            pos 0..14 (half-pitch), below the card, centred by Flight_Report.lua;
+#                                   art from src_art/badges/<ID>.png, else a placeholder
 # Dot-matrix / scanline grids are anchored to canvas pixels, so separate layers line up.
 # Preview: out/preview/report_preview.png (+ report_preview_bg.png on a backdrop; not packed).
 # Usage: python tools/score_cards/make_report_cards.py [--out DIR]   (Pillow, numpy; default DIR =
@@ -70,12 +76,12 @@ FIELDS = {
     "earn":   (4, 398, 312, 42, C_POS, "0123456789p"),
     "pen":    (4, 398, 394, 42, C_NEG, "0123456789m"),
     "loss":   (4, 398, 476, 42, C_AMB, "0123456789m"),
-    "lsopts": (3, 1234, 280, 28, C_TEXT, "0123456789d"),
-    "wire":   (1, 1234, 316, 28, C_TEXT, "1234"),
-    "tgr":    (4, 1234, 352, 28, C_TEXT, "0123456789d"),
-    "bk":     (2, 1056, 434, 34, C_TEXT, "0123456789"),
-    "bkmax":  (2, 1128, 434, 34, C_LABEL, "0123456789"),
-    "bkpct":  (3, 1206, 434, 34, C_AMB, "0123456789"),
+    "lsopts": (3, 1234, 342, 28, C_TEXT, "0123456789d"),
+    "wire":   (1, 1234, 376, 28, C_TEXT, "1234"),
+    "tgr":    (4, 1234, 410, 28, C_TEXT, "0123456789d"),
+    "bk":     (2, 1056, 482, 34, C_TEXT, "0123456789"),
+    "bkmax":  (2, 1128, 482, 34, C_LABEL, "0123456789"),
+    "bkpct":  (3, 1206, 482, 34, C_AMB, "0123456789"),
 }
 for i in range(1, len(GROUPS) + 1):
     y = ROW0 + (i - 1) * ROWH
@@ -94,7 +100,8 @@ BADGES = [  # id, label, kind (A achievement / D demerit) - same ids as Flight_R
     ("ON_THE_PLAN", "ON THE\nPLAN", "A"), ("TIME_HACK", "TIME\nHACK", "A"),
     ("FUEL_DISCIPLINE", "FUEL\nDISCIPLINE", "A"), ("PARKING_PRO", "PARKING\nPRO", "A"),
 ]
-BADGE_SLOTS, BADGE_W, BADGE_H = 8, 140, 120        # v1.3.0 row below the card, no strip
+BADGE_SLOTS, BADGE_W, BADGE_H = 8, 140, 120        # v1.3.0 row below the card, no strip; 8 badges at most
+BADGE_POS = 2 * BADGE_SLOTS - 1                     # v1.4.0 half-pitch positions for centring
 BADGE_GAP = 8
 BADGE_X0 = (W - (BADGE_SLOTS * BADGE_W + (BADGE_SLOTS - 1) * BADGE_GAP)) // 2
 BADGE_Y = CARD_B + (H - CARD_B - BADGE_H) // 2 + 2
@@ -131,6 +138,11 @@ def import_badges(src_dir):
     print("imported %d, unknown file names %s, ids without art %s" % (len(done), unknown, missing))
 
 
+# v1.4.0 LSO long grade (AIRBOSS grade.details, upper-cased by Flight_Report.lua)
+LX_ROWS, LX_COLS, LX_SIZE, LX_LINE = 3, 34, 17, 20
+LX_GLYPHS = dict([(c, c) for c in "ABCDEFGHIKLMNOPRSTUVWXY"] +
+                 [("lp", "("), ("rp", ")"), ("us", "_"), ("sl", "/"), ("bs", "\\"), ("m", "-"), ("d", ".")])
+
 LSO = {"OK_U": ("_OK_", C_POS), "OK": ("OK", C_POS), "OKP": ("(OK)", C_AMB), "NG": ("-- NO GRADE", C_AMB),
        "C": ("CUT", C_NEG), "WO": ("WAVE-OFF", C_NEG), "B": ("BOLTER", C_NEG), "NONE": ("NO LSO GRADE", C_LABEL),
        "DIV": ("DIVERT", C_AMB)}
@@ -164,6 +176,15 @@ def check_lua():
     if gs != GROUP_SLOTS:
         bad.append("GROUP_SLOTS")
     missing = sorted(set(ids) ^ set(b[0] for b in BADGES))
+    for key, want in (("BADGE_SLOTS", BADGE_SLOTS), ("LX_ROWS", LX_ROWS), ("LX_COLS", LX_COLS)):   # v1.4.0
+        m = re.search(key + r"\s*=\s*(\d+)", src)
+        if not m or int(m.group(1)) != want:
+            bad.append(key)
+    m = re.search(r"LX_GLYPH\s*=\s*\{([^}]*)\}", src)
+    lua_g = dict((v, k) for k, v in re.findall(r'\["(.{1,2})"\]\s*=\s*"(\w+)"', m.group(1))) if m else {}
+    lua_g = {k: v.replace("\\\\", "\\") for k, v in lua_g.items()}
+    if lua_g != LX_GLYPHS:
+        bad.append("LX_GLYPH")
     if bad or missing:
         sys.exit("Flight_Report.lua and this script disagree: fields %s, badges %s" % (bad, missing))
 
@@ -272,7 +293,8 @@ def rivet(im, cx, cy, r=7):
 HDR_L, HDR_R = (28, 28, 864, 102), (876, 28, 1252, 102)
 BAND = (28, 112, 1252, 144)
 P_L, P_M, P_R = (28, 154, 418, 562), (430, 154, 864, 562), (876, 154, 1252, 562)
-LSO_BOX = (892, 212, 1236, 262)
+LSO_BOX = (892, 216, 1236, 334)
+LX_X0, LX_Y0 = 904, 284                               # v1.4.0 first character cell (left, baseline)
 
 
 def bezel(im):
@@ -337,21 +359,24 @@ def frame():
     m = mask()
     ImageDraw.Draw(m).polygon(chamfer_pts(LSO_BOX, 8), outline=255, width=2)
     im.alpha_composite(phosphor(m, C_GRID, 0, glow=0.3))
-    for y, t in ((294, "PASS PTS"), (330, "WIRE"), (366, "GROOVE s")):
+    for y, t in ((356, "PASS PTS"), (390, "WIRE"), (424, "GROOVE s")):
         put_text(im, (894, y), t, 20, C_LABEL, anchor="lm")
-    put_text(im, (894, 406), "BANKLER (not in total)", 16, C_LABEL)
-    put_text(im, (1062, 451), "/", 34, C_LABEL, anchor="lm")
-    put_text(im, (1236, 451), "%", 30, C_AMB, pitch=0, anchor="rm")   # dot matrix mangles %
+    put_text(im, (894, 458), "BANKLER (not in total)", 16, C_LABEL)
+    put_text(im, (1062, 499), "/", 34, C_LABEL, anchor="lm")
+    put_text(im, (1236, 499), "%", 30, C_AMB, pitch=0, anchor="rm")   # dot matrix mangles %
     save(im, "frame.png")
     return im
 
 
-def word(name, text, col, box, size):
+def word(name, text, col, box, size, left=False):
     im = canvas()
     x0, y0, x1, y1 = box
     while font(size).getlength(text) > x1 - x0 and size > 12:
         size -= 2
-    put_text(im, ((x0 + x1) / 2, (y0 + y1) / 2), text, size, col, anchor="mm")
+    if left:
+        put_text(im, (x0, (y0 + y1) / 2), text, size, col, anchor="lm")
+    else:
+        put_text(im, ((x0 + x1) / 2, (y0 + y1) / 2), text, size, col, anchor="mm")
     save(im, name)
     return im
 
@@ -385,6 +410,46 @@ def glyphs():
     return n
 
 
+def lso_chars():
+    """v1.4.0 one layer per (glyph, cell) of the long-grade grid."""
+    cell = font(LX_SIZE).getlength("0")
+    n = 0
+    for k in range(LX_ROWS * LX_COLS):
+        r, c = divmod(k, LX_COLS)
+        x, y = LX_X0 + (c + 0.5) * cell, LX_Y0 + r * LX_LINE
+        for g, ch in LX_GLYPHS.items():
+            im = canvas()
+            put_text(im, (x, y), ch, LX_SIZE, C_TEXT, 0, anchor="ms")
+            save(im, "lx_%s_%d.png" % (g, k))
+            n += 1
+    return n
+
+
+def lx_files(text):
+    """Preview twin of Flight_Report.lua LxFiles(): word wrap on spaces, hard split of long tokens."""
+    inv = {v: k for k, v in LX_GLYPHS.items()}
+    rows, cur = [], ""
+    for tok in text.upper().split():
+        while len(tok) > LX_COLS:
+            if cur:
+                rows.append(cur); cur = ""
+            rows.append(tok[:LX_COLS]); tok = tok[LX_COLS:]
+        if not cur:
+            cur = tok
+        elif len(cur) + 1 + len(tok) <= LX_COLS:
+            cur += " " + tok
+        else:
+            rows.append(cur); cur = tok
+    if cur:
+        rows.append(cur)
+    out = []
+    for r, line in enumerate(rows[:LX_ROWS]):
+        for c, ch in enumerate(line):
+            if ch in inv:
+                out.append("lx_%s_%d.png" % (inv[ch], r * LX_COLS + c))
+    return out
+
+
 def badge_art(bid, label, kind):
     side = min(BADGE_W, BADGE_H) - 4
     p = os.path.join(BADGE_ART, bid + ".png")
@@ -404,9 +469,9 @@ def badges():
     n = 0
     for bid, label, kind in BADGES:
         art = badge_art(bid, label, kind)
-        for slot in range(BADGE_SLOTS):
+        for slot in range(BADGE_POS):                                  # v1.4.0 half-pitch positions
             im = canvas()
-            x = BADGE_X0 + slot * (BADGE_W + BADGE_GAP) + (BADGE_W - art.width) // 2
+            x = round(BADGE_X0 + slot * (BADGE_W + BADGE_GAP) / 2 + (BADGE_W - art.width) / 2)
             im.alpha_composite(art, (x, BADGE_Y + (BADGE_H - art.height) // 2))
             save(im, "badge_%s_%d.png" % (bid, slot))
             n += 1
@@ -438,12 +503,15 @@ def preview(base):
             ("+10", "-19"), ("+7", "-5"), ("0", "0"), ("0", "0")]
     for i, (e, p) in enumerate(vals, 1):
         fld("g%de" % i, e); fld("g%dp" % i, p)
-    lay("lso_OK.png"); fld("lsopts", "4.0"); fld("wire", "2"); fld("tgr", "20.9")
+    lay("lso_OK.png"); fld("lsopts", "4.0")
+    for f in lx_files("(LUL)X (F)IM (LO)IC _LUL_AR (LLWD)IW (LIG)"):
+        lay(f)
+    fld("wire", "2"); fld("tgr", "20.9")
     fld("bk", "60"); fld("bkmax", "75"); fld("bkpct", "80")
     lay("stamp_1.png")
-    for name in ("badge_READBACK_ACE_0.png", "badge_FIRST_PLUG_1.png", "badge_PARKING_PRO_2.png",
-                 "badge_HEAVY_3.png", "badge_SPEED_DEMON_4.png", "badge_COWBOY_5.png"):
-        lay(name)
+    shown = ["READBACK_ACE", "FIRST_PLUG", "PARKING_PRO", "HEAVY", "SPEED_DEMON"]
+    for i, b in enumerate(shown):                                     # centred like Flight_Report.lua
+        lay("badge_%s_%d.png" % (b, BADGE_SLOTS - len(shown) + 2 * i))
     os.makedirs(PREV, exist_ok=True)
     im.save(os.path.join(PREV, "report_preview.png"))
     bg = backdrop()
@@ -466,16 +534,18 @@ def main():
     for k, (t, c) in GRADES.items():
         word("grade_%s.png" % k, t, c, (HDR_R[0] + 16, HDR_R[1], HDR_R[2] - 16, HDR_R[3]), 60)
     for k, (t, c) in LSO.items():
-        word("lso_%s.png" % k, t, c, (LSO_BOX[0] + 8, LSO_BOX[1], LSO_BOX[2] - 8, LSO_BOX[3]), 44)
+        word("lso_%s.png" % k, t, c, (LSO_BOX[0] + 12, LSO_BOX[1] + 4, LSO_BOX[2] - 12, LSO_BOX[1] + 48), 44, left=True)
     word("carrier_na.png", "NO CARRIER PASS", C_LABEL, (LSO_BOX[0] + 8, LSO_BOX[1], LSO_BOX[2] - 8, LSO_BOX[3]), 28)
     for n, t in STAMPS.items():
         stamp(n, t)
     ng = glyphs()
+    nl = lso_chars()
     nb = badges()
     preview(base)
     files = os.listdir(OUT)
     size = sum(os.path.getsize(os.path.join(OUT, f)) for f in files)
-    print("%d files (%d digit layers, %d badge layers), %.1f MB -> %s" % (len(files), ng, nb, size / 1e6, OUT))
+    print("%d files (%d digit, %d LSO character, %d badge layers), %.1f MB -> %s"
+          % (len(files), ng, nl, nb, size / 1e6, OUT))
 
 
 if __name__ == "__main__":

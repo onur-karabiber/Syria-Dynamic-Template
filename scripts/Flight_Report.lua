@@ -1,4 +1,8 @@
--- Flight_Report | v1.0.0
+-- Flight_Report | v1.1.0
+-- v1.1.0 (Onur 2026-11-02): LSO box shows AIRBOSS's long grade (grade.details, upper-cased, word-wrapped on a
+--         LX_ROWS x LX_COLS character grid, lx_<glyph>_<k>.png) under the grade word; badges centred under the
+--         card (n badges on half-pitch positions BADGE_SLOTS-n, +2, ...; achievements first, then demerits);
+--         "-- (BOLTER)" maps to the BOLTER word. Needs FlightReport/ from make_report_cards.py >= v1.4.0.
 --[[
   End-of-flight report card ("karne"), decisions Onur 2026-11-02 (project doc claude/report-card-design-2026-11-02.md):
     * TOTAL, EARNED, PENALTIES, MISSION LOSSES (tanker / AWACS lost: not in the pilot total)
@@ -8,7 +12,7 @@
       ("60/75, 80 %"), never added to the total
     * ROE stamp (Core_Scoring disposition 1..3)
     * overall grade SIERRA HOTEL / SAT / UNSAT from penalties and key outcomes, not from the raw total
-    * badges only (no points), up to 8: achievements fill from the left, demerits from the right
+    * badges only (no points), up to 8: achievements then demerits, centred under the card
   Shown at the hero's engine shutdown after a landing (carrier or field), at the loss of the aircraft, or from
   F10 > INFO > "FLIGHT REPORT: end sortie". F10 > INFO > "FLIGHT REPORT: score detail" prints the ledger.
   A one-line JSON ("[FR] JSON {...}") goes to dcs.log for tools/flight_report.py (HTML report).
@@ -17,8 +21,9 @@
   with identical align/size (same mechanics as Score_Display: a_out_picture_s through net.dostring_in).
     frame.png · grade_<SH|SAT|UNSAT>.png · stamp_<1..3>.png · lso_<code>.png · carrier_na.png
     <field>_<glyph>_<slot>.png  glyph 0-9 | p (+) | m (-) | d (.), right-aligned in CFG.FIELDS[field] slots
-    badge_<ID>_<slot>.png       slot 0..7
-  Number of layers on screen at once: ~40-90. Whether DCS draws that many pictures at once without a hitch
+    lx_<glyph>_<k>.png          LSO long grade, character k of the LX_ROWS x LX_COLS grid
+    badge_<ID>_<pos>.png        pos 0..14 (half-pitch, centred)
+  Number of layers on screen at once: ~40-90, plus one per long-grade character (up to ~100). Whether DCS draws that many pictures at once without a hitch
   is NOT verified [V]; the text report (F10) and the HTML report carry the same content.
 
   Reads (all optional, pcall-guarded): TRT.Score (Core_Scoring >= v1.5.1: ledger, incidents, disposition,
@@ -32,7 +37,7 @@ local TRT = _G.TRT
 if TRT.FlightReport then env.info("[FR] already loaded, second copy ignored") return end
 
 local CFG = {
-    VERSION   = "1.0.0",
+    VERSION   = "1.1.0",
     PLAYER    = TRT.PLAYER_NAME or "Player_01",
     CS        = "HORNET 51",
     DIR       = "FlightReport/",
@@ -53,7 +58,8 @@ local CFG = {
     -- numeric fields: slots (right-aligned), see make_report_cards.py FIELDS (same names / slots)
     FIELDS = { tot = 5, earn = 4, pen = 4, loss = 4, lsopts = 3, wire = 1, tgr = 4, bk = 2, bkmax = 2, bkpct = 3 },
     GROUP_SLOTS = 4,
-    BADGE_SLOTS = 8,
+    BADGE_SLOTS = 8,          -- at most 8 badges; 2 * 8 - 1 half-pitch positions (centring)
+    LX_ROWS = 3, LX_COLS = 34,   -- v1.1.0 LSO long-grade grid (make_report_cards.py LX_ROWS / LX_COLS)
 }
 
 -- groups: key, label; ledger category -> group (TIME split by the timing item code)
@@ -90,7 +96,12 @@ local BADGES = {
 }
 local GRADE_TXT = { SH = "SIERRA HOTEL", SAT = "SAT", UNSAT = "UNSAT" }
 local LSO_CODE = { ["_OK_"] = "OK_U", ["OK"] = "OK", ["(OK)"] = "OKP", ["--"] = "NG", ["CUT"] = "C", ["C"] = "C",
-    ["WO"] = "WO", ["WOP"] = "WO", ["OWO"] = "WO", ["WOFD"] = "WO", ["B"] = "B" }
+    ["WO"] = "WO", ["WOP"] = "WO", ["OWO"] = "WO", ["WOFD"] = "WO", ["B"] = "B", ["-- (BOLTER)"] = "B",
+    ["BOLTER"] = "B" }
+-- v1.1.0 long-grade characters -> layer glyph names (make_report_cards.py LX_GLYPHS; J, Q, Z, digits: not drawn)
+local LX_GLYPH = { ["A"] = "A", ["B"] = "B", ["C"] = "C", ["D"] = "D", ["E"] = "E", ["F"] = "F", ["G"] = "G", ["H"] = "H", ["I"] = "I", ["K"] = "K", ["L"] = "L", ["M"] = "M",
+    ["N"] = "N", ["O"] = "O", ["P"] = "P", ["R"] = "R", ["S"] = "S", ["T"] = "T", ["U"] = "U", ["V"] = "V", ["W"] = "W", ["X"] = "X", ["Y"] = "Y",
+    ["("] = "lp", [")"] = "rp", ["_"] = "us", ["/"] = "sl", ["\\"] = "bs", ["-"] = "m", ["."] = "d" }
 local DISP_TXT = { [0] = "none", [1] = "Letter of Instruction", [2] = "Letter of Reprimand + FNAEB",
     [3] = "JAGMAN investigation, court-martial possible" }
 
@@ -304,9 +315,10 @@ local function TextReport(R)
         if x.e ~= 0 or x.p ~= 0 then L[#L + 1] = string.format("  %-22s %4s / %4s", g.label, sgn(x.e), sgn(x.p)) end
     end
     if R.lso then
-        L[#L + 1] = string.format("CARRIER: LSO %s (%s PT)%s%s", R.lso.grade, tostring(R.lso.points),
+        L[#L + 1] = string.format("CARRIER: LSO %s (%s PT)%s%s%s", R.lso.grade, tostring(R.lso.points),
             R.lso.wire and string.format(", %d-wire", R.lso.wire) or "",
-            R.lso.tgroove and string.format(", groove %.1f s", R.lso.tgroove) or "")
+            R.lso.tgroove and string.format(", groove %.1f s", R.lso.tgroove) or "",
+            (R.lso.details and R.lso.details ~= "") and ("\n  " .. R.lso.details) or "")
     end
     if R.bankler then
         L[#L + 1] = string.format("BANKLER (not in the total): %d / %d (%d %%)", R.bankler.score, R.bankler.max,
@@ -389,6 +401,28 @@ local function Field(files, field, str, slots)
     end
 end
 
+--- v1.1.0 long grade -> lx_ layers: word wrap on spaces, tokens longer than a row are split, extra rows dropped
+local function LxFiles(files, text)
+    local rows, cur = {}, ""
+    for word in tostring(text or ""):upper():gmatch("%S+") do
+        local tok = word
+        while #tok > CFG.LX_COLS do
+            if cur ~= "" then rows[#rows + 1] = cur; cur = "" end
+            rows[#rows + 1] = tok:sub(1, CFG.LX_COLS); tok = tok:sub(CFG.LX_COLS + 1)
+        end
+        if cur == "" then cur = tok
+        elseif #cur + 1 + #tok <= CFG.LX_COLS then cur = cur .. " " .. tok
+        else rows[#rows + 1] = cur; cur = tok end
+    end
+    if cur ~= "" then rows[#rows + 1] = cur end
+    for r = 1, math.min(#rows, CFG.LX_ROWS) do
+        for c = 1, #rows[r] do
+            local g = LX_GLYPH[rows[r]:sub(c, c)]
+            if g then files[#files + 1] = string.format("lx_%s_%d.png", g, (r - 1) * CFG.LX_COLS + c - 1) end
+        end
+    end
+end
+
 local function Card(R)
     local files = {}
     files[#files + 1] = "grade_" .. R.grade .. ".png"
@@ -403,6 +437,7 @@ local function Card(R)
     end
     if R.lso and R.landing ~= "field" then
         files[#files + 1] = "lso_" .. (LSO_CODE[R.lso.grade] or "NONE") .. ".png"
+        if R.lso.details and R.lso.details ~= "" then LxFiles(files, R.lso.details) end   -- v1.1.0
         if R.lso.points then Field(files, "lsopts", string.format("%.1f", R.lso.points)) end
         if R.lso.wire and R.lso.wire >= 1 and R.lso.wire <= 4 then Field(files, "wire", tostring(R.lso.wire)) end
         if R.lso.tgroove then Field(files, "tgr", string.format("%.1f", math.min(99.9, R.lso.tgroove))) end
@@ -415,11 +450,13 @@ local function Card(R)
         Field(files, "bkpct", tostring(math.max(0, math.min(100, round(100 * R.bankler.score / math.max(1, R.bankler.max))))))
     end
     if (R.disp or 0) >= 1 then files[#files + 1] = "stamp_" .. math.min(3, R.disp) .. ".png" end
-    -- badges: achievements from the left, demerits from the right
-    local left, right = 0, CFG.BADGE_SLOTS - 1
-    for _, b in ipairs(R.badges) do
-        if b.kind == "A" then files[#files + 1] = string.format("badge_%s_%d.png", b.id, left); left = left + 1
-        else files[#files + 1] = string.format("badge_%s_%d.png", b.id, right); right = right - 1 end
+    -- v1.1.0 badges centred under the card: achievements first, then demerits, on half-pitch positions
+    local list = {}
+    for _, b in ipairs(R.badges) do if b.kind == "A" then list[#list + 1] = b end end
+    for _, b in ipairs(R.badges) do if b.kind ~= "A" then list[#list + 1] = b end end
+    local n = math.min(#list, CFG.BADGE_SLOTS)
+    for i = 1, n do
+        files[#files + 1] = string.format("badge_%s_%d.png", list[i].id, CFG.BADGE_SLOTS - n + 2 * (i - 1))
     end
     Pic("frame.png", true)
     for _, f in ipairs(files) do Pic(f, false) end
