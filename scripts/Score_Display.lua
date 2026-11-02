@@ -1,5 +1,7 @@
--- Score_Display | v1.2.7
+-- Score_Display | v1.2.8
 --[[
+  v1.2.8: CFG.CRT size 40 % of image: Onur's pick from the TEST-VIS size picker (3840x2160, GUI scale 1.5,
+          2026-11-02). 100 % of image is NOT native pixels in DCS (it drew ~2x too large on that screen).
   v1.2.7: total digits by length (make_cards.py >= v0.5.1): crt_t2 (1-2 chars, largest), crt_t3 (3), crt_t (4).
           CFG.CRT size 50 % of image (v1.2.6 at 100 % looked ~2x too large on a 3840x2160 screen, Onur
           2026-11-02; DCS seems to scale image-% pictures to the window - not verified [V]).
@@ -70,7 +72,7 @@
 _G.TRT = _G.TRT or {}
 local TRT = _G.TRT
 
-local VERSION = "1.2.7"
+local VERSION = "1.2.8"
 
 local CFG = {
     DIR         = "ScoreCards/",
@@ -84,7 +86,7 @@ local CFG = {
     MEDAL_DELAY = 3,                       -- s after the park result
     SOUND       = true,
     PC_OK       = true,                    -- v1.2.0: check_ok sound on detected PC steps
-    CRT         = { dur = 6,  h = 0, v = 0, size = 50, units = 0 },    -- v1.2.7: 50 % of image (v1.2.6: 100)
+    CRT         = { dur = 6,  h = 0, v = 0, size = 40, units = 0 },    -- v1.2.8: 40 % of image (Onur's pick)
     MED         = { dur = 12, h = 1, v = 1, size = 50, units = 1 },
     PC          = { dir = "PlaneCaptain/", dur = 600, h = 0, v = 0, size = 17, units = 1,   -- v1.2.3: was 24
                     -- must match tools/score_cards/out/PlaneCaptain (make_pc_cards.py IDS present)
