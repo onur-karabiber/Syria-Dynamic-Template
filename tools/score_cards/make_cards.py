@@ -1,4 +1,7 @@
-# make_cards.py | v0.3.0
+# make_cards.py | v0.4.0
+# v0.4.0: Onur's scoreboard art v7 (2026-11-02, src_art/score_table_v7_src.png, 1074x942, transparent): total in
+#         the upper part of the large screen (clear of the small screen that overlaps its lower right), last delta
+#         centred in the small screen. Digits / colours as v0.3.0. Card 700 px wide.
 # v0.3.0: Onur's scoreboard art (2026-11-02, src_art/score_frame_src.png: "TOTAL SCORE" triangle + small screen,
 #         white background cut to alpha): total in the dashed triangle, last delta in the screen. Digits in the
 #         report-card style: Share Tech Mono, dot matrix on a canvas-anchored grid, phosphor glow. Layer names and
@@ -43,9 +46,9 @@ GLYPHS = {"0": "0", "1": "1", "2": "2", "3": "3", "4": "4", "5": "5",
 # ------------------------------------------------------------------
 CARDS = {
     "crt": {
-        "src": "score_frame_src.png",         # v0.3.0 (crt_frame_src.png = v0.2.0 art)
-        "width": 900,
-        "box": (0, 0, 1671, 941),             # whole art: set positions below are fractions of it
+        "src": "score_table_v7_src.png",      # v0.4.0 (crt_frame_src.png = v0.2.0 art)
+        "width": 700,
+        "box": (0, 0, 1074, 942),             # whole art: set positions below are fractions of it
     },
     "med": {
         "src": "medal_frame_src.png",
@@ -56,14 +59,14 @@ CARDS = {
 
 # Digit sets: which card, glyphs, centre/height as fractions of the box.
 SETS = {
-    # v0.3.0 total: 4 characters fit the dashed triangle under its diagonal (src px cx 345, baseline 463,
-    # ink 163); delta: centred in the small screen (cx 1405, baseline 226, ink 118)
+    # v0.4.0 total: large screen, above the small screen (src px cx 437, baseline 545, ink 230: 4 chars span
+    # x 83..791 inside the corner marks 50..825); delta: small screen (cx 912, baseline 727, ink 72)
     "crt_t": dict(card="crt", glyphs="0123456789m", font="ShareTechMono-Regular.ttf",
-                  cx=345 / 1671, base=463 / 941, h=163 / 941, style="dot", pitch=4, rgb=(170, 255, 150)),
+                  cx=437 / 1074, base=545 / 942, h=230 / 942, style="dot", pitch=4, rgb=(170, 255, 150)),
     "crt_dp": dict(card="crt", glyphs="0123456789p", font="ShareTechMono-Regular.ttf",
-                   cx=1405 / 1671, base=226 / 941, h=118 / 941, style="dot", pitch=3, rgb=(170, 255, 150)),
+                   cx=912 / 1074, base=727 / 942, h=72 / 942, style="dot", pitch=3, rgb=(170, 255, 150)),
     "crt_dn": dict(card="crt", glyphs="0123456789m", font="ShareTechMono-Regular.ttf",
-                   cx=1405 / 1671, base=226 / 941, h=118 / 941, style="dot", pitch=3, rgb=(255, 55, 35)),
+                   cx=912 / 1074, base=727 / 942, h=72 / 942, style="dot", pitch=3, rgb=(255, 55, 35)),
     "med_t": dict(card="med", glyphs="0123456789m", font="BlackOpsOne-Regular.ttf",
                   cx=0.50, base=0.78, h=0.58, style="medal", rgb=(140, 250, 125)),
 }

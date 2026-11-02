@@ -1,4 +1,6 @@
-# make_report_cards.py | v1.4.1
+# make_report_cards.py | v1.4.2
+# v1.4.2: (Onur 2026-11-02, after the TEST-VIS flight) metal bezel removed: the panels stand on their own on the
+#         transparent canvas; badges 15 % larger (art 116 -> 134 px), the card ends at CARD_B 568.
 # v1.4.1: long-grade glyph names "dash" / "dot" (were "m" / "d": lx_m_ vs lx_M_ collide on case-insensitive
 #         file systems, found when extracting on Windows 2026-11-02).
 # v1.4.0: (Onur 2026-11-02) LSO box carries AIRBOSS's long grade: the grade word (lso_<code>.png, left) plus
@@ -20,7 +22,7 @@
 # (project doc claude/report-card-design-2026-11-02.md).
 #
 # Every layer is a full 1280x720 transparent canvas, so DCS overlays them exactly with one align/size.
-#   frame.png                       card (bezel, panels, band, static labels)
+#   frame.png                       card (panels, band, static labels)
 #   grade_<SH|SAT|UNSAT>.png        overall grade word (top right)
 #   stamp_<1|2|3>.png               ROE disposition stamp
 #   lso_<code>.png                  LSO grade word: OK_U (_OK_) OK OKP ((OK)) NG (--) C WO B NONE DIV
@@ -51,8 +53,7 @@ BADGE_ART = os.path.join(HERE, "src_art", "badges")
 LUA = os.path.join(REPO, "scripts", "Flight_Report.lua")
 
 W, H = 1280, 720
-CARD_B = 588                                          # v1.3.1 card bottom (bezel art); badges below
-FRAME_ART = os.path.join(HERE, "src_art", "report_frame_src.png")
+CARD_B = 568                                          # v1.4.2 card bottom (panel bottom 562 + glow); badges below
 MONO = os.path.join(FONTS, "ShareTechMono-Regular.ttf")   # v1.3.0 the only font
 
 # palette: badge green / red, Plane Captain card tones
@@ -102,11 +103,11 @@ BADGES = [  # id, label, kind (A achievement / D demerit) - same ids as Flight_R
     ("ON_THE_PLAN", "ON THE\nPLAN", "A"), ("TIME_HACK", "TIME\nHACK", "A"),
     ("FUEL_DISCIPLINE", "FUEL\nDISCIPLINE", "A"), ("PARKING_PRO", "PARKING\nPRO", "A"),
 ]
-BADGE_SLOTS, BADGE_W, BADGE_H = 8, 140, 120        # v1.3.0 row below the card, no strip; 8 badges at most
+BADGE_SLOTS, BADGE_W, BADGE_H = 8, 140, 138        # v1.4.2 art 134 px (+15 %); 8 badges at most
 BADGE_POS = 2 * BADGE_SLOTS - 1                     # v1.4.0 half-pitch positions for centring
 BADGE_GAP = 8
 BADGE_X0 = (W - (BADGE_SLOTS * BADGE_W + (BADGE_SLOTS - 1) * BADGE_GAP)) // 2
-BADGE_Y = CARD_B + (H - CARD_B - BADGE_H) // 2 + 2
+BADGE_Y = CARD_B + (H - CARD_B - BADGE_H) // 2
 ART_PX = 400   # v1.1.0 src_art/badges size
 
 # v1.1.0: title-based file names (Onur's art folder) -> badge id; key = lower-case letters and digits only
@@ -299,27 +300,8 @@ LSO_BOX = (892, 216, 1236, 334)
 LX_X0, LX_Y0 = 904, 284                               # v1.4.0 first character cell (left, baseline)
 
 
-def bezel(im):
-    """Onur's bezel art scaled onto the card; its transparent inside (flood fill from the centre) is panel ground."""
-    art = Image.open(FRAME_ART).convert("RGBA")
-    art = art.crop(art.getchannel("A").point(lambda v: 255 if v > 40 else 0).getbbox())
-    art = art.resize((W, CARD_B), Image.LANCZOS)
-    inside = art.getchannel("A").point(lambda v: 255 if v > 90 else 0)
-    ImageDraw.floodfill(inside, (W // 2, CARD_B // 2), 128)
-    a = (np.asarray(inside) == 128).astype(np.float32)
-    a = np.asarray(Image.fromarray((a * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(5)), np.float32) / 255
-    a = np.pad(a, ((0, H - CARD_B), (0, 0)))
-    ground = np.dstack([np.broadcast_to(np.array((3, 9, 3), np.float32), (H, W, 3)), (a * BG_A)[:, :, None]])
-    im.alpha_composite(Image.fromarray(ground.astype(np.uint8), "RGBA"))
-    full = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    full.paste(art, (0, 0))
-    im.alpha_composite(full)
-
-
 def frame():
     im = canvas()
-    # metal bezel
-    bezel(im)                                                          # v1.3.1 Onur's art
     # panels
     for box in (HDR_L, HDR_R, P_L, P_M, P_R):
         fill_poly(im, chamfer_pts(box, 16), (2, 10, 2), 255, grunge(23), 0.35)
