@@ -1,20 +1,28 @@
--- Carrier_Geometry | v1.1.2
+-- Carrier_Geometry | v1.1.3
+-- v1.1.3: FIX radial hysteresis. The decrement branch was unreachable: just below the
+--         sector edge relBearing = (bearing - edge) % 360 is ~359.x, which already
+--         satisfies ">= sectorSize + hysteresis", so a DECREASING radial stepped the
+--         index the wrong way (+1 per tick) until the 6.3 deg resync snapped it back
+--         (sawtooth, up to ~6 deg error on flag 6551). Steps now use the signed
+--         diffToCurrent (-180, 180]. Increasing radials and flag IDs are unchanged.
+--         Ported from Saved Games Carrier_Geometry_v2.lua (whose v1.1.1 base and
+--         on-screen banner are not taken). Stale loadfile note removed from header.
 -- v1.1.2: load message moved from the screen to dcs.log (Onur 2026-11-01: no system
 --         banners for the pilot).
 -- Distance_Flag_v3 + Radial_Flag_v1 birlesimi. Ayni Unit lookup, ayni tick,
 -- iki flag. Flag ID'leri (6550, 6551) eskisiyle ayni - mevcut ME trigger'lar
--- bozulmaz. Bu dosya yuklendiginde eski iki dosyayi loadfile zincirinden
--- CIKAR, aksi halde iki ayri script ayni flag'lere yazmaya calisir.
+-- bozulmaz. Eski iki script (Distance_Flag / Radial_Flag) mission'a ayrica
+-- eklenmemeli; ayni flag'lere iki yazici olur.
 -- v1.1.1: playerName artik _G.TRT.PLAYER_NAME'den okunur (varsayilan
 -- "Player_01"). Core_Scoring'e yukleme sirasi bagimliligi yok; .miz basina
 -- override yapiliyorsa o Do Script satiri bu script'ten ONCE calismali.
 
--- Load check (one-time): dcs.log only (v1.1.2)
-env.info("[Carrier_Geometry] v1.1.2 measuring activated")
+-- Load check (one-time): dcs.log only
+env.info("[Carrier_Geometry] v1.1.3 measuring activated")
 
 do
   local playerName = (_G.TRT and _G.TRT.PLAYER_NAME) or "Player_01"
-  env.info("[Carrier_Geometry] v1.1.2 player unit: " .. playerName)
+  env.info("[Carrier_Geometry] v1.1.3 player unit: " .. playerName)
   local cvnName    = "CVN"
 
   local distFlagId = 6550   -- DME (NM)
@@ -158,11 +166,11 @@ do
           lastRadIndex = math.floor(bearing / sectorSize) % totalSectors
           changed = true
         else
-          local relBearing = (bearing - currentLowerEdge) % 360
-          if relBearing >= (sectorSize + radHysteresis) then
+          -- v1.1.3: signed diffToCurrent; >= upper band -> +1, below lower band -> -1.
+          if diffToCurrent >= (sectorSize + radHysteresis) then
             lastRadIndex = (lastRadIndex + 1) % totalSectors
             changed = true
-          elseif relBearing >= (360 - radHysteresis) then
+          elseif diffToCurrent < -radHysteresis then
             lastRadIndex = (lastRadIndex - 1 + totalSectors) % totalSectors
             changed = true
           end

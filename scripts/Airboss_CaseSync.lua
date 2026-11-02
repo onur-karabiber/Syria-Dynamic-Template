@@ -1,4 +1,6 @@
--- Airboss_CaseSync.lua | v1.0.8
+-- Airboss_CaseSync.lua | v1.0.9
+-- v1.0.9: comment only - polling-pattern reference now names Carrier_Geometry
+--   (merged Distance_Flag_v3 / Radial_Flag_v1) instead of the unloaded Radial_Flag_v1.2.0.
 -- TRT Syria Recovery Framework - syncs TRT.Airboss recovery case to ME flag 100
 --
 -- v1.0.8: global SetSuperCarrier() stub until TrapTraining.lua defines the real one. The ME trigger
@@ -60,10 +62,10 @@
 --     case. That's what this script does.
 --
 -- Edge-detects on the RAW ME flag value via trigger.misc.getUserFlag(100)
--- polled on a timer -- same shape as the Radial_Flag_v1.2.0 /
--- Distance_Flag_v3.lua polling pattern, but structurally immune to their
--- resync bug class: those compared a DERIVED counter against the actual
--- sector and could drift apart; this compares the ME flag's raw value
+-- polled on a timer -- same shape as the Carrier_Geometry.lua polling
+-- pattern (merged Distance_Flag_v3 / Radial_Flag_v1), but structurally immune
+-- to its resync bug class: it compares a DERIVED counter against the actual
+-- sector and can drift apart (see Carrier_Geometry v1.1.3); this compares the ME flag's raw value
 -- directly every poll, so there's nothing to drift from.
 
 TRT = TRT or {}
@@ -232,4 +234,4 @@ timer.scheduleFunction(CheckFlag100, nil, timer.getTime() + 5)
 if type(_G.SetSuperCarrier) ~= "function" then   -- v1.0.8
   function _G.SetSuperCarrier(enabled) _G.carrierTCN = enabled and "72X" or "74X" end
 end
-env.info("Airboss_CaseSync | v1.0.8 | listening on flag 100")
+env.info("Airboss_CaseSync | v1.0.9 | listening on flag 100")
