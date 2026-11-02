@@ -1,4 +1,7 @@
-# make_report_cards.py | v1.0.0
+# make_report_cards.py | v1.1.0
+# v1.1.0: Onur's badge art (2026-11-02, square 1254 px): badges are square, 116 px on the card (strip y 594..714).
+#         --import-badges DIR copies art named by the badge title ("Bankler 75.png", "Heavy at The Ramp.png", ...)
+#         to src_art/badges/<ID>.png, downscaled to 400 px (repo size); unknown / missing names are listed.
 # Report-card ("karne") layers for scripts/Flight_Report.lua v1.0.0 -> out/FlightReport/*.png
 # (project doc claude/report-card-design-2026-11-02.md). Placeholder art: Onur replaces it later.
 #
@@ -77,7 +80,38 @@ BADGES = [  # id, label, kind (A achievement / D demerit) - same ids as Flight_R
     ("ON_THE_PLAN", "ON THE\nPLAN", "A"), ("TIME_HACK", "TIME\nHACK", "A"),
     ("FUEL_DISCIPLINE", "FUEL\nDISCIPLINE", "A"), ("PARKING_PRO", "PARKING\nPRO", "A"),
 ]
-BADGE_SLOTS, BADGE_Y, BADGE_W, BADGE_H, BADGE_X0 = 8, 600, 140, 100, 48
+BADGE_SLOTS, BADGE_Y, BADGE_W, BADGE_H, BADGE_X0 = 8, 594, 140, 120, 48   # v1.1.0 square art, 116 px
+ART_PX = 400   # v1.1.0 src_art/badges size
+
+# v1.1.0: title-based file names (Onur's art folder) -> badge id; key = lower-case letters and digits only
+ART_NAMES = {"bankler75": "BANKLER_75", "bankler7575": "BANKLER_75", "bankler70": "BANKLER_70",
+             "okpass": "OK_PASS", "threewire": "THREE_WIRE", "cleanroe": "CLEAN_ROE", "shack": "SHACK",
+             "ticresponse": "TIC_RESPONSE", "readbackace": "READBACK_ACE", "defensiveace": "DEFENSIVE_ACE",
+             "ghost": "GHOST", "firstplug": "FIRST_PLUG", "ontheplan": "ON_THE_PLAN", "timehack": "TIME_HACK",
+             "fueldiscipline": "FUEL_DISCIPLINE", "parkingpro": "PARKING_PRO", "blueonblue": "BLUE_ON_BLUE",
+             "cowboy": "COWBOY", "speeddemon": "SPEED_DEMON", "offcorridor": "OFF_CORRIDOR",
+             "belowtheharddeck": "HARD_DECK", "harddeck": "HARD_DECK", "bolterclub": "BOLTER_CLUB",
+             "heavyattheramp": "HEAVY", "heavy": "HEAVY", "onfumes": "FUMES", "fumes": "FUMES"}
+
+
+def import_badges(src_dir):
+    os.makedirs(BADGE_ART, exist_ok=True)
+    done, unknown = set(), []
+    for f in sorted(os.listdir(src_dir)):
+        if not f.lower().endswith(".png"):
+            continue
+        key = re.sub(r"[^a-z0-9]", "", os.path.splitext(f)[0].lower())
+        bid = ART_NAMES.get(key)
+        if not bid:
+            unknown.append(f)
+            continue
+        im = Image.open(os.path.join(src_dir, f)).convert("RGBA")
+        im.thumbnail((ART_PX, ART_PX), Image.LANCZOS)
+        im.save(os.path.join(BADGE_ART, bid + ".png"), optimize=True)
+        done.add(bid)
+        print("badge art: %-28s -> %s.png" % (f, bid))
+    missing = [b[0] for b in BADGES if b[0] not in done]
+    print("imported %d, unknown file names %s, ids without art %s" % (len(done), unknown, missing))
 
 LSO = {"OK_U": ("_OK_", C_POS), "OK": ("OK", C_POS), "OKP": ("(OK)", C_AMB), "NG": ("--", C_AMB),
        "C": ("CUT", C_NEG), "WO": ("WAVE-OFF", C_NEG), "B": ("BOLTER", C_NEG), "NONE": ("NOT GRADED", C_LABEL),
@@ -204,7 +238,8 @@ def badge_art(bid, label, kind):
     p = os.path.join(BADGE_ART, bid + ".png")
     if os.path.isfile(p):
         a = Image.open(p).convert("RGBA")
-        a.thumbnail((BADGE_W - 8, BADGE_H - 4))
+        side = min(BADGE_W - 8, BADGE_H - 4)   # v1.1.0 square art
+        a.thumbnail((side, side), Image.LANCZOS)
         return a
     a = Image.new("RGBA", (BADGE_W - 8, BADGE_H - 4), (0, 0, 0, 0))
     d = ImageDraw.Draw(a)
@@ -258,6 +293,8 @@ def preview(base):
 
 def main():
     global OUT
+    if "--import-badges" in sys.argv:                       # v1.1.0
+        import_badges(sys.argv[sys.argv.index("--import-badges") + 1])
     if "--out" in sys.argv:
         OUT = os.path.abspath(sys.argv[sys.argv.index("--out") + 1])
     check_lua()

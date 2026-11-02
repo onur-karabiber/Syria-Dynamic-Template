@@ -1,4 +1,5 @@
-# flight_report.py | v1.0.0
+# flight_report.py | v1.1.0
+# v1.1.0: badges shown with Onur's art (tools/score_cards/src_art/badges/<ID>.png, embedded as data URIs).
 # Full flight report (HTML, one self-contained file) from dcs.log, decision Onur 2026-11-02
 # (project doc claude/report-card-design-2026-11-02.md). DCS cannot write files itself (io/lfs sanitized), so
 # Flight_Report.lua (>= v1.0.0) writes one "[FR] JSON {...}" line at the end of the sortie and this tool turns
@@ -12,6 +13,7 @@
 # Without an [FR] JSON line (older scripts) the score part is rebuilt from the "[Core_Scoring] SCORE" lines.
 
 import argparse
+import base64
 import html
 import json
 import os
@@ -157,6 +159,18 @@ def sgn(v):
     return "+%d" % v if v > 0 else str(v)
 
 
+ART = os.path.join(os.path.dirname(os.path.abspath(__file__)), "score_cards", "src_art", "badges")
+
+
+def badge_html(b):
+    p = os.path.join(ART, "%s.png" % b.get("id"))
+    if os.path.isfile(p):
+        with open(p, "rb") as f:
+            uri = "data:image/png;base64," + base64.b64encode(f.read()).decode()
+        return '<img class=bimg src="%s" alt="%s" title="%s">' % (uri, esc(b.get("label")), esc(b.get("label")))
+    return '<span class="badge %s">%s</span>' % (esc(b.get("kind")), esc(b.get("label")))
+
+
 def fuel_svg(fuel):
     if len(fuel) < 2:
         return "<p class=dim>No fuel samples ([TL] FUEL).</p>"
@@ -195,7 +209,7 @@ h2{font-size:17px;letter-spacing:.08em;color:var(--dim);border-bottom:1px solid 
 table{width:100%;border-collapse:collapse}td,th{padding:5px 8px;border-bottom:1px solid #1d2c3a;text-align:left;vertical-align:top}
 th{color:var(--dim);font-weight:600}th.n,td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .badges{display:flex;flex-wrap:wrap;gap:8px}.badge{padding:6px 12px;border-radius:8px;border:2px solid}
-.badge.A{border-color:var(--pos);background:#123a22}.badge.D{border-color:var(--neg);background:#3d1515}
+.bimg{width:200px;height:200px;object-fit:contain}.badge.A{border-color:var(--pos);background:#123a22}.badge.D{border-color:var(--neg);background:#3d1515}
 pre{white-space:pre-wrap;background:var(--pan);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:13px}
 details summary{cursor:pointer;color:var(--dim)}.chart{width:100%;height:auto;background:var(--pan);border-radius:8px}
 .chart .fuel{fill:none;stroke:var(--pos);stroke-width:2}.chart .alt{fill:none;stroke:#4b7aa0;stroke-width:1.5}
@@ -240,8 +254,8 @@ def render(D, S, logpath, n):
     o.append('<table>%s</table>' % "".join('<tr><td>%s</td><td>%s</td></tr>' % (esc(a), esc(b)) for a, b in rows)
              if rows else '<p class=dim>No graded carrier pass.</p>')
     o.append('<h2>BADGES</h2>')
-    o.append('<div class=badges>%s</div>' % "".join('<span class="badge %s">%s</span>' % (esc(b.get("kind")), esc(b.get("label")))
-                                                    for b in S["badges"]) if S["badges"] else '<p class=dim>None.</p>')
+    o.append('<div class=badges>%s</div>' % "".join(badge_html(b) for b in S["badges"])
+             if S["badges"] else '<p class=dim>None.</p>')
     if S.get("hard_deck_s"):
         o.append('<p class=dim>Hard deck: %s s below 20,000 ft MSL in the engagement area (not scored).</p>' % esc(S["hard_deck_s"]))
     o.append('<h2>ROE / FRIENDLY FIRE</h2>')
@@ -275,7 +289,7 @@ def render(D, S, logpath, n):
     if D["radio"]:
         o.append('<h2>RADIO</h2><details><summary>%d transmissions</summary><pre>%s</pre></details>'
                  % (len(D["radio"]), esc("\n".join("%s  %s" % r for r in D["radio"]))))
-    o.append('<p class=dim>tools/flight_report.py v1.0.0</p></main></html>')
+    o.append('<p class=dim>tools/flight_report.py v1.1.0</p></main></html>')
     return "\n".join(o)
 
 
