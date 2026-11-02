@@ -1,4 +1,6 @@
-# refresh_scripts.py | v1.3.1
+# refresh_scripts.py | v1.4.0
+# v1.4.0: --folder NAME (repeatable) syncs the top-level files of src/NAME/ into NAME/ of the .miz
+#         (changed replaced, new added, files only in the .miz kept): FlightReport, ScoreCards, PlaneCaptain.
 # v1.3.1: --kneeboard is repeatable (generated cards + static pages, e.g. kneeboard/cas_l_static/);
 #         .png and .jpg pages are synced.
 # v1.3.0: kneeboard entries go to KNEEBOARD/IMAGES/ (upper case, as the ME writes them; DCS did not
@@ -38,7 +40,7 @@ def first_line(b):
     return b.split(b"\n", 1)[0].decode("utf-8", "replace").strip()
 
 
-def main(src, dry, sound_sets=(), kb_dirs=()):
+def main(src, dry, sound_sets=(), kb_dirs=(), folders=()):
     with zipfile.ZipFile(src) as z:
         mapres = dcslua.parse(z.read(PREFIX + "mapResource"))[1]
         luas = sorted({v.decode() for v in mapres.values()
@@ -99,6 +101,21 @@ def main(src, dry, sound_sets=(), kb_dirs=()):
                 else:
                     added[arc] = data
                     print("kneeboard: %s (new)" % arc)
+        for fo in folders:                                      # v1.4.0
+            d = os.path.join(REPO, "src", fo)
+            for f in sorted(os.listdir(d)):
+                p = os.path.join(d, f)
+                if not os.path.isfile(p):
+                    continue
+                arc = "%s/%s" % (fo, f)
+                data = open(p, "rb").read()
+                if arc in names:
+                    if z.read(arc) != data:
+                        new[arc] = data
+                        print("folder:  %s (changed)" % arc)
+                else:
+                    added[arc] = data
+                    print("folder:  %s (new)" % arc)
         if not new and not added and not moved:
             print("up to date, nothing written")
             return 0
@@ -131,16 +148,19 @@ def main(src, dry, sound_sets=(), kb_dirs=()):
 
 
 if __name__ == "__main__":
-    argv, sets, args, kb = sys.argv[1:], [], [], []
+    argv, sets, args, kb, fol = sys.argv[1:], [], [], [], []
     i = 0
     while i < len(argv):
         if argv[i] == "--sounds" and i + 1 < len(argv):
             sets.append(argv[i + 1]); i += 2; continue
         if argv[i] == "--kneeboard" and i + 1 < len(argv):
             kb.append(argv[i + 1]); i += 2; continue
+        if argv[i] == "--folder" and i + 1 < len(argv):          # v1.4.0
+            fol.append(argv[i + 1]); i += 2; continue
         if argv[i] != "--dry-run":
             args.append(argv[i])
         i += 1
     if len(args) != 1:
-        sys.exit('usage: refresh_scripts.py "<mission.miz>" [--dry-run] [--sounds SET ...] [--kneeboard DIR ...]')
-    sys.exit(main(args[0], "--dry-run" in argv, sets, kb))
+        sys.exit('usage: refresh_scripts.py "<mission.miz>" [--dry-run] [--sounds SET ...] [--kneeboard DIR ...] '
+                 '[--folder NAME ...]')
+    sys.exit(main(args[0], "--dry-run" in argv, sets, kb, fol))

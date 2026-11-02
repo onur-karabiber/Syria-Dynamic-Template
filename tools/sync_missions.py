@@ -1,4 +1,6 @@
-# sync_missions.py | v1.0.0
+# sync_missions.py | v1.1.0
+# v1.1.0: CAS (L) also gets the picture folders src/FlightReport, src/ScoreCards, src/PlaneCaptain (--folder,
+#         refresh_scripts.py >= v1.4.0); "Not covered" below no longer applies to them.
 # Keeps the three parallel missions in step (decision Onur 2026-11-02):
 #   Syria_Dynamic_Template.miz        <- built from src/ + scripts/ (build.py)
 #   Syria_Dynamic_Template HOUND.miz  <- GENERATED: template + Hound ELINT (tools/add_elint.py)
@@ -39,6 +41,7 @@ HOUND = os.path.join(config.MISSIONS_DIR, "Syria_Dynamic_Template HOUND.miz")
 CAS = os.path.join(config.MISSIONS_DIR, "Close Air Support (L).miz")
 ME_DATA = ["mission", "l10n/DEFAULT/dictionary", "l10n/DEFAULT/mapResource", "options", "warehouses"]
 PY = sys.executable or "python"
+PICTURE_FOLDERS = ["FlightReport", "ScoreCards", "PlaneCaptain"]   # v1.1.0
 
 
 def run(args):
@@ -119,6 +122,9 @@ def main():
             for s in sound_sets():
                 args += ["--sounds", s]
             args += ["--kneeboard", os.path.join("src", "KNEEBOARD", "IMAGES")]
+            for fo in PICTURE_FOLDERS:                          # v1.1.0
+                if os.path.isdir(os.path.join(REPO, "src", fo)):
+                    args += ["--folder", fo]
             if dry:
                 args.append("--dry-run")
             rc = run(args)

@@ -79,6 +79,11 @@ python tools/sync_missions.py             # build template, regenerate HOUND, re
 * **CAS (L)** keeps its own mission data (no RAT / ambient radios); the tool refreshes its scripts, every sound set it shares with `src/Sounds`, and the kneeboard pages. ME-level changes (units, triggers) still go into both missions by hand or per tool (`add_script.py --src` / `--miz`, `strip_native_jtac.py --src` / `--miz`).
 * `src/KNEEBOARD/IMAGES/*_LCRA_*` (Jeppesen) is gitignored: packed when present on disk, never pushed.
 
+### 3c. Flight report (report card) — 2026-11-02
+* In the mission, `scripts/Flight_Report.lua` shows the report card at the hero's engine shutdown after a landing (carrier or field), at the loss of the aircraft, or from F10 > INFO > "FLIGHT REPORT: end sortie"; "FLIGHT REPORT: score detail" prints the score ledger. It replaces Score_Display's medal card.
+* Card layers: `python tools/score_cards/make_report_cards.py` writes `src/FlightReport/` (~1,500 full-canvas PNG layers, ~6.5 MB; placeholder art; badge art from `tools/score_cards/src_art/badges/<ID>.png` when present). The script checks that its field slots and badge ids match `Flight_Report.lua`. Preview: `tools/score_cards/out/preview/report_preview.png`.
+* After the flight: `python tools/flight_report.py` (default `%USERPROFILE%\Saved Games\DCS\Logs\dcs.log`) writes a self-contained HTML report to `Logs\FlightReports\` (score groups, carrier section, badges, ROE, ledger, fuel/altitude chart, timing debrief, AAR, JTAC events, radio transcript). `--all` = one report per sortie in the log.
+
 ### 4. Player Slot Convention
 * The scenario's "hero" slot is the unit named `Player_01`. The **group name is free** (`CAS-1`, `SEAD-1`, ...); no scoring script depends on it.
 * Additional human slots should be named `Player_02` ... `Player_NN`. Bankler's `TrapTraining.lua` grades `Player_01`-`Player_44` per slot; the TRT scoring layer (flags, departure, approach, kill/landing score) follows only the hero.

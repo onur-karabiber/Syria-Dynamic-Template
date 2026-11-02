@@ -1,5 +1,7 @@
--- Comms_Director | v1.7.11
+-- Comms_Director | v1.7.12
 --[[
+  v1.7.12 - report card: CD.ticState.callT (timer.getTime() of the JTAC's TIC call), CD.corridorMz = true when
+            Strike made the "still off the corridor" call at the Marshal hand-off.
   v1.7.11 - CAS (L) sortie 2026-11-02 (Onur):
             * MUD call on a JTAC frequency gets a JTAC "Hornet 51, copy." (JTAC_Controller voice, TRT.JC.voice);
               before, only OVERLORD answered and a MUD on Pointer / Eyeball went unanswered.
@@ -1741,6 +1743,7 @@ end
 
 --- v1.7.11: still outside the corridor at the Marshal hand-off (queued before "Marshal, push button 16")
 local function C_CorridorMz(radial)
+    CD.corridorMz = true   -- v1.7.12
     env.info(string.format("[CD] corridor: Marshal hand-off on R-%03d (corridor R-%03d +/-%d)", radial,
         (CFG.CORRIDOR_TRUE - CFG.MAGVAR) % 360, CFG.CORRIDOR_HALF))
     Q(string.format("[STRIKE] %s, Strike. You are inside fifty miles and still off the corridor. "
@@ -2507,7 +2510,10 @@ TicHandoff = function(key)
     CD.ticState = { key = key, n = 0, used = {}, next = nil, done = false, bda = false }
     Q(string.format("[%s] %s, %s, TROOPS IN CONTACT, troops in contact! Bravo 2-1 is taking effective "
         .. "fire from enemy armor. Request immediate CAS, say time out.", j.cs, CFG.CS, j.disp),
-        CFG.DUR_URGENT, CFG.TIC.FIRST_S, function() env.info("[CD] TIC call " .. j.disp) end, nil,
+        CFG.DUR_URGENT, CFG.TIC.FIRST_S, function()
+            env.info("[CD] TIC call " .. j.disp)
+            if CD.ticState then CD.ticState.callT = timer.getTime() end   -- v1.7.12
+        end, nil,
         S(j.ch, j.k .. "_tic"))
     CD.queue[#CD.queue].hold = 0.1
     local p = Player()
@@ -3440,7 +3446,7 @@ local function CD_Init()
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
     timer.scheduleFunction(MudTick, nil, timer.getTime() + 10)   -- v1.7.9
-    env.info("[CD] Comms_Director v1.7.11 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.7.12 online — CAS-1 Syria")
 end
 
 CD_Init()

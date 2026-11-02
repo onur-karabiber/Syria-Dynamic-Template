@@ -1,5 +1,7 @@
--- JTAC_Controller | v0.9.0
+-- JTAC_Controller | v0.9.1
 --[[
+  v0.9.1 (report card): RELEASE event data carries .key; JC.stats { miss } counts MISS assessments
+    (Flight_Report.lua badges SHACK / TIC RESPONSE).
   v0.9.0 (scoring review 2026-11-02, Onur):
     * ROE penalties per PASS, not per weapon: weapons released within 2 s of the first violation of a pass
       (ripple / pairs) add no second -15 / -25 and no second violation count (a 2-bomb ripple was -40 with
@@ -164,7 +166,7 @@ if TRT.JC then env.info("[JC] already loaded, second copy ignored") return end
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "0.9.0",
+    VERSION      = "0.9.1",
     VOICE        = true,      -- v0.7.0 spoken transmissions (needs Comms_Director >= v1.6.4)
     PLAYER_UNIT  = "Player_01",
     CS           = "HORNET 51",
@@ -272,7 +274,7 @@ local DIR8_TXT = { "north", "northeast", "east", "southeast", "south", "southwes
 --  STATE
 -- ══════════════════════════════════════════════════════════════
 local JC = { version = CFG.VERSION, active = true, CFG = CFG, st = {}, subs = {}, queue = {}, qBusy = false,
-    unauthW = {} }   -- v0.8.1 { id, rec } of every weapon released without clearance
+    unauthW = {}, stats = { miss = 0 } }   -- v0.9.1 stats   -- v0.8.1 { id, rec } of every weapon released without clearance
 TRT.JC = JC
 for _, k in ipairs(CFG.ORDER) do JC.st[k] = { phase = "IDLE" } end
 
@@ -1659,6 +1661,7 @@ local function Assess(k)
         local miss = last and D2(last, AimPos(k)) or 0
         Jtac(k, string.format("%s, %s, miss.%s Report IN.", CFG.CS, j.disp, corr), CFG.DUR.short)
         Log(string.format("MISS %s %.0f m", k, miss))
+        JC.stats.miss = JC.stats.miss + 1   -- v0.9.1
     end
     if st.nine then st.nine.aim = nau:getName() end
 end
@@ -1737,7 +1740,7 @@ local function OnShot(w)
     local a = st.att or {}
     local inside, h = false, Mag(HeroHdgT(u))
     if st.nine then inside, h = HdgInFah(k, u) end
-    local rec = { type = d.displayName or tn, kind = kind, t = now, cleared = a.cleared == true,
+    local rec = { key = k, type = d.displayName or tn, kind = kind, t = now, cleared = a.cleared == true,   -- v0.9.1 key
         afterAbort = a.aborted == true and a.abortT and (now - a.abortT) < 60, fah = inside, hdg = h,
         readback = st.rbOk == true, laser = st.spot ~= nil, phase = st.phase }
     Log(string.format("RELEASE %s %s cleared=%s afterAbort=%s fah=%s(%s) readback=%s laser=%s phase=%s", k,

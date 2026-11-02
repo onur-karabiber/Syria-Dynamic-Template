@@ -1,4 +1,13 @@
--- Core_Scoring | v1.5.0
+-- Core_Scoring | v1.5.1
+-- v1.5.1 (report card decisions, Onur 2026-11-02):
+--   * Friendly asset lost (tanker / AWACS, any cause) is a MISSION LOSS, not a pilot penalty: recorded in
+--     TRT.Score.losses { t, name, value } (value = the old -8 / -10), text + log, flag 1908 untouched.
+--   * The hero's AIRBOSS LSO grades are kept in TRT.Score.passes { t, grade, points, wire, tgroove, details }
+--     (every graded pass, bolters / wave-offs included); TRT.Score.lso = the trap's grade.
+--   * Carrier landing points only for the hero: the old TARGET_UNITS AI names (LANDER-8-1, ...) added +5 to the
+--     hero's total when they landed. Land-based +2 likewise hero only.
+--   * The dead "Bankler score merged" path is removed (decision: Bankler shown as is, not in the total;
+--     Flight_Report captures it).
 -- v1.5.0 (scoring review 2026-11-02, decisions Onur; project doc claude/scoring-review-2026-11-02.md):
 --   * Score ledger: every TRT.addScore(delta, reason[, cat]) is kept in TRT.Score.ledger
 --     { t, d, reason, cat } (cat inferred from the reason when not given: DEP AAR TIME CAS KILL THREAT ROE
@@ -137,7 +146,7 @@ local TRT = _G.TRT
 -- SCORE
 ----------------------------------------------------------------
 -- v1.5.0: ledger + categories (end-of-flight report card)
-TRT.Score = TRT.Score or { ledger = {}, incidents = {}, expected = nil }
+TRT.Score = TRT.Score or { ledger = {}, incidents = {}, expected = nil, losses = {}, passes = {} }
 local SC = TRT.Score
 local CAT_RULES = {   -- first match wins (reason, case-sensitive Lua patterns)
     { "^MISSION EVENT", "MISSION" }, { "^FRIENDLY FIRE", "ROE" }, { "^ROE", "ROE" },
@@ -685,7 +694,10 @@ do
         if not delta then return end
 
         lossHandled[name] = true
-        TRT.addScore(delta, "ASSET LOST: " .. name)
+        -- v1.5.1: mission loss, not the pilot's score
+        SC.losses[#SC.losses + 1] = { t = timer.getAbsTime(), name = name, value = delta }
+        env.info(string.format("[Core_Scoring] MISSION LOSS %s (%d, not in the pilot total)", name, delta))
+        trigger.action.outTextForCoalition(coalition.side.BLUE, "MISSION LOSS: " .. name, 10, false)
     end
 
     world.addEventHandler(LEH2)
@@ -942,6 +954,9 @@ do
                 if type(pd) == "table" and pd.unitname == PLAYER_NAME and type(grade) == "table" then
                     LAST_GRADE = { t = timer.getTime(), grade = tostring(grade.grade), points = tonumber(grade.points),
                                    wire = grade.wire }
+                    SC.passes[#SC.passes + 1] = { t = timer.getAbsTime(), grade = tostring(grade.grade),   -- v1.5.1
+                        points = tonumber(grade.points), wire = tonumber(grade.wire), tgroove = tonumber(grade.Tgroove),
+                        details = tostring(grade.details or ""), landed = pd.landed and true or false }
                     env.info(string.format("[Core_Scoring] LSO grade %s (%s PT, wire %s)", LAST_GRADE.grade,
                         tostring(LAST_GRADE.points), tostring(LAST_GRADE.wire)))
                 end
@@ -962,6 +977,7 @@ do
         if g and g.t >= t0 - 2 and g.points then
             local pts = math.max(0, math.min(5, math.floor(g.points + 0.5)))
             local wire = tonumber(g.wire) and string.format(", %d-wire", g.wire) or ""
+            SC.lso = SC.passes[#SC.passes]   -- v1.5.1
             if pts > 0 then
                 TRT.addScore(pts, string.format("Carrier landing, LSO %s%s", g.grade, wire))
             else
@@ -998,13 +1014,13 @@ do
         if n == PLAYER_NAME then   -- v1.5.0: ROE / friendly fire report after the landing
             timer.scheduleFunction(function() pcall(SC.report) end, nil, timer.getTime() + REPORT_S)
         end
+        if n ~= PLAYER_NAME then   -- v1.5.1: AI / other slots never score for the hero
+            env.info(string.format("[Core_Scoring] %s landing of %s (not the hero): not scored", p.kind, n))
+            return nil
+        end
         if p.kind == "carrier" then
-            if n == PLAYER_NAME then   -- v1.4.7: points from the LSO grade
-                local tEnd = timer.getTime() + GRADE_WAIT_S
-                timer.scheduleFunction(function() return awardTrap(n, p.t0, tEnd) end, nil, timer.getTime() + 0.1)
-            else
-                TRT.addScore(5, "Successful carrier landing")
-            end
+            local tEnd = timer.getTime() + GRADE_WAIT_S   -- v1.4.7: points from the LSO grade
+            timer.scheduleFunction(function() return awardTrap(n, p.t0, tEnd) end, nil, timer.getTime() + 0.1)
             if TRT.onCarrierLanding then TRT.onCarrierLanding(n) end
         else
             TRT.addScore(2, "Successful land-based landing")
@@ -1040,38 +1056,9 @@ do
 end
 
 ----------------------------------------------------------------
--- BANKLER / TRAPTRAINER MERGE
--- Skipped for Case III - both source files hard-excluded this on
--- purpose (TrapTrainer scores an optical/visual pattern that a Case III
--- radar/GCA-style approach doesn't fly). Now driven by the LIVE case
--- flag instead of a hardcoded CASE_III_ENABLED check.
+-- BANKLER: v1.5.1 the merge into the total is removed (it never fired: it read a "traptrainer"
+-- global that does not exist). Bankler's pass score is shown as is by Flight_Report.lua.
 ----------------------------------------------------------------
-do
-    local merged = false
-
-    local function mergeBankler()
-        if merged then return nil end
-
-        local case = TRT.getCurrentCase and TRT.getCurrentCase()
-        if case == 3 then
-            merged = true
-            return nil
-        end
-
-        if not traptrainer or not traptrainer.PlayerData then
-            return timer.getTime() + 5
-        end
-
-        local b = traptrainer.PlayerData.score or 0
-        if b == 0 then return timer.getTime() + 5 end
-
-        merged = true
-        TRT.addScore(b, "Bankler score merged")
-        return nil
-    end
-
-    timer.scheduleFunction(mergeBankler, nil, timer.getTime() + 30)
-end
 
 ----------------------------------------------------------------
 -- ACTIVE CASE (MANUAL, MISSION-EDITOR CONTROLLED)
@@ -1128,4 +1115,4 @@ do
     timer.scheduleFunction(watchCaseChange, nil, timer.getTime() + 1)
 end
 
-env.info("[Core_Scoring] v1.5.0 loaded. Player unit: " .. PLAYER_NAME)
+env.info("[Core_Scoring] v1.5.1 loaded. Player unit: " .. PLAYER_NAME)

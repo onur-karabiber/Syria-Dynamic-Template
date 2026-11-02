@@ -1,5 +1,6 @@
--- Score_Display | v1.2.4
+-- Score_Display | v1.2.5
 --[[
+  v1.2.5: no medal card when Flight_Report.lua is loaded (TRT.FlightReport): the report card replaces it.
   v1.2.4: the TRT.addScore hook passes every argument through (Core_Scoring v1.5.0 takes a 3rd: category).
   Picture score cards (CAS (L) only; not part of the template build).
 
@@ -64,7 +65,7 @@
 _G.TRT = _G.TRT or {}
 local TRT = _G.TRT
 
-local VERSION = "1.2.4"
+local VERSION = "1.2.5"
 
 local CFG = {
     DIR         = "ScoreCards/",
@@ -210,6 +211,11 @@ local medalDone = false
 timer.scheduleFunction(function(_, t)
     if medalDone then return nil end
     local r = tonumber(trigger.misc.getUserFlag(CFG.FLAG_PARK)) or 0
+    if (r == 1 or r == 2) and TRT.FlightReport then   -- v1.2.5
+        medalDone = true
+        log("park result " .. r .. " -> no medal (Flight_Report shows the report card)")
+        return nil
+    end
     if r == 1 or r == 2 then
         medalDone = true
         log("park result " .. r .. " -> medal in " .. CFG.MEDAL_DELAY .. " s")
