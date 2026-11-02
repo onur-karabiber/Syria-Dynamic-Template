@@ -1,4 +1,8 @@
-# make_cards.py | v0.2.0
+# make_cards.py | v0.3.0
+# v0.3.0: Onur's scoreboard art (2026-11-02, src_art/score_frame_src.png: "TOTAL SCORE" triangle + small screen,
+#         white background cut to alpha): total in the dashed triangle, last delta in the screen. Digits in the
+#         report-card style: Share Tech Mono, dot matrix on a canvas-anchored grid, phosphor glow. Layer names and
+#         the 7-slot centring rule unchanged (Score_Display.lua untouched). Card 900 px wide.
 # v0.2.0: Onur's "CRT borderless" art (green phosphor, 2026-10-28): CRT 1254x1254,
 #         medal 1333x1180; boxes re-measured; digits green (total), bright green (+),
 #         red (-); medal digits phosphor green.
@@ -39,9 +43,9 @@ GLYPHS = {"0": "0", "1": "1", "2": "2", "3": "3", "4": "4", "5": "5",
 # ------------------------------------------------------------------
 CARDS = {
     "crt": {
-        "src": "crt_frame_src.png",
-        "width": 512,
-        "box": (205, 576, 1060, 940),         # dashed box (src px, v0.2.0)
+        "src": "score_frame_src.png",         # v0.3.0 (crt_frame_src.png = v0.2.0 art)
+        "width": 900,
+        "box": (0, 0, 1671, 941),             # whole art: set positions below are fractions of it
     },
     "med": {
         "src": "medal_frame_src.png",
@@ -52,12 +56,14 @@ CARDS = {
 
 # Digit sets: which card, glyphs, centre/height as fractions of the box.
 SETS = {
-    "crt_t": dict(card="crt", glyphs="0123456789m", font="BlackOpsOne-Regular.ttf",
-                  cx=0.50, base=0.64, h=0.44, style="crt", rgb=(140, 255, 120)),
-    "crt_dp": dict(card="crt", glyphs="0123456789p", font="BlackOpsOne-Regular.ttf",
-                   cx=0.50, base=0.91, h=0.17, style="crt", rgb=(215, 255, 205)),
-    "crt_dn": dict(card="crt", glyphs="0123456789m", font="BlackOpsOne-Regular.ttf",
-                   cx=0.50, base=0.91, h=0.17, style="crt", rgb=(255, 70, 50)),
+    # v0.3.0 total: 4 characters fit the dashed triangle under its diagonal (src px cx 345, baseline 463,
+    # ink 163); delta: centred in the small screen (cx 1405, baseline 226, ink 118)
+    "crt_t": dict(card="crt", glyphs="0123456789m", font="ShareTechMono-Regular.ttf",
+                  cx=345 / 1671, base=463 / 941, h=163 / 941, style="dot", pitch=4, rgb=(170, 255, 150)),
+    "crt_dp": dict(card="crt", glyphs="0123456789p", font="ShareTechMono-Regular.ttf",
+                   cx=1405 / 1671, base=226 / 941, h=118 / 941, style="dot", pitch=3, rgb=(170, 255, 150)),
+    "crt_dn": dict(card="crt", glyphs="0123456789m", font="ShareTechMono-Regular.ttf",
+                   cx=1405 / 1671, base=226 / 941, h=118 / 941, style="dot", pitch=3, rgb=(255, 55, 35)),
     "med_t": dict(card="med", glyphs="0123456789m", font="BlackOpsOne-Regular.ttf",
                   cx=0.50, base=0.78, h=0.58, style="medal", rgb=(140, 250, 125)),
 }
@@ -85,8 +91,8 @@ def font_for(spec, box):
     return ImageFont.truetype(path, size)
 
 
-def cell_width(font):
-    return max(font.getlength(GLYPHS[g]) for g in GLYPHS) * 0.92
+def cell_width(font, mono=False):
+    return max(font.getlength(GLYPHS[g]) for g in GLYPHS) * (1.0 if mono else 0.92)
 
 
 def glyph_mask(size, font, ch, x, y):
@@ -113,6 +119,27 @@ def style_crt(mask, rgb):
     rgbA[..., 2] = b + (255 - b) * hot
     rgbA[..., 3] = alpha * 255
     return Image.fromarray(np.clip(rgbA, 0, 255).astype(np.uint8), "RGBA")
+
+
+def style_dot(mask, rgb, pitch):
+    """v0.3.0 report-card phosphor: dot matrix (gap 1 px, grid anchored to the canvas) + glow."""
+    w, h = mask.size
+    m = mask.filter(ImageFilter.MaxFilter(3))                  # weight: Share Tech Mono is thin
+    a = np.asarray(m, np.float32) / 255.0
+    hp, wp = h // pitch * pitch, w // pitch * pitch
+    cov = a[:hp, :wp].reshape(hp // pitch, pitch, wp // pitch, pitch).mean(axis=(1, 3))
+    lvl = np.clip((cov - 0.10) / 0.22, 0, 1)
+    dot = np.ones((pitch, pitch), np.float32)
+    dot[-1, :] = 0.18
+    dot[:, -1] = 0.18
+    core = np.zeros((h, w), np.float32)
+    core[:hp, :wp] = np.kron(lvl, dot)
+    g = Image.fromarray((core * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(pitch * 1.4))
+    alpha = np.clip(core + np.asarray(g, np.float32) / 255.0 * 0.6, 0, 1)
+    hi = np.clip(core - 0.6, 0, 1) * 0.5
+    rgb = np.array(rgb, np.float32)
+    col = rgb[None, None, :] + (255 - rgb)[None, None, :] * hi[:, :, None]
+    return Image.fromarray(np.dstack([col, alpha[:, :, None] * 255]).clip(0, 255).astype(np.uint8), "RGBA")
 
 
 def style_medal(mask, rgb, seed):
@@ -160,7 +187,7 @@ def main():
     for name, spec in SETS.items():
         frame, box = frames[spec["card"]]
         font = font_for(spec, box)
-        cw = cell_width(font)
+        cw = cell_width(font, spec["style"] == "dot")
         bw, bh = box[2] - box[0], box[3] - box[1]
         cx = box[0] + spec["cx"] * bw
         by = box[1] + spec["base"] * bh
@@ -168,7 +195,9 @@ def main():
             for slot in range(7):
                 x = cx + (slot - 3) * cw / 2
                 m = glyph_mask(frame.size, font, GLYPHS[g], x, by)
-                if spec["style"] == "crt":
+                if spec["style"] == "dot":
+                    lay = style_dot(m, spec["rgb"], spec["pitch"])
+                elif spec["style"] == "crt":
                     lay = style_crt(m, spec["rgb"])
                 else:
                     lay = style_medal(m, spec["rgb"], seed=gi * 7 + slot)
