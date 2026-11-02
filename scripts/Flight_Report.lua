@@ -1,4 +1,6 @@
--- Flight_Report | v1.1.0
+-- Flight_Report | v1.1.1
+-- v1.1.1: long-grade glyph names "dash" / "dot" (make_report_cards.py >= v1.4.1); "d" / "m" collided with D / M
+--         on case-insensitive file systems.
 -- v1.1.0 (Onur 2026-11-02): LSO box shows AIRBOSS's long grade (grade.details, upper-cased, word-wrapped on a
 --         LX_ROWS x LX_COLS character grid, lx_<glyph>_<k>.png) under the grade word; badges centred under the
 --         card (n badges on half-pitch positions BADGE_SLOTS-n, +2, ...; achievements first, then demerits);
@@ -37,7 +39,7 @@ local TRT = _G.TRT
 if TRT.FlightReport then env.info("[FR] already loaded, second copy ignored") return end
 
 local CFG = {
-    VERSION   = "1.1.0",
+    VERSION   = "1.1.1",
     PLAYER    = TRT.PLAYER_NAME or "Player_01",
     CS        = "HORNET 51",
     DIR       = "FlightReport/",
@@ -101,7 +103,7 @@ local LSO_CODE = { ["_OK_"] = "OK_U", ["OK"] = "OK", ["(OK)"] = "OKP", ["--"] = 
 -- v1.1.0 long-grade characters -> layer glyph names (make_report_cards.py LX_GLYPHS; J, Q, Z, digits: not drawn)
 local LX_GLYPH = { ["A"] = "A", ["B"] = "B", ["C"] = "C", ["D"] = "D", ["E"] = "E", ["F"] = "F", ["G"] = "G", ["H"] = "H", ["I"] = "I", ["K"] = "K", ["L"] = "L", ["M"] = "M",
     ["N"] = "N", ["O"] = "O", ["P"] = "P", ["R"] = "R", ["S"] = "S", ["T"] = "T", ["U"] = "U", ["V"] = "V", ["W"] = "W", ["X"] = "X", ["Y"] = "Y",
-    ["("] = "lp", [")"] = "rp", ["_"] = "us", ["/"] = "sl", ["\\"] = "bs", ["-"] = "m", ["."] = "d" }
+    ["("] = "lp", [")"] = "rp", ["_"] = "us", ["/"] = "sl", ["\\"] = "bs", ["-"] = "dash", ["."] = "dot" }   -- v1.1.1: not "d" / "m" (lx_D vs lx_d on Windows)
 local DISP_TXT = { [0] = "none", [1] = "Letter of Instruction", [2] = "Letter of Reprimand + FNAEB",
     [3] = "JAGMAN investigation, court-martial possible" }
 

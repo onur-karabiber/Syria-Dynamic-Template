@@ -1,4 +1,6 @@
-# make_report_cards.py | v1.4.0
+# make_report_cards.py | v1.4.1
+# v1.4.1: long-grade glyph names "dash" / "dot" (were "m" / "d": lx_m_ vs lx_M_ collide on case-insensitive
+#         file systems, found when extracting on Windows 2026-11-02).
 # v1.4.0: (Onur 2026-11-02) LSO box carries AIRBOSS's long grade: the grade word (lso_<code>.png, left) plus
 #         grade.details on a 3 x 34 character grid (lx_<glyph>_<k>.png, k = row * LX_COLS + col, glyph names
 #         in LX_GLYPHS); badges centred under the card: 15 half-pitch positions (badge_<ID>_<pos>.png,
@@ -141,7 +143,7 @@ def import_badges(src_dir):
 # v1.4.0 LSO long grade (AIRBOSS grade.details, upper-cased by Flight_Report.lua)
 LX_ROWS, LX_COLS, LX_SIZE, LX_LINE = 3, 34, 17, 20
 LX_GLYPHS = dict([(c, c) for c in "ABCDEFGHIKLMNOPRSTUVWXY"] +
-                 [("lp", "("), ("rp", ")"), ("us", "_"), ("sl", "/"), ("bs", "\\"), ("m", "-"), ("d", ".")])
+                 [("lp", "("), ("rp", ")"), ("us", "_"), ("sl", "/"), ("bs", "\\"), ("dash", "-"), ("dot", ".")])   # v1.4.1: no case-only twins of D / M (Windows)
 
 LSO = {"OK_U": ("_OK_", C_POS), "OK": ("OK", C_POS), "OKP": ("(OK)", C_AMB), "NG": ("-- NO GRADE", C_AMB),
        "C": ("CUT", C_NEG), "WO": ("WAVE-OFF", C_NEG), "B": ("BOLTER", C_NEG), "NONE": ("NO LSO GRADE", C_LABEL),
