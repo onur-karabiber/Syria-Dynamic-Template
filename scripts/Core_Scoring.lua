@@ -1,4 +1,10 @@
--- Core_Scoring | v1.4.6
+-- Core_Scoring | v1.4.7
+-- v1.4.7 (Onur, 2026-11-02): the hero's carrier landing score follows the AIRBOSS LSO grade of the trap pass
+--   instead of a flat +5: _OK_ +5, OK +4, (OK) +3, -- +2, CUT 0 (AIRBOSS's own pass points, rounded, 0..5).
+--   2026-11-02 sortie: "--" (no grade, 2.0 PT) still earned +5. The grade comes from AIRBOSS OnAfterLSOGrade
+--   (hooked here, chained; Pilot_Banter chains after it), ~6 s after S_EVENT_LAND; the award waits up to
+--   GRADE_WAIT_S after the LAND_CONFIRM_S check. No grade by then -> flat +5 as before (logged). AI / other
+--   TARGET_UNITS keep the flat +5; land-based landings keep +2.
 -- v1.4.6 (CAS (L) sortie 2026-11-02, Onur):
 --   * No kill points for a weapon released without clearance / after an abort. 2026-11-02: the GBU-12
 --     released without CLEARED HOT (-15 ROE) still earned +10 +2 for its kills (net -3). The kill handler
@@ -762,6 +768,58 @@ do
     }
     local LANDING_DONE = {}
     local LAND_CONFIRM_S = 8          -- v1.4.5
+    local GRADE_WAIT_S   = 12         -- v1.4.7: extra wait for the AIRBOSS LSO grade after the confirm
+    local LAST_GRADE     = nil        -- v1.4.7: { t, grade, points, wire } of the hero's last graded pass
+
+    -- v1.4.7: AIRBOSS LSO grade hook (chained; later hooks, e.g. Pilot_Banter, chain to this one)
+    local function hookGrade()
+        local ab = TRT.Airboss
+        if type(ab) ~= "table" then return false end
+        if ab.__trtCsGrade then return true end
+        local prev = ab.OnAfterLSOGrade
+        ab.OnAfterLSOGrade = function(self, From, Event, To, pd, grade, ...)
+            if prev then
+                local okP, errP = pcall(prev, self, From, Event, To, pd, grade, ...)
+                if not okP then env.info("[Core_Scoring] previous OnAfterLSOGrade error: " .. tostring(errP)) end
+            end
+            pcall(function()
+                if type(pd) == "table" and pd.unitname == PLAYER_NAME and type(grade) == "table" then
+                    LAST_GRADE = { t = timer.getTime(), grade = tostring(grade.grade), points = tonumber(grade.points),
+                                   wire = grade.wire }
+                    env.info(string.format("[Core_Scoring] LSO grade %s (%s PT, wire %s)", LAST_GRADE.grade,
+                        tostring(LAST_GRADE.points), tostring(LAST_GRADE.wire)))
+                end
+            end)
+        end
+        ab.__trtCsGrade = true
+        env.info("[Core_Scoring] AIRBOSS OnAfterLSOGrade hooked")
+        return true
+    end
+    if not hookGrade() then
+        timer.scheduleFunction(function() if hookGrade() then return nil end return timer.getTime() + 5 end,
+            nil, timer.getTime() + 5)
+    end
+
+    --- v1.4.7: hero carrier landing points from the LSO grade (t0 = S_EVENT_LAND time)
+    local function awardTrap(n, t0, tEnd)
+        local g = LAST_GRADE
+        if g and g.t >= t0 - 2 and g.points then
+            local pts = math.max(0, math.min(5, math.floor(g.points + 0.5)))
+            local wire = tonumber(g.wire) and string.format(", %d-wire", g.wire) or ""
+            if pts > 0 then
+                TRT.addScore(pts, string.format("Carrier landing, LSO %s%s", g.grade, wire))
+            else
+                env.info(string.format("[Core_Scoring] carrier landing, LSO %s: 0 points", g.grade))
+                trigger.action.outTextForCoalition(coalition.side.BLUE,
+                    string.format("Carrier landing, LSO %s%s: no landing points", g.grade, wire), 8, false)
+            end
+            return nil
+        end
+        if timer.getTime() < tEnd then return timer.getTime() + 1 end
+        env.info("[Core_Scoring] no LSO grade " .. GRADE_WAIT_S .. " s after the landing confirm - flat +5")
+        TRT.addScore(5, "Successful carrier landing (no LSO grade)")
+        return nil
+    end
     local PENDING = {}                -- name -> { kind, lost }
     local LEH = {}
     local EV = world.event
@@ -782,7 +840,12 @@ do
         end
         LANDING_DONE[n] = true
         if p.kind == "carrier" then
-            TRT.addScore(5, "Successful carrier landing")
+            if n == PLAYER_NAME then   -- v1.4.7: points from the LSO grade
+                local tEnd = timer.getTime() + GRADE_WAIT_S
+                timer.scheduleFunction(function() return awardTrap(n, p.t0, tEnd) end, nil, timer.getTime() + 0.1)
+            else
+                TRT.addScore(5, "Successful carrier landing")
+            end
             if TRT.onCarrierLanding then TRT.onCarrierLanding(n) end
         else
             TRT.addScore(2, "Successful land-based landing")
@@ -811,7 +874,7 @@ do
             if place and place.getCategory and place:getCategory() == Object.Category.BASE then kind = "land-based" end
         end
         if not kind then return end
-        PENDING[n] = { kind = kind, lost = false }
+        PENDING[n] = { kind = kind, lost = false, t0 = timer.getTime() }
         timer.scheduleFunction(function() confirm(n) end, nil, timer.getTime() + LAND_CONFIRM_S)
     end
     world.addEventHandler(LEH)
@@ -906,4 +969,4 @@ do
     timer.scheduleFunction(watchCaseChange, nil, timer.getTime() + 1)
 end
 
-env.info("[Core_Scoring] v1.4.6 loaded. Player unit: " .. PLAYER_NAME)
+env.info("[Core_Scoring] v1.4.7 loaded. Player unit: " .. PLAYER_NAME)
