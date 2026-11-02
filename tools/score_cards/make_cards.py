@@ -1,4 +1,9 @@
-# make_cards.py | v0.4.1
+# make_cards.py | v0.5.0
+# v0.5.0: Onur's v8 art (score_table_v8_src.png, 425x356 = the on-screen size he wants): layers at the art's
+#         native size (no scaling); Score_Display >= v1.2.6 draws them at 100 % of the image. Positions measured
+#         on v8 (corner marks: large screen x 19..311 / y 100..327, small screen x 300..412 / y 210..292).
+#         Total ink 74 px centred in the large screen (4 chars x 51..279, clear of the small screen at x >= 289),
+#         delta ink 32 px centred in the small screen; the delta's dot pitch is 2 px (3 px left ~10 dots).
 # v0.4.1: total centred in the large screen both ways (Onur 2026-11-02: it sat against the top edge): centre
 #         (437, 565) src px = middle of the corner marks; ink 200 so 4 characters (x 129..745) stay clear of the
 #         small screen (x >= 762) that overlaps the large screen's lower right.
@@ -49,9 +54,9 @@ GLYPHS = {"0": "0", "1": "1", "2": "2", "3": "3", "4": "4", "5": "5",
 # ------------------------------------------------------------------
 CARDS = {
     "crt": {
-        "src": "score_table_v7_src.png",      # v0.4.0 (crt_frame_src.png = v0.2.0 art)
-        "width": 700,
-        "box": (0, 0, 1074, 942),             # whole art: set positions below are fractions of it
+        "src": "score_table_v8_src.png",      # v0.5.0 (crt_frame_src.png = v0.2.0 art)
+        "width": 425,                         # native: no scaling
+        "box": (0, 0, 425, 356),              # whole art: set positions below are fractions of it
     },
     "med": {
         "src": "medal_frame_src.png",
@@ -62,14 +67,14 @@ CARDS = {
 
 # Digit sets: which card, glyphs, centre/height as fractions of the box.
 SETS = {
-    # v0.4.1 total: centre of the large screen (src px cx 437, baseline 665, ink 200); delta: small screen
-    # (cx 912, baseline 727, ink 72)
+    # v0.5.0 total: centre of the large screen (cx 165, baseline 250.5, ink 74); delta: small screen
+    # (cx 356, baseline 267, ink 32)
     "crt_t": dict(card="crt", glyphs="0123456789m", font="ShareTechMono-Regular.ttf",
-                  cx=437 / 1074, base=665 / 942, h=200 / 942, style="dot", pitch=4, rgb=(170, 255, 150)),
+                  cx=165 / 425, base=250.5 / 356, h=74 / 356, style="dot", pitch=3, rgb=(170, 255, 150)),
     "crt_dp": dict(card="crt", glyphs="0123456789p", font="ShareTechMono-Regular.ttf",
-                   cx=912 / 1074, base=727 / 942, h=72 / 942, style="dot", pitch=3, rgb=(170, 255, 150)),
+                   cx=356 / 425, base=267 / 356, h=32 / 356, style="dot", pitch=2, gap=0.55, rgb=(170, 255, 150)),
     "crt_dn": dict(card="crt", glyphs="0123456789m", font="ShareTechMono-Regular.ttf",
-                   cx=912 / 1074, base=727 / 942, h=72 / 942, style="dot", pitch=3, rgb=(255, 55, 35)),
+                   cx=356 / 425, base=267 / 356, h=32 / 356, style="dot", pitch=2, gap=0.55, rgb=(255, 70, 45)),
     "med_t": dict(card="med", glyphs="0123456789m", font="BlackOpsOne-Regular.ttf",
                   cx=0.50, base=0.78, h=0.58, style="medal", rgb=(140, 250, 125)),
 }
@@ -127,7 +132,7 @@ def style_crt(mask, rgb):
     return Image.fromarray(np.clip(rgbA, 0, 255).astype(np.uint8), "RGBA")
 
 
-def style_dot(mask, rgb, pitch):
+def style_dot(mask, rgb, pitch, gap=0.18):
     """v0.3.0 report-card phosphor: dot matrix (gap 1 px, grid anchored to the canvas) + glow."""
     w, h = mask.size
     m = mask.filter(ImageFilter.MaxFilter(3))                  # weight: Share Tech Mono is thin
@@ -136,8 +141,8 @@ def style_dot(mask, rgb, pitch):
     cov = a[:hp, :wp].reshape(hp // pitch, pitch, wp // pitch, pitch).mean(axis=(1, 3))
     lvl = np.clip((cov - 0.10) / 0.22, 0, 1)
     dot = np.ones((pitch, pitch), np.float32)
-    dot[-1, :] = 0.18
-    dot[:, -1] = 0.18
+    dot[-1, :] = gap                                        # v0.5.0: gap brightness per set (small digits)
+    dot[:, -1] = gap
     core = np.zeros((h, w), np.float32)
     core[:hp, :wp] = np.kron(lvl, dot)
     g = Image.fromarray((core * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(pitch * 1.4))
@@ -202,7 +207,7 @@ def main():
                 x = cx + (slot - 3) * cw / 2
                 m = glyph_mask(frame.size, font, GLYPHS[g], x, by)
                 if spec["style"] == "dot":
-                    lay = style_dot(m, spec["rgb"], spec["pitch"])
+                    lay = style_dot(m, spec["rgb"], spec["pitch"], spec.get("gap", 0.18))
                 elif spec["style"] == "crt":
                     lay = style_crt(m, spec["rgb"])
                 else:

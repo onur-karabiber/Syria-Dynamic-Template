@@ -1,5 +1,7 @@
--- Score_Display | v1.2.5
+-- Score_Display | v1.2.6
 --[[
+  v1.2.6: score card at the art's own pixel size (Onur's v8 art 425x356 is drawn the size he wants):
+          CFG.CRT size 100, units 0 (% of image; was 22 % of window). Layers from make_cards.py >= v0.5.0.
   v1.2.5: no medal card when Flight_Report.lua is loaded (TRT.FlightReport): the report card replaces it.
   v1.2.4: the TRT.addScore hook passes every argument through (Core_Scoring v1.5.0 takes a 3rd: category).
   Picture score cards (CAS (L) only; not part of the template build).
@@ -65,7 +67,7 @@
 _G.TRT = _G.TRT or {}
 local TRT = _G.TRT
 
-local VERSION = "1.2.5"
+local VERSION = "1.2.6"
 
 local CFG = {
     DIR         = "ScoreCards/",
@@ -79,7 +81,7 @@ local CFG = {
     MEDAL_DELAY = 3,                       -- s after the park result
     SOUND       = true,
     PC_OK       = true,                    -- v1.2.0: check_ok sound on detected PC steps
-    CRT         = { dur = 6,  h = 0, v = 0, size = 22, units = 1 },
+    CRT         = { dur = 6,  h = 0, v = 0, size = 100, units = 0 },   -- v1.2.6: native pixels (was 22 % of window)
     MED         = { dur = 12, h = 1, v = 1, size = 50, units = 1 },
     PC          = { dir = "PlaneCaptain/", dur = 600, h = 0, v = 0, size = 17, units = 1,   -- v1.2.3: was 24
                     -- must match tools/score_cards/out/PlaneCaptain (make_pc_cards.py IDS present)
