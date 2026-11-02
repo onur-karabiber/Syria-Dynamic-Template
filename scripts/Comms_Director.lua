@@ -1,5 +1,17 @@
--- Comms_Director | v1.7.12
+-- Comms_Director | v1.7.13
 --[[
+  v1.7.13 - CAS (L) sortie 2026-11-02/03 (Onur):
+            * WINCHESTER (JTAC_Controller >= v0.10.0): a JTAC tasking that ends DONE with targets still alive
+              (st.incomplete) counts as finished like TERMINATED: JTAC1 -> J1_OFF, JTAC2 -> J2_OFF. J2_OFF then
+              offers the INFLTREP and the AR2 tanker as usual (2026-11-02: the hero had no bomb for Eyeball's last
+              target, no menu item led out, he called "mission abort" and AR2 had no OVERLORD control). The
+              hand-off text says "checked out, Winchester"; no Bravo 2-1 "fire has stopped" call while targets
+              remain. INFLTREP: line 5 = units actually destroyed, remarks + "Mission 41xx incomplete, Winchester."
+              (clips i_rmk_inc1 / i_rmk_inc2). Time on target = check-out time when the group is not dead.
+            * Strike speed calls (warn / brass) get the pilot's "Hornet 51, wilco." (p_wilco); 2026-11-02 the
+              "Check speed" call had no answer.
+            OPEN: a Winchester at Pointer (JTAC-1) still goes to Eyeball on OVERLORD's retasking (pilot line
+            "mission 4101 complete"); with six weapons for six targets this needs four misses at Pointer.
   v1.7.12 - report card: CD.ticState.callT (timer.getTime() of the JTAC's TIC call), CD.corridorMz = true when
             Strike made the "still off the corridor" call at the Marshal hand-off.
   v1.7.11 - CAS (L) sortie 2026-11-02 (Onur):
@@ -498,10 +510,10 @@ local CFG = {
         ovl_say_status_tkr     = { ch = "OVERLORD", len = 3.50 },
         eye_abort              = { ch = "EYEBALL", len = 3.98 },
         eye_manpads            = { ch = "EYEBALL", len = 5.91 },
-        str_corridor           = { ch = "STRIKE", len = 4.99 },   -- v1.7.11 reworded
-        str_corridor_mz        = { ch = "STRIKE", len = 5.44 },   -- v1.7.11
-        str_speed              = { ch = "STRIKE", len = 4.24 },   -- v1.7.11
-        str_speed_brass        = { ch = "STRIKE", len = 4.83 },   -- v1.7.11
+        str_corridor           = { ch = "STRIKE", len = 4.99 },
+        str_corridor_mz        = { ch = "STRIKE", len = 5.44 },
+        str_speed              = { ch = "STRIKE", len = 4.24 },
+        str_speed_brass        = { ch = "STRIKE", len = 4.83 },
         p_ovl_feet_dry         = { ch = "OVERLORD", len = 2.09 },
         p_ovl_feet_wet         = { ch = "OVERLORD", len = 1.97 },
         p_ovl_picture          = { ch = "OVERLORD", len = 2.74 },
@@ -555,6 +567,8 @@ local CFG = {
         i_l5                   = { ch = "PILOT", len = 0.66 },
         i_l5b                  = { ch = "PILOT", len = 1.14 },
         i_rmk                  = { ch = "PILOT", len = 3.06 },
+        i_rmk_inc1             = { ch = "PILOT", len = 2.12 },
+        i_rmk_inc2             = { ch = "PILOT", len = 2.31 },
         p_ovl_abort_a          = { ch = "PILOT", len = 2.71 },
         ovl_abort_a            = { ch = "OVERLORD", len = 3.24 },
         p_ovl_checkin_rb       = { ch = "OVERLORD", len = 4.25 },
@@ -655,6 +669,78 @@ local CFG = {
         p_rifle                = { ch = "PILOT", len = 0.50 },
         p_bombs_away           = { ch = "PILOT", len = 0.72 },
         p_away                 = { ch = "PILOT", len = 0.47 },
+        ovl_ar1_a              = { ch = "OVERLORD", len = 2.21 },
+        o_maintain             = { ch = "OVERLORD", len = 0.52 },
+        ovl_tkr_bra            = { ch = "OVERLORD", len = 1.41 },
+        ovl_off_tkr            = { ch = "OVERLORD", len = 2.88 },
+        ovl_copy_51            = { ch = "OVERLORD", len = 1.93 },
+        p_ovl_req_tkr_a        = { ch = "PILOT", len = 2.45 },
+        p_ovl_off_tkr_a        = { ch = "PILOT", len = 2.34 },
+        p_ovl_off_tkr_b        = { ch = "PILOT", len = 1.12 },
+        p_tkr_rb_a             = { ch = "PILOT", len = 0.92 },
+        p_tkr_rb_b             = { ch = "PILOT", len = 0.86 },
+        p_tkr_init_a           = { ch = "PILOT", len = 2.76 },
+        p_tkr_init_b           = { ch = "PILOT", len = 2.32 },
+        p_request              = { ch = "PILOT", len = 0.58 },
+        p_judy                 = { ch = "PILOT", len = 1.45 },
+        tkr_init_a             = { ch = "TEXACO", len = 3.73 },
+        tkr_rcvd               = { ch = "TEXACO", len = 2.33 },
+        tkr_clear              = { ch = "TEXACO", len = 2.79 },
+        t_altimeter            = { ch = "TEXACO", len = 0.58 },
+        t_available            = { ch = "TEXACO", len = 0.51 },
+        t_point                = { ch = "TEXACO", len = 0.35 },
+        t_0                    = { ch = "TEXACO", len = 0.44 },
+        t_1                    = { ch = "TEXACO", len = 0.41 },
+        t_2                    = { ch = "TEXACO", len = 0.31 },
+        t_3                    = { ch = "TEXACO", len = 0.38 },
+        t_4                    = { ch = "TEXACO", len = 0.34 },
+        t_5                    = { ch = "TEXACO", len = 0.40 },
+        t_6                    = { ch = "TEXACO", len = 0.51 },
+        t_7                    = { ch = "TEXACO", len = 0.43 },
+        t_8                    = { ch = "TEXACO", len = 0.25 },
+        t_9                    = { ch = "TEXACO", len = 0.40 },
+        p_ovl_divb_ltag        = { ch = "PILOT", len = 3.10 },
+        p_ovl_div_ltag         = { ch = "PILOT", len = 2.11 },
+        p_ovl_divb_lcra        = { ch = "PILOT", len = 2.90 },
+        p_ovl_div_lcra         = { ch = "PILOT", len = 2.40 },
+        ovl_div_a              = { ch = "OVERLORD", len = 2.40 },
+        o_ltag                 = { ch = "OVERLORD", len = 0.49 },
+        o_lcra                 = { ch = "OVERLORD", len = 0.61 },
+        ovl_div_b_ltag         = { ch = "OVERLORD", len = 3.24 },
+        ovl_div_b_lcra         = { ch = "OVERLORD", len = 3.35 },
+        p_div_rb_ltag          = { ch = "OVERLORD", len = 2.99 },
+        p_div_rb_lcra          = { ch = "OVERLORD", len = 3.12 },
+        o_fl                   = { ch = "OVERLORD", len = 0.57 },
+        o_vector               = { ch = "OVERLORD", len = 0.42 },
+        ovl_vec_a              = { ch = "OVERLORD", len = 1.21 },
+        o_texaco               = { ch = "OVERLORD", len = 0.50 },
+        p_fl                   = { ch = "PILOT", len = 0.68 },
+        p_vector               = { ch = "PILOT", len = 0.45 },
+        p_nose_cold            = { ch = "PILOT", len = 1.79 },
+        p_51                   = { ch = "PILOT", len = 0.89 },
+        p_min_fuel             = { ch = "PILOT", len = 0.82 },
+        ovl_div_b_ltag_ank     = { ch = "OVERLORD", len = 3.56 },
+        p_div_rb_ltag_ank      = { ch = "OVERLORD", len = 2.76 },
+        p_tkr_overrun          = { ch = "PILOT", len = 2.15 },
+        p_tkr_breakaway        = { ch = "PILOT", len = 2.29 },
+        p_spokes               = { ch = "PILOT", len = 1.51 },
+        tkr_term_overrun       = { ch = "TEXACO", len = 1.76 },
+        tkr_term_bkw           = { ch = "TEXACO", len = 2.05 },
+        tkr_spokes             = { ch = "TEXACO", len = 4.22 },
+        ovl_tkr_lost_cp        = { ch = "OVERLORD", len = 5.07 },
+        ovl_tkr_lost_si        = { ch = "OVERLORD", len = 4.67 },
+        ovl_inflrep_lost       = { ch = "OVERLORD", len = 4.08 },
+        p_mud                  = { ch = "OVERLORD", len = 0.36 },
+        p_n10                  = { ch = "OVERLORD", len = 0.43 },
+        p_n15                  = { ch = "OVERLORD", len = 0.55 },
+        p_n19                  = { ch = "OVERLORD", len = 0.56 },
+        tq_rmk1                = { ch = "TEXACO", len = 1.03 },
+        tq_rmk2                = { ch = "TEXACO", len = 2.06 },
+        tq_rcvd41              = { ch = "TEXACO", len = 2.21 },
+        tq_rcvd42              = { ch = "TEXACO", len = 2.26 },
+        tq_ctl                 = { ch = "TEXACO", len = 0.62 },
+        a41_ack                = { ch = "TEXACO", len = 0.90 },
+        a42_ack                = { ch = "TEXACO", len = 0.76 },
         pj_n_0                 = { ch = "POINTER", len = 0.45 },
         pj_n_1                 = { ch = "POINTER", len = 0.42 },
         pj_n_2                 = { ch = "POINTER", len = 0.49 },
@@ -817,6 +903,11 @@ local CFG = {
         pj_w_local             = { ch = "POINTER", len = 0.41 },
         pj_bda_rmk             = { ch = "POINTER", len = 0.99 },
         pj_bda_end             = { ch = "POINTER", len = 2.76 },
+        pj_bda_wnc             = { ch = "POINTER", len = 2.71 },
+        pj_w_none_obs          = { ch = "POINTER", len = 0.77 },
+        pj_w_activity          = { ch = "POINTER", len = 0.70 },
+        pj_w_remaining         = { ch = "POINTER", len = 1.44 },
+        pj_bda_end_inc         = { ch = "POINTER", len = 3.17 },
         pj_nj_a                = { ch = "POINTER", len = 1.58 },
         pj_nj_bravo            = { ch = "POINTER", len = 1.18 },
         pj_nj_me               = { ch = "POINTER", len = 0.82 },
@@ -990,6 +1081,11 @@ local CFG = {
         ej_w_local             = { ch = "EYEBALL", len = 0.43 },
         ej_bda_rmk             = { ch = "EYEBALL", len = 0.93 },
         ej_bda_end             = { ch = "EYEBALL", len = 2.29 },
+        ej_bda_wnc             = { ch = "EYEBALL", len = 2.39 },
+        ej_w_none_obs          = { ch = "EYEBALL", len = 0.68 },
+        ej_w_activity          = { ch = "EYEBALL", len = 0.67 },
+        ej_w_remaining         = { ch = "EYEBALL", len = 1.33 },
+        ej_bda_end_inc         = { ch = "EYEBALL", len = 2.23 },
         ej_nj_a                = { ch = "EYEBALL", len = 1.26 },
         ej_nj_bravo            = { ch = "EYEBALL", len = 1.07 },
         ej_nj_me               = { ch = "EYEBALL", len = 0.88 },
@@ -1044,85 +1140,10 @@ local CFG = {
         jp_bda_eye             = { ch = "PILOT", len = 3.57 },
         jp_swo_ptr             = { ch = "PILOT", len = 3.12 },
         jp_swo_eye             = { ch = "PILOT", len = 3.14 },
+        jp_wnc_ptr             = { ch = "PILOT", len = 2.02 },
+        jp_wnc_eye             = { ch = "PILOT", len = 1.87 },
         ovl_rep_ptr            = { ch = "OVERLORD", len = 7.49 },
         ovl_rep_eye            = { ch = "OVERLORD", len = 7.60 },
-        ovl_ar1_a              = { ch = "OVERLORD", len = 2.21 },
-        o_maintain             = { ch = "OVERLORD", len = 0.52 },
-        ovl_tkr_bra            = { ch = "OVERLORD", len = 1.41 },
-        ovl_off_tkr            = { ch = "OVERLORD", len = 2.88 },
-        ovl_copy_51            = { ch = "OVERLORD", len = 1.93 },
-        p_mud                  = { ch = "OVERLORD", len = 0.36 },   -- v1.7.9 MUD calls
-        p_n10                  = { ch = "OVERLORD", len = 0.43 },
-        p_n15                  = { ch = "OVERLORD", len = 0.55 },
-        p_n19                  = { ch = "OVERLORD", len = 0.56 },
-        -- v1.7.10 Traffic.lua AI receivers at the tanker
-        tq_rmk1                = { ch = "TEXACO", len = 1.03 },
-        tq_rmk2                = { ch = "TEXACO", len = 2.06 },
-        tq_rcvd41              = { ch = "TEXACO", len = 2.21 },
-        tq_rcvd42              = { ch = "TEXACO", len = 2.26 },
-        tq_ctl                 = { ch = "TEXACO", len = 0.62 },
-        a41_ack                = { ch = "TEXACO", len = 0.90 },
-        a42_ack                = { ch = "TEXACO", len = 0.76 },
-        p_ovl_req_tkr_a        = { ch = "PILOT", len = 2.45 },
-        p_ovl_off_tkr_a        = { ch = "PILOT", len = 2.34 },
-        p_ovl_off_tkr_b        = { ch = "PILOT", len = 1.12 },
-        p_tkr_rb_a             = { ch = "PILOT", len = 0.92 },
-        p_tkr_rb_b             = { ch = "PILOT", len = 0.86 },
-        p_tkr_init_a           = { ch = "PILOT", len = 2.76 },
-        p_tkr_init_b           = { ch = "PILOT", len = 2.32 },
-        p_request              = { ch = "PILOT", len = 0.58 },
-        p_judy                 = { ch = "PILOT", len = 1.45 },
-        tkr_init_a             = { ch = "TEXACO", len = 3.73 },
-        tkr_rcvd               = { ch = "TEXACO", len = 2.33 },
-        tkr_clear              = { ch = "TEXACO", len = 2.79 },
-        t_altimeter            = { ch = "TEXACO", len = 0.58 },
-        t_available            = { ch = "TEXACO", len = 0.51 },
-        t_point                = { ch = "TEXACO", len = 0.35 },
-        t_0                    = { ch = "TEXACO", len = 0.44 },
-        t_1                    = { ch = "TEXACO", len = 0.41 },
-        t_2                    = { ch = "TEXACO", len = 0.31 },
-        t_3                    = { ch = "TEXACO", len = 0.38 },
-        t_4                    = { ch = "TEXACO", len = 0.34 },
-        t_5                    = { ch = "TEXACO", len = 0.40 },
-        t_6                    = { ch = "TEXACO", len = 0.51 },
-        t_7                    = { ch = "TEXACO", len = 0.43 },
-        t_8                    = { ch = "TEXACO", len = 0.25 },
-        t_9                    = { ch = "TEXACO", len = 0.40 },
-        -- v1.7.6 overrun / breakaway / spokes / tanker lost
-        p_tkr_overrun          = { ch = "PILOT", len = 2.15 },
-        p_tkr_breakaway        = { ch = "PILOT", len = 2.29 },
-        p_spokes               = { ch = "PILOT", len = 1.51 },
-        tkr_term_overrun       = { ch = "TEXACO", len = 1.76 },
-        tkr_term_bkw           = { ch = "TEXACO", len = 2.05 },
-        tkr_spokes             = { ch = "TEXACO", len = 4.22 },
-        ovl_tkr_lost_cp        = { ch = "OVERLORD", len = 5.07 },
-        ovl_tkr_lost_si        = { ch = "OVERLORD", len = 4.67 },
-        ovl_inflrep_lost       = { ch = "OVERLORD", len = 4.08 },
-        -- v1.7.4 flight level / vector / Mode 3 / ack / minimum fuel
-        o_fl                   = { ch = "OVERLORD", len = 0.57 },
-        o_vector               = { ch = "OVERLORD", len = 0.42 },
-        ovl_vec_a              = { ch = "OVERLORD", len = 1.21 },
-        o_texaco               = { ch = "OVERLORD", len = 0.50 },
-        p_fl                   = { ch = "PILOT", len = 0.68 },
-        p_vector               = { ch = "PILOT", len = 0.45 },
-        p_nose_cold            = { ch = "PILOT", len = 1.79 },
-        p_51                   = { ch = "PILOT", len = 0.89 },
-        p_min_fuel             = { ch = "PILOT", len = 0.82 },
-        -- v1.7.3 divert
-        p_ovl_divb_ltag        = { ch = "PILOT", len = 3.10 },
-        p_ovl_div_ltag         = { ch = "PILOT", len = 2.11 },
-        p_ovl_divb_lcra        = { ch = "PILOT", len = 2.90 },
-        p_ovl_div_lcra         = { ch = "PILOT", len = 2.40 },
-        ovl_div_a              = { ch = "OVERLORD", len = 2.40 },
-        o_ltag                 = { ch = "OVERLORD", len = 0.49 },
-        o_lcra                 = { ch = "OVERLORD", len = 0.61 },
-        ovl_div_b_ltag         = { ch = "OVERLORD", len = 3.24 },
-        ovl_div_b_lcra         = { ch = "OVERLORD", len = 3.35 },
-        p_div_rb_ltag          = { ch = "OVERLORD", len = 2.99 },
-        p_div_rb_lcra          = { ch = "OVERLORD", len = 3.12 },
-        -- v1.7.5 Field_Arrival hand-off
-        ovl_div_b_ltag_ank     = { ch = "OVERLORD", len = 3.56 },
-        p_div_rb_ltag_ank      = { ch = "OVERLORD", len = 2.76 },
     },
 
     -- Air picture / threat / CAP net (v1.5.0)
@@ -1327,9 +1348,17 @@ local function JcOn()
 end
 
 --- v1.6.2: JTAC_Controller terminated control of JTAC key "J1" / "J2"
+--- v1.7.13: JTAC_Controller tasking that ended with targets still alive (Winchester): { destroyed, remaining, total }
+local function JcInc(k)
+    local jc = _G.TRT and _G.TRT.JC
+    local st = jc and jc.active and jc.st and jc.st[k]
+    return (st and st.phase == "DONE" and st.incomplete) or nil
+end
+
 local function JcTerm(k)
     local jc = _G.TRT and _G.TRT.JC
-    return (jc and jc.active and jc.st and jc.st[k] and jc.st[k].phase == "TERMINATED") and true or false
+    if (jc and jc.active and jc.st and jc.st[k] and jc.st[k].phase == "TERMINATED") then return true end
+    return JcInc(k) ~= nil   -- v1.7.13 Winchester
 end
 
 --- Clip length + file for a token id. "cv:<id>" = CV_Comms clip set (TRT.CV_AUDIO).
@@ -1763,6 +1792,7 @@ function CD.speedCall(kind)
     else
         return false
     end
+    ReadBack("STRIKE", CFG.CS .. ", wilco.", "p_wilco")   -- v1.7.13
     env.info("[CD] speed call (Strike): " .. kind)
     QPlay()
     return true
@@ -2237,17 +2267,23 @@ end
 local function A_Inflrep()
     local p = Player(); if not p then return end
     CD.awaiting = true; MenuRebuild()
+    local inc1, inc2 = JcInc("J1"), JcInc("J2")   -- v1.7.13 Winchester: destroyed count, remark
+    local n1 = (inc1 and inc1.destroyed) or CD.j1.size or 0
+    local n2 = (inc2 and inc2.destroyed) or CD.j2.size or 0
+    local rmk = "Remarks, SAM activity in both target areas."
+    if inc1 then rmk = rmk .. string.format(" Mission %s incomplete, Winchester.", CFG.MSN_J1) end
+    if inc2 then rmk = rmk .. string.format(" Mission %s incomplete, Winchester.", CFG.MSN_J2) end
     Pilot(string.format("Overlord, %s, INFLTREP.\n"
         .. "Line 1, %s.\nLine 2, mission %s and %s.\nLine 3, %s and %s.\n"
-        .. "Line 4, time on target %s and %s.\nLine 5, %d and %d vehicles destroyed.\n"
-        .. "Remarks, SAM activity in both target areas.",
+        .. "Line 4, time on target %s and %s.\nLine 5, %d and %d vehicles destroyed.\n%s",
         CFG.CS, CFG.CS, CFG.MSN_J1, CFG.MSN_J2,
         CD.j1.pos and MGRS(CD.j1.pos) or "unknown", CD.j2.pos and MGRS(CD.j2.pos) or "unknown",
-        Clock(CD.j1.tot), Clock(CD.j2.tot), CD.j1.size, CD.j2.size),
+        Clock(CD.j1.tot), Clock(CD.j2.tot), n1, n2, rmk),
         S("OVERLORD", "i_head", "i_l1", "i_l2",
           "i_l3", PSpell(CD.j1.pos and MGRS(CD.j1.pos)), 0.1, "cv:p_and", PSpell(CD.j2.pos and MGRS(CD.j2.pos)), 0.25,
           "i_l4", PClock(CD.j1.tot), 0.1, "cv:p_and", PClock(CD.j2.tot), 0.25,
-          "i_l5", PD(CD.j1.size), "cv:p_and", PD(CD.j2.size), "i_l5b", "i_rmk"))
+          "i_l5", PD(n1), "cv:p_and", PD(n2), "i_l5b", "i_rmk",
+          inc1 and "i_rmk_inc1" or nil, inc2 and "i_rmk_inc2" or nil))
     -- INFLTREP is long — give it time on screen
     CD.queue[#CD.queue].dur  = CFG.DUR_LONG + 4
     CD.queue[#CD.queue].hold = 8
@@ -3064,16 +3100,26 @@ SetPhase = function(new)
         Msg("[CAS-1] All radio calls: F10 > COMMS. \"Show: next call\" lists the next step.", CFG.DUR_HANDOFF)
     elseif new == "J1_OFF" then
         local txt = "[CAS-1] Pointer 11 tasking complete. Check out, then report to OVERLORD (F10)."
+        if JcInc("J1") then   -- v1.7.13 Winchester
+            CD.j1.tot = CD.j1.tot or timer.getAbsTime()
+            txt = "[CAS-1] Checked out of Pointer 11 (Winchester, mission incomplete). Report to OVERLORD (F10)."
+        end
         if JcOn() then   -- v1.6.2: after the JTAC's BDA / termination call
             timer.scheduleFunction(function() Msg(txt, CFG.DUR_SHORT) end, nil, timer.getTime() + 8)
         else Msg(txt, CFG.DUR_SHORT) end
         TicBDA("J1")   -- v1.5.4
     elseif new == "J2_OFF" then
         local txt = "[CAS-1] Eyeball 11 tasking complete. Check out, then INFLTREP to OVERLORD (F10)."
+        local inc = JcInc("J2")   -- v1.7.13 Winchester
+        if inc then
+            CD.j2.tot = CD.j2.tot or timer.getAbsTime()
+            txt = "[CAS-1] Checked out of Eyeball 11 (Winchester, mission incomplete). INFLTREP to OVERLORD (F10)."
+            env.info(string.format("[CD] J2 Winchester: %d destroyed, %d remaining", inc.destroyed or 0, inc.remaining or 0))
+        end
         if JcOn() then
             timer.scheduleFunction(function() Msg(txt, CFG.DUR_SHORT) end, nil, timer.getTime() + 8)
         else Msg(txt, CFG.DUR_SHORT) end
-        TicBDA("J2")
+        if not inc then TicBDA("J2") end
     elseif new == "DIVERT" and CD.divert then   -- v1.7.3
         Msg("[CAS-1] " .. (NextText() or "Divert."), CFG.DUR_HANDOFF)
     elseif new == "RECOVERY" then

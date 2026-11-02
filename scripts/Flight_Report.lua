@@ -1,4 +1,12 @@
--- Flight_Report | v1.1.1
+-- Flight_Report | v1.2.0
+-- v1.2.0 (CAS (L) sortie 2026-11-02/03, Onur): the report no longer waits for S_EVENT_ENGINE_SHUTDOWN, which the
+--         Hornet fires only late in the spool-down. After a landing the engine RPM is read once a second from the
+--         export environment (LoGetEngineInfo, as PlaneCaptain_Carrier does); both engines below CFG.OFF_RPM for
+--         CFG.OFF_HOLD_S = engines off -> Deck_Park (>= v1.1.0, TRT.DeckPark.engineOff) scores the park first,
+--         the card follows CFG.SHOW_DELAY_S later. The event stays as the fallback (RPM unreadable). A takeoff
+--         after a landing disarms. The full text report is no longer put on screen when the card is drawn (it
+--         stayed 90 s in the upper right corner over the card); it is in F10 > INFO > "FLIGHT REPORT: text
+--         report" and in dcs.log. Text on screen only when no picture could be drawn.
 -- v1.1.1: long-grade glyph names "dash" / "dot" (make_report_cards.py >= v1.4.1); "d" / "m" collided with D / M
 --         on case-insensitive file systems.
 -- v1.1.0 (Onur 2026-11-02): LSO box shows AIRBOSS's long grade (grade.details, upper-cased, word-wrapped on a
@@ -15,7 +23,7 @@
     * ROE stamp (Core_Scoring disposition 1..3)
     * overall grade SIERRA HOTEL / SAT / UNSAT from penalties and key outcomes, not from the raw total
     * badges only (no points), up to 8: achievements then demerits, centred under the card
-  Shown at the hero's engine shutdown after a landing (carrier or field), at the loss of the aircraft, or from
+  Shown at engines off (v1.2.0: RPM, else S_EVENT_ENGINE_SHUTDOWN) after a landing (carrier or field), at the loss of the aircraft, or from
   F10 > INFO > "FLIGHT REPORT: end sortie". F10 > INFO > "FLIGHT REPORT: score detail" prints the ledger.
   A one-line JSON ("[FR] JSON {...}") goes to dcs.log for tools/flight_report.py (HTML report).
 
@@ -39,14 +47,17 @@ local TRT = _G.TRT
 if TRT.FlightReport then env.info("[FR] already loaded, second copy ignored") return end
 
 local CFG = {
-    VERSION   = "1.1.1",
+    VERSION   = "1.2.0",
     PLAYER    = TRT.PLAYER_NAME or "Player_01",
     CS        = "HORNET 51",
     DIR       = "FlightReport/",
     LAY       = { dur = 90, h = 1, v = 1, size = 82, units = 1 },   -- centred, 82 % of the window
     PICTURES  = true,
     SHOW_AFTER_LAND_S = 30,   -- the trap score (LSO grade) can take ~20 s after S_EVENT_LAND
-    SHOW_DELAY_S      = 5,    -- after the engine shutdown (Deck_Park scores at the shutdown)
+    SHOW_DELAY_S      = 3,    -- after engines off (Deck_Park scores at engines off)
+    OFF_RPM           = 50,   -- v1.2.0: both engines below this % RPM = engines off (F/A-18C ground idle ~63-70 %)
+    OFF_HOLD_S        = 2,    -- v1.2.0: ... for this long (one-off RPM glitch guard)
+    OFF_MIN_AFTER_LAND_S = 10,   -- v1.2.0: no RPM check in the first seconds after the landing
     LOST_DELAY_S      = 6,
     FLAG_SCORE        = 1908,
     HARD_DECK_FT      = 20000,
@@ -193,7 +204,7 @@ local function JcTasks()
     local jc = TRT.JC
     if not (jc and jc.CFG and jc.CFG.ORDER and jc.st) then return nil, nil end
     local done = 0
-    for _, k in ipairs(jc.CFG.ORDER) do if jc.st[k] and jc.st[k].phase == "DONE" then done = done + 1 end end
+    for _, k in ipairs(jc.CFG.ORDER) do if jc.st[k] and jc.st[k].phase == "DONE" and not jc.st[k].incomplete then done = done + 1 end end   -- v1.2.0 Winchester = not done
     return done, #jc.CFG.ORDER
 end
 
@@ -460,23 +471,37 @@ local function Card(R)
     for i = 1, n do
         files[#files + 1] = string.format("badge_%s_%d.png", list[i].id, CFG.BADGE_SLOTS - n + 2 * (i - 1))
     end
-    Pic("frame.png", true)
+    local drawn = Pic("frame.png", true)
     for _, f in ipairs(files) do Pic(f, false) end
-    return #files + 1
+    return #files + 1, drawn
 end
 
 function FR.show(why)
     local ok, R = pcall(FR.compute)
     if not ok then Log("compute error: " .. tostring(R)); return end
     FR.ended, FR.shown = true, FR.shown + 1
+    FR.lastR = R
     local txt = TextReport(R)
-    trigger.action.outTextForCoalition(coalition.side.BLUE, txt, CFG.LAY.dur, false)
     Log("REPORT (" .. tostring(why) .. ")\n" .. txt)
     local okJ, js = pcall(Json, R)
     if okJ then env.info("[FR] JSON " .. js) else Log("json error: " .. tostring(js)) end
-    local okC, n = pcall(Card, R)
-    Log(okC and string.format("card: %d layers", n) or ("card error: " .. tostring(n)))
+    local okC, n, drawn = pcall(Card, R)
+    Log(okC and string.format("card: %d layers%s", n, drawn and "" or " (not drawn)") or ("card error: " .. tostring(n)))
+    if not (okC and drawn) then   -- v1.2.0: text on screen only when the card could not be drawn
+        trigger.action.outTextForCoalition(coalition.side.BLUE, txt, CFG.LAY.dur, false)
+    end
     pcall(trigger.action.outSoundForCoalition, coalition.side.BLUE, "Sounds/SCORE/mission_end.ogg")
+end
+
+--- v1.2.0: the text version of the report (F10); before the end of the sortie it is a preview
+function FR.text()
+    local R = FR.lastR
+    if not R then
+        local ok, r = pcall(FR.compute)
+        if not ok then Log("compute error: " .. tostring(r)); return end
+        R = r
+    end
+    trigger.action.outTextForCoalition(coalition.side.BLUE, TextReport(R), 60, true)
 end
 
 function FR.detail()
@@ -493,6 +518,60 @@ end
 -- ══════════════════════════════════════════════════════════════
 --  EVENTS / TICK / MENU
 -- ══════════════════════════════════════════════════════════════
+-- v1.2.0 engines off: engine RPM from the export environment (the mission environment has none)
+local RPM_CODE = 'local e = LoGetEngineInfo and LoGetEngineInfo() ' ..
+                 'if e and e.RPM then return string.format("%.1f,%.1f", e.RPM.left or -1, e.RPM.right or -1) end return ""'
+local rpmOk = nil   -- nil unknown, true readable, false not readable
+local function ReadRPM()
+    if rpmOk == false or not canPic then return nil end
+    local ok, res = pcall(net.dostring_in, "export", RPM_CODE)
+    local l, r
+    if ok and type(res) == "string" then
+        l, r = res:match("([%-%d%.]+),([%-%d%.]+)")
+        l, r = tonumber(l), tonumber(r)
+    end
+    if l and r and l >= 0 and r >= 0 then
+        if rpmOk == nil then Log(string.format("RPM readable (L %.1f R %.1f)", l, r)) end
+        rpmOk = true
+        return l, r
+    end
+    if rpmOk == nil then Log("RPM not readable (" .. tostring(res) .. ") -> report at S_EVENT_ENGINE_SHUTDOWN") end
+    rpmOk = false
+    return nil
+end
+
+function FR.enginesOff(src)
+    if FR.offDone or FR.ended or not FR.land then return end
+    FR.offDone = true
+    if TRT.DeckPark and TRT.DeckPark.engineOff then   -- Deck_Park >= v1.1.0 scores the park first
+        local ok, err = pcall(TRT.DeckPark.engineOff, src)
+        if not ok then Log("Deck_Park engineOff error: " .. tostring(err)) end
+    end
+    local wait = math.max(CFG.SHOW_DELAY_S, CFG.SHOW_AFTER_LAND_S - (timer.getTime() - FR.land.t))
+    Log(string.format("engines off (%s) after a %s landing -> report in %.0f s", src, FR.land.kind, wait))
+    timer.scheduleFunction(function() if not FR.ended then FR.show("engines off, " .. src) end end, nil,
+        timer.getTime() + wait)
+end
+
+local function RpmTick()
+    if not FR.land or FR.ended or FR.offDone then return end
+    if timer.getTime() - FR.land.t < CFG.OFF_MIN_AFTER_LAND_S then return end
+    local u = Hero()
+    if not u then return end
+    local okA, air = pcall(u.inAir, u)
+    if okA and air then FR.offT = nil; return end
+    local l, r = ReadRPM()
+    if not l then return end
+    if l < CFG.OFF_RPM and r < CFG.OFF_RPM then
+        FR.offT = FR.offT or timer.getTime()
+        if timer.getTime() - FR.offT >= CFG.OFF_HOLD_S then
+            FR.enginesOff(string.format("RPM L %.0f R %.0f %%", l, r))
+        end
+    else
+        FR.offT = nil
+    end
+end
+
 local EV = world.event
 local LOST = { [EV.S_EVENT_CRASH] = true, [EV.S_EVENT_EJECTION] = true, [EV.S_EVENT_PILOT_DEAD] = true,
                [EV.S_EVENT_DEAD] = true }
@@ -514,10 +593,11 @@ function H:onEvent(e)
         end)
         FR.land = { kind = kind, t = timer.getTime() }
         Log("landing: " .. kind)
+    elseif e.id == EV.S_EVENT_TAKEOFF then   -- v1.2.0: a takeoff after a landing disarms
+        if FR.land and not FR.ended then Log("takeoff after the landing -> disarmed") end
+        if not FR.ended then FR.land, FR.offT, FR.offDone = nil, nil, false end
     elseif e.id == EV.S_EVENT_ENGINE_SHUTDOWN and FR.land and not FR.ended then
-        local wait = math.max(CFG.SHOW_DELAY_S, CFG.SHOW_AFTER_LAND_S - (timer.getTime() - FR.land.t))
-        Log(string.format("engine shutdown after a %s landing -> report in %.0f s", FR.land.kind, wait))
-        timer.scheduleFunction(function() FR.show("engine shutdown") end, nil, timer.getTime() + wait)
+        FR.enginesOff("S_EVENT_ENGINE_SHUTDOWN")
     elseif LOST[e.id] and not FR.lost and not FR.ended then
         local air = true
         pcall(function() air = e.initiator:inAir() end)
@@ -532,7 +612,7 @@ end
 world.addEventHandler(H)
 
 timer.scheduleFunction(function(_, t)
-    pcall(HookBankler); pcall(HookJC); pcall(HardDeckTick)
+    pcall(HookBankler); pcall(HookJC); pcall(HardDeckTick); pcall(RpmTick)
     return t + 1
 end, nil, timer.getTime() + 2)
 
@@ -540,6 +620,7 @@ local function InfoItems()
     return {
         { "FLIGHT REPORT: end sortie (show report)", function() FR.show("F10") end },
         { "FLIGHT REPORT: score detail", function() FR.detail() end },
+        { "FLIGHT REPORT: text report", function() FR.text() end },
     }
 end
 if TRT.Menu and TRT.Menu.Register then

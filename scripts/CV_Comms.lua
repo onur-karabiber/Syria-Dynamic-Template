@@ -1,4 +1,5 @@
--- CV_Comms | v1.7.7
+-- CV_Comms | v1.7.8
+-- v1.7.8: (CAS (L) sortie 2026-11-02/03) Marshal / Approach speed calls get the pilot's "<modex>, wilco." (p_wilco).
 -- v1.7.7: (scoring review 2026-11-02, Onur) CV_Comms is the only module grading the marshal fix and the hold
 --         (Recovery_Approach v1.1.0 dropped Initial Fix / Holding duration). A missing report no longer avoids the
 --         penalty: commencing (F10 or AIRBOSS releasing the hero from the stack, step past Holding/Commencing)
@@ -766,7 +767,9 @@ function CV.speedCall(kind)
         and string.format("%s, %s. Check speed. Three fifty knots maximum%s.", m,
             (who == "MARSHAL") and "Marshal" or "Approach", (who == "MARSHAL") and " in the marshal zone" or "")
         or string.format("%s, you are still fast. Slow to three fifty knots now. That goes in the debrief.", m)
-    Q(who, who, Seq(D(v, m), CFG.P, v .. "_spd_" .. kind), text, nil, 0.3)
+    Q(who, who, Seq(D(v, m), CFG.P, v .. "_spd_" .. kind), text, function()   -- v1.7.8 pilot acknowledges
+        Pilot(who, Seq(D("p", m), CFG.P, "p_wilco"), string.format("%s, wilco.", m))
+    end, 0.3)
     Log("speed call (" .. who .. "): " .. kind)
     return true
 end

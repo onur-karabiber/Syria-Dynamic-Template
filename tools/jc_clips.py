@@ -1,4 +1,6 @@
-# jc_clips.py | v1.1.0
+# jc_clips.py | v1.2.0
+# v1.2.0: Winchester check-out (JTAC_Controller v0.10.0): bda_wnc, w_activity, w_none_obs, w_remaining, bda_end_inc,
+#         pilot jp_wnc_ptr / jp_wnc_eye.
 # v1.1.0: pilot BDA / termination acknowledgements (jp_bda_*, jp_swo_*) for JTAC_Controller v0.8.0.
 # Voice for JTAC_Controller (>= v0.7.0): ONE source for the clip list and the runtime dictionary.
 #   python tools/jc_clips.py            writes the JC rows into tts/clips.csv (block "# BEGIN JC" .. "# END JC")
@@ -145,6 +147,12 @@ JP = {
     "w_local": ("local", "local."),
     "bda_rmk": ("remarks mission", "Remarks, mission"),
     "bda_end": ("successful cleared to depart return to overlord", "successful. Cleared to depart, return to Overlord."),
+    # v1.2.0 (JTAC_Controller v0.10.0): Winchester, partial BDA
+    "bda_wnc": ("copy winchester bda size", "copy Winchester. B D A. Size,"),
+    "w_none_obs": ("none observed", "none observed."),
+    "w_activity": ("activity", "Activity,"),
+    "w_remaining": ("remaining location", "remaining. Location,"),
+    "bda_end_inc": ("not complete cleared to depart return to overlord", "not complete. Cleared to depart, return to Overlord."),
     "nj_a": ("hornet 51 target is the", "Hornet five one, target is the"),
     "nj_bravo": ("from bravo 2-1", "From Bravo two one,"),
     "nj_me": ("from my position", "From my position,"),
@@ -202,6 +210,9 @@ PILOT = {   # id -> (written key, spoken)
     "jp_bda_eye": ("eyeball 11 hornet 51 copy bda switching overlord", "Eyeball one one, Hornet five one, copy B D A, switching Overlord."),
     "jp_swo_ptr": ("pointer 11 hornet 51 copy switching overlord", "Pointer one one, Hornet five one, copy, switching Overlord."),
     "jp_swo_eye": ("eyeball 11 hornet 51 copy switching overlord", "Eyeball one one, Hornet five one, copy, switching Overlord."),
+    # v1.2.0 (JTAC_Controller v0.10.0): Winchester
+    "jp_wnc_ptr": ("pointer 11 hornet 51 winchester", "Pointer one one, Hornet five one, Winchester."),
+    "jp_wnc_eye": ("eyeball 11 hornet 51 winchester", "Eyeball one one, Hornet five one, Winchester."),
 }
 OVL = {
     "ovl_rep_ptr": ("hornet 51 overlord pointer 11 reports an unauthorized weapons release the incident has been "

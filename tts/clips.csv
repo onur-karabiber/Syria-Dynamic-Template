@@ -81,6 +81,8 @@ i_l4;PILOT;Line four, time on target,;tok:0.1
 i_l5;PILOT;Line five,;tok:0.1
 i_l5b;PILOT;vehicles destroyed.;tok:0.2
 i_rmk;PILOT;Remarks, Sam activity in both target areas.;tok
+i_rmk_inc1;PILOT;Mission four one zero one incomplete, Winchester.;tok
+i_rmk_inc2;PILOT;Mission four one zero two incomplete, Winchester.;tok
 # ── v1.4.2: mission abort / RTB from any mission phase
 p_ovl_abort_a;PILOT;Overlord, Hornet five one, mission abort, RTB,;tok:0.1
 ovl_abort_a;OVERLORD;Hornet five one, Overlord, copy abort. RTB approved.;tok:0.15
@@ -187,6 +189,85 @@ p_rel_eye;PILOT>EYEBALL;Eyeball one one, Hornet five one,;tok:0.08
 p_rifle;PILOT;rifle.;tok:0.1
 p_bombs_away;PILOT;bombs away.;tok
 p_away;PILOT;away.;tok
+# v1.7.0 Comms_Director EMCON 2 tanker RV (aar-plan s.9 v2). Token clips, chained at runtime.
+ovl_ar1_a;OVERLORD;Hornet five one, Overlord, Texaco one one;tok:0.05
+o_maintain;OVERLORD;maintain;tok
+ovl_tkr_bra;OVERLORD;Hornet five one, Texaco;tok:0.05
+ovl_off_tkr;OVERLORD;Hornet five one, Overlord, copy. Proceed C P Tiger,;tok:0.05
+ovl_copy_51;OVERLORD;Hornet five one, Overlord, copy.;tok
+p_ovl_req_tkr_a;PILOT;Overlord, Hornet five one, request Texaco,;tok:0.1
+p_ovl_off_tkr_a;PILOT;Overlord, Hornet five one, off Texaco,;tok:0.1
+p_ovl_off_tkr_b;PILOT;proceeding C P Tiger.;tok
+p_tkr_rb_a;PILOT;Hornet five one,;tok:0.1
+p_tkr_rb_b;PILOT;push button seven.;tok
+p_tkr_init_a;PILOT;Texaco one one, Hornet five one, flight level;tok
+p_tkr_init_b;PILOT;TACAN two one Yankee, Mode three;tok
+p_request;PILOT;request;tok
+p_judy;PILOT;Hornet five one, Judy.;tok
+tkr_init_a;TEXACO;Hornet five one, Texaco one one, R V Alpha, flight level;tok
+tkr_rcvd;TEXACO;Hornet five one, Texaco one one, you received;tok
+tkr_clear;TEXACO;Hornet five one, Texaco one one, clear to leave.;tok
+t_altimeter;TEXACO;altimeter;tok
+t_available;TEXACO;available.;tok
+t_point;TEXACO;point;tok
+t_0;TEXACO;zero;tok
+t_1;TEXACO;one;tok
+t_2;TEXACO;two;tok
+t_3;TEXACO;three;tok
+t_4;TEXACO;four;tok
+t_5;TEXACO;five;tok
+t_6;TEXACO;six;tok
+t_7;TEXACO;seven;tok
+t_8;TEXACO;eight;tok
+t_9;TEXACO;niner;tok
+# v1.7.3 OVERLORD divert branch (Incirlik written "Injirlik" so Piper says the Turkish c = j)
+p_ovl_divb_ltag;PILOT;Overlord, Hornet five one, bingo, diverting Injirlik,;tok:0.1
+p_ovl_div_ltag;PILOT;Overlord, Hornet five one, diverting Injirlik,;tok:0.1
+p_ovl_divb_lcra;PILOT;Overlord, Hornet five one, bingo, diverting Akrotiri,;tok:0.1
+p_ovl_div_lcra;PILOT;Overlord, Hornet five one, diverting Akrotiri,;tok:0.1
+ovl_div_a;OVERLORD;Hornet five one, Overlord, copy divert.;tok:0.15
+o_ltag;OVERLORD;Injirlik;tok
+o_lcra;OVERLORD;Akrotiri;tok
+ovl_div_b_ltag;OVERLORD;Proceed direct. Contact Injirlik tower, three six zero decimal one.;tok
+ovl_div_b_lcra;OVERLORD;Proceed direct. Contact Akrotiri tower, two five two decimal zero.;tok
+p_div_rb_ltag;PILOT>OVERLORD;Hornet five one, proceeding direct, switching Injirlik tower.;tok
+p_div_rb_lcra;PILOT>OVERLORD;Hornet five one, proceeding direct, switching Akrotiri tower.;tok
+# v1.7.4 AAR calls vs ATP-56 (flight level, RV Alpha vector, Mode 3, clear-to-leave ack) and divert minimum fuel
+o_fl;OVERLORD;flight level;tok
+o_vector;OVERLORD;vector;tok
+ovl_vec_a;OVERLORD;Hornet five one, vector;tok:0.05
+o_texaco;OVERLORD;Texaco;tok
+p_fl;PILOT;flight level;tok
+p_vector;PILOT;vector;tok
+p_nose_cold;PILOT;nose cold, switches safe,;tok:0.1
+p_51;PILOT;Hornet five one.;tok
+p_min_fuel;PILOT;minimum fuel,;tok:0.1
+# v1.7.5 divert to Incirlik via Field_Arrival (Ankara Control hand-off)
+ovl_div_b_ltag_ank;OVERLORD;Proceed direct. Contact Ankara Control, two four zero decimal eight.;tok
+p_div_rb_ltag_ank;PILOT>OVERLORD;Hornet five one, proceeding direct, switching Ankara.;tok
+# v1.7.6 AAR branch calls (overrun / breakaway / spokes) and tanker loss
+p_tkr_overrun;PILOT;Texaco one one, execute overrun.;tok
+p_tkr_breakaway;PILOT;Texaco one one, breakaway, breakaway, breakaway.;tok
+p_spokes;PILOT;Hornet five one, spokes.;tok
+tkr_term_overrun;TEXACO;Hornet five one, terminate overrun.;tok
+tkr_term_bkw;TEXACO;Hornet five one, terminate emergency separation.;tok
+tkr_spokes;TEXACO;Hornet five one, Texaco one one, copy spokes. Disconnect, check engine instruments.;tok
+ovl_tkr_lost_cp;OVERLORD;Hornet five one, Overlord, Texaco one one is off station, no tanker available. Proceed C P Tiger.;tok
+ovl_tkr_lost_si;OVERLORD;Hornet five one, Overlord, Texaco one one is off station, no tanker available. Say intentions.;tok
+ovl_inflrep_lost;OVERLORD;Hornet five one, Overlord, copy INFLTREP. No tanker available. Say intentions.;tok
+# v1.7.9 MUD calls (RWR ground threat): "Hornet five one, mud <type>, <bearing>" = jp_cs + p_mud + type + cv:p_ digits
+p_mud;PILOT>OVERLORD;mud;tok
+p_n10;PILOT>OVERLORD;ten;tok
+p_n15;PILOT>OVERLORD;fifteen;tok
+p_n19;PILOT>OVERLORD;nineteen;tok
+# Traffic.lua v1.0.0 / CD v1.7.10: AI receivers at the tanker (TEXACO remark at RV Alpha, their post-AAR calls)
+tq_rmk1;TEXACO;One receiver ahead of you.;tok
+tq_rmk2;TEXACO;Two receivers ahead of you, join echelon left.;tok
+tq_rcvd41;TEXACO;Hornet four one, Texaco one one, you received;tok
+tq_rcvd42;TEXACO;Hornet four two, Texaco one one, you received;tok
+tq_ctl;TEXACO;Clear to leave.;tok
+a41_ack;AI41>TEXACO;Hornet four one.;tok
+a42_ack;AI42>TEXACO;Hornet four two.;tok
 # BEGIN JC (tools/jc_clips.py)
 pj_n_0;POINTER_JC>POINTER;zero;tok
 pj_n_1;POINTER_JC>POINTER;one;tok
@@ -350,6 +431,11 @@ pj_w_time;POINTER_JC>POINTER;Time,;tok:0.1
 pj_w_local;POINTER_JC>POINTER;local.;tok
 pj_bda_rmk;POINTER_JC>POINTER;Remarks, mission;tok
 pj_bda_end;POINTER_JC>POINTER;successful. Cleared to depart, return to Overlord.;tok
+pj_bda_wnc;POINTER_JC>POINTER;copy Winchester. B D A. Size,;tok:0.1
+pj_w_none_obs;POINTER_JC>POINTER;none observed.;tok
+pj_w_activity;POINTER_JC>POINTER;Activity,;tok:0.1
+pj_w_remaining;POINTER_JC>POINTER;remaining. Location,;tok:0.1
+pj_bda_end_inc;POINTER_JC>POINTER;not complete. Cleared to depart, return to Overlord.;tok
 pj_nj_a;POINTER_JC>POINTER;Hornet five one, target is the;tok
 pj_nj_bravo;POINTER_JC>POINTER;From Bravo two one,;tok:0.1
 pj_nj_me;POINTER_JC>POINTER;From my position,;tok:0.1
@@ -523,6 +609,11 @@ ej_w_time;EYEBALL;Time,;tok:0.1
 ej_w_local;EYEBALL;local.;tok
 ej_bda_rmk;EYEBALL;Remarks, mission;tok
 ej_bda_end;EYEBALL;successful. Cleared to depart, return to Overlord.;tok
+ej_bda_wnc;EYEBALL;copy Winchester. B D A. Size,;tok:0.1
+ej_w_none_obs;EYEBALL;none observed.;tok
+ej_w_activity;EYEBALL;Activity,;tok:0.1
+ej_w_remaining;EYEBALL;remaining. Location,;tok:0.1
+ej_bda_end_inc;EYEBALL;not complete. Cleared to depart, return to Overlord.;tok
 ej_nj_a;EYEBALL;Hornet five one, target is the;tok
 ej_nj_bravo;EYEBALL;From Bravo two one,;tok:0.1
 ej_nj_me;EYEBALL;From my position,;tok:0.1
@@ -577,85 +668,8 @@ jp_bda_ptr;PILOT;Pointer one one, Hornet five one, copy B D A, switching Overlor
 jp_bda_eye;PILOT;Eyeball one one, Hornet five one, copy B D A, switching Overlord.;tok
 jp_swo_ptr;PILOT;Pointer one one, Hornet five one, copy, switching Overlord.;tok
 jp_swo_eye;PILOT;Eyeball one one, Hornet five one, copy, switching Overlord.;tok
+jp_wnc_ptr;PILOT;Pointer one one, Hornet five one, Winchester.;tok
+jp_wnc_eye;PILOT;Eyeball one one, Hornet five one, Winchester.;tok
 ovl_rep_ptr;OVERLORD;Hornet five one, Overlord. Pointer one one reports an unauthorized weapons release. The incident has been reported to CAG. Report to CAG on recovery.;tok
 ovl_rep_eye;OVERLORD;Hornet five one, Overlord. Eyeball one one reports an unauthorized weapons release. The incident has been reported to CAG. Report to CAG on recovery.;tok
 # END JC
-# v1.7.0 Comms_Director EMCON 2 tanker RV (aar-plan s.9 v2). Token clips, chained at runtime.
-ovl_ar1_a;OVERLORD;Hornet five one, Overlord, Texaco one one;tok:0.05
-o_maintain;OVERLORD;maintain;tok
-ovl_tkr_bra;OVERLORD;Hornet five one, Texaco;tok:0.05
-ovl_off_tkr;OVERLORD;Hornet five one, Overlord, copy. Proceed C P Tiger,;tok:0.05
-ovl_copy_51;OVERLORD;Hornet five one, Overlord, copy.;tok
-p_ovl_req_tkr_a;PILOT;Overlord, Hornet five one, request Texaco,;tok:0.1
-p_ovl_off_tkr_a;PILOT;Overlord, Hornet five one, off Texaco,;tok:0.1
-p_ovl_off_tkr_b;PILOT;proceeding C P Tiger.;tok
-p_tkr_rb_a;PILOT;Hornet five one,;tok:0.1
-p_tkr_rb_b;PILOT;push button seven.;tok
-p_tkr_init_a;PILOT;Texaco one one, Hornet five one, flight level;tok
-p_tkr_init_b;PILOT;TACAN two one Yankee, Mode three;tok
-p_request;PILOT;request;tok
-p_judy;PILOT;Hornet five one, Judy.;tok
-tkr_init_a;TEXACO;Hornet five one, Texaco one one, R V Alpha, flight level;tok
-tkr_rcvd;TEXACO;Hornet five one, Texaco one one, you received;tok
-tkr_clear;TEXACO;Hornet five one, Texaco one one, clear to leave.;tok
-t_altimeter;TEXACO;altimeter;tok
-t_available;TEXACO;available.;tok
-t_point;TEXACO;point;tok
-t_0;TEXACO;zero;tok
-t_1;TEXACO;one;tok
-t_2;TEXACO;two;tok
-t_3;TEXACO;three;tok
-t_4;TEXACO;four;tok
-t_5;TEXACO;five;tok
-t_6;TEXACO;six;tok
-t_7;TEXACO;seven;tok
-t_8;TEXACO;eight;tok
-t_9;TEXACO;niner;tok
-# v1.7.3 OVERLORD divert branch (Incirlik written "Injirlik" so Piper says the Turkish c = j)
-p_ovl_divb_ltag;PILOT;Overlord, Hornet five one, bingo, diverting Injirlik,;tok:0.1
-p_ovl_div_ltag;PILOT;Overlord, Hornet five one, diverting Injirlik,;tok:0.1
-p_ovl_divb_lcra;PILOT;Overlord, Hornet five one, bingo, diverting Akrotiri,;tok:0.1
-p_ovl_div_lcra;PILOT;Overlord, Hornet five one, diverting Akrotiri,;tok:0.1
-ovl_div_a;OVERLORD;Hornet five one, Overlord, copy divert.;tok:0.15
-o_ltag;OVERLORD;Injirlik;tok
-o_lcra;OVERLORD;Akrotiri;tok
-ovl_div_b_ltag;OVERLORD;Proceed direct. Contact Injirlik tower, three six zero decimal one.;tok
-ovl_div_b_lcra;OVERLORD;Proceed direct. Contact Akrotiri tower, two five two decimal zero.;tok
-p_div_rb_ltag;PILOT>OVERLORD;Hornet five one, proceeding direct, switching Injirlik tower.;tok
-p_div_rb_lcra;PILOT>OVERLORD;Hornet five one, proceeding direct, switching Akrotiri tower.;tok
-# v1.7.4 AAR calls vs ATP-56 (flight level, RV Alpha vector, Mode 3, clear-to-leave ack) and divert minimum fuel
-o_fl;OVERLORD;flight level;tok
-o_vector;OVERLORD;vector;tok
-ovl_vec_a;OVERLORD;Hornet five one, vector;tok:0.05
-o_texaco;OVERLORD;Texaco;tok
-p_fl;PILOT;flight level;tok
-p_vector;PILOT;vector;tok
-p_nose_cold;PILOT;nose cold, switches safe,;tok:0.1
-p_51;PILOT;Hornet five one.;tok
-p_min_fuel;PILOT;minimum fuel,;tok:0.1
-# v1.7.5 divert to Incirlik via Field_Arrival (Ankara Control hand-off)
-ovl_div_b_ltag_ank;OVERLORD;Proceed direct. Contact Ankara Control, two four zero decimal eight.;tok
-p_div_rb_ltag_ank;PILOT>OVERLORD;Hornet five one, proceeding direct, switching Ankara.;tok
-# v1.7.6 AAR branch calls (overrun / breakaway / spokes) and tanker loss
-p_tkr_overrun;PILOT;Texaco one one, execute overrun.;tok
-p_tkr_breakaway;PILOT;Texaco one one, breakaway, breakaway, breakaway.;tok
-p_spokes;PILOT;Hornet five one, spokes.;tok
-tkr_term_overrun;TEXACO;Hornet five one, terminate overrun.;tok
-tkr_term_bkw;TEXACO;Hornet five one, terminate emergency separation.;tok
-tkr_spokes;TEXACO;Hornet five one, Texaco one one, copy spokes. Disconnect, check engine instruments.;tok
-ovl_tkr_lost_cp;OVERLORD;Hornet five one, Overlord, Texaco one one is off station, no tanker available. Proceed C P Tiger.;tok
-ovl_tkr_lost_si;OVERLORD;Hornet five one, Overlord, Texaco one one is off station, no tanker available. Say intentions.;tok
-ovl_inflrep_lost;OVERLORD;Hornet five one, Overlord, copy INFLTREP. No tanker available. Say intentions.;tok
-# v1.7.9 MUD calls (RWR ground threat): "Hornet five one, mud <type>, <bearing>" = jp_cs + p_mud + type + cv:p_ digits
-p_mud;PILOT>OVERLORD;mud;tok
-p_n10;PILOT>OVERLORD;ten;tok
-p_n15;PILOT>OVERLORD;fifteen;tok
-p_n19;PILOT>OVERLORD;nineteen;tok
-# Traffic.lua v1.0.0 / CD v1.7.10: AI receivers at the tanker (TEXACO remark at RV Alpha, their post-AAR calls)
-tq_rmk1;TEXACO;One receiver ahead of you.;tok
-tq_rmk2;TEXACO;Two receivers ahead of you, join echelon left.;tok
-tq_rcvd41;TEXACO;Hornet four one, Texaco one one, you received;tok
-tq_rcvd42;TEXACO;Hornet four two, Texaco one one, you received;tok
-tq_ctl;TEXACO;Clear to leave.;tok
-a41_ack;AI41>TEXACO;Hornet four one.;tok
-a42_ack;AI42>TEXACO;Hornet four two.;tok

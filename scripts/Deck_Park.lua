@@ -1,4 +1,7 @@
--- Deck_Park | v1.0.0
+-- Deck_Park | v1.1.0
+-- v1.1.0 (2026-11-03): TRT.DeckPark.engineOff(src) - Flight_Report >= v1.2.0 calls it when both engines drop
+--   below its RPM threshold (the Hornet fires S_EVENT_ENGINE_SHUTDOWN late in the spool-down), so the park
+--   is scored before the report card. The event stays as the fallback; whichever comes first scores, once.
 -- TRT Syria Recovery Framework - post-trap deck parking score.
 --
 -- Rule (single-player, hero = TRT.PLAYER_NAME, default "Player_01"):
@@ -34,7 +37,7 @@
 ----------------------------------------------------------------
 -- CONFIG
 ----------------------------------------------------------------
-local VERSION = "v1.0.0"
+local VERSION = "v1.1.0"
 local TAG     = "[Deck_Park " .. VERSION .. "] "
 
 local CFG = {
@@ -160,6 +163,38 @@ local function finishIncomplete(why)
 end
 
 ----------------------------------------------------------------
+-- ENGINES OFF (event or Flight_Report RPM, v1.1.0) - first one scores
+----------------------------------------------------------------
+local function engineOff(u, src)
+    nShutdown = nShutdown + 1
+    local d, f, s = measure(u)
+    log(string.format("ENGINES OFF #%d (%s) t=%.1f state=%d  ac fwd %s stbd %s  dist-to-spot %s m",
+        nShutdown, src, timer.getTime(), state,
+        f and string.format("%.1f", f) or "?", s and string.format("%.1f", s) or "?",
+        d and string.format("%.1f", d) or "?"))
+    if state ~= ST_ARMED then return end
+    if not d then log("carrier not found at shutdown - no result"); return end
+
+    state = ST_DONE
+    if d <= SPOT.r then
+        trigger.action.setUserFlag(CFG.FLAG_RESULT, 1)
+        score(CFG.PARK_PTS, "Deck park: shut down in assigned spot")
+    else
+        trigger.action.setUserFlag(CFG.FLAG_RESULT, 2)
+        score(0, string.format("Deck park: shut down outside assigned spot (%.0f m off)", d))
+    end
+end
+
+TRT.DeckPark = {
+    version = VERSION,
+    engineOff = function(src)
+        if not SPOT then return end
+        local u = Unit.getByName(PLAYER)
+        if u and u:isExist() then engineOff(u, src or "external") end
+    end,
+}
+
+----------------------------------------------------------------
 -- EVENTS
 ----------------------------------------------------------------
 local EV = world.event
@@ -190,23 +225,7 @@ function H:onEvent(e)
         if state ~= ST_DONE then state = ST_IDLE end
 
     elseif e.id == EV.S_EVENT_ENGINE_SHUTDOWN then
-        nShutdown = nShutdown + 1
-        local d, f, s = measure(u)
-        log(string.format("ENGINE_SHUTDOWN #%d t=%.1f state=%d  ac fwd %s stbd %s  dist-to-spot %s m",
-            nShutdown, timer.getTime(), state,
-            f and string.format("%.1f", f) or "?", s and string.format("%.1f", s) or "?",
-            d and string.format("%.1f", d) or "?"))
-        if state ~= ST_ARMED then return end
-        if not d then log("carrier not found at shutdown - no result"); return end
-
-        state = ST_DONE
-        if d <= SPOT.r then
-            trigger.action.setUserFlag(CFG.FLAG_RESULT, 1)
-            score(CFG.PARK_PTS, "Deck park: shut down in assigned spot")
-        else
-            trigger.action.setUserFlag(CFG.FLAG_RESULT, 2)
-            score(0, string.format("Deck park: shut down outside assigned spot (%.0f m off)", d))
-        end
+        engineOff(u, "S_EVENT_ENGINE_SHUTDOWN")
 
     elseif state == ST_ARMED then
         if e.id == EV.S_EVENT_PLAYER_LEAVE_UNIT then finishIncomplete("left the aircraft before shutdown")

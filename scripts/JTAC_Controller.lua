@@ -1,5 +1,14 @@
--- JTAC_Controller | v0.9.1
+-- JTAC_Controller | v0.10.0
 --[[
+  v0.10.0 (CAS (L) sortie 2026-11-02/03, Onur): WINCHESTER. A miss at Pointer cost a weapon, Eyeball's last target
+    had nothing left for it, and the menu had no way out (no check-out, no INFLTREP, no AR2). Now, in ATTACK, when
+    the hero has no air-to-ground weapon left (bombs, rockets, A/G missiles except anti-radiation ones) and targets
+    are still alive, F1 is "<JTAC>: WINCHESTER (check out)" (after the OFF call of the last pass). The pilot reports
+    Winchester, the JTAC turns the laser off and gives a partial BDA (JP 3-09.3 SALT-R: destroyed units it can see,
+    the units still there as Activity, remarks "mission ..., not complete") and clears him off to Overlord; the pilot
+    acknowledges. The tasking ends DONE with st.incomplete = { destroyed, remaining, total } and events CHECKOUT +
+    DONE { incomplete = true }. Comms_Director >= v1.7.13 treats it as a finished tasking (J1_OFF / J2_OFF,
+    INFLTREP "incomplete"); Flight_Report >= v1.2.0 does not count it as a completed tasking.
   v0.9.1 (report card): RELEASE event data carries .key; JC.stats { miss } counts MISS assessments
     (Flight_Report.lua badges SHACK / TIC RESPONSE).
   v0.9.0 (scoring review 2026-11-02, Onur):
@@ -371,6 +380,7 @@ local VOICE = {
     egress = { pj = "egress north to tiger", ej = "egress northwest feet wet" },
     jtac = {   -- written key ({s} = own call sign) -> suffix (<prefix>_<suffix>)
         ["abort"] = "w_abort",
+        ["activity"] = "w_activity",
         ["activity none observed location"] = "bda_act",
         ["advise when ready for 9-line"] = "gp_end",
         ["advise when ready for remarks"] = "nl_end",
@@ -386,6 +396,7 @@ local VOICE = {
         ["caution"] = "w_caution",
         ["caution no run-in clear of"] = "rm_caution",
         ["civilian vehicle entering the target area"] = "ab_civ",
+        ["copy winchester bda size"] = "bda_wnc",
         ["destroyed"] = "w_destroyed",
         ["elevation"] = "w_elev",
         ["enemy"] = "ci_enemy",
@@ -433,6 +444,8 @@ local VOICE = {
         ["next target"] = "as_next",
         ["no artillery hazards winds on the deck"] = "ci_wind",
         ["no artillery hazards winds on the deck calm"] = "ci_calm",
+        ["none observed"] = "w_none_obs",
+        ["not complete cleared to depart return to overlord"] = "bda_end_inc",
         ["not observed"] = "w_notobs",
         ["of the target"] = "w_of_tgt",
         ["on the route to the ip"] = "rm_route",
@@ -443,6 +456,7 @@ local VOICE = {
         ["proceed to the ip via"] = "rm_via",
         ["puma"] = "ip_puma",
         ["read back"] = "w_readback",
+        ["remaining location"] = "w_remaining",
         ["remarks i have a laser no ir pointer request in with heading advise when ready for game plan"] = "ci_end",
         ["remarks mission"] = "bda_rmk",
         ["report in"] = "as_rin",
@@ -509,6 +523,7 @@ local VOICE = {
         ["eyeball 11 hornet 51 copy switching overlord"] = "jp_swo_eye",
         ["eyeball 11 hornet 51 mission"] = "jp_ci_eye",
         ["eyeball 11 hornet 51 ready to copy"] = "jp_ready_eye",
+        ["eyeball 11 hornet 51 winchester"] = "jp_wnc_eye",
         ["eyeball 11 laser on"] = "jp_lon_eye",
         ["eyeball 11 shift"] = "jp_shift_eye",
         ["final attack heading"] = "jp_fah",
@@ -535,6 +550,7 @@ local VOICE = {
         ["pointer 11 hornet 51 copy switching overlord"] = "jp_swo_ptr",
         ["pointer 11 hornet 51 mission"] = "jp_ci_ptr",
         ["pointer 11 hornet 51 ready to copy"] = "jp_ready_ptr",
+        ["pointer 11 hornet 51 winchester"] = "jp_wnc_ptr",
         ["pointer 11 laser on"] = "jp_lon_ptr",
         ["pointer 11 shift"] = "jp_shift_ptr",
         ["ready to copy remarks"] = "jp_ready_rmk",
@@ -1058,6 +1074,21 @@ local function Ordnance(u)
     return (#parts > 0) and table.concat(parts, ", ") or "no air-to-ground ordnance"
 end
 
+--- v0.10.0: number of air-to-ground weapons left (bombs, rockets, A/G missiles; no anti-radiation missiles)
+local function AgCount(u)
+    local n = 0
+    for _, a in ipairs((u and u:getAmmo()) or {}) do
+        local d = a.desc or {}
+        local tn = tostring(d.typeName or "")
+        local ag = d.category == Weapon.Category.BOMB or d.category == Weapon.Category.ROCKET
+            or (d.category == Weapon.Category.MISSILE and d.missileCategory ~= Weapon.MissileCategory.AAM)
+        if ag and not tn:find("AGM_88") and not tn:find("HARM") and not tn:find("ALARM") then
+            n = n + (a.count or 0)
+        end
+    end
+    return n
+end
+
 local function Position(u)
     local p, cp = u:getPoint(), CFG.CP.pos
     local d = NM(D2(cp, p))
@@ -1534,6 +1565,38 @@ local function A_Off(k)
     MenuRefresh()
 end
 
+--- v0.10.0: Winchester -> partial BDA -> cleared off to Overlord, tasking DONE (incomplete)
+local function A_Winchester(k)
+    local st, j = JC.st[k], J(k)
+    local alive = TargetUnits(k)
+    if st.phase ~= "ATTACK" or #alive == 0 then return end
+    Busy(k, true)
+    local lasing = st.spot ~= nil
+    LaserOff(k, "winchester")
+    PilotF(string.format("%s, %s, Winchester.", j.disp, CFG.CS))
+    local seen, unseen, ju = {}, 0, JtacUnit(k)
+    local aliveSet = {}
+    for _, u in ipairs(alive) do aliveSet[u:getName()] = true end
+    for _, s in ipairs(st.units or {}) do
+        if not aliveSet[s.name] then
+            if ju and land.isVisible(Eye(ju:getPoint()), Eye(s.pos, 2)) then seen[#seen + 1] = s.label
+            else unseen = unseen + 1 end
+        end
+    end
+    local sz = (#seen > 0) and (Word(#seen) .. " destroyed, " .. DescribeLabels(seen)) or "none observed"
+    Jtac(k, string.format("%s, %s, copy Winchester. BDA: size, %s%s. Activity, %s remaining. Location, %s. "
+        .. "Time, %s local. Remarks, mission %s, not complete. Cleared to depart, return to Overlord.", CFG.CS,
+        j.disp, sz, (unseen > 0) and string.format(", %s not observed", Word(unseen)) or "", Describe(alive),
+        st.units and st.units[1] and MGRS(st.units[1].pos) or "unknown", Clock(), j.msn), CFG.DUR.long)
+    Pilot(string.format("%s, %s, copy BDA, switching Overlord.", j.disp, CFG.CS), Free(k))
+    st.incomplete = { destroyed = #(st.units or {}) - #alive, remaining = #alive, total = #(st.units or {}) }
+    Log(string.format("WINCHESTER %s: %d destroyed (%d seen), %d remaining%s", k, st.incomplete.destroyed, #seen,
+        #alive, lasing and ", laser off" or ""))
+    Emit("CHECKOUT", { key = k, why = "winchester", destroyed = st.incomplete.destroyed, remaining = #alive })
+    Emit("DONE", { key = k, incomplete = true })
+    SetPhase(k, "DONE")
+end
+
 local function A_Corr(k, what)
     local st, j = JC.st[k], J(k)
     st.att.corr = what
@@ -1885,6 +1948,10 @@ local function Items(_)
                     { "TALLY", function() A_Corr(k, "TALLY") end },
                     { "CAPTURED", function() A_Corr(k, "CAPTURED") end },
                     { "NO JOY", function() A_Corr(k, "NO JOY") end } } })
+                -- v0.10.0: nothing left to drop -> Winchester (after the OFF call of the last pass)
+                if u and not (a.offPending or (a.inCalled and not a.released)) and AgCount(u) == 0 then
+                    add(0, { P .. "WINCHESTER (check out)", function() A_Winchester(k) end })
+                end
                 table.sort(L, function(x, y) if x[1] ~= y[1] then return x[1] < y[1] end return x[2] < y[2] end)
                 for _, e in ipairs(L) do out[#out + 1] = e[3] end
             end
