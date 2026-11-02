@@ -1,4 +1,7 @@
--- Visual_Test | v1.0.0
+-- Visual_Test | v1.1.0
+-- v1.1.0: F10 > VISUAL TEST > Scoreboard size: the scoreboard (42 / +5) at several sizes, % of image and % of
+--         window, to pick the one that looks like Onur's v8 art at its intended size (Score_Display v1.2.7 uses
+--         50 % of image). Logged as "[VTEST] size ...".
 -- Injected by tools/make_test_variant.py (--start VIS) as a "triggerOnce" DO SCRIPT. NOT part of the template
 -- build. Draws the new pictures with sample values so their look, size and layering can be checked in DCS
 -- (Onur 2026-11-02): scoreboard (Score_Display v0.3.0 art) and the report card (FlightReport v1.4.1 layers).
@@ -21,7 +24,7 @@ do
     LX["("], LX[")"], LX["_"], LX["/"], LX["\\"], LX["-"], LX["."] = "lp", "rp", "us", "sl", "bs", "dash", "dot"
 
     local function log(s) env.info("[VTEST] " .. s) end
-    log("Visual_Test v1.0.0 loaded; Flight_Report " .. (FR and tostring(FR.version) or "MISSING")
+    log("Visual_Test v1.1.0 loaded; Flight_Report " .. (FR and tostring(FR.version) or "MISSING")
         .. ", Score_Display " .. ((TRT.ScoreDisplay and TRT.ScoreDisplay.version) and tostring(TRT.ScoreDisplay.version)
         or (TRT.ScoreDisplay and "present" or "MISSING")))
 
@@ -115,6 +118,32 @@ do
         end
     end
 
+    -- v1.1.0 size picker: same layer rule as Score_Display (slot 2(i-1)-(n-1)+3, set by length)
+    local function boardAt(a)
+        local size, units = a[1], a[2]
+        local t, d = "42", "+5"
+        local files = { "ScoreCards/crt_frame.png" }
+        local function add(set, text)
+            for i = 1, #text do
+                local ch = text:sub(i, i)
+                local g = (ch == "+" and "p") or (ch == "-" and "m") or ch
+                files[#files + 1] = string.format("ScoreCards/%s_%s_%d.png", set, g, 2 * (i - 1) - (#text - 1) + 3)
+            end
+        end
+        add((#t <= 2 and "crt_t2") or (#t == 3 and "crt_t3") or "crt_t", t)
+        add("crt_dp", d)
+        local fails = 0
+        for _, f in ipairs(files) do
+            local code = string.format('a_out_picture_s(%q, %q, %d, %s, 0, "%d", "%d", %d, "%d")', "blue", f, 8,
+                "false", 0, 0, size, units)
+            local ok, res, okd = pcall(net.dostring_in, "mission", code)
+            if not ok or okd == false then fails = fails + 1; log("picture failed: " .. tostring(res)) end
+        end
+        log(string.format("size %d %% of %s: %d layers, failed %d", size, units == 0 and "image" or "window",
+            #files, fails))
+        trigger.action.outText(string.format("Scoreboard: %d %% of %s", size, units == 0 and "image" or "window"), 8)
+    end
+
     local function clear()
         pic("PlaneCaptain/blank.png", true, 1)
         log("cleared")
@@ -143,5 +172,9 @@ do
     missionCommands.addCommand("Scoreboard 42 / +5", m, board, { 42, 5 })
     missionCommands.addCommand("Scoreboard 27 / -15", m, board, { 27, -15 })
     missionCommands.addCommand("Scoreboard 147 / +120", m, board, { 147, 120 })
+    local sz = missionCommands.addSubMenu("Scoreboard size", m)
+    for _, v in ipairs({ { 30, 0 }, { 40, 0 }, { 50, 0 }, { 60, 0 }, { 75, 0 }, { 8, 1 }, { 10, 1 }, { 12, 1 }, { 14, 1 } }) do
+        missionCommands.addCommand(string.format("%d %% of %s", v[1], v[2] == 0 and "image" or "window"), sz, boardAt, v)
+    end
     missionCommands.addCommand("Clear pictures", m, clear)
 end

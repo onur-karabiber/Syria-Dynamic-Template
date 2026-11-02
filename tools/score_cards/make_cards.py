@@ -1,4 +1,7 @@
-# make_cards.py | v0.5.0
+# make_cards.py | v0.5.1
+# v0.5.1: total as large as the large screen allows (Onur 2026-11-02), one set per length, all centred on
+#         (165, 213.5) and clear of the small screen (outer edge x 287, top y 197): crt_t2 (1-2 chars, ink 149),
+#         crt_t3 (3 chars, ink 99), crt_t (4 chars, ink 76). Score_Display >= v1.2.7 picks the set by length.
 # v0.5.0: Onur's v8 art (score_table_v8_src.png, 425x356 = the on-screen size he wants): layers at the art's
 #         native size (no scaling); Score_Display >= v1.2.6 draws them at 100 % of the image. Positions measured
 #         on v8 (corner marks: large screen x 19..311 / y 100..327, small screen x 300..412 / y 210..292).
@@ -70,7 +73,11 @@ SETS = {
     # v0.5.0 total: centre of the large screen (cx 165, baseline 250.5, ink 74); delta: small screen
     # (cx 356, baseline 267, ink 32)
     "crt_t": dict(card="crt", glyphs="0123456789m", font="ShareTechMono-Regular.ttf",
-                  cx=165 / 425, base=250.5 / 356, h=74 / 356, style="dot", pitch=3, rgb=(170, 255, 150)),
+                  cx=165 / 425, base=251.5 / 356, h=76 / 356, style="dot", pitch=3, rgb=(170, 255, 150)),
+    "crt_t3": dict(card="crt", glyphs="0123456789m", font="ShareTechMono-Regular.ttf",
+                   cx=165 / 425, base=263 / 356, h=99 / 356, style="dot", pitch=3, rgb=(170, 255, 150)),
+    "crt_t2": dict(card="crt", glyphs="0123456789m", font="ShareTechMono-Regular.ttf",
+                   cx=165 / 425, base=288 / 356, h=149 / 356, style="dot", pitch=4, rgb=(170, 255, 150)),
     "crt_dp": dict(card="crt", glyphs="0123456789p", font="ShareTechMono-Regular.ttf",
                    cx=356 / 425, base=267 / 356, h=32 / 356, style="dot", pitch=2, gap=0.55, rgb=(170, 255, 150)),
     "crt_dn": dict(card="crt", glyphs="0123456789m", font="ShareTechMono-Regular.ttf",
@@ -228,9 +235,10 @@ def main():
                 im.alpha_composite(layers["%s_%s_%d.png" % (set_name, g, slot)])
         return im
 
-    compose("crt", [("crt_t", "42"), ("crt_dp", "+5")]).save(os.path.join(PREV, "crt_42_plus5.png"))
-    compose("crt", [("crt_t", "-123"), ("crt_dn", "-15")]).save(os.path.join(PREV, "crt_m123_minus15.png"))
-    compose("crt", [("crt_t", "7"), ("crt_dp", "+120")]).save(os.path.join(PREV, "crt_7_plus120.png"))
+    tset = lambda t: "crt_t2" if len(t) <= 2 else ("crt_t3" if len(t) == 3 else "crt_t")   # = Score_Display
+    for t, d, fn in (("42", "+5", "crt_42_plus5"), ("-123", "-15", "crt_m123_minus15"), ("7", "+120", "crt_7_plus120"),
+                     ("118", "+2", "crt_118_plus2")):
+        compose("crt", [(tset(t), t), ("crt_dn" if d[0] == "-" else "crt_dp", d)]).save(os.path.join(PREV, fn + ".png"))
     compose("med", [("med_t", "87")]).save(os.path.join(PREV, "med_87.png"))
     compose("med", [("med_t", "-123")]).save(os.path.join(PREV, "med_m123.png"))
 
