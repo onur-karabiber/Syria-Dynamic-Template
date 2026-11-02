@@ -1,5 +1,6 @@
--- Score_Display | v1.2.3
+-- Score_Display | v1.2.4
 --[[
+  v1.2.4: the TRT.addScore hook passes every argument through (Core_Scoring v1.5.0 takes a 3rd: category).
   Picture score cards (CAS (L) only; not part of the template build).
 
   v1.2.3: plane captain cards 30 % smaller: CFG.PC.size 24 -> 17 (% of window; Onur 2026-11-01).
@@ -63,7 +64,7 @@
 _G.TRT = _G.TRT or {}
 local TRT = _G.TRT
 
-local VERSION = "1.2.3"
+local VERSION = "1.2.4"
 
 local CFG = {
     DIR         = "ScoreCards/",
@@ -192,8 +193,8 @@ end
 ----------------------------------------------------------------
 if type(TRT.addScore) == "function" then
     local orig = TRT.addScore
-    TRT.addScore = function(delta, reason)
-        orig(delta, reason)
+    TRT.addScore = function(delta, reason, ...)
+        orig(delta, reason, ...)
         local d = tonumber(delta)
         if d and d ~= 0 then push(d) end
     end

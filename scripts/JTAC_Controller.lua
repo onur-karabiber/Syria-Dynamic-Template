@@ -1,5 +1,14 @@
--- JTAC_Controller | v0.8.1
+-- JTAC_Controller | v0.9.0
 --[[
+  v0.9.0 (scoring review 2026-11-02, Onur):
+    * ROE penalties per PASS, not per weapon: weapons released within 2 s of the first violation of a pass
+      (ripple / pairs) add no second -15 / -25 and no second violation count (a 2-bomb ripple was -40 with
+      "control terminated"). Their kills still score nothing (JC.unauthKill).
+    * Impact <= CFG.SCORE.FRIENDLY_M of friendly ground troops is no longer -30 (it hit cleared releases too):
+      it is an incident note only ("danger close", severity 0 cleared / 1 not cleared). Real friendly damage
+      is scored by Core_Scoring >= v1.5.0 (friendly fire, S_EVENT_HIT / KILL on own coalition).
+    * Incidents also go to the central registry (TRT.Score.incident); with Core_Scoring >= v1.5.0 its
+      ROE / FRIENDLY FIRE REPORT replaces this script's own landing report.
   v0.8.1 (CAS (L) sortie 2026-11-02, Onur):
     * JC.unauthKill(weapon, victim) for Core_Scoring >= v1.4.6: true when the kill came from a weapon
       released without CLEARED HOT, after an abort or after control was terminated (same weapon object,
@@ -155,7 +164,7 @@ if TRT.JC then env.info("[JC] already loaded, second copy ignored") return end
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "0.8.1",
+    VERSION      = "0.9.0",
     VOICE        = true,      -- v0.7.0 spoken transmissions (needs Comms_Director >= v1.6.4)
     PLAYER_UNIT  = "Player_01",
     CS           = "HORNET 51",
@@ -202,7 +211,7 @@ local CFG = {
     },
     -- v0.6.0: J3 penalties (live)
     SCORE = { ENABLE = true, RB_WRONG = -2, RB_CAP = -6, UNAUTH = -15, AFTER_ABORT = -25,
-              TERMINATED = -10, FRIENDLY = -30, FRIENDLY_M = 150 },
+              TERMINATED = -10, FRIENDLY_M = 150 },   -- v0.9.0 FRIENDLY -30 removed (note only)
     IP_MAX_OFF   = 45,          -- deg: pre-briefed IP run-in vs FAH centre, beyond -> keyhole IP
     KEYHOLE_NM   = 10,
     ABORT        = { challenge = "BR" },
@@ -284,11 +293,15 @@ local function Score(pts, reason)
     if TRT.addScore then pcall(TRT.addScore, pts, reason)
     else env.info(string.format("[JC] SCORE %+d %s (Core_Scoring missing)", pts, reason)) end
 end
-local function Incident(k, kind, detail)
+local SEV = { UNAUTH = 1, AFTER_ABORT = 2, TERMINATED = 2, DANGER_CLOSE = 0 }   -- v0.9.0
+local function Incident(k, kind, detail, sev)
     local t = math.floor(timer.getAbsTime()) % 86400
     JC.incidents[#JC.incidents + 1] = { t = string.format("%02d%02d", math.floor(t / 3600), math.floor((t % 3600) / 60)),
         key = k, kind = kind, detail = detail }
     env.info(string.format("[JC] INCIDENT %s %s: %s", k, kind, detail))
+    if TRT.Score and type(TRT.Score.incident) == "function" then   -- v0.9.0 central registry
+        pcall(TRT.Score.incident, kind, sev or SEV[kind] or 1, detail, "JTAC " .. tostring(k))
+    end
 end
 
 -- ══════════════════════════════════════════════════════════════
@@ -1694,9 +1707,9 @@ local function TrackWeapon(k, w, rec)
                         end
                     end
                 end
-                if nd and nd <= CFG.SCORE.FRIENDLY_M then
-                    Score(CFG.SCORE.FRIENDLY, string.format("ROE: IMPACT %d M FROM FRIENDLIES (%s)", math.floor(nd), nn))
-                    Incident(k, "FRIENDLY", string.format("%s impacted %d m from friendly unit %s", rec.type, math.floor(nd), nn))
+                if nd and nd <= CFG.SCORE.FRIENDLY_M then   -- v0.9.0: note only (no -30)
+                    Incident(k, "DANGER_CLOSE", string.format("%s impacted %d m from friendly unit %s (%s)", rec.type,
+                        math.floor(nd), nn, rec.cleared and "cleared release" or "not cleared"), rec.cleared and 0 or 1)
                 end
             end
             if pass.pending <= 0 then
@@ -1739,7 +1752,10 @@ local function OnShot(w)
     end
     if st.phase == "TERMINATED" then
         Log("RELEASE after TERMINATED " .. k)
+    elseif (rec.afterAbort or not rec.cleared) and st.violT and now - st.violT <= 2 then   -- v0.9.0 same pass
+        Log("RELEASE " .. k .. ": violation in the same pass (ripple), not scored again")
     elseif rec.afterAbort or not rec.cleared then
+        st.violT = now
         st.viol = (st.viol or 0) + 1
         Emit("VIOLATION", { key = k, n = st.viol, afterAbort = rec.afterAbort })
         -- v0.6.0: penalty, incident record, OVERLORD relays the report
@@ -2051,6 +2067,7 @@ end
 local EV = {}
 local function Debrief()
     if #JC.incidents == 0 or JC.debriefed then return end
+    if TRT.Score and type(TRT.Score.report) == "function" then return end   -- v0.9.0 Core_Scoring reports
     JC.debriefed = true
     local kinds, lines = {}, { "ROE INCIDENT REPORT - " .. CFG.CS }
     for _, i in ipairs(JC.incidents) do
@@ -2058,7 +2075,7 @@ local function Debrief()
         lines[#lines + 1] = string.format("- %sL  %s", i.t, i.detail)
     end
     lines[#lines + 1] = "Reported: JTAC -> ASOC, OVERLORD -> CAG."
-    if kinds.FRIENDLY then
+    if kinds.DANGER_CLOSE then
         lines[#lines + 1] = "Weapon impact near friendly troops: possible fratricide. Command (JAGMAN) investigation; "
             .. "UCMJ action, up to court-martial, possible."
     end

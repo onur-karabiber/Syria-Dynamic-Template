@@ -1,4 +1,9 @@
--- CV_Comms | v1.7.6
+-- CV_Comms | v1.7.7
+-- v1.7.7: (scoring review 2026-11-02, Onur) CV_Comms is the only module grading the marshal fix and the hold
+--         (Recovery_Approach v1.1.0 dropped Initial Fix / Holding duration). A missing report no longer avoids the
+--         penalty: commencing (F10 or AIRBOSS releasing the hero from the stack, step past Holding/Commencing)
+--         without an "established" report = -EST_PTS "No established report"; leaving the stack without the
+--         "commencing" report = -EAT_PTS "No commencing report". Once per clearance, CASE II/III only.
 -- v1.7.6: (CAS (L) sortie 2026-11-02, Onur) CV.speedCall(kind) for Overspeed_Penalty v7.5.0: the controller the
 --         hero is on calls a Marshal Zone speed violation. Marshal phases (CHECKIN .. PENETRATION):
 --         "467, Marshal. Check speed. Three fifty knots maximum in the marshal zone." (warn) and
@@ -280,7 +285,7 @@
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "1.7.6",
+    VERSION      = "1.7.7",
     PLAYER_UNIT  = "Player_01",
     CARRIER_UNIT = "CVN",
     MODEX        = "467",       -- fallback if AIRBOSS has no onboard number yet
@@ -931,9 +936,26 @@ local function A_AppSeeYou()
     SetPhase("ZIPLIP")
 end
 
+--- v1.7.7: a report that was never made costs the same as a bad one (once per clearance)
+local function MissingReports(why, commencingToo)
+    local c = CV.clr
+    if not (c and c.eatAbs and TRT and TRT.addScore) then return end
+    if not c.estScored then
+        c.estScored = true
+        Log("no established report (" .. why .. ")")
+        TRT.addScore(-CFG.EST_PTS, "No established report (" .. why .. ")")
+    end
+    if commencingToo and not c.eatScored then
+        c.eatScored = true
+        Log("no commencing report (" .. why .. ")")
+        TRT.addScore(-CFG.EAT_PTS, "No commencing report (" .. why .. ")")
+    end
+end
+
 local function A_Commencing()
     local c, m, lbs, ab = CV.clr, Modex(), FuelLbs(), AB()
     if not c then return end
+    MissingReports("commencing called", false)   -- v1.7.7
     local dt = timer.getAbsTime() - (c.eatAbs or timer.getAbsTime())
     TRT.CV_COMMENCE = { t = timer.getAbsTime(), dt = dt }
     local ok = math.abs(dt) <= CFG.EAT_TOL
@@ -2058,6 +2080,10 @@ local function Tick(_, t)
             if pd.step ~= CV.abStep then
                 Log("AIRBOSS step " .. tostring(CV.abStep) .. " -> " .. tostring(pd.step)
                     .. string.format(" (%.1f NM, %d ft)", d, math.floor(u:getPoint().y * 3.28084)))
+                -- v1.7.7: AIRBOSS took the hero out of the stack while he never reported
+                if CV.abStep == AIRBOSS.PatternStep.COMMENCING and HOLD_PHASES[CV.phase] then
+                    MissingReports("left the stack without the call", true)
+                end
                 CV.abStep = pd.step
             end
             if pd.holding ~= CV.abHold then

@@ -1,4 +1,7 @@
--- Flight_Timeline | v1.1.6
+-- Flight_Timeline | v1.2.0
+-- v1.2.0 (scoring review 2026-11-02, Onur): timing is scored (CFG.SCORING = true): M1, M2, T1-T4 go through
+--   TRT.addScore ("TIMING ..." = category TIME in the Core_Scoring v1.5.0 ledger); bands and the -12..+9 clip
+--   unchanged.
 -- v1.1.6: tanker-queue credit (Onur 2026-11-01, Traffic.lua): TL.credit.tanker (s) is written by Traffic while the
 --   hero waits for a hose behind AI receivers; credit() = threat + fail + tanker. A random queue is not the
 --   pilot's doing, so it moves the plan times like the threat / failure credit.
@@ -84,7 +87,7 @@ if TRT.TL then
 end
 
 local CFG = {
-    VERSION        = "1.1.6",
+    VERSION        = "1.2.0",
     PLAYER_UNIT    = TRT.PLAYER_NAME or "Player_01",
     GROUP          = "CAS-1",          -- ME group whose route builds the ATO
     CARRIER        = "CVN",
@@ -93,7 +96,7 @@ local CFG = {
     CP_ETE_FALLBACK = 2460,            -- s, used only if the route cannot be read
     CP_POS_FALLBACK = { x = 73640, z = -39914 },
 
-    SCORING        = false,            -- v1.0.0: shadow mode (log + text only)
+    SCORING        = true,             -- v1.2.0 live (v1.0.0-v1.1.6: shadow, log + text only)
     SHADOW_MSG     = true,             -- show "[TL shadow]" lines on screen
     BINGO_CALIBRATED = true,           -- T4 scores only when true (v1.1.5: CP fuel + station burn measured)
     FUEL_CALLS     = false,            -- on-screen JOKER / BINGO text (off while numbers are placeholders)

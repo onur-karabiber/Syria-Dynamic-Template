@@ -1,4 +1,6 @@
--- Overspeed_Penalty_In_Marshal_Zone | v7.5.0
+-- Overspeed_Penalty_In_Marshal_Zone | v7.6.0
+-- v7.6.0 (scoring review 2026-11-02, Onur): total cap TOTAL_CAP = 100 points per mission. Once reached, no
+--   further points are taken (warning, voice and the run summary still come). Before: uncapped.
 -- v7.5.0 (CAS (L) sortie 2026-11-02, Onur): the penalties now go through TRT.addScore (Core_Scoring), so the
 --   score cards (Score_Display hooks TRT.addScore) and the [Core_Scoring] SCORE log lines show them. Before,
 --   flag 1908 was decremented directly: 19 points left the total (45 -> 26) with no card, and the pilot
@@ -35,6 +37,9 @@ local WARNING_DELAY      = 20
 local PENALTY_INTERVAL   = 5
 local MSG_EVERY          = 30   -- s between penalty summaries (v7.2.0)
 local PENALTY_FLAG       = 1908
+local TOTAL_CAP          = 100  -- v7.6.0 max points this script takes per mission
+local totalPts           = 0
+local runBrassed         = false   -- v7.6.0 one "still fast" call per run
 local PLAYER_UNIT_NAME   = (_G.TRT and _G.TRT.PLAYER_NAME) or "Player_01"
 local TRIGGER_ZONE_NAME  = "Marshal_Zone"
 local ALTITUDE_FLOOR_M   = 366  -- 1200 ft MSL (~AGL), altında script devre dışı
@@ -129,7 +134,7 @@ local function closeRun(unit)
                 trigger.misc.getUserFlag(PENALTY_FLAG)), 10)
         end
     end
-    runPenalties, lastMsgTime = 0, nil
+    runPenalties, lastMsgTime, runBrassed = 0, nil, false
 end
 
 local function checkMarshalSpeed()
@@ -167,9 +172,13 @@ local function checkMarshalSpeed()
 
             if warningTime and (now - warningTime) >= WARNING_DELAY then
                 if lastPenaltyTime and (now - lastPenaltyTime) >= PENALTY_INTERVAL then
-                    pendingPts   = pendingPts + 1          -- v7.5.0: batched, see flush()
-                    runPenalties = runPenalties + 1
-                    if runPenalties == 1 then voice("brass", 1) end
+                    if totalPts < TOTAL_CAP then          -- v7.6.0 cap
+                        pendingPts   = pendingPts + 1          -- v7.5.0: batched, see flush()
+                        totalPts     = totalPts + 1
+                        runPenalties = runPenalties + 1
+                        if totalPts == TOTAL_CAP then env.info("[OVERSPEED] cap reached (-" .. TOTAL_CAP .. ")") end
+                    end
+                    if not runBrassed then runBrassed = true; voice("brass", runPenalties) end
                     if not lastMsgTime or (now - lastMsgTime) >= MSG_EVERY then
                         flush(string.format(" (%d so far)", runPenalties))
                         lastMsgTime = now
@@ -189,4 +198,4 @@ local function checkMarshalSpeed()
 end
 
 timer.scheduleFunction(checkMarshalSpeed, nil, timer.getTime() + 5)
-env.info("[OVERSPEED] Overspeed_Penalty_In_Marshal_Zone v7.5.0 loaded")
+env.info("[OVERSPEED] Overspeed_Penalty_In_Marshal_Zone v7.6.0 loaded")

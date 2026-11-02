@@ -1,4 +1,21 @@
--- Core_Scoring | v1.4.7
+-- Core_Scoring | v1.5.0
+-- v1.5.0 (scoring review 2026-11-02, decisions Onur; project doc claude/scoring-review-2026-11-02.md):
+--   * Score ledger: every TRT.addScore(delta, reason[, cat]) is kept in TRT.Score.ledger
+--     { t, d, reason, cat } (cat inferred from the reason when not given: DEP AAR TIME CAS KILL THREAT ROE
+--     ASSET RECOVERY TRAP DIVERT MISSION OTHER) for the end-of-flight report card. TRT.Score.sum(cat).
+--   * Flag 1908 changed outside TRT.addScore (ME triggers, e.g. template "DEAD SCORE-1/-2" a_inc_flag +15)
+--     is detected within 1 s and re-booked through TRT.addScore ("MISSION EVENT", log + card + ledger).
+--   * Friendly fire: the hero's S_EVENT_KILL on a unit / static of his own coalition FF_KILL (-50), the
+--     first S_EVENT_HIT on each such object FF_HIT (-20). Every one is an incident (TRT.Score.incident).
+--   * Incident registry TRT.Score.incidents (JTAC_Controller >= v0.9.0 reports into it) and a ROE / FRIENDLY
+--     FIRE REPORT REPORT_S after the hero's landing is confirmed, with the disposition of the worst incident:
+--     1 counseling / Letter of Instruction, 2 Letter of Reprimand + FNAEB, 3 JAGMAN investigation, court-martial.
+--   * Groove fuel follows the recovery fuel plan (Flight_Timeline thresholds RECOVERY: BINGO, max trap) and is
+--     graded in the groove only (AIRBOSS step "Groove*"; geometric fallback without AIRBOSS), once per sortie
+--     (reset at the landing, not at a bolter's takeoff): > max trap +1,000 -5 / > max trap +300 -2 /
+--     BINGO-300 .. max trap+300 +3 / >= 2,000 -2 / >= 1,500 -5 / less -8.
+--   * Carrier landing without an AIRBOSS grade: +2 (= "--", No Grade) instead of +5.
+--   * Name-prefix kill matching: longest prefix first (was pairs() order).
 -- v1.4.7 (Onur, 2026-11-02): the hero's carrier landing score follows the AIRBOSS LSO grade of the trap pass
 --   instead of a flat +5: _OK_ +5, OK +4, (OK) +3, -- +2, CUT 0 (AIRBOSS's own pass points, rounded, 0..5).
 --   2026-11-02 sortie: "--" (no grade, 2.0 PT) still earned +5. The grade comes from AIRBOSS OnAfterLSOGrade
@@ -119,13 +136,42 @@ local TRT = _G.TRT
 ----------------------------------------------------------------
 -- SCORE
 ----------------------------------------------------------------
-function TRT.addScore(delta, reason)
+-- v1.5.0: ledger + categories (end-of-flight report card)
+TRT.Score = TRT.Score or { ledger = {}, incidents = {}, expected = nil }
+local SC = TRT.Score
+local CAT_RULES = {   -- first match wins (reason, case-sensitive Lua patterns)
+    { "^MISSION EVENT", "MISSION" }, { "^FRIENDLY FIRE", "ROE" }, { "^ROE", "ROE" },
+    { "^READBACK", "CAS" }, { "^TARGET DESTROYED", "KILL" }, { "^JTAC TARGET GROUP", "KILL" },
+    { "^MISSILE DEFEATED", "THREAT" }, { "^ASSET LOST", "ASSET" }, { "^Aerial Refuel", "AAR" },
+    { "^TIMING", "TIME" }, { "^Departure", "DEP" }, { "^Divert", "DIVERT" },
+    { "land%-based", "DIVERT" }, { "^Carrier landing", "TRAP" }, { "^Successful carrier", "TRAP" },
+    { "^Groove fuel", "TRAP" }, { "^Deck park", "TRAP" }, { "^MARSHAL ZONE", "RECOVERY" },
+    { "^Established", "RECOVERY" }, { "^Commenced", "RECOVERY" }, { "^No established", "RECOVERY" },
+    { "^No commencing", "RECOVERY" }, { "12NM", "RECOVERY" }, { "10NM", "RECOVERY" },
+}
+function SC.category(reason)
+    local r = tostring(reason or "")
+    for _, x in ipairs(CAT_RULES) do if r:find(x[1]) then return x[2] end end
+    return "OTHER"
+end
+function SC.sum(cat, sign)   -- sign: nil all, 1 positives only, -1 negatives only
+    local n = 0
+    for _, e in ipairs(SC.ledger) do
+        if (not cat or e.cat == cat) and (not sign or (sign > 0 and e.d > 0) or (sign < 0 and e.d < 0)) then n = n + e.d end
+    end
+    return n
+end
+
+function TRT.addScore(delta, reason, cat)
     local cur = trigger.misc.getUserFlag(FLAG_SCORE)
     if type(cur) ~= "number" then cur = 0 end
     local new = cur + delta
 
     trigger.action.setUserFlag(FLAG_SCORE, new)
-    env.info(string.format("[Core_Scoring] SCORE %+d (total %s) %s", delta, tostring(new), tostring(reason)))
+    SC.expected = new
+    cat = cat or SC.category(reason)
+    SC.ledger[#SC.ledger + 1] = { t = timer.getAbsTime(), d = delta, reason = tostring(reason), cat = cat }
+    env.info(string.format("[Core_Scoring] SCORE %+d (total %s) [%s] %s", delta, tostring(new), cat, tostring(reason)))
 
     local sign = (delta >= 0) and ("+" .. tostring(delta)) or tostring(delta)
     trigger.action.outTextForCoalition(
@@ -133,6 +179,53 @@ function TRT.addScore(delta, reason)
         string.format("%s (%s) [TOTAL %s]", tostring(reason), sign, tostring(new)),
         8, false
     )
+end
+
+-- v1.5.0: flag 1908 changed by anything else (ME a_inc_flag etc.) -> re-book through TRT.addScore
+timer.scheduleFunction(function()
+    local cur = trigger.misc.getUserFlag(FLAG_SCORE)
+    if type(cur) == "number" then
+        if SC.expected == nil then
+            SC.expected = cur
+        elseif cur ~= SC.expected then
+            local d = cur - SC.expected
+            trigger.action.setUserFlag(FLAG_SCORE, SC.expected)
+            env.info(string.format("[Core_Scoring] flag %d changed outside addScore by %+d", FLAG_SCORE, d))
+            TRT.addScore(d, "MISSION EVENT (trigger)", "MISSION")
+        end
+    end
+    return timer.getTime() + 1
+end, nil, timer.getTime() + 1)
+
+-- v1.5.0: incident registry (severity 0 note, 1 ROE breach, 2 serious, 3 friendly casualties)
+local DISPOSITION = {
+    [0] = "No action.",
+    [1] = "Formal counseling, Letter of Instruction. The release is reviewed with CAG.",
+    [2] = "Letter of Reprimand. Grounded pending a Field Naval Aviator Evaluation Board (FNAEB); command investigation.",
+    [3] = "Friendly casualties: JAGMAN investigation and FNAEB; UCMJ action up to court-martial possible.",
+}
+function SC.incident(kind, sev, detail, src)
+    local t = math.floor(timer.getAbsTime()) % 86400
+    SC.incidents[#SC.incidents + 1] = { kind = kind, sev = sev or 1, detail = tostring(detail), src = src,
+        clock = string.format("%02d%02d", math.floor(t / 3600), math.floor((t % 3600) / 60)) }
+    env.info(string.format("[Core_Scoring] INCIDENT %s sev %d (%s): %s", kind, sev or 1, tostring(src), tostring(detail)))
+end
+function SC.report()
+    if SC.reported or #SC.incidents == 0 then return end
+    SC.reported = true
+    local worst, lines = 0, { "ROE / FRIENDLY FIRE REPORT" }
+    for _, i in ipairs(SC.incidents) do
+        worst = math.max(worst, i.sev)
+        lines[#lines + 1] = string.format("- %sL  %s", i.clock, i.detail)
+    end
+    local nBreach = 0
+    for _, i in ipairs(SC.incidents) do if i.sev >= 1 then nBreach = nBreach + 1 end end
+    if worst == 1 and nBreach >= 2 then worst = 2 end
+    lines[#lines + 1] = "Disposition: " .. DISPOSITION[worst]
+    SC.disposition = worst
+    local txt = table.concat(lines, "\n")
+    trigger.action.outTextForCoalition(coalition.side.BLUE, txt, 60, false)
+    env.info("[Core_Scoring] REPORT\n" .. txt)
 end
 
 ----------------------------------------------------------------
@@ -320,17 +413,21 @@ local GROUP_CATEGORY_SCORES = {
 local STATIC_DEFAULT_SCORE = 2
 local DEFAULT_ENEMY_SCORE  = 1
 local JTAC_GROUP_BONUS     = 5     -- v1.4.0: hero's kill finishes a JTAC target group
+local FF_KILL              = -50   -- v1.5.0 friendly unit / static destroyed by the hero
+local FF_HIT               = -20   -- v1.5.0 first hit on each friendly object (no kill needed)
 local JTAC_BONUS_DELAY     = 3     -- s after the kill before counting the survivors
 
 local function resolveEnemyScore(unitName, typeName, groupCategory, isStatic)
     local delta = UNIT_NAME_OVERRIDES[unitName]
     if delta then return delta, "name" end
 
+    local best, bestVal                       -- v1.5.0: longest prefix wins (pairs() order was arbitrary)
     for key, val in pairs(UNIT_NAME_OVERRIDES) do
-        if string.find(unitName, key, 1, true) == 1 then
-            return val, "name-prefix"
+        if string.find(unitName, key, 1, true) == 1 and (not best or #key > #best or (#key == #best and key < best)) then
+            best, bestVal = key, val
         end
     end
+    if best then return bestVal, "name-prefix" end
 
     if typeName and TYPE_SCORES[typeName] then
         return TYPE_SCORES[typeName], "type"
@@ -450,6 +547,15 @@ do
         if not okV or not victimName or killHandled[victimName] then return end
 
         local okCo, victimCoalition = pcall(function() return victim:getCoalition() end)
+        local okKC, killerCoalition = pcall(function() return killer:getCoalition() end)
+        if okCo and okKC and victimCoalition == killerCoalition then          -- v1.5.0 friendly fire
+            killHandled[victimName] = true
+            local okTN, tn = pcall(function() return victim:getTypeName() end)
+            local what = string.format("%s (%s)", victimName, okTN and tn or "?")
+            TRT.addScore(FF_KILL, "FRIENDLY FIRE: destroyed " .. what, "ROE")
+            SC.incident("FF_KILL", 3, "Friendly fire: " .. what .. " destroyed by " .. PLAYER_NAME, "Core_Scoring")
+            return
+        end
         if not okCo or victimCoalition ~= coalition.side.RED then return end
 
         local okCat, cat = pcall(function() return victim:getCategory() end)
@@ -512,6 +618,27 @@ do
     end
 
     world.addEventHandler(KEH)
+
+    -- v1.5.0: friendly fire, damage (first hit per friendly object)
+    local ffHit = {}
+    local HEH = {}
+    function HEH:onEvent(e)
+        if not e or e.id ~= world.event.S_EVENT_HIT or not e.initiator or not e.target then return end
+        pcall(function()
+            if e.initiator:getName() ~= PLAYER_NAME then return end
+            local tgt = e.target
+            if not tgt.getCoalition or tgt:getCoalition() ~= e.initiator:getCoalition() then return end
+            local n = tgt:getName()
+            if not n or ffHit[n] or killHandled[n] then return end
+            ffHit[n] = true
+            local okTN, tn = pcall(function() return tgt:getTypeName() end)
+            local wn = (e.weapon_name) or (e.weapon and e.weapon.getTypeName and e.weapon:getTypeName()) or "?"
+            local what = string.format("%s (%s)", n, okTN and tn or "?")
+            TRT.addScore(FF_HIT, "FRIENDLY FIRE: hit " .. what, "ROE")
+            SC.incident("FF_HIT", 2, string.format("Friendly fire: %s hit by %s (%s)", what, PLAYER_NAME, wn), "Core_Scoring")
+        end)
+    end
+    world.addEventHandler(HEH)
 
     if DEBUG_LOG_UNATTRIBUTED_DEATHS then
         timer.scheduleFunction(function()
@@ -580,8 +707,10 @@ do
 
     local FUEL_EMERGENCY_LBS = 1500
     local FUEL_LOW_LBS       = 2000
-    local FUEL_GOOD_MIN_LBS  = 2500
-    local FUEL_GOOD_MAX_LBS  = 3500
+    -- v1.5.0: 2,500-3,500 "good" band retired; the plan comes from Flight_Timeline
+    local GROOVE_BINGO_FALLBACK   = 4100   -- recovery BINGO (TL v1.1.5, LCRA ~110 NM) when TL is missing
+    local GROOVE_MAXTRAP_FALLBACK = 4300   -- 33,000 - ZFW 28,700
+    local GROOVE_TOL_LB           = 300
 
     local grooveDone = {}
 
@@ -610,34 +739,60 @@ do
         if not c or not c:isExist() then return end
         if TRT.distToCarrierNm(u, c) > GROOVE_DIST_NM then return end
 
-        local alt = TRT.altFt(u)
-        if alt < GROOVE_ALT_MIN_FT or alt > GROOVE_ALT_MAX_FT then return end
-
-        local spd = TRT.spdKts(u)
-        if spd < GROOVE_SPD_MIN_KTS or spd > GROOVE_SPD_MAX_KTS then return end
+        -- v1.5.0: in the groove = AIRBOSS step "Groove ..." for the hero; geometric window only without AIRBOSS
+        local ab, inGroove = TRT.Airboss, nil
+        if type(ab) == "table" and type(ab.players) == "table" then
+            inGroove = false
+            for _, pd in pairs(ab.players) do
+                if type(pd) == "table" and pd.unitname == uname then
+                    inGroove = type(pd.step) == "string" and pd.step:find("^Groove") ~= nil
+                end
+            end
+        end
+        if inGroove == false then return end
+        if inGroove == nil then
+            local alt = TRT.altFt(u)
+            if alt < GROOVE_ALT_MIN_FT or alt > GROOVE_ALT_MAX_FT then return end
+            local spd = TRT.spdKts(u)
+            if spd < GROOVE_SPD_MIN_KTS or spd > GROOVE_SPD_MAX_KTS then return end
+        end
 
         local lbs = fuelLbs(u)
         if not lbs then return end
 
-        local delta, msg
-        if lbs < FUEL_EMERGENCY_LBS then
-            delta, msg = -8, string.format("Fuel state below recovery minimum: %.0f lbs", lbs)
-        elseif lbs < FUEL_LOW_LBS then
-            delta, msg = -5, string.format("Fuel state critical for recovery: %.0f lbs", lbs)
-        elseif lbs >= FUEL_GOOD_MIN_LBS and lbs <= FUEL_GOOD_MAX_LBS then
-            delta, msg =  5, string.format("Fuel state within recovery limits: %.0f lbs", lbs)
+        -- v1.5.0: bands from the recovery fuel plan (Flight_Timeline thresholds, RECOVERY zone)
+        local bingo, maxTrap = GROOVE_BINGO_FALLBACK, GROOVE_MAXTRAP_FALLBACK
+        local tl = TRT.TL
+        if tl and type(tl.thresholds) == "function" then
+            local okT, th = pcall(tl.thresholds, u:getPoint(), { phase = "RECOVERY" }, nil)
+            if okT and type(th) == "table" then
+                bingo = tonumber(th.bingo) or bingo
+                maxTrap = tonumber(th.maxTrap) or maxTrap
+            end
         end
-
-        if delta then
-            grooveDone[uname] = true
-            TRT.addScore(delta, msg)
+        local delta, why
+        if lbs > maxTrap + 1000 then
+            delta, why = -5, string.format("%.0f lb, over max trap %.0f by %.0f", lbs, maxTrap, lbs - maxTrap)
+        elseif lbs > maxTrap + GROOVE_TOL_LB then
+            delta, why = -2, string.format("%.0f lb, above max trap %.0f", lbs, maxTrap)
+        elseif lbs >= bingo - GROOVE_TOL_LB then
+            delta, why = 3, string.format("%.0f lb, on plan (BINGO %.0f .. max trap %.0f)", lbs, bingo, maxTrap)
+        elseif lbs >= FUEL_LOW_LBS then
+            delta, why = -2, string.format("%.0f lb, below recovery BINGO %.0f", lbs, bingo)
+        elseif lbs >= FUEL_EMERGENCY_LBS then
+            delta, why = -5, string.format("%.0f lb, critical", lbs)
+        else
+            delta, why = -8, string.format("%.0f lb, below the recovery minimum", lbs)
         end
+        grooveDone[uname] = true
+        TRT.addScore(delta, "Groove fuel: " .. why, "TRAP")
     end
 
     local GEH = {}
-    function GEH:onEvent(e)
-        if e and e.id == world.event.S_EVENT_TAKEOFF and e.initiator then
-            grooveDone[e.initiator:getName()] = nil
+    function GEH:onEvent(e)   -- v1.5.0: once per sortie (reset at the landing; a bolter's takeoff keeps it)
+        if e and e.id == world.event.S_EVENT_LAND and e.initiator then
+            local ok, n = pcall(function() return e.initiator:getName() end)
+            if ok and n then grooveDone[n] = nil end
         end
     end
     world.addEventHandler(GEH)
@@ -769,6 +924,7 @@ do
     local LANDING_DONE = {}
     local LAND_CONFIRM_S = 8          -- v1.4.5
     local GRADE_WAIT_S   = 12         -- v1.4.7: extra wait for the AIRBOSS LSO grade after the confirm
+    local REPORT_S       = 20         -- v1.5.0: ROE / friendly fire report this long after the landing confirm
     local LAST_GRADE     = nil        -- v1.4.7: { t, grade, points, wire } of the hero's last graded pass
 
     -- v1.4.7: AIRBOSS LSO grade hook (chained; later hooks, e.g. Pilot_Banter, chain to this one)
@@ -816,8 +972,8 @@ do
             return nil
         end
         if timer.getTime() < tEnd then return timer.getTime() + 1 end
-        env.info("[Core_Scoring] no LSO grade " .. GRADE_WAIT_S .. " s after the landing confirm - flat +5")
-        TRT.addScore(5, "Successful carrier landing (no LSO grade)")
+        env.info("[Core_Scoring] no LSO grade " .. GRADE_WAIT_S .. " s after the landing confirm - scored as No Grade")
+        TRT.addScore(2, "Carrier landing, not graded (No Grade)", "TRAP")   -- v1.5.0 (was +5)
         return nil
     end
     local PENDING = {}                -- name -> { kind, lost }
@@ -839,6 +995,9 @@ do
             return nil
         end
         LANDING_DONE[n] = true
+        if n == PLAYER_NAME then   -- v1.5.0: ROE / friendly fire report after the landing
+            timer.scheduleFunction(function() pcall(SC.report) end, nil, timer.getTime() + REPORT_S)
+        end
         if p.kind == "carrier" then
             if n == PLAYER_NAME then   -- v1.4.7: points from the LSO grade
                 local tEnd = timer.getTime() + GRADE_WAIT_S
@@ -969,4 +1128,4 @@ do
     timer.scheduleFunction(watchCaseChange, nil, timer.getTime() + 1)
 end
 
-env.info("[Core_Scoring] v1.4.7 loaded. Player unit: " .. PLAYER_NAME)
+env.info("[Core_Scoring] v1.5.0 loaded. Player unit: " .. PLAYER_NAME)

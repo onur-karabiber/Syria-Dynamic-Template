@@ -1,4 +1,11 @@
--- Recovery_Approach | v1.0.4
+-- Recovery_Approach | v1.1.0
+-- v1.1.0 (scoring review 2026-11-02, Onur: one module per marshal item): the Initial Fix +/-5 and the
+--   "Holding duration" +5 are no longer scored here. CV_Comms grades the same things from the pilot's own
+--   reports (established on the fix +/-5, commenced vs EAT +/-5; v1.7.7: a missing report is -5). The IF
+--   zone still triggers the commence-fuel text. The 12 NM chart check no longer waits for IF + 120 s in the
+--   hold (2026-11-02: the hero never crossed InitialFix_Zone, so nothing after it was graded): it is armed
+--   once the hero has commenced (CV_Comms phase PENETRATION or later) or has
+--   been in Holding_Zone.
 -- v1.0.4: on arming (flag 101) the planned recovery case (flag 102) is applied first
 -- via TRT.CaseSync.ApplyRecoveryCase (Airboss_CaseSync v1.0.7), so "Recovery Rules
 -- Activated: CASE N" shows the recovery case, not the departure case.
@@ -52,6 +59,9 @@ local ZONE_12NM_CHART  = "12NMa_Zone"
 local COMMENCE_FLAG = 101
 
 local COMMENCE_MIN_FUEL_LBS = 3000
+-- v1.1.0: CV_Comms phases after "commencing" (the hero has left the stack)
+local COMMENCED_PHASES = { PENETRATION = true, APP_CHECKIN = true, APPROACH = true, APP_SEEYOU = true,
+    ZIPLIP = true, FINAL = true, NEEDLES = true, BALLWAIT = true, BALL = true, GROOVE = true }
 local HOLD_DURATION_SEC     = 120
 
 -- IF-fix window: source files disagreed (CASE-II: 9800-10200/260-330,
@@ -138,14 +148,7 @@ end
 ----------------------------------------------------------------
 local function updateChart(u, now, case)
     if not CHART.ifDone and TRT.inZone(u, IF_ZONE) then
-        local alt, spd = TRT.altFt(u), TRT.spdKts(u)
-        if alt >= IF_ALT_MIN and alt <= IF_ALT_MAX
-           and spd >= IF_SPD_MIN and spd <= IF_SPD_MAX then
-            TRT.addScore(5, "Initial Fix: Within parameters")
-        else
-            TRT.addScore(-5, "Initial Fix: Out of parameters")
-        end
-
+        -- v1.1.0: no score here (CV_Comms grades the marshal fix)
         if not CHART.commenceFuelChecked then
             local lbs = commenceFuelLbs(u)
             if lbs then
@@ -160,22 +163,20 @@ local function updateChart(u, now, case)
 
         CHART.ifDone = true
         CASE_PHASE = "IF"
-        return
     end
 
-    if CHART.ifDone and not CHART.holdDone then
-        if TRT.inZone(u, HOLD_ZONE) then
-            if not CHART.holdEnter then CHART.holdEnter = now end
-            if now - CHART.holdEnter >= HOLD_DURATION_SEC then
-                TRT.addScore(5, "Holding duration correct")
-                CHART.holdDone = true
-                CASE_PHASE = "HOLD"
-            end
+    -- v1.1.0: hold seen (no score) or commenced -> the 12 NM check is armed
+    if not CHART.holdDone then
+        local cv = TRT.CV
+        local commenced = cv and COMMENCED_PHASES[cv.phase or ""]
+        if TRT.inZone(u, HOLD_ZONE) or commenced then
+            CHART.holdDone = true
+            CASE_PHASE = "HOLD"
         end
         return
     end
 
-    if CHART.ifDone and CHART.holdDone and not CHART.nm12Done then
+    if CHART.holdDone and not CHART.nm12Done then
         if not TRT.inZone(u, ZONE_12NM_CHART) then return end
 
         local alt, spd = TRT.altFt(u), TRT.spdKts(u)
@@ -215,4 +216,4 @@ local function mainLoop()
 end
 
 timer.scheduleFunction(mainLoop, nil, timer.getTime() + 1)
-env.info("[Recovery_Approach] v1.0.4 loaded.")
+env.info("[Recovery_Approach] v1.1.0 loaded.")

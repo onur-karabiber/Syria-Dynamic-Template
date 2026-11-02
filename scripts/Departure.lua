@@ -1,4 +1,8 @@
--- Departure | v1.0.3
+-- Departure | v1.1.0
+-- v1.1.0 (scoring review 2026-11-02, Onur): departure scoring only for a CARRIER launch. A takeoff away from
+--   the carrier (LTAG after a divert) no longer arms it (one-sample -5 beyond 7 NM). A takeoff near the carrier
+--   arms it only once per sortie: after a departure has been armed, the next carrier "takeoff" (bolter,
+--   touch-and-go) is ignored until the hero has landed (S_EVENT_LAND).
 -- v1.0.3: the arming text is shown once per departure case ("DEPARTURE: CASE 3" on birth); the re-arm
 -- at takeoff is silent unless the case changed meanwhile (Onur 2026-11-01: fewer system banners).
 -- CASE-adaptive departure scoring. Replaces CASE_III_Departure.lua and
@@ -151,6 +155,7 @@ end
 -- airborne-heuristic fallback poll (carrier TAKEOFF events can be
 -- flaky in DCS - kept from CASE_III_Departure.lua's original comment).
 ----------------------------------------------------------------
+local sortieArmed, landedSince = false, true   -- v1.1.0
 do
     local EH = {}
     function EH:onEvent(e)
@@ -158,8 +163,20 @@ do
         if e.initiator:getName() ~= PLAYER_NAME then return end
 
         if e.id == world.event.S_EVENT_TAKEOFF then
-            armDeparture()
+            if not nearCarrier(e.initiator) then                      -- v1.1.0
+                env.info("[Departure] takeoff away from the carrier: not scored")
+                sortieArmed = true
+            elseif sortieArmed and not landedSince then
+                env.info("[Departure] carrier takeoff without a landing since the launch (bolter?): not re-armed")
+            else
+                sortieArmed, landedSince = true, false
+                armDeparture()
+            end
+        elseif e.id == world.event.S_EVENT_LAND then
+            landedSince = true
+            if DEP.active then DEP.active = false; env.info("[Departure] landed before 7 NM: not scored") end
         elseif e.id == world.event.S_EVENT_BIRTH and nearCarrier(e.initiator) then
+            sortieArmed, landedSince = false, true
             armDeparture()
         end
     end
@@ -167,7 +184,7 @@ do
 end
 
 timer.scheduleFunction(function()
-    if not DEP.active and not DEP.done then
+    if not DEP.active and not DEP.done and not sortieArmed then   -- v1.1.0: fallback only before any launch
         local u = TRT.uPlayer()
         local c = TRT.uCarrier()
         if u and u:isExist() and c and c:isExist() then
@@ -175,6 +192,7 @@ timer.scheduleFunction(function()
             local alt  = TRT.altFt(u)
             local spd  = TRT.spdKts(u)
             if dist > 0.3 and alt > 50 and spd > 80 then
+                sortieArmed, landedSince = true, false   -- v1.1.0
                 armDeparture()
             end
         end
@@ -184,4 +202,4 @@ timer.scheduleFunction(function()
     return timer.getTime() + 1
 end, nil, timer.getTime() + 1)
 
-env.info("[Departure] v1.0.3 loaded. Player unit: " .. PLAYER_NAME)
+env.info("[Departure] v1.1.0 loaded. Player unit: " .. PLAYER_NAME)
