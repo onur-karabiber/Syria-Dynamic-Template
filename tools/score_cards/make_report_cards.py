@@ -1,4 +1,6 @@
-# make_report_cards.py | v1.3.0
+# make_report_cards.py | v1.3.1
+# v1.3.1: Onur's metal bezel (src_art/report_frame_src.png, 2026-11-02) replaces the drawn bezel and rivets;
+#         layout refitted inside it; carrier panel gets an explicit "LSO GRADE" row; NG shows "-- NO GRADE".
 # v1.3.0: CRT pixel look of the Plane Captain cards (Onur 2026-11-02): metal bezel with rivets, black
 #         panels with phosphor-green chamfered outlines, a grunge green band with black text, dot-matrix
 #         large text / scanlined small text with glow. Font back to Share Tech Mono (monospace) everywhere.
@@ -41,7 +43,8 @@ BADGE_ART = os.path.join(HERE, "src_art", "badges")
 LUA = os.path.join(REPO, "scripts", "Flight_Report.lua")
 
 W, H = 1280, 720
-CARD_B = 580                                          # v1.3.0 card bottom; badges below
+CARD_B = 588                                          # v1.3.1 card bottom (bezel art); badges below
+FRAME_ART = os.path.join(HERE, "src_art", "report_frame_src.png")
 MONO = os.path.join(FONTS, "ShareTechMono-Regular.ttf")   # v1.3.0 the only font
 
 # palette: badge green / red, Plane Captain card tones
@@ -58,21 +61,21 @@ BG_A = 246                      # panel opacity
 
 GROUPS = ["Launch & departure", "Mission timing", "Aerial refuelling", "VUL / CAS procedure", "Targets",
           "Threat avoidance", "ROE / friendly fire", "Recovery", "Trap & deck", "Divert", "Mission events"]
-ROW0, ROWH = 190, 33
+ROW0, ROWH = 188, 33
 G_E_RIGHT, G_P_RIGHT, G_H = 772, 856, 24
 
 # field: (slots, right_x, top_y, height, colour, glyphs)
 FIELDS = {
-    "tot":    (5, 400, 188, 84, C_TEXT, "0123456789m"),
-    "earn":   (4, 400, 314, 42, C_POS, "0123456789p"),
-    "pen":    (4, 400, 396, 42, C_NEG, "0123456789m"),
-    "loss":   (4, 400, 478, 42, C_AMB, "0123456789m"),
-    "lsopts": (3, 1240, 266, 28, C_TEXT, "0123456789d"),
-    "wire":   (1, 1240, 302, 28, C_TEXT, "1234"),
-    "tgr":    (4, 1240, 338, 28, C_TEXT, "0123456789d"),
-    "bk":     (2, 1060, 424, 34, C_TEXT, "0123456789"),
-    "bkmax":  (2, 1132, 424, 34, C_LABEL, "0123456789"),
-    "bkpct":  (3, 1210, 424, 34, C_AMB, "0123456789"),
+    "tot":    (5, 398, 186, 84, C_TEXT, "0123456789m"),
+    "earn":   (4, 398, 312, 42, C_POS, "0123456789p"),
+    "pen":    (4, 398, 394, 42, C_NEG, "0123456789m"),
+    "loss":   (4, 398, 476, 42, C_AMB, "0123456789m"),
+    "lsopts": (3, 1234, 280, 28, C_TEXT, "0123456789d"),
+    "wire":   (1, 1234, 316, 28, C_TEXT, "1234"),
+    "tgr":    (4, 1234, 352, 28, C_TEXT, "0123456789d"),
+    "bk":     (2, 1056, 434, 34, C_TEXT, "0123456789"),
+    "bkmax":  (2, 1128, 434, 34, C_LABEL, "0123456789"),
+    "bkpct":  (3, 1206, 434, 34, C_AMB, "0123456789"),
 }
 for i in range(1, len(GROUPS) + 1):
     y = ROW0 + (i - 1) * ROWH
@@ -91,10 +94,10 @@ BADGES = [  # id, label, kind (A achievement / D demerit) - same ids as Flight_R
     ("ON_THE_PLAN", "ON THE\nPLAN", "A"), ("TIME_HACK", "TIME\nHACK", "A"),
     ("FUEL_DISCIPLINE", "FUEL\nDISCIPLINE", "A"), ("PARKING_PRO", "PARKING\nPRO", "A"),
 ]
-BADGE_SLOTS, BADGE_W, BADGE_H = 8, 140, 124        # v1.3.0 row below the card, no strip
+BADGE_SLOTS, BADGE_W, BADGE_H = 8, 140, 120        # v1.3.0 row below the card, no strip
 BADGE_GAP = 8
 BADGE_X0 = (W - (BADGE_SLOTS * BADGE_W + (BADGE_SLOTS - 1) * BADGE_GAP)) // 2
-BADGE_Y = CARD_B + (H - CARD_B - BADGE_H) // 2 + 4
+BADGE_Y = CARD_B + (H - CARD_B - BADGE_H) // 2 + 2
 ART_PX = 400   # v1.1.0 src_art/badges size
 
 # v1.1.0: title-based file names (Onur's art folder) -> badge id; key = lower-case letters and digits only
@@ -128,8 +131,8 @@ def import_badges(src_dir):
     print("imported %d, unknown file names %s, ids without art %s" % (len(done), unknown, missing))
 
 
-LSO = {"OK_U": ("_OK_", C_POS), "OK": ("OK", C_POS), "OKP": ("(OK)", C_AMB), "NG": ("--", C_AMB),
-       "C": ("CUT", C_NEG), "WO": ("WAVE-OFF", C_NEG), "B": ("BOLTER", C_NEG), "NONE": ("NOT GRADED", C_LABEL),
+LSO = {"OK_U": ("_OK_", C_POS), "OK": ("OK", C_POS), "OKP": ("(OK)", C_AMB), "NG": ("-- NO GRADE", C_AMB),
+       "C": ("CUT", C_NEG), "WO": ("WAVE-OFF", C_NEG), "B": ("BOLTER", C_NEG), "NONE": ("NO LSO GRADE", C_LABEL),
        "DIV": ("DIVERT", C_AMB)}
 GRADES = {"SH": ("SIERRA HOTEL", C_POS), "SAT": ("SAT", C_AMB), "UNSAT": ("UNSAT", C_NEG)}
 STAMPS = {1: "LETTER OF\nINSTRUCTION", 2: "REPRIMAND\nFNAEB", 3: "COURT-MARTIAL\nREVIEW"}
@@ -266,61 +269,79 @@ def rivet(im, cx, cy, r=7):
 
 
 # ---------------------------------------------------------------- layers
-HDR_L, HDR_R = (22, 20, 866, 102), (880, 20, 1258, 102)
-BAND = (22, 112, 1258, 146)
-P_L, P_M, P_R = (22, 156, 420, 564), (432, 156, 866, 564), (880, 156, 1258, 564)
+HDR_L, HDR_R = (28, 28, 864, 102), (876, 28, 1252, 102)
+BAND = (28, 112, 1252, 144)
+P_L, P_M, P_R = (28, 154, 418, 562), (430, 154, 864, 562), (876, 154, 1252, 562)
+LSO_BOX = (892, 212, 1236, 262)
+
+
+def bezel(im):
+    """Onur's bezel art scaled onto the card; its transparent inside (flood fill from the centre) is panel ground."""
+    art = Image.open(FRAME_ART).convert("RGBA")
+    art = art.crop(art.getchannel("A").point(lambda v: 255 if v > 40 else 0).getbbox())
+    art = art.resize((W, CARD_B), Image.LANCZOS)
+    inside = art.getchannel("A").point(lambda v: 255 if v > 90 else 0)
+    ImageDraw.floodfill(inside, (W // 2, CARD_B // 2), 128)
+    a = (np.asarray(inside) == 128).astype(np.float32)
+    a = np.asarray(Image.fromarray((a * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(5)), np.float32) / 255
+    a = np.pad(a, ((0, H - CARD_B), (0, 0)))
+    ground = np.dstack([np.broadcast_to(np.array((3, 9, 3), np.float32), (H, W, 3)), (a * BG_A)[:, :, None]])
+    im.alpha_composite(Image.fromarray(ground.astype(np.uint8), "RGBA"))
+    full = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    full.paste(art, (0, 0))
+    im.alpha_composite(full)
 
 
 def frame():
     im = canvas()
     # metal bezel
-    tex = grunge(11)
-    fill_poly(im, chamfer_pts((0, 0, W - 1, CARD_B), 30), (60, 66, 58), 255, tex, 0.8)
-    fill_poly(im, chamfer_pts((14, 14, W - 15, CARD_B - 14), 24), (3, 9, 3), BG_A)
-    for cx, cy in ((22, 22), (W - 23, 22), (22, CARD_B - 22), (W - 23, CARD_B - 22)):
-        rivet(im, cx, cy)
+    bezel(im)                                                          # v1.3.1 Onur's art
     # panels
     for box in (HDR_L, HDR_R, P_L, P_M, P_R):
         fill_poly(im, chamfer_pts(box, 16), (2, 10, 2), 255, grunge(23), 0.35)
         outline(im, box, 16, C_LINE, 3)
     fill_poly(im, chamfer_pts(BAND, 6), C_BAND, 255, grunge(37), 0.55)
     # static text
-    put_text(im, (42, 61), "FLIGHT REPORT", 60, C_POS, anchor="lm")
+    put_text(im, (46, 65), "FLIGHT REPORT", 60, C_POS, anchor="lm")
     ink = mask()
-    text_m(ink, (44, 129), "HORNET 51 · CAS-1 · F/A-18C", 22, "lm")
-    text_m(ink, (1240, 129), "SORTIE DEBRIEF", 22, "rm")
+    text_m(ink, (48, 128), "HORNET 51 · CAS-1 · F/A-18C", 22, "lm")
+    text_m(ink, (1234, 128), "SORTIE DEBRIEF", 22, "rm")
     a = np.asarray(ink, np.float32) / 255.0 * SCAN ** 0.5
     im.alpha_composite(Image.fromarray(np.dstack([np.full((H, W, 3), C_INK, np.float32),
                                                   (a * 255)[:, :, None]]).astype(np.uint8), "RGBA"))
     lab = 22
-    put_text(im, (44, 166), "TOTAL", lab, C_LABEL)
-    put_text(im, (44, 290), "EARNED", lab, C_LABEL)
-    put_text(im, (44, 372), "PENALTIES", lab, C_LABEL)
-    put_text(im, (44, 454), "MISSION LOSSES", lab, C_LABEL)
-    put_text(im, (44, 524), "(not in the total)", 16, C_LABEL)
-    put_text(im, (44, 544), "F10 > INFO > FLIGHT REPORT", 14, C_GRID)
-    put_text(im, (448, 166), "GROUP", 18, C_LABEL)
-    put_text(im, (G_E_RIGHT, 166), "EARNED", 18, C_LABEL, anchor="ra")
-    put_text(im, (G_P_RIGHT, 166), "PEN.", 18, C_LABEL, anchor="ra")
+    put_text(im, (46, 164), "TOTAL", lab, C_LABEL)
+    put_text(im, (46, 288), "EARNED", lab, C_LABEL)
+    put_text(im, (46, 370), "PENALTIES", lab, C_LABEL)
+    put_text(im, (46, 452), "MISSION LOSSES", lab, C_LABEL)
+    put_text(im, (46, 520), "(not in the total)", 16, C_LABEL)
+    put_text(im, (46, 540), "F10 > INFO > FLIGHT REPORT", 14, C_GRID)
+    put_text(im, (446, 164), "GROUP", 18, C_LABEL)
+    put_text(im, (G_E_RIGHT, 164), "EARNED", 18, C_LABEL, anchor="ra")
+    put_text(im, (G_P_RIGHT, 164), "PEN.", 18, C_LABEL, anchor="ra")
     m = mask()
     d = ImageDraw.Draw(m)
     for i, g in enumerate(GROUPS):
         y = ROW0 + i * ROWH
-        d.text((448, y + G_H // 2 + 1), g, font=font(19), fill=255, anchor="lm")
+        d.text((446, y + G_H // 2 + 1), g, font=font(19), fill=255, anchor="lm")
     im.alpha_composite(phosphor(m, C_TEXT, 0))
     m = mask()
     d = ImageDraw.Draw(m)
     for i in range(len(GROUPS)):
         y = ROW0 + i * ROWH + ROWH - 5
-        for x in range(446, 858, 4):                                   # dotted rule
+        for x in range(444, 856, 4):                                   # dotted rule
             d.point((x, y), fill=255)
     im.alpha_composite(phosphor(m, C_GRID, 0, glow=0.2))
-    put_text(im, (898, 166), "CARRIER", 22, C_LABEL)
-    for y, t in ((280, "PASS PTS"), (316, "WIRE"), (352, "GROOVE s")):
-        put_text(im, (898, y), t, 20, C_LABEL, anchor="lm")
-    put_text(im, (898, 396), "BANKLER (not in total)", 16, C_LABEL)
-    put_text(im, (1066, 441), "/", 34, C_LABEL, anchor="lm")
-    put_text(im, (1240, 441), "%", 34, C_AMB, anchor="rm")
+    put_text(im, (894, 164), "CARRIER RECOVERY", 22, C_LABEL)
+    put_text(im, (894, 196), "LSO GRADE", 18, C_LABEL)                 # v1.3.1
+    m = mask()
+    ImageDraw.Draw(m).polygon(chamfer_pts(LSO_BOX, 8), outline=255, width=2)
+    im.alpha_composite(phosphor(m, C_GRID, 0, glow=0.3))
+    for y, t in ((294, "PASS PTS"), (330, "WIRE"), (366, "GROOVE s")):
+        put_text(im, (894, y), t, 20, C_LABEL, anchor="lm")
+    put_text(im, (894, 406), "BANKLER (not in total)", 16, C_LABEL)
+    put_text(im, (1062, 451), "/", 34, C_LABEL, anchor="lm")
+    put_text(im, (1236, 451), "%", 30, C_AMB, pitch=0, anchor="rm")   # dot matrix mangles %
     save(im, "frame.png")
     return im
 
@@ -337,7 +358,7 @@ def word(name, text, col, box, size):
 
 def stamp(n, text):
     im = canvas()
-    box = (500, 30, 840, 94)
+    box = (500, 36, 840, 94)
     fill_poly(im, chamfer_pts(box, 10), (24, 2, 0), 245)
     outline(im, box, 10, C_NEG, 4)
     m = mask()
@@ -417,7 +438,7 @@ def preview(base):
             ("+10", "-19"), ("+7", "-5"), ("0", "0"), ("0", "0")]
     for i, (e, p) in enumerate(vals, 1):
         fld("g%de" % i, e); fld("g%dp" % i, p)
-    lay("lso_NG.png"); fld("lsopts", "2.0"); fld("wire", "2"); fld("tgr", "20.9")
+    lay("lso_OK.png"); fld("lsopts", "4.0"); fld("wire", "2"); fld("tgr", "20.9")
     fld("bk", "60"); fld("bkmax", "75"); fld("bkpct", "80")
     lay("stamp_1.png")
     for name in ("badge_READBACK_ACE_0.png", "badge_FIRST_PLUG_1.png", "badge_PARKING_PRO_2.png",
@@ -445,8 +466,8 @@ def main():
     for k, (t, c) in GRADES.items():
         word("grade_%s.png" % k, t, c, (HDR_R[0] + 16, HDR_R[1], HDR_R[2] - 16, HDR_R[3]), 60)
     for k, (t, c) in LSO.items():
-        word("lso_%s.png" % k, t, c, (896, 196, 1244, 252), 56)
-    word("carrier_na.png", "NO CARRIER PASS", C_LABEL, (896, 196, 1244, 252), 30)
+        word("lso_%s.png" % k, t, c, (LSO_BOX[0] + 8, LSO_BOX[1], LSO_BOX[2] - 8, LSO_BOX[3]), 44)
+    word("carrier_na.png", "NO CARRIER PASS", C_LABEL, (LSO_BOX[0] + 8, LSO_BOX[1], LSO_BOX[2] - 8, LSO_BOX[3]), 28)
     for n, t in STAMPS.items():
         stamp(n, t)
     ng = glyphs()
