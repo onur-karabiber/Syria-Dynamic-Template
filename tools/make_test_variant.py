@@ -1,4 +1,7 @@
-# make_test_variant.py | v1.3.1
+# make_test_variant.py | v1.4.0
+# v1.4.0: --start VIS (visual test, Onur 2026-11-02): the J1 air start ("AIRSTART J1": 30 NM before CP TIGER)
+#         plus tools/visual_test.lua injected as a triggerOnce DO SCRIPT: scoreboard and report-card samples
+#         from T+30 s, F10 > Other > VISUAL TEST for the rest ([VTEST] log lines).
 # v1.3.1: --div-internal-lb default 2000 -> 2800 (~5 000 lb total, just above the station BINGO 4 900 of
 #         Flight_Timeline v1.1.3).
 # v1.3.0: --start DIV (OVERLORD divert test, Comms_Director v1.7.3): the J2 start (over CP TIGER, heading to
@@ -159,7 +162,8 @@ def build(mission, a, key):
         sys.exit("route point '%s' not found (or it is the first point)" % a.cp_name)
     cp = pts[cp_i]
     cx, cy = cp[b"x"], cp[b"y"]
-    if key == "J1":
+    geo = "J1" if key == "VIS" else key
+    if geo == "J1":
         prev = pts[cp_i - 1]
         dx, dy = cx - prev[b"x"], cy - prev[b"y"]
         d = math.hypot(dx, dy)
@@ -189,12 +193,15 @@ def build(mission, a, key):
         p1.pop(k, None)
     p1.update({b"x": sx, b"y": sy, b"alt": alt, b"alt_type": b"BARO", b"type": b"Turning Point",
                b"action": b"Turning Point", b"speed": spd, b"ETA": 0, b"ETA_locked": True,
-               b"name": ("AIRSTART J2 DIV" if key == "DIV" else "AIRSTART " + key).encode()})
+               b"name": ("AIRSTART J2 DIV" if key == "DIV" else "AIRSTART " + geo).encode()})
     if key == "DIV":
         unit[b"payload"][b"fuel"] = round(a.div_internal_lb / 2.20462, 1)
         print("  DIV: internal fuel %d lb" % a.div_internal_lb)
     keep = [p1] + pts[cp_i:]          # drop the departure point(s) before the CP
     g[b"route"][b"points"] = {i: p for i, p in enumerate(keep, 1)}
+    if key == "VIS":
+        with open(os.path.join(HERE, "visual_test.lua"), "rb") as f:
+            add_do_script(mission, f.read(), "VISUAL TEST")
     print("  %s: start %.0f / %.0f (ME x / y), heading %03.0f true, %d ft, %d kt, route %d point(s)"
           % (key, sx, sy, math.degrees(hdg), a.alt_ft, a.kt, len(keep)))
 
@@ -202,7 +209,7 @@ def build(mission, a, key):
 def main():
     ap = argparse.ArgumentParser(description="air-start TEST variants of a CAS .miz (written next to it)")
     ap.add_argument("miz")
-    ap.add_argument("--start", nargs="+", choices=["J1", "J2", "AAR", "AAR-S", "DIV"], default=["J1", "J2"])
+    ap.add_argument("--start", nargs="+", choices=["J1", "J2", "AAR", "AAR-S", "DIV", "VIS"], default=["J1", "J2"])
     ap.add_argument("--tanker-group", default="TANKER-1")
     ap.add_argument("--aar-nm", type=float, default=12)
     ap.add_argument("--aar-alt-ft", type=int, default=20000)
