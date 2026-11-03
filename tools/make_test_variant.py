@@ -1,4 +1,8 @@
-# make_test_variant.py | v1.6.0
+# make_test_variant.py | v1.7.0
+# v1.7.0: waypoint numbers kept (flight 2026-11-03: CP TIGER became WP1 instead of the kneeboard's WP2, the pilot
+#         steered WP2 = IP LYNX and passed CP TIGER 20.3 NM abeam, outside the 20 NM tasking ring). The dropped
+#         departure point(s) are replaced by turning points on the start -> CP leg ("TEST LEG n"), so every point
+#         from the CP on keeps its number (AIR START + J1 / J2 / DIV / VIS / AAR).
 # v1.6.0: --spoof J1|J2|both|off (JTAC_Controller v0.13.0): ME flag 216 forces the spoofed abort on that JTAC
 #         (100 %) or switches it off. Variant name tag "SPF<x>", e.g. "TEST-J1-A-SPFJ1".
 # v1.5.0: tasking scenarios (Comms_Director v1.8.0): --scen A|B|C forces the scenario, --lc J1tech|J1down|J2tech|
@@ -114,6 +118,24 @@ def add_do_script(mission, text, comment):
     print("  trigger %d '%s' added (DO SCRIPT, %d bytes)" % (n, comment, len(text)))
 
 
+def filler(p_from, p_to, n):
+    """v1.7.0: n turning points evenly on the leg p_from -> p_to (replace the dropped departure points so the
+    waypoint numbers from the CP on match the kneeboard)."""
+    out = []
+    for i in range(1, n + 1):
+        f = i / (n + 1.0)
+        p = copy.deepcopy(p_to)
+        for k in (b"linkUnit", b"helipadId", b"airdromeId", b"linkOffset", b"task"):
+            p.pop(k, None)
+        p.update({b"x": p_from[b"x"] + (p_to[b"x"] - p_from[b"x"]) * f,
+                  b"y": p_from[b"y"] + (p_to[b"y"] - p_from[b"y"]) * f,
+                  b"alt": p_from[b"alt"], b"alt_type": b"BARO", b"type": b"Turning Point", b"action": b"Turning Point",
+                  b"speed": p_from[b"speed"], b"ETA": 0, b"ETA_locked": False,
+                  b"name": ("TEST LEG %d" % i).encode()})
+        out.append(p)
+    return out
+
+
 def build_aar(mission, a, key):
     g = find_group(mission, b"plane", a.group)
     tk = find_group(mission, b"plane", a.tanker_group)
@@ -143,7 +165,7 @@ def build_aar(mission, a, key):
     p1.update({b"x": sx, b"y": sy, b"alt": alt, b"alt_type": b"BARO", b"type": b"Turning Point",
                b"action": b"Turning Point", b"speed": spd, b"ETA": 0, b"ETA_locked": True,
                b"name": b"AIRSTART AAR"})
-    keep = [p1] + pts[cp_i:]
+    keep = [p1] + filler(p1, pts[cp_i], cp_i - 1) + pts[cp_i:]   # v1.7.0 numbering kept
     g[b"route"][b"points"] = {i: p for i, p in enumerate(keep, 1)}
     with open(os.path.join(HERE, "aar_test_logger.lua"), "rb") as f:
         logger = f.read().replace(b"__SILENCE__", b"true" if key == "AAR-S" else b"false")
@@ -235,7 +257,7 @@ def build(mission, a, key):
     if key == "DIV":
         unit[b"payload"][b"fuel"] = round(a.div_internal_lb / 2.20462, 1)
         print("  DIV: internal fuel %d lb" % a.div_internal_lb)
-    keep = [p1] + pts[cp_i:]          # drop the departure point(s) before the CP
+    keep = [p1] + filler(p1, cp, cp_i - 1) + pts[cp_i:]   # v1.7.0: departure point(s) -> leg points, numbering kept
     g[b"route"][b"points"] = {i: p for i, p in enumerate(keep, 1)}
     if key == "VIS":
         with open(os.path.join(HERE, "visual_test.lua"), "rb") as f:

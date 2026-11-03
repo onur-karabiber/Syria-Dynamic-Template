@@ -1,5 +1,7 @@
--- Comms_Director | v1.8.2
+-- Comms_Director | v1.8.3
 --[[
+  v1.8.3 - flight 2026-11-03 (Onur): the pilot's "negative Texaco, state X.X, proceeding CP TIGER" (skip AR1) is voiced
+           (p_ovl_neg_tkr_a + state tokens + p_ovl_off_tkr_b); it was text only.
   v1.8.2 - CFG.AUDIO: spoofed-abort / AUTHENTICATE clips (pj_/ej_ iauth, spf_dis, spf_neg, spf_adv; jp_auth_ptr /
            jp_auth_eye) for JTAC_Controller v0.13.0. No logic change.
   v1.8.1 - CFG.AUDIO: pilot clip jp_abort_ack ("Hornet five one, aborting.") for JTAC_Controller v0.12.0
@@ -2181,7 +2183,9 @@ end
 local function A_SkipAR1()
     local p = Player(); if not p then return end
     CD.awaiting = true; MenuRebuild()
-    Pilot(string.format("Overlord, %s, negative Texaco, state %s, proceeding %s.", CFG.CS, State(p), CFG.CP_NAME))
+    Pilot(string.format("Overlord, %s, negative Texaco, state %s, proceeding %s.", CFG.CS, State(p), CFG.CP_NAME),
+        Voiced(S("OVERLORD", "p_ovl_neg_tkr_a", "cv:p_state", PD((State(p):match("^(%d+)%.") or "0")), "cv:p_point",
+            PD((State(p):match("%.(%d)$") or "0")), 0.15, "p_ovl_off_tkr_b")))   -- v1.8.3
     Q(string.format("[OVERLORD] %s, Overlord, copy.", CFG.CS), CFG.DUR_SHORT, CFG.REPLY_GAP,
         function() CD.tk = nil; CD.ar1Done = true; CD.awaiting = false; MenuRebuild() end, nil,
         Voiced(S("OVERLORD", "ovl_copy_51")))
@@ -4149,7 +4153,7 @@ local function CD_Init()
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
     timer.scheduleFunction(MudTick, nil, timer.getTime() + 10)   -- v1.7.9
-    env.info("[CD] Comms_Director v1.8.2 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.8.3 online — CAS-1 Syria")
 end
 
 CD_Init()

@@ -1,5 +1,9 @@
--- JTAC_Controller | v0.13.0
+-- JTAC_Controller | v0.13.1
 --[[
+  v0.13.1 (flight 2026-11-03, Onur): (1) the pilot answers "readback correct ... call for laser. Report IP inbound."
+    with "<CS>, wilco." (the call carried two instructions and stayed unanswered); the JTAC's items open when the
+    wilco has ended. (2) Lost comms: when the first check-in stays unanswered and "how copy?" opens, an on-screen
+    hint says so ("No answer from <JTAC>. Call again: F10 > <JTAC>: how copy?"), like the hint before OVERLORD.
   v0.13.0 (spoofed abort / AUTHENTICATE, decisions Onur 2026-11-03): imitative deception on the JTAC net.
     * CFG.SPOOF.pct (10 %) per JTAC tasking, rolled at its first CLEARED HOT: once, CFG.SPOOF.delay s after a
       CLEARED HOT, a transmission in the JTAC's own call sign and voice says "HORNET 51, ABORT <wrong letter> x3.
@@ -226,7 +230,7 @@ if TRT.JC then env.info("[JC] already loaded, second copy ignored") return end
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "0.13.0",
+    VERSION      = "0.13.1",
     VOICE        = true,      -- v0.7.0 spoken transmissions (needs Comms_Director >= v1.6.4)
     PLAYER_UNIT  = "Player_01",
     CS           = "HORNET 51",
@@ -607,6 +611,7 @@ local VOICE = {
         ["hornet 51 spot"] = "jp_spot",
         ["hornet 51 tally"] = "jp_tally",
         ["hornet 51 ten seconds"] = "jp_ten",
+        ["hornet 51 wilco"] = "jp_wilco",
         ["one hornet"] = "jp_one_hornet",
         ["overhead cp tiger"] = "jp_overhead",
         ["playtime"] = "jp_playtime",
@@ -1541,7 +1546,8 @@ local function A_Quiz(k, choice)
         local laser = (j.mark.kind == "laser")
         Jtac(k, string.format("%s, readback correct.%s Report IP inbound.", CFG.CS,
             laser and string.format(" Laser-to-target line %s, call for laser.", st.nine.ltl or "")
-            or ""), CFG.DUR.short, Free(k))
+            or ""), CFG.DUR.short)
+        Pilot(string.format("%s, wilco.", CFG.CS), nil, Free(k))   -- v0.13.1
         st.att = { ipIn = false, inCalled = false, cleared = false, aborted = false, corr = nil }
         SetPhase(k, "ATTACK")
     else
@@ -2450,6 +2456,12 @@ local function Tick(_, now)
             if st.busy and st.busyT and now - st.busyT > CFG.BUSY_MAX_S then
                 Log(string.format("BUSY watchdog %s (%.0f s) -> menu released", k, now - st.busyT))
                 Busy(k, false); MenuRefresh()
+            end
+            if st.phase == "SILENT" and st.silentN == 1 and st.silentT and not st.hcHint
+                and now - st.silentT >= CFG.NOCOMM_RETRY_S then   -- v0.13.1
+                st.hcHint = true
+                Msg(string.format("[CAS-1] No answer from %s. Call again: F10 > %s: how copy?", J(k).disp,
+                    J(k).disp:upper()), 12)
             end
             if st.phase == "SILENT" and st.silentN == 2 and st.silentT and now - st.silentT >= CFG.NOCOMM_RETRY_S then
                 SetPhase(k, "NOCOMM")

@@ -291,6 +291,7 @@ ovl_lc_down_ptr;OVERLORD;Hornet five one, Overlord. Pointer one one is off the n
 ovl_lc_down_eye;OVERLORD;Hornet five one, Overlord. Eyeball one one is off the net, unable to raise. Mission four one zero two cancelled.;tok
 p_push_9;PILOT;Push button nine, Hornet five one.;tok
 p_push_11;PILOT;Push button eleven, Hornet five one.;tok
+p_ovl_neg_tkr_a;PILOT;Overlord, Hornet five one, negative Texaco,;tok:0.1
 p_ovl_cont_notkr_a;PILOT;Overlord, Hornet five one, continuing mission without tanker,;tok:0.1
 i_rmk_can1;PILOT;Mission four one zero one cancelled, no JTAC contact.;tok
 i_rmk_can2;PILOT;Mission four one zero two cancelled, no JTAC contact.;tok
@@ -699,6 +700,7 @@ jp_dry;PILOT;dry.;tok
 jp_aborting;PILOT;Hornet five one, aborting, off;tok
 jp_abort_ack;PILOT;Hornet five one, aborting.;tok
 jp_cs;PILOT;Hornet five one,;tok:0.1
+jp_wilco;PILOT;Hornet five one, wilco.;tok
 jp_rifle;PILOT;rifle,;tok:0.1
 jp_away;PILOT;away.;tok
 jp_bda_ptr;PILOT;Pointer one one, Hornet five one, copy B D A, switching Overlord.;tok

@@ -1,4 +1,5 @@
-# jc_clips.py | v1.5.0
+# jc_clips.py | v1.5.1
+# v1.5.1: pilot "Hornet five one, wilco." (jp_wilco) after "readback correct ... report IP inbound" (JTAC_Controller v0.13.1).
 # v1.5.0: spoofed abort / AUTHENTICATE (JTAC_Controller v0.13.0): JTAC iauth, spf_dis, spf_neg, spf_adv;
 #         pilot jp_auth_ptr / jp_auth_eye.
 # v1.4.0: pilot abort acknowledgement jp_abort_ack "Hornet five one, aborting." for JTAC_Controller v0.12.0
@@ -216,6 +217,7 @@ PILOT = {   # id -> (written key, spoken)
     "jp_aborting": ("hornet 51 aborting off", "Hornet five one, aborting, off"),   # unused since JC v0.12.0
     "jp_abort_ack": ("hornet 51 aborting", "Hornet five one, aborting."),           # v1.4.0
     "jp_cs": ("hornet 51", "Hornet five one,"),
+    "jp_wilco": ("hornet 51 wilco", "Hornet five one, wilco."),   # v1.5.1
     "jp_rifle": ("rifle", "rifle,"),
     "jp_away": ("away", "away."),
     # v1.1.0 (JTAC_Controller v0.8.0): pilot acknowledges BDA / termination
