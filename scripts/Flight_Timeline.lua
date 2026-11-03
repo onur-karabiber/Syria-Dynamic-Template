@@ -1,4 +1,8 @@
--- Flight_Timeline | v1.2.0
+-- Flight_Timeline | v1.3.0
+-- v1.3.0 (tasking scenarios, Comms_Director >= v1.8.0): VUL END (T3) = every tasking ended (CD.vulDone / vulT), in
+--   any order, not "JTAC-2 target dead"; the VUL END plan is moved by CD.vulExtS (C2-directed delay: B hold at CP
+--   TIGER, C partial Pointer work before OVERLORD's divert) - not the pilot's doing, like the threat / tanker credit.
+--   HOLD is a STATION phase; J1_OFF / J2_OFF count as on station while a tasking remains.
 -- v1.2.0 (scoring review 2026-11-02, Onur): timing is scored (CFG.SCORING = true): M1, M2, T1-T4 go through
 --   TRT.addScore ("TIMING ..." = category TIME in the Core_Scoring v1.5.0 ledger); bands and the -12..+9 clip
 --   unchanged.
@@ -50,7 +54,7 @@
                                                                                      | ..+10:00 -2 | later -4
     T2    CP: first entry within CP_RADIUS_NM of the       L + (ETA_cp - ETA_wp1)    |d| <= 2:00 +3 | <= 5:00 0
           route point named CFG.CP_WP_NAME                 (ME route of CFG.GROUP)   | late -3 | early -1
-    T3    VUL END: JTAC-2 target dead (Comms_Director)     CP + 35:00                on time +2 | <= +10:00 0
+    T3    VUL END: every tasking ended (Comms_Director)   CP + 35:00 (+ CD.vulExtS)                on time +2 | <= +10:00 0
                                                                                      | later (or still on station) -2
     T4    fuel below BINGO(position) while on station      -                         -1 per full minute, cap -5
           (<= STATION_NM of the CP, before RTB, not while refuelling); settled when the station ends
@@ -87,7 +91,7 @@ if TRT.TL then
 end
 
 local CFG = {
-    VERSION        = "1.2.0",
+    VERSION        = "1.3.0",
     PLAYER_UNIT    = TRT.PLAYER_NAME or "Player_01",
     GROUP          = "CAS-1",          -- ME group whose route builds the ATO
     CARRIER        = "CVN",
@@ -159,15 +163,22 @@ local CFG = {
 
 local NAMES = {
     M1 = "ENGINES RUNNING", M2 = "CHECKS DONE", T1 = "CAT SHOT",
-    T2 = CFG.CP_NAME, T3 = "VUL END (JTAC-2)", T4 = "BINGO ON STATION",
+    T2 = CFG.CP_NAME, T3 = "VUL END (taskings)", T4 = "BINGO ON STATION",
 }
 local ORDER = { "M1", "M2", "T1", "T2", "T3", "T4" }
 
 local MISSION_PH = {
-    STRIKE_OUT = true, STRIKE_CHK = true, OVL_OUT = true, ENROUTE = true, JTAC1 = true, J1_OFF = true,
+    STRIKE_OUT = true, STRIKE_CHK = true, OVL_OUT = true, ENROUTE = true, HOLD = true, JTAC1 = true, J1_OFF = true,
     JTAC2 = true, J2_OFF = true, REFUEL = true, TKR_DONE = true,
 }
-local STATION_PH = { JTAC1 = true, J1_OFF = true, JTAC2 = true }
+local STATION_PH = { JTAC1 = true, J1_OFF = true, JTAC2 = true, J2_OFF = true, HOLD = true }   -- v1.3.0
+--- v1.3.0: on station = working / holding, or between two taskings
+local function onStationPh(cd)
+    if not (cd and STATION_PH[cd.phase]) then return false end
+    if (cd.phase == "J1_OFF" or cd.phase == "J2_OFF") and cd.vulDone ~= nil then return not cd.vulDone end
+    return cd.phase ~= "J2_OFF"   -- CD < v1.8.0: J2_OFF = VUL complete
+end
+local function vulExt() local cd = TRT and TRT.CD; return (cd and tonumber(cd.vulExtS)) or 0 end
 local END_PH = { RTB = true, STRIKE_IN = true, INBOUND = true, RECOVERY = true, DONE = true, DIVERT = true }
 
 -- ══════════════════════════════════════════════════════════════
@@ -486,14 +497,14 @@ local function scoreT2(t)
 end
 
 local function scoreT3(t, stillOnStation)
-    local plan = TL.ato.VUL + credit()
+    local plan = TL.ato.VUL + credit() + vulExt()
     local d = t - plan
     local p
     if stillOnStation then p = CFG.T3_PTS_LATE
     elseif d <= 0 then p = CFG.T3_PTS_GOOD
     elseif d <= CFG.T3_LATE then p = 0
     else p = CFG.T3_PTS_LATE end
-    local what = stillOnStation and "JTAC-2 not complete, still on station" or ("JTAC-2 complete " .. clock(t))
+    local what = stillOnStation and "taskings not complete, still on station" or ("taskings complete " .. clock(t))
     settle("T3", plan, t, p, string.format("%s, VUL END %s (%s)", what, clock(plan), mmss(d)))
     setFlag(CFG.FLAGS.VUL)
 end
@@ -538,7 +549,7 @@ local function cardText()
     L[#L + 1] = string.format("L   CAT SHOT              %s   -1:00/+2:00 +%d", clock(A.L + c), CFG.T1_PTS_GOOD)
     L[#L + 1] = string.format("CP  %-21s %s   +/-2:00 +%d   (L%s, %s)", CFG.CP_NAME, clock(A.CP + c),
         CFG.T2_PTS_GOOD, mmss(A.ete), A.src)
-    L[#L + 1] = string.format("VUL END (JTAC-2 done)     %s   +%d", clock(A.VUL + c), CFG.T3_PTS_GOOD)
+    L[#L + 1] = string.format("VUL END (taskings done)   %s   +%d", clock(A.VUL + c), CFG.T3_PTS_GOOD)
     L[#L + 1] = string.format("FUEL (lb)  STATION BINGO %.1f JOKER %.1f (tanker + LTAG)", CFG.STATION_BINGO_LB / 1000,
         (CFG.STATION_BINGO_LB + CFG.JOKER_MARGIN_LB) / 1000)
     L[#L + 1] = string.format("RTB: %.1f + %.0f lb/NM to nearer of LTAG/LCRA   RECOVERY: LCRA, TANK = BINGO + %.1f, max MAX TRAP %.1f",
@@ -586,7 +597,9 @@ local function timelineText(title)
     if TL.winchester then L[#L + 1] = "WINCHESTER (A/G)  " .. clock(TL.winchester) end
     if TL.phaseT.JTAC1 then L[#L + 1] = "JTAC-1 start      " .. clock(TL.phaseT.JTAC1) end
     if TL.phaseT.J1_OFF then L[#L + 1] = "JTAC-1 complete   " .. clock(TL.phaseT.J1_OFF) end
-    if TL.phaseT.J2_OFF then L[#L + 1] = "JTAC-2 complete   " .. clock(TL.phaseT.J2_OFF) end
+    local cdv = TRT and TRT.CD
+    if cdv and cdv.vulT then L[#L + 1] = "Taskings complete " .. clock(absToElapsed(cdv.vulT))
+    elseif TL.phaseT.J2_OFF then L[#L + 1] = "JTAC-2 complete   " .. clock(TL.phaseT.J2_OFF) end
     if TL.refuelT then L[#L + 1] = "Refuel contact    " .. clock(TL.refuelT) end
     if TL.divertTxt then L[#L + 1] = TL.divertTxt end   -- v1.1.2
     if #TL.ladder > 0 then
@@ -642,7 +655,7 @@ local function onLand(t, place)
         if TL.aborted then mark("T2", "void", "mission abort") else mark("T2", "n/a", CFG.CP_NAME .. " not reached") end
     end
     if not TL.m.T3.state then
-        if TL.aborted then mark("T3", "void", "mission abort") else mark("T3", "n/a", "JTAC-2 not complete") end
+        if TL.aborted then mark("T3", "void", "mission abort") else mark("T3", "n/a", "taskings not complete") end
     end
     settleT4("landed")
     log(string.format("SUMMARY sum=%+d credit=%s threat=%s fail=%s scoring=%s", TL.sum, mmss(credit()),
@@ -800,7 +813,9 @@ local function tick()
             TL.phase = cd.phase
             if not TL.phaseT[cd.phase] then TL.phaseT[cd.phase] = t end
             log("phase " .. tostring(cd.phase) .. " " .. clock(t))
-            if cd.phase == "RECOVERY" or cd.phase == "J2_OFF" then snap("PH " .. cd.phase) end
+            if cd.phase == "RECOVERY" or ((cd.phase == "J1_OFF" or cd.phase == "J2_OFF") and onStationPh(cd) == false) then
+                snap("PH " .. cd.phase)
+            end
         end
         if cd.aborted and not TL.aborted then
             TL.aborted = t
@@ -822,8 +837,9 @@ local function tick()
             snap("DIVERT", dv.lb)
             voidOpen("divert")
         end
-        if not TL.m.T3.state and not TL.aborted and cd.deadJ2 then
-            local tj2 = absToElapsed(cd.j2 and cd.j2.tot) or t
+        local vul = cd.vulDone or (cd.vulDone == nil and cd.deadJ2)   -- v1.3.0 (CD < v1.8.0: JTAC-2 dead)
+        if not TL.m.T3.state and not TL.aborted and vul then
+            local tj2 = absToElapsed(cd.vulT or (cd.j2 and cd.j2.tot)) or t
             scoreT3(tj2, false)
         end
     end
@@ -866,8 +882,8 @@ local function tick()
 
     -- VUL END timeout: still on station 10 min after VUL END
     if not TL.m.T3.state and not TL.aborted and TL.cpReached then
-        local plan = TL.ato.VUL + credit()
-        local onStation = (cd and STATION_PH[cd.phase]) or (not cd and dCP <= CFG.STATION_NM)
+        local plan = TL.ato.VUL + credit() + vulExt()
+        local onStation = (cd and onStationPh(cd)) or (not cd and dCP <= CFG.STATION_NM)
         if onStation and t > plan + CFG.T3_LATE then scoreT3(t, true) end
         if t > plan then setFlag(CFG.FLAGS.VUL) end
     end

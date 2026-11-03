@@ -1,4 +1,6 @@
--- Pilot_Banter | v2.1.1
+-- Pilot_Banter | v2.1.2
+-- v2.1.2: fence-out at REFUEL after the last tasking in any order (Comms_Director >= v1.8.0 CD.vulDone); HOLD at
+--         CP TIGER counts as outbound for the distance fence-in.
 --[[
   v2.1.1 (CAS (L) sortie 2026-11-02, Onur): "taking gas" fuel values were ~200 lb above the cockpit
       fuel indication while fuel was flowing (pilot report: says 5,400 while the gauge still reads 5,200).
@@ -167,7 +169,7 @@ local CFG = {
                    TKR_DONE = true, RTB = true, OVL_OUT = true, STRIKE_IN = true, INBOUND = true,
                    DIVERT = true },
     STATION_CD = { JTAC1 = true, JTAC2 = true },
-    OUTBOUND_CD = { STRIKE_OUT = true, ENROUTE = true },
+    OUTBOUND_CD = { STRIKE_OUT = true, ENROUTE = true, HOLD = true },   -- v2.1.2 HOLD
     INBOUND_CD = { TKR_DONE = true, RTB = true, OVL_OUT = true, STRIKE_IN = true, INBOUND = true },
     FENCE_OUT_CD = { RTB = true, OVL_OUT = true, STRIKE_IN = true, INBOUND = true, DIVERT = true, RECOVERY = true },
     AAR_CLOSE  = { JOIN = true, ECHELON_L = true, ECHELON_R = true, ASTERN = true, CONTACT = true },
@@ -2508,7 +2510,7 @@ local function WatchModules(u, air)
                 W.wasStation = true
             end
             if W.wasStation and not W.fenceOut and air
-                and (CFG.FENCE_OUT_CD[ph] or (ph == "REFUEL" and cd.deadJ2)) then
+                and (CFG.FENCE_OUT_CD[ph] or (ph == "REFUEL" and (cd.vulDone or cd.deadJ2))) then
                 W.fenceOut = true
                 Fire("fence_out", "CD " .. tostring(prev) .. " -> " .. tostring(ph))
             end

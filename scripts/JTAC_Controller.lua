@@ -1,5 +1,16 @@
--- JTAC_Controller | v0.10.0
+-- JTAC_Controller | v0.11.0
 --[[
+  v0.11.0 (tasking scenarios, Onur 2026-11-03; needs Comms_Director >= v1.8.0):
+    * Radio gate: while a dialogue exchange is on the radio (Busy) the JTAC's F10 items are hidden; Busy is
+      released when the JTAC's answer has ENDED (Jtac(..., fnEnd): Comms_Director onEnd), so the next item appears
+      after the call was heard. Readback timers start at the end of the call. Watchdog CFG.BUSY_MAX_S.
+      Every queued JC call carries the tag "JC:<key>" (Comms_Director QDrop).
+    * Lost comms: JC.setNoComm(k, kind) or the JTAC unit dead -> the check-in goes out, no answer (phase SILENT);
+      after CFG.NOCOMM_RETRY_S "how copy? (no answer)"; still nothing -> phase NOCOMM (Comms_Director: "OVERLORD:
+      unable contact"). JC.altFreq(k, btn) = restored on the alternate button (check in again), JC.cancel(k, why)
+      = tasking cancelled (DONE, st.cancelled). A JTAC killed during the tasking goes silent the same way.
+    * OVERLORD divert: JC.freeze(k, on) hides the items while OVERLORD's offer is open; JC.suspend(k) discards the
+      dialogue (laser off, queued calls dropped, phase HOLD); JC.resume(k) -> IDLE -> fresh hand-off and check-in.
   v0.10.0 (CAS (L) sortie 2026-11-02/03, Onur): WINCHESTER. A miss at Pointer cost a weapon, Eyeball's last target
     had nothing left for it, and the menu had no way out (no check-out, no INFLTREP, no AR2). Now, in ATTACK, when
     the hero has no air-to-ground weapon left (bombs, rockets, A/G missiles except anti-radiation ones) and targets
@@ -175,7 +186,7 @@ if TRT.JC then env.info("[JC] already loaded, second copy ignored") return end
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "0.9.1",
+    VERSION      = "0.11.0",
     VOICE        = true,      -- v0.7.0 spoken transmissions (needs Comms_Director >= v1.6.4)
     PLAYER_UNIT  = "Player_01",
     CS           = "HORNET 51",
@@ -203,6 +214,8 @@ local CFG = {
     IMPACT_WAIT_S = 3,
     UNAUTH_KILL_M = 150,         -- v0.8.1 m from the unauthorized weapon's last point to the victim (3D)
     UNAUTH_KILL_S = 15,          -- v0.8.1 s after its impact a kill can still be attributed to it
+    NOCOMM_RETRY_S = 20,         -- v0.11.0 lost comms: s without an answer before "how copy?" / OVERLORD
+    BUSY_MAX_S    = 120,         -- v0.11.0 watchdog: a dialogue gate never stays closed longer than this
     TIC_WAIT_S    = 120,         -- v0.8.1 max s the TIC JTAC's hand-off waits for the CD TIC exchange
     THREAT_NM    = 8,
     -- v0.4.0: threats to the run-in (typical envelopes, NM / ft MSL; not verified against DCS models)
@@ -521,6 +534,7 @@ local VOICE = {
         ["eyeball 11 cease laser"] = "jp_cease_eye",
         ["eyeball 11 hornet 51 copy bda switching overlord"] = "jp_bda_eye",
         ["eyeball 11 hornet 51 copy switching overlord"] = "jp_swo_eye",
+        ["eyeball 11 hornet 51 how copy"] = "jp_hc_eye",
         ["eyeball 11 hornet 51 mission"] = "jp_ci_eye",
         ["eyeball 11 hornet 51 ready to copy"] = "jp_ready_eye",
         ["eyeball 11 hornet 51 winchester"] = "jp_wnc_eye",
@@ -548,6 +562,7 @@ local VOICE = {
         ["pointer 11 cease laser"] = "jp_cease_ptr",
         ["pointer 11 hornet 51 copy bda switching overlord"] = "jp_bda_ptr",
         ["pointer 11 hornet 51 copy switching overlord"] = "jp_swo_ptr",
+        ["pointer 11 hornet 51 how copy"] = "jp_hc_ptr",
         ["pointer 11 hornet 51 mission"] = "jp_ci_ptr",
         ["pointer 11 hornet 51 ready to copy"] = "jp_ready_ptr",
         ["pointer 11 hornet 51 winchester"] = "jp_wnc_ptr",
@@ -697,39 +712,54 @@ local function OwnFire()
     timer.scheduleFunction(function()
         Msg(it.text, it.dur)
         if it.fn then pcall(it.fn) end
-        timer.scheduleFunction(function() OwnFire() end, nil, timer.getTime() + (it.hold or it.dur))
+        timer.scheduleFunction(function()
+            if it.onEnd then pcall(it.onEnd) end   -- v0.11.0
+            OwnFire()
+        end, nil, timer.getTime() + (it.hold or it.dur))
     end, nil, timer.getTime() + (it.after or 0) + 0.01)
 end
 
---- text, display s, gap before (s), callback at start, hold (s until the next may start), voice seq
-local function Say(text, dur, after, fn, hold, audio)
+--- text, display s, gap before (s), callback at start, hold (s until the next may start), voice seq,
+--- v0.11.0: onEnd = callback when the transmission has ENDED, tag = "JC:<key>" (Comms_Director QDrop)
+local function Say(text, dur, after, fn, hold, audio, onEnd, tag)
     local cd = TRT.CD_RADIO
     if cd and cd.Q then
-        cd.Q(text, dur, after, fn, hold, audio)
+        cd.Q(text, dur, after, fn, hold, audio, onEnd, tag)
         cd.QPlay()
         return
     end
-    JC.queue[#JC.queue + 1] = { text = text, dur = dur, after = after, fn = fn, hold = hold }
+    JC.queue[#JC.queue + 1] = { text = text, dur = dur, after = after, fn = fn, hold = hold, onEnd = onEnd, tag = tag }
     if not JC.qBusy then OwnFire() end
 end
+local function Tag(k) return k and ("JC:" .. k) or nil end
 
 local function J(k) return CFG.JTACS[k] end
+local Silent   -- v0.11.0: Silent(k) -> true when the JTAC cannot transmit (lost comms / JTAC dead)
 -- v0.7.0: JC.vk = JTAC the pilot is talking to (set by the F10 items and the release handler);
 -- JC.lastLen = airtime (s) of the last voiced JTAC transmission (0 = text only)
 local function PV(text) return Voice("P", JC.vk and J(JC.vk), text) end
 local function JV(k, text) local a, len = Voice("J", J(k), text); JC.lastLen = len or 0; return a end
-local function Pilot(text, fn)
-    Say("[" .. CFG.CS .. "] " .. text, CFG.DUR.pilot, 0.3, fn, CFG.DUR.hold_pilot, PV(text))
+--- fn at the start of the transmission, fnEnd (v0.11.0) when it has ended
+local function Pilot(text, fn, fnEnd)
+    Say("[" .. CFG.CS .. "] " .. text, CFG.DUR.pilot, 0.3, fn, CFG.DUR.hold_pilot, PV(text), fnEnd, Tag(JC.vk))
 end
-local function Jtac(k, text, dur, fn, hold)
-    Say("[" .. J(k).cs .. "] " .. text, dur or CFG.DUR.short, 1.5, fn, hold or CFG.DUR.hold, JV(k, text))
+--- v0.11.0: fnEnd runs when the JTAC's transmission has ENDED (menu gate: the next item appears after the
+--- call was heard, not while it plays). A silent JTAC (lost comms) does not transmit; fnEnd runs at once.
+local function Jtac(k, text, dur, fnEnd, hold)
+    if Silent and Silent(k) then
+        Log("SILENT " .. k .. ": " .. text)
+        if fnEnd then timer.scheduleFunction(function() pcall(fnEnd) end, nil, timer.getTime() + 0.1) end
+        return
+    end
+    Say("[" .. J(k).cs .. "] " .. text, dur or CFG.DUR.short, 1.5, nil, hold or CFG.DUR.hold, JV(k, text), fnEnd, Tag(k))
 end
 --- time-critical attack / laser traffic
 local function PilotF(text, fn)
-    Say("[" .. CFG.CS .. "] " .. text, CFG.DUR.pilot, CFG.DUR.fast_after, fn, CFG.DUR.fast_hold, PV(text))
+    Say("[" .. CFG.CS .. "] " .. text, CFG.DUR.pilot, CFG.DUR.fast_after, fn, CFG.DUR.fast_hold, PV(text), nil, Tag(JC.vk))
 end
 local function JtacF(k, text, fn)
-    Say("[" .. J(k).cs .. "] " .. text, CFG.DUR.short, 0.8, fn, CFG.DUR.fast_hold, JV(k, text))
+    if Silent and Silent(k) then Log("SILENT " .. k .. ": " .. text); if fn then pcall(fn) end; return end
+    Say("[" .. J(k).cs .. "] " .. text, CFG.DUR.short, 0.8, fn, CFG.DUR.fast_hold, JV(k, text), nil, Tag(k))
 end
 local function Ovl(text, dur, after, hold)
     Say("[OVERLORD] " .. text, dur, after, nil, hold, (Voice("O", nil, text)))
@@ -742,6 +772,10 @@ local function JtacUnit(k)
     local g = Group.getByName(J(k).group)
     if not g or not g:isExist() then return nil end
     for _, u in ipairs(g:getUnits() or {}) do if Alive(u) then return u end end
+end
+Silent = function(k)   -- v0.11.0
+    local st = JC.st[k]
+    return (st and st.nocomm ~= nil) or JtacUnit(k) == nil
 end
 
 local function TargetUnits(k)
@@ -1302,15 +1336,27 @@ local function SetPhase(k, ph)
     MenuRefresh()
 end
 
-local function Busy(k, v) JC.st[k].busy = v end   -- v0.3.1: no menu rebuild (items stay)
-local function Free(k) return function() Busy(k, false) end end
+-- v0.11.0: while busy (a dialogue exchange is on the radio) the JTAC's items are hidden; Free runs when the JTAC's
+-- answer has ENDED, so the next item appears after the call was heard. Watchdog in Tick (CFG.BUSY_MAX_S).
+local function Busy(k, v) JC.st[k].busy = v; JC.st[k].busyT = v and timer.getTime() or nil end
+local function Free(k) return function() Busy(k, false); MenuRefresh() end end
 
 local function A_CheckIn(k)
     local st, j, u = JC.st[k], J(k), Hero()
     if not u then return end
     Busy(k, true)
-    Pilot(string.format("%s, %s, mission %s, %s, %s, %s, playtime %d, %s, abort code %s.", j.disp, CFG.CS,
-        j.msn, CFG.NUM_TYPE, Position(u), Ordnance(u), Playtime(u), CFG.CAPS, ChallengeTxt()))
+    local ciTxt = string.format("%s, %s, mission %s, %s, %s, %s, playtime %d, %s, abort code %s.", j.disp, CFG.CS,
+        j.msn, CFG.NUM_TYPE, Position(u), Ordnance(u), Playtime(u), CFG.CAPS, ChallengeTxt())
+    if Silent(k) then   -- v0.11.0 lost comms: the call goes out, nobody answers
+        Pilot(ciTxt, nil, function()
+            st.silentN, st.silentT = 1, timer.getTime(); Busy(k, false); MenuRefresh()
+        end)
+        Log(string.format("CHECK-IN %s: no answer (%s)", k, tostring(st.nocomm or "JTAC unit dead")))
+        Emit("SILENT", { key = k })
+        SetPhase(k, "SILENT")
+        return
+    end
+    Pilot(ciTxt)
     local tp = Centroid(TargetUnits(k)) or (JtacUnit(k) and JtacUnit(k):getPoint())
     local excl = {}
     for _, gn in ipairs(j.targets) do excl[gn] = true end
@@ -1330,6 +1376,17 @@ local function A_CheckIn(k)
         tp and WindText(tp) or "unknown"), CFG.DUR.long, Free(k), 8)
     st.checkinT = timer.getTime()
     SetPhase(k, "SITREP")
+end
+
+--- v0.11.0 lost comms: second call; no answer -> NOCOMM (Comms_Director offers "unable contact" to OVERLORD)
+local function A_HowCopy(k)
+    local st, j = JC.st[k], J(k)
+    Busy(k, true)
+    st.silentN = 1.5
+    Pilot(string.format("%s, %s, how copy?", j.disp, CFG.CS), nil, function()
+        st.silentN, st.silentT = 2, timer.getTime(); Busy(k, false); MenuRefresh()
+    end)
+    Log("HOW COPY " .. k)
 end
 
 local function A_ReadyGamePlan(k)
@@ -1352,7 +1409,7 @@ local function A_ReadyNine(k)
     Jtac(k, string.format("%s\n  %s\n  %s\n  %s\n  %d\n  %s\n  %s\n  %s\n  %s\n  egress %s\n"
         .. "Advise when ready for remarks.", CFG.CS .. ",", n.ip, n.hdg, n.dist, n.elev, n.desc, n.grid,
         n.mark, n.fr, n.egress), CFG.DUR.nine, function()
-            Busy(k, false)
+            Busy(k, false); MenuRefresh()
             if n.keyhole and n.ipPos then   -- v0.5.0
                 Msg(string.format("[CAS-1] IP %s = %s (from the target %s mag, %s NM).", n.ip, MGRS(n.ipPos),
                     n.ip:match("keyhole (%d+)/") or "?", n.dist), 30)
@@ -1392,13 +1449,11 @@ local function A_ReadyRemarks(k)
     end
     rem[#rem + 1] = "request " .. j.ord
     rem[#rem + 1] = "hard deck two-zero thousand in effect"
-    local air
     Jtac(k, string.format("%s, remarks: %s. Restrictions: final attack heading %s to %s. Report IP inbound.",
         CFG.CS, table.concat(rem, ", "), H3(n.fahLo), H3(n.fahHi)), CFG.DUR.long, function()
-            st.rbT0, st.rbPrompted = timer.getTime() + (air or 0), 0   -- v0.7.0: from the end of the call
-            Busy(k, false)
+            st.rbT0, st.rbPrompted = timer.getTime(), 0   -- v0.11.0: runs at the end of the call
+            Busy(k, false); MenuRefresh()
         end, 6)
-    air = JC.lastLen
     NewQuiz(k)
     st.rbTries = 0
     SetPhase(k, "READBACK")
@@ -1444,10 +1499,8 @@ local function A_Quiz(k, choice)
             st.rbPen = (st.rbPen or 0) + pen
             Score(pen, string.format("READBACK ERROR %s (%d item%s)", J(k).disp, #wrong, #wrong > 1 and "s" or ""))
         end
-        local air
         Jtac(k, string.format("%s, negative. %s. Read back.", CFG.CS, table.concat(fix, ", ")), CFG.DUR.short,
-            function() st.rbT0, st.rbPrompted = timer.getTime() + (air or 0), 0; Busy(k, false) end)
-        air = JC.lastLen
+            function() st.rbT0, st.rbPrompted = timer.getTime(), 0; Busy(k, false); MenuRefresh() end)
         NewQuiz(k)
     end
 end
@@ -1588,7 +1641,7 @@ local function A_Winchester(k)
         .. "Time, %s local. Remarks, mission %s, not complete. Cleared to depart, return to Overlord.", CFG.CS,
         j.disp, sz, (unseen > 0) and string.format(", %s not observed", Word(unseen)) or "", Describe(alive),
         st.units and st.units[1] and MGRS(st.units[1].pos) or "unknown", Clock(), j.msn), CFG.DUR.long)
-    Pilot(string.format("%s, %s, copy BDA, switching Overlord.", j.disp, CFG.CS), Free(k))
+    Pilot(string.format("%s, %s, copy BDA, switching Overlord.", j.disp, CFG.CS), nil, Free(k))
     st.incomplete = { destroyed = #(st.units or {}) - #alive, remaining = #alive, total = #(st.units or {}) }
     Log(string.format("WINCHESTER %s: %d destroyed (%d seen), %d remaining%s", k, st.incomplete.destroyed, #seen,
         #alive, lasing and ", laser off" or ""))
@@ -1881,7 +1934,8 @@ end
 -- ══════════════════════════════════════════════════════════════
 local function Offered(k, u)
     local st = JC.st[k]
-    if st.phase == "IDLE" or st.phase == "DONE" or st.phase == "TERMINATED" then return false end
+    if st.phase == "IDLE" or st.phase == "DONE" or st.phase == "TERMINATED" or st.phase == "HOLD"
+        or st.phase == "NOCOMM" then return false end   -- v0.11.0 HOLD (divert) / NOCOMM (OVERLORD's)
     local cd = TRT.CD
     if CFG.HANDOFF == "CD" and cd and cd.phase == J(k).cdPhase then return true end
     local tp = Centroid(TargetUnits(k))
@@ -1891,13 +1945,17 @@ end
 local function Items(_)
     local out, u = {}, Hero()
     for _, k in ipairs(CFG.ORDER) do
-        if Offered(k, u) then
+        if Offered(k, u) and not JC.st[k].busy and not JC.st[k].frozen then   -- v0.11.0 radio gate / OVERLORD divert
             local st, j = JC.st[k], J(k)
             local P = j.disp:upper() .. ": "
             local first = #out + 1
             local ph = st.phase
             if ph == "CHECKIN" then
                 out[#out + 1] = { P .. "check in (btn " .. j.btn .. ")", function() A_CheckIn(k) end }
+            elseif ph == "SILENT" then   -- v0.11.0
+                if st.silentN == 1 and st.silentT and timer.getTime() - st.silentT >= CFG.NOCOMM_RETRY_S then
+                    out[#out + 1] = { P .. "how copy? (no answer)", function() A_HowCopy(k) end }
+                end
             elseif ph == "SITREP" then
                 out[#out + 1] = { P .. "ready for game plan", function() A_ReadyGamePlan(k) end }
             elseif ph == "GAMEPLAN" then
@@ -2084,6 +2142,76 @@ local function Handoff(k)
     SetPhase(k, "CHECKIN")
 end
 
+local ACTIVE = { SITREP = true, GAMEPLAN = true, NINE = true, READBACK = true, ATTACK = true }   -- v0.11.0
+
+-- ══════════════════════════════════════════════════════════════
+--  v0.11.0 API for Comms_Director (scenarios: lost comms, OVERLORD divert, cancellation)
+-- ══════════════════════════════════════════════════════════════
+local function DropQueued(k)
+    local r = TRT.CD_RADIO
+    if r and r.drop then return r.drop(Tag(k)) end
+    return 0
+end
+
+--- lost comms with JTAC k ("tech" | "down"), set at the scenario pick
+function JC.setNoComm(k, kind)
+    if not JC.st[k] then return end
+    JC.st[k].nocomm = kind
+    Log("NOCOMM armed " .. k .. " (" .. tostring(kind) .. ")")
+end
+
+--- comms restored on the alternate button: check in again
+function JC.altFreq(k, btn)
+    local st = JC.st[k]; if not st then return end
+    st.nocomm, st.silentN, st.silentT = nil, nil, nil
+    J(k).btn = btn
+    Busy(k, false)
+    Log(string.format("ALTERNATE %s: button %d, check-in again", k, btn))
+    SetPhase(k, "CHECKIN")
+end
+
+--- tasking cancelled (lost comms, Winchester elsewhere, target gone): no more traffic, DONE (not completed)
+function JC.cancel(k, why)
+    local st = JC.st[k]; if not st then return end
+    LaserOff(k, "cancelled")
+    local n = DropQueued(k)
+    Busy(k, false)
+    st.frozen, st.cancelled = nil, why or "cancelled"
+    Log(string.format("CANCEL %s (%s), %d queued call(s) dropped", k, st.cancelled, n))
+    Emit("CANCEL", { key = k, why = st.cancelled })
+    SetPhase(k, "DONE")
+end
+
+--- OVERLORD is talking (divert offer): hide the JTAC's items, no readback prompts
+function JC.freeze(k, on)
+    local st = JC.st[k]; if not st then return end
+    st.frozen = on and true or nil
+    if not on and st.phase == "READBACK" and st.rbT0 then st.rbT0, st.rbPrompted = timer.getTime(), 0 end
+    Log("FREEZE " .. k .. " " .. tostring(on))
+    MenuRefresh()
+end
+
+--- divert accepted: the JTAC holds; its dialogue is discarded, a fresh check-in follows on resume
+function JC.suspend(k)
+    local st = JC.st[k]; if not st then return end
+    LaserOff(k, "suspended")
+    local n = DropQueued(k)
+    local keep = { phase = st.phase, tic = st.tic, rbPen = st.rbPen, viol = st.viol, violT = st.violT, nocomm = st.nocomm }
+    for key in pairs(st) do st[key] = nil end
+    for key, v in pairs(keep) do st[key] = v end
+    Log(string.format("SUSPEND %s from %s, %d queued call(s) dropped", k, keep.phase, n))
+    Emit("SUSPEND", { key = k })
+    SetPhase(k, "HOLD")
+end
+
+function JC.resume(k)
+    local st = JC.st[k]; if not st then return end
+    if st.phase == "HOLD" then
+        Log("RESUME " .. k .. " -> fresh hand-off")
+        SetPhase(k, "IDLE")
+    end
+end
+
 local function Tick(_, now)
     local ok, err = pcall(function()
         local u = Hero()
@@ -2120,7 +2248,26 @@ local function Tick(_, now)
                 Emit("DONE", { key = k })
                 SetPhase(k, "DONE")
             end
-            if st.phase == "READBACK" and st.rbT0 and not st.busy then
+            -- v0.11.0: busy watchdog, lost comms progression, JTAC lost during the tasking
+            if st.busy and st.busyT and now - st.busyT > CFG.BUSY_MAX_S then
+                Log(string.format("BUSY watchdog %s (%.0f s) -> menu released", k, now - st.busyT))
+                Busy(k, false); MenuRefresh()
+            end
+            if st.phase == "SILENT" and st.silentN == 2 and st.silentT and now - st.silentT >= CFG.NOCOMM_RETRY_S then
+                SetPhase(k, "NOCOMM")
+                Emit("NOCOMM", { key = k })
+                Msg(string.format("[CAS-1] No answer from %s. Report to OVERLORD (F10, COMM2).", J(k).disp), 12)
+            end
+            if ACTIVE[st.phase] and not st.nocomm and JtacUnit(k) == nil then
+                st.nocomm = "JTAC unit dead"
+                LaserOff(k, "JTAC lost")
+                if TRT.CD_RADIO and TRT.CD_RADIO.drop then TRT.CD_RADIO.drop(Tag(k)) end
+                Busy(k, false)
+                st.silentN, st.silentT = 1, now - CFG.NOCOMM_RETRY_S + 10
+                Log("JTAC " .. k .. " lost during the tasking (" .. st.phase .. ") -> silent")
+                SetPhase(k, "SILENT")
+            end
+            if st.phase == "READBACK" and st.rbT0 and not st.busy and not st.frozen then
                 local due = st.rbT0 + CFG.RB_PROMPT_S * ((st.rbPrompted or 0) + 1)
                 if now >= due and (st.rbPrompted or 0) < 3 then
                     st.rbPrompted = (st.rbPrompted or 0) + 1

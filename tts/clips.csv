@@ -268,6 +268,32 @@ tq_rcvd42;TEXACO;Hornet four two, Texaco one one, you received;tok
 tq_ctl;TEXACO;Clear to leave.;tok
 a41_ack;AI41>TEXACO;Hornet four one.;tok
 a42_ack;AI42>TEXACO;Hornet four two.;tok
+# v1.8.0 Comms_Director tasking scenarios (Onur 2026-11-03): order, hold at CP, divert, lost comms, no-show
+ovl_contact_eyeball_b;OVERLORD;Eyeball one one is on station. Contact Eyeball one one, push button five. Return to this button on check-out.;tok
+ovl_tic_eyeball_c;OVERLORD;Eyeball one one reports troops in contact, priority immediate. Contact Eyeball one one, push button five, without delay. Return to this button on check-out.;tok
+ovl_resume_ptr;OVERLORD;Pointer one one is holding. Contact Pointer one one, push button four.;tok
+ovl_task_a;OVERLORD;Hornet five one, Overlord, tasking.;tok:0.1
+ovl_hold;OVERLORD;Hornet five one, Overlord. Hold at C P Tiger, angels two two. Expect tasking in five minutes.;tok
+p_hold_rb;PILOT>OVERLORD;Hornet five one, holding C P Tiger, angels two two.;tok
+p_ovl_off_eyeball_a;PILOT;Overlord, Hornet five one, off Eyeball one one, mission four one zero two complete,;tok:0.1
+ovl_divert_a;OVERLORD;Hornet five one, Overlord, divert, divert.;tok:0.15
+ovl_divert_b;OVERLORD;Eyeball one one reports troops in contact, priority immediate. Contact Eyeball one one, push button five, without delay. Pointer one one is advised.;tok
+p_divert_ptr;PILOT>POINTER;Pointer one one, Hornet five one, diverted by Overlord to troops in contact. Will return when able.;tok
+ptr_divert_ack;POINTER_JC>POINTER;Hornet five one, Pointer one one, copy. No other CAS available, we'll hold. Return when able.;tok
+p_divert_unable;PILOT>OVERLORD;Overlord, Hornet five one, unable divert,;tok:0.1
+ovl_divert_unable;OVERLORD;Hornet five one, Overlord, copy. Continue with Pointer one one.;tok
+p_unable_ptr;PILOT>OVERLORD;Overlord, Hornet five one, unable contact Pointer one one.;tok
+p_unable_eye;PILOT>OVERLORD;Overlord, Hornet five one, unable contact Eyeball one one.;tok
+ovl_standby;OVERLORD;Hornet five one, Overlord, copy, stand by.;tok
+ovl_lc_alt_ptr;OVERLORD;Hornet five one, Overlord. Pointer one one reports radio failure on primary. Contact Pointer one one on alternate, push button nine.;tok
+ovl_lc_alt_eye;OVERLORD;Hornet five one, Overlord. Eyeball one one reports radio failure on primary. Contact Eyeball one one on alternate, push button eleven.;tok
+ovl_lc_down_ptr;OVERLORD;Hornet five one, Overlord. Pointer one one is off the net, unable to raise. Mission four one zero one cancelled.;tok
+ovl_lc_down_eye;OVERLORD;Hornet five one, Overlord. Eyeball one one is off the net, unable to raise. Mission four one zero two cancelled.;tok
+p_push_9;PILOT;Push button nine, Hornet five one.;tok
+p_push_11;PILOT;Push button eleven, Hornet five one.;tok
+p_ovl_cont_notkr_a;PILOT;Overlord, Hornet five one, continuing mission without tanker,;tok:0.1
+i_rmk_can1;PILOT;Mission four one zero one cancelled, no JTAC contact.;tok
+i_rmk_can2;PILOT;Mission four one zero two cancelled, no JTAC contact.;tok
 # BEGIN JC (tools/jc_clips.py)
 pj_n_0;POINTER_JC>POINTER;zero;tok
 pj_n_1;POINTER_JC>POINTER;one;tok
@@ -668,6 +694,8 @@ jp_bda_ptr;PILOT;Pointer one one, Hornet five one, copy B D A, switching Overlor
 jp_bda_eye;PILOT;Eyeball one one, Hornet five one, copy B D A, switching Overlord.;tok
 jp_swo_ptr;PILOT;Pointer one one, Hornet five one, copy, switching Overlord.;tok
 jp_swo_eye;PILOT;Eyeball one one, Hornet five one, copy, switching Overlord.;tok
+jp_hc_ptr;PILOT;Pointer one one, Hornet five one, how copy?;tok
+jp_hc_eye;PILOT;Eyeball one one, Hornet five one, how copy?;tok
 jp_wnc_ptr;PILOT;Pointer one one, Hornet five one, Winchester.;tok
 jp_wnc_eye;PILOT;Eyeball one one, Hornet five one, Winchester.;tok
 ovl_rep_ptr;OVERLORD;Hornet five one, Overlord. Pointer one one reports an unauthorized weapons release. The incident has been reported to CAG. Report to CAG on recovery.;tok

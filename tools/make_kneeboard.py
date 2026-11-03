@@ -1,4 +1,7 @@
-# make_kneeboard.py | v3.5.4
+# make_kneeboard.py | v3.6.0
+# v3.6.0: 02 COMM: alternate JTAC buttons C1-09 POINTER ALT 255.00 / C1-11 EYEBALL ALT 259.00 (lost comms, Comms_Director
+#         v1.8.0); COMM 2 btn 1 = OVERLORD (divert / retasking while working a JTAC on C1); comm flow 4-6 = OVERLORD
+#         tasks the JTACs in its own order (hold at CP TIGER angels 22 possible, divert possible).
 # v3.5.4: 08 FUEL from the 31 Oct full sortie [D]: CP 12 300, station burn ~200 lb/min, VUL ~6 900; recovery
 #         MAX TRAP 4 300 (33 000 - ZFW 28 700), TANK capped at max trap (Flight_Timeline v1.1.5); signal tank from
 #         Tower btn 1 in CASE I/II, back to Tower after tanking (CV_Comms v1.7.4).
@@ -133,11 +136,13 @@ def comm():
               ("03","265.00 AM","STRIKE","STK",""),("04","333.30 AM","POINTER 11","JTAC-1",""),
               ("05","333.40 AM","EYEBALL 11","JTAC-2",""),("06","251.10 AM","OVERLORD","OVL",""),
               ("07","252.10 AM","TEXACO 11","TKR",""),("08","252.30 AM","ARCO 31 (RCV)","RTK","CVN tanker"),
+              ("09","255.00 AM","POINTER ALT","JTAC-1","lost comms"),
+              ("11","259.00 AM","EYEBALL ALT","JTAC-2","lost comms"),
               ("15","263.00 AM","APPROACH","APP","+CASE III LSO"),
               ("16","261.00 AM","MARSHAL","MRS","")]:
         c.chrow(*r)
     c.rule(); c.band("COMM 2  (UFC → C2)")
-    c.chrow("01", "251.10 AM", "OVERLORD mon", "OVL")
+    c.chrow("01", "251.10 AM", "OVERLORD", "OVL", "keep up on JTAC")
     c.chrow("02", "128.10 AM", "AI traffic", "AI", "02–10: 128.1–128.9")
     c.rule(); c.head("DISCRETE / GUARD")
     c.kv("GUARD", "243.00 AM (monitor)", "m")
@@ -145,8 +150,8 @@ def comm():
     c.kv("CVN native", "127.60 AM not used (F1)", "m")
     c.rule(); c.head("COMM FLOW   (F10 > COMMS)")
     flow = [("1","Airborne","DEP","C1-02","CASE III dep (I/II zip)"),("2","7 DME/clrd","STK","C1-03","Mode 4 · Kilo"),
-            ("3","Strike h/o","OVL","C1-06","check in · picture"),("4","20 NM to CP","PTR","C1-04","JTAC (F10)" if SCRIPTED else "native JTAC"),
-            ("5","Off Pointer","OVL","C1-06","→ EYE C1-05"),("6","Off Eyeball","OVL","C1-06","INFLTREP → Texaco"),
+            ("3","Strike h/o","OVL","C1-06","check in · picture"),("4","20 NM to CP","OVL","C2-01","tasking / hold CP a22"),
+            ("5","Off JTAC","OVL","C2-01","→ next JTAC (OVL order)"),("6","Off last JTAC","OVL","C2-01","INFLTREP → Texaco"),
             ("7","Texaco","TKR","C1-07","check in · refuel"),("8","Off Texaco","OVL","C1-06","RTB · feet wet"),
             ("9","90 NM CVN","STK","C1-03","check in inbound"),("10","50 NM CVN","MRS","C1-16","check in · readback"),
             ("11","Marshal h/o","APP","C1-15","CASE II/III appr"),("12","See you at 10","TWR","C1-01","ZIPLIP (CASE I/II)")]

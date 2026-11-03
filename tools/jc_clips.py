@@ -1,4 +1,5 @@
-# jc_clips.py | v1.2.0
+# jc_clips.py | v1.3.0
+# v1.3.0: lost comms "how copy?" (jp_hc_ptr / jp_hc_eye) for JTAC_Controller v0.11.0.
 # v1.2.0: Winchester check-out (JTAC_Controller v0.10.0): bda_wnc, w_activity, w_none_obs, w_remaining, bda_end_inc,
 #         pilot jp_wnc_ptr / jp_wnc_eye.
 # v1.1.0: pilot BDA / termination acknowledgements (jp_bda_*, jp_swo_*) for JTAC_Controller v0.8.0.
@@ -210,6 +211,9 @@ PILOT = {   # id -> (written key, spoken)
     "jp_bda_eye": ("eyeball 11 hornet 51 copy bda switching overlord", "Eyeball one one, Hornet five one, copy B D A, switching Overlord."),
     "jp_swo_ptr": ("pointer 11 hornet 51 copy switching overlord", "Pointer one one, Hornet five one, copy, switching Overlord."),
     "jp_swo_eye": ("eyeball 11 hornet 51 copy switching overlord", "Eyeball one one, Hornet five one, copy, switching Overlord."),
+    # v1.3.0 (JTAC_Controller v0.11.0): lost comms, second call
+    "jp_hc_ptr": ("pointer 11 hornet 51 how copy", "Pointer one one, Hornet five one, how copy?"),
+    "jp_hc_eye": ("eyeball 11 hornet 51 how copy", "Eyeball one one, Hornet five one, how copy?"),
     # v1.2.0 (JTAC_Controller v0.10.0): Winchester
     "jp_wnc_ptr": ("pointer 11 hornet 51 winchester", "Pointer one one, Hornet five one, Winchester."),
     "jp_wnc_eye": ("eyeball 11 hornet 51 winchester", "Eyeball one one, Hornet five one, Winchester."),

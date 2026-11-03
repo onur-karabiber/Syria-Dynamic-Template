@@ -1,4 +1,7 @@
--- Flight_Report | v1.2.0
+-- Flight_Report | v1.3.0
+-- v1.3.0 (tasking scenarios, Comms_Director >= v1.8.0): a tasking cancelled for lost comms or a target destroyed
+--         before it was tasked is not the pilot's: it leaves the tasking count (SIERRA HOTEL / UNSAT "all / no JTAC
+--         tasking complete"); cancelled for Winchester stays (counts as not complete). JC cancelled = not complete.
 -- v1.2.0 (CAS (L) sortie 2026-11-02/03, Onur): the report no longer waits for S_EVENT_ENGINE_SHUTDOWN, which the
 --         Hornet fires only late in the spool-down. After a landing the engine RPM is read once a second from the
 --         export environment (LoGetEngineInfo, as PlaneCaptain_Carrier does); both engines below CFG.OFF_RPM for
@@ -47,7 +50,7 @@ local TRT = _G.TRT
 if TRT.FlightReport then env.info("[FR] already loaded, second copy ignored") return end
 
 local CFG = {
-    VERSION   = "1.2.0",
+    VERSION   = "1.3.0",
     PLAYER    = TRT.PLAYER_NAME or "Player_01",
     CS        = "HORNET 51",
     DIR       = "FlightReport/",
@@ -203,9 +206,18 @@ end
 local function JcTasks()
     local jc = TRT.JC
     if not (jc and jc.CFG and jc.CFG.ORDER and jc.st) then return nil, nil end
-    local done = 0
-    for _, k in ipairs(jc.CFG.ORDER) do if jc.st[k] and jc.st[k].phase == "DONE" and not jc.st[k].incomplete then done = done + 1 end end   -- v1.2.0 Winchester = not done
-    return done, #jc.CFG.ORDER
+    local done, total = 0, 0
+    local cd = TRT.CD
+    for _, k in ipairs(jc.CFG.ORDER) do
+        local r, why = cd and cd.res and cd.res[k], cd and cd.why and cd.why[k]
+        local notMine = (r == "skipped") or (r == "cancelled" and why ~= "winchester")   -- v1.3.0
+        if not notMine then
+            total = total + 1
+            local st = jc.st[k]
+            if st and st.phase == "DONE" and not st.incomplete and not st.cancelled then done = done + 1 end   -- v1.2.0 Winchester = not done
+        end
+    end
+    return done, total
 end
 
 function FR.compute()
@@ -301,7 +313,7 @@ function FR.compute()
     R.nDemerit = nD
     -- overall grade
     local g = "SAT"
-    if FR.lost or R.disp >= 2 or R.pen <= CFG.GRADE.UNSAT_PEN or (R.tasksTotal and R.tasksDone == 0) then
+    if FR.lost or R.disp >= 2 or R.pen <= CFG.GRADE.UNSAT_PEN or (R.tasksTotal and R.tasksTotal > 0 and R.tasksDone == 0) then
         g = "UNSAT"
     elseif R.disp == 0 and nD == 0 and R.pen >= CFG.GRADE.SH_PEN
         and (not R.tasksTotal or R.tasksDone == R.tasksTotal)

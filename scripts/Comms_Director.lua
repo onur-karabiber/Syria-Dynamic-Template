@@ -1,5 +1,27 @@
--- Comms_Director | v1.7.13
+-- Comms_Director | v1.8.0
 --[[
+  v1.8.0 - tasking scenarios and radio-flow gates (decisions Onur 2026-11-03, project doc
+           claude/tasking-scenarios-2026-11-03.md):
+            * The JTAC order is a list (CD.order), not the phase chain: JTAC1 / JTAC2 = "working Pointer / Eyeball",
+              J1_OFF / J2_OFF = "that tasking ended"; the F10 item there is "off <JTAC>, ready for retasking" while
+              a tasking remains, else INFLTREP. CD.res[key] = done | incomplete | terminated | cancelled | skipped;
+              CD.vulDone / vulT when every tasking has ended (Flight_Timeline T3, Pilot_Banter); CD.vulExtS = C2 delay.
+            * Scenario picked once at the OVERLORD check-in (40 / 30 / 30): A Pointer -> Eyeball; B "hold at CP TIGER,
+              angels 22, expect tasking in five minutes", then a random JTAC first ("Hornet 51, Overlord, tasking.");
+              C Pointer first, OVERLORD breaks in on COMM2 during the Pointer 9-line dialogue: "divert, divert,
+              Eyeball 11 reports troops in contact ... Pointer 11 is advised" -> F10 wilco (pilot tells Pointer 11,
+              Pointer 11 holds, "no other CAS available") or unable (state); fuel guard; after Eyeball 11 the hero
+              returns to Pointer 11 for a fresh check-in. ME flags 210-212 force them (test variants), 213 = picked.
+            * Lost comms (A / B, ~12 % of sorties, never the TIC JTAC; or the JTAC unit dead): JTAC_Controller keeps
+              the JTAC silent; after two calls F10 "OVERLORD: unable contact <JTAC>" -> "stand by" -> tech: "radio
+              failure on primary, contact on alternate, push button 9 / 11" (CHAN switched) | down: "off the net,
+              unable to raise, mission 41xx cancelled" -> next tasking or "say intentions" (INFLTREP).
+            * Winchester cancels the remaining taskings (nothing left to drop).
+            * AR1 tanker lost or no-show (0.1 %): "Texaco 11 is off station, no tanker available. Say intentions."
+              -> F10 continue without tanker / RTB / divert (was "Proceed CP TIGER").
+            * Radio-flow gates: Q(..., onEnd, tag) runs onEnd when the transmission has ENDED; QClear / QDrop still
+              run the dropped items' onEnd (gates never stick). A JTAC phase starts at the end of the pilot's
+              push-button readback; the TIC check-in at the end of the JTAC's "check in when ready" call.
   v1.7.13 - CAS (L) sortie 2026-11-02/03 (Onur):
             * WINCHESTER (JTAC_Controller >= v0.10.0): a JTAC tasking that ends DONE with targets still alive
               (st.incomplete) counts as finished like TERMINATED: JTAC1 -> J1_OFF, JTAC2 -> J2_OFF. J2_OFF then
@@ -441,6 +463,35 @@ local CFG = {
         GS_MIN    = 180,    -- m/s ground speed floor for "N minutes out"
     },
     INJ_ARM_NM     = 20,
+
+    -- v1.8.0 tasking scenarios (decisions Onur 2026-11-03), picked once at the OVERLORD check-in
+    --   A  Pointer 11 then Eyeball 11 (fragged order)
+    --   B  hold at CP TIGER, OVERLORD tasks a random JTAC first
+    --   C  Pointer 11 first; during the 9-line dialogue OVERLORD diverts the hero to Eyeball 11 (TIC),
+    --      Pointer 11 holds; after Eyeball 11 the hero returns to Pointer 11 (fresh check-in)
+    -- Lost comms with one JTAC (A / B only, never the TIC JTAC): "tech" = radio failure on primary, recovered
+    -- on the alternate button; "down" = off the net, mission cancelled. Tanker no-show: per mille.
+    -- ME overrides: flag 210 scenario 1/2/3 (0 = random), 211 lost comms 1 J1 tech, 2 J1 down, 3 J2 tech,
+    -- 4 J2 down, 9 none (0 = random), 212 tanker no-show 1 yes / 2 no (0 = random). Flag 213 = scenario picked.
+    SCEN = {
+        P        = { A = 40, B = 30, C = 30 },
+        LC_P     = 17,       -- % in A / B (A + B = 70 % of sorties -> ~12 % overall, Onur: 10-15 %)
+        LC_TECH  = 50,       -- % of lost comms that are recoverable on the alternate button
+        NOSHOW_PM = 1,       -- tanker no-show, per mille (Onur: 0.1 %)
+        FLAG_SCEN = 210, FLAG_LC = 211, FLAG_NOSHOW = 212, FLAG_PICKED = 213,
+        FLAG_TIC = 214, FLAG_FIRST = 215,   -- tests: TIC 1 Pointer / 2 Eyeball / 9 off; B first tasking 1 / 2
+        HOLD_NM  = 8,        -- B: tasking timer starts inside this range of CP TIGER ...
+        HOLD_MAX_S = 300,    -- ... or this long after the hold call
+        HOLD_WAIT = { 60, 150 },   -- B: s after that until the tasking call
+        HOLD_ANGELS = 22,
+        STBY_S   = { 30, 50 },     -- lost comms: OVERLORD "stand by" -> answer
+        DV_PHASES = { "SITREP", "GAMEPLAN", "NINE", "READBACK" },   -- C: Pointer 11 phases a divert may hit
+        DV_DELAY = { 4, 15 },      -- C: s of radio silence in that phase before OVERLORD breaks in
+        DV_BURN_LB_NM = 14,        -- C: fuel guard, transit burn
+        DV_RESERVE_LB = 1000,      -- C: fuel guard, margin above the station BINGO after the transit
+    },
+    -- v1.8.0 alternate JTAC frequencies = unused COMM1 presets (Player_01 ME: btn 9 255.00, btn 11 259.00)
+    ALT = { J1 = { btn = 9, freq = "255.00", hz = 255.00e6 }, J2 = { btn = 11, freq = "259.00", hz = 259.00e6 } },
 
     -- Hand-off geometry (NM)
     DEP_HANDOFF_NM  = 20,    -- only without CV_Comms (legacy)
@@ -1227,7 +1278,7 @@ local CFG = {
         -- CD phase -> frequency the hero is working (no entry = no call)
         CH = { STRIKE_OUT = "STRIKE", STRIKE_CHK = "STRIKE", STRIKE_IN = "STRIKE", INBOUND = "STRIKE",
                OVL_OUT = "OVERLORD", ENROUTE = "OVERLORD", REFUEL = "OVERLORD", TKR_DONE = "OVERLORD",
-               RTB = "OVERLORD", J1_OFF = "OVERLORD", J2_OFF = "OVERLORD", DIVERT = "OVERLORD",
+               RTB = "OVERLORD", J1_OFF = "OVERLORD", J2_OFF = "OVERLORD", DIVERT = "OVERLORD", HOLD = "OVERLORD",
                JTAC1 = "POINTER", JTAC2 = "EYEBALL" },
     },
     REMIND_FIRST   = 60,     -- s after a check-in becomes due before the first repeat
@@ -1264,13 +1315,26 @@ local CD = {
     tic           = nil,      -- v1.5.4 "J1" / "J2" / false (off); nil = not picked yet
     ticState      = nil,
     worked        = {},       -- v1.5.5 J1 / J2 = true once JTAC1 / JTAC2 was entered      -- v1.5.4 { key, n, used, next, done, bda } after the TIC hand-off
+    -- v1.8.0 tasking order (read-only for other modules)
+    scen          = nil,      -- { kind = "A"|"B"|"C", lc = nil | { key, kind = "tech"|"down" }, noShow }
+    order         = { "J1", "J2" },
+    cur           = nil,      -- JTAC key being worked (or last worked)
+    res           = {},       -- key -> "done" | "incomplete" | "terminated" | "cancelled" | "skipped"
+    why           = {},       -- key -> reason of a cancellation ("lost comms", "winchester", ...)
+    vulDone       = false,    -- every tasking finished / cancelled (Flight_Timeline T3, Pilot_Banter)
+    vulT          = nil,      -- timer.getAbsTime() of vulDone
+    vulExtS       = 0,        -- s of C2-directed delay (B hold, C partial Pointer work) added to VUL END
+    hold          = nil,      -- B: { t0, armT, fireT }
+    dv            = nil,      -- C: { state = armed|asked|accepted|refused|missed, at, t }
+    lcs           = {},       -- lost comms progress per key
+    ar1Int        = false,    -- AR1 tanker gone: OVERLORD asked "say intentions"
 }
 _G.TRT = _G.TRT or {}
 _G.TRT.CD = CD   -- v1.5.1: read-only view for Flight_Timeline; do not write from outside
 
 -- Phases in which the player is (or should be) working OVERLORD
 local OVL_PHASES = {
-    ENROUTE = true, JTAC1 = true, J1_OFF = true, JTAC2 = true,
+    ENROUTE = true, HOLD = true, JTAC1 = true, J1_OFF = true, JTAC2 = true,
     J2_OFF = true, REFUEL = true, TKR_DONE = true, RTB = true,
 }
 
@@ -1431,9 +1495,23 @@ local HD_TEXT = "hard deck two-zero thousand MSL in the engagement area"
 -- @param hold   Time from this clip's start until the next clip may start
 --               (default = dur). Shorter than dur → next clip overlaps on screen.
 -- @param audio  Optional voice clip id (CFG.AUDIO key). Next clip waits for it.
-local function Q(text, dur, after, fn, hold, audio)
-    table.insert(CD.queue, { text = text, dur = dur or CFG.DUR_SHORT, after = after or 1,
-                             fn = fn, hold = hold, audio = audio })
+-- @param onEnd  v1.8.0: callback when the transmission has ENDED (audio + pad, or hold / dur) - menu gates
+-- @param tag    v1.8.0: owner tag ("JC:J1" ...) so a suspended tasking can drop its queued traffic
+-- Returns the queued item.
+local function Q(text, dur, after, fn, hold, audio, onEnd, tag)
+    local it = { text = text, dur = dur or CFG.DUR_SHORT, after = after or 1,
+                 fn = fn, hold = hold, audio = audio, onEnd = onEnd, tag = tag }
+    table.insert(CD.queue, it)
+    return it
+end
+
+local function RunEnd(clip)
+    if clip and clip.onEnd then
+        local f = clip.onEnd
+        clip.onEnd = nil
+        local ok, err = pcall(f)
+        if not ok then env.info("[CD] onEnd error: " .. tostring(err)) end
+    end
 end
 
 local function QFire()
@@ -1451,19 +1529,45 @@ local function QFire()
     local len = Tx(clip.audio)
     if clip.fn then pcall(clip.fn) end
     CD.qPlaying = true
+    CD.onAir = clip
     local wait = clip.hold or clip.dur
     if len > 0 then wait = math.max(wait, len + CFG.AUDIO_PAD) end
-    timer.scheduleFunction(function() CD.qPlaying = false; QFire() end,
-        nil, timer.getTime() + wait)
+    -- v1.8.0: onEnd at the end of the audio (or the hold), never before; the next clip starts after it
+    local endT = (len > 0) and (len + CFG.AUDIO_PAD) or wait
+    if endT < wait then
+        timer.scheduleFunction(function() RunEnd(clip) end, nil, timer.getTime() + endT)
+    end
+    timer.scheduleFunction(function()
+        RunEnd(clip)
+        if CD.onAir == clip then CD.onAir = nil end
+        CD.qPlaying = false; QFire()
+    end, nil, timer.getTime() + wait)
 end
 
 local function QPlay()
     if not CD.qPlaying and #CD.queue > 0 then QFire() end
 end
 
+--- Drop every queued (not yet on air) transmission. v1.8.0: their onEnd still runs (menu gates never stick).
 local function QClear()
+    local old = CD.queue
     CD.queue = {}
+    for _, it in ipairs(old) do RunEnd(it) end
 end
+
+--- v1.8.0: drop the queued transmissions of one owner tag (onEnd still runs).
+local function QDrop(tag)
+    local keep, drop = {}, {}
+    for _, it in ipairs(CD.queue) do
+        if it.tag == tag then drop[#drop + 1] = it else keep[#keep + 1] = it end
+    end
+    CD.queue = keep
+    for _, it in ipairs(drop) do RunEnd(it) end
+    return #drop
+end
+
+--- v1.8.0: radio idle (nothing on air, nothing queued)
+local function RadioIdle() return not CD.qPlaying and #CD.queue == 0 end
 
 --- Pilot transmission followed by controller reply(ies).
 -- @param audio  Optional voice clip id (pilot side, CFG.AUDIO key).
@@ -1540,7 +1644,9 @@ _G.TRT.CD_AUDIO   = CFG.AUDIO      -- v1.7.5 shared token clips (Field_Arrival "
 _G.TRT.CD_SND_DIR = CFG.SND_DIR
 _G.TRT.CD_RADIO = { Q = function(...) return Q(...) end, QPlay = function() return QPlay() end, Msg = Msg,
     len = function(id) return (ClipOf(id)) end,                         -- v1.6.4
-    has = function(id) return ClipOf(id) ~= nil end }
+    has = function(id) return ClipOf(id) ~= nil end,
+    drop = function(tag) return QDrop(tag) end,                         -- v1.8.0
+    idle = function() return RadioIdle() end }                          -- v1.8.0
 
 --- Pilot readback after the queued controller transmission (v1.4.5).
 local function ReadBack(ch, text, clip)
@@ -1704,6 +1810,7 @@ end
 -- forward declarations
 local SetPhase, MenuRebuild, Remind
 local TicPick, TicHandoff   -- v1.5.4 (TROOPS IN CONTACT section)
+local ScenPick, C_OvlContact, A_Inflrep, NextKey, C_NoShow   -- v1.8.0 (TASKING section)
 
 -- ══════════════════════════════════════════════════════════════
 --  RADIO CALLS — controller-initiated (hand-offs / threats)
@@ -1714,17 +1821,7 @@ local function C_DepSwitchStrike()
     Ack("DEPARTURE", false, CFG.BTN.STRIKE)
 end
 
-local function C_OvlContactPointer(p)
-    local tic = TicPick() == "J1"   -- v1.5.4
-    Q(string.format("[OVERLORD] %s, Overlord. %s %s. %s "
-        .. "Contact Pointer 11, %s%s. Return to this button on check-out.",
-        CFG.CS, CFG.CP_NAME, BrgRng(p:getPoint(), CFG.CP_POS),
-        tic and "Pointer 11 reports TROOPS IN CONTACT, priority immediate." or "Pointer 11 is on station.",
-        Btn("J1"), tic and ", without delay" or ""), CFG.DUR_LONG, 0, nil, nil,
-        S("OVERLORD", "ovl_contact_pointer_a", OBR(p:getPoint(), CFG.CP_POS), 0.1,
-          tic and "ovl_tic_pointer_b" or "ovl_contact_pointer_b"))
-    if tic then TicHandoff("J1") else Ack("OVERLORD", false, CFG.BTN.J1) end
-end
+-- v1.8.0: C_OvlContactPointer -> C_OvlContact(key, ...) in the TASKING section
 
 local function C_OvlSwitchStrike(p)
     local c = Carrier()
@@ -1843,27 +1940,11 @@ local function A_OvlCheckIn()
         S("OVERLORD", "ovl_ci_rc", picSeq, 0.1, "ovl_ci_frag", OBR(p:getPoint(), CFG.CP_POS), 0.15, "ovl_checkin_b"))
     ReadBack("OVERLORD", string.format("%s, proceeding %s, hard deck two-zero thousand, wilco.", CFG.CS, CFG.CP_NAME),
         "p_ovl_checkin_rb")
+    if CD.scen and CD.scen.noShow then C_NoShow() end   -- v1.8.0
     QPlay()
 end
 
-local function A_OvlOffPointer()
-    local p = Player(); if not p then return end
-    CD.awaiting = true; MenuRebuild()
-    Pilot(string.format("Overlord, %s, off Pointer 11, mission %s complete, angels %d, state %s. "
-        .. "Ready for retasking.", CFG.CS, CFG.MSN_J1, Angels(p), State(p)),
-        S("OVERLORD", "p_ovl_off_pointer_a", PAS(p), 0.15, "p_ovl_off_pointer_b"))
-    local tic = TicPick() == "J2"   -- v1.5.4
-    Q(string.format("[OVERLORD] %s, Overlord, copy. Return to %s, %s. "
-        .. "%s Contact Eyeball 11, %s%s.",
-        CFG.CS, CFG.CP_NAME, BrgRng(p:getPoint(), CFG.CP_POS),
-        tic and "Eyeball 11 reports TROOPS IN CONTACT, priority immediate." or "Eyeball 11 is on station.",
-        Btn("J2"), tic and ", without delay" or ""),
-        CFG.DUR_LONG, CFG.REPLY_GAP, function() SetPhase("JTAC2") end, nil,
-        S("OVERLORD", "ovl_off_pointer_a", OBR(p:getPoint(), CFG.CP_POS), 0.1,
-          tic and "ovl_tic_eyeball_b" or "ovl_off_pointer_b"))
-    if tic then TicHandoff("J2") else Ack("OVERLORD", false, CFG.BTN.J2) end
-    QPlay()
-end
+-- v1.8.0: A_OvlOffPointer -> A_OvlOffJtac(key) in the TASKING section
 
 -- ══════════════════════════════════════════════════════════════
 --  v1.7.0 TANKER RV, EMCON 2 (AR1 before the VUL, AR2 after INFLTREP)
@@ -1889,6 +1970,7 @@ local function TNum(s) local i, f = s:match("^(%d+)%.(%d)$"); return { TD(i or "
 
 --- v1.7.6: tanker unit exists and is not dead.
 local function TkAlive()
+    if CD.scen and CD.scen.noShow then return false end   -- v1.8.0 tanker no-show
     local t = Tanker()
     if not t then return false end
     local okE, ex = pcall(t.isExist, t)
@@ -1985,7 +2067,7 @@ end
 
 local function A_TkrRequest()
     local p = Player(); if not p then return end
-    if not Tanker() then Msg("[CAS-1] Texaco 11 not available.", CFG.DUR_SHORT); return end
+    if not TkAlive() then Msg("[CAS-1] Texaco 11 not available.", CFG.DUR_SHORT); return end   -- v1.8.0
     CD.awaiting = true
     TkOpen(1)
     MenuRebuild()
@@ -2181,11 +2263,13 @@ local function TkrLostTick()
     CD.tk = nil
     local ar1 = (ph == "ENROUTE") and not CD.ar1Done
     if ar1 then CD.ar1Done = true end
-    if not OVL_PHASES[ph] or not (ar1 or wasOpen or ph == "REFUEL" or ph == "J2_OFF") then MenuRebuild(); return end
+    local lastOff = (ph == "J1_OFF" or ph == "J2_OFF") and not NextKey()   -- v1.8.0
+    if not OVL_PHASES[ph] or not (ar1 or wasOpen or ph == "REFUEL" or lastOff) then MenuRebuild(); return end
     CD.awaiting = false
-    if ar1 then
-        Q(string.format("[OVERLORD] %s, Overlord, Texaco 11 is off station, no tanker available. Proceed %s.",
-            CFG.CS, CFG.CP_NAME), CFG.DUR_LONG, 0, nil, nil, Voiced(S("OVERLORD", "ovl_tkr_lost_cp")))
+    if ar1 then   -- v1.8.0 (Onur): say intentions, the pilot decides (continue / RTB / divert)
+        CD.ar1Int = true
+        Q(string.format("[OVERLORD] %s, Overlord, Texaco 11 is off station, no tanker available. Say intentions.",
+            CFG.CS), CFG.DUR_LONG, 0, nil, nil, Voiced(S("OVERLORD", "ovl_tkr_lost_si")))
     else
         Q(string.format("[OVERLORD] %s, Overlord, Texaco 11 is off station, no tanker available. Say intentions.",
             CFG.CS), CFG.DUR_LONG, 0, nil, nil, Voiced(S("OVERLORD", "ovl_tkr_lost_si")))
@@ -2264,46 +2348,7 @@ local function TkrNext()
     return table.concat(s, "; ")
 end
 
-local function A_Inflrep()
-    local p = Player(); if not p then return end
-    CD.awaiting = true; MenuRebuild()
-    local inc1, inc2 = JcInc("J1"), JcInc("J2")   -- v1.7.13 Winchester: destroyed count, remark
-    local n1 = (inc1 and inc1.destroyed) or CD.j1.size or 0
-    local n2 = (inc2 and inc2.destroyed) or CD.j2.size or 0
-    local rmk = "Remarks, SAM activity in both target areas."
-    if inc1 then rmk = rmk .. string.format(" Mission %s incomplete, Winchester.", CFG.MSN_J1) end
-    if inc2 then rmk = rmk .. string.format(" Mission %s incomplete, Winchester.", CFG.MSN_J2) end
-    Pilot(string.format("Overlord, %s, INFLTREP.\n"
-        .. "Line 1, %s.\nLine 2, mission %s and %s.\nLine 3, %s and %s.\n"
-        .. "Line 4, time on target %s and %s.\nLine 5, %d and %d vehicles destroyed.\n%s",
-        CFG.CS, CFG.CS, CFG.MSN_J1, CFG.MSN_J2,
-        CD.j1.pos and MGRS(CD.j1.pos) or "unknown", CD.j2.pos and MGRS(CD.j2.pos) or "unknown",
-        Clock(CD.j1.tot), Clock(CD.j2.tot), n1, n2, rmk),
-        S("OVERLORD", "i_head", "i_l1", "i_l2",
-          "i_l3", PSpell(CD.j1.pos and MGRS(CD.j1.pos)), 0.1, "cv:p_and", PSpell(CD.j2.pos and MGRS(CD.j2.pos)), 0.25,
-          "i_l4", PClock(CD.j1.tot), 0.1, "cv:p_and", PClock(CD.j2.tot), 0.25,
-          "i_l5", PD(n1), "cv:p_and", PD(n2), "i_l5b", "i_rmk",
-          inc1 and "i_rmk_inc1" or nil, inc2 and "i_rmk_inc2" or nil))
-    -- INFLTREP is long — give it time on screen
-    CD.queue[#CD.queue].dur  = CFG.DUR_LONG + 4
-    CD.queue[#CD.queue].hold = 8
-    if TkAlive() then                                    -- v1.7.0: EMCON 2 RV vector + readback (v1.7.6 alive)
-        TkOpen(2)
-        TkrVector(p, 2)
-    elseif CD.tkrLost then                               -- v1.7.6
-        CD.tk = nil
-        Q(string.format("[OVERLORD] %s, Overlord, copy INFLTREP. No tanker available. Say intentions.", CFG.CS),
-            CFG.DUR_LONG, CFG.REPLY_GAP, function() SetPhase("REFUEL") end, nil,
-            Voiced(S("OVERLORD", "ovl_inflrep_lost")))
-    else
-        CD.tk = nil
-        Q(string.format("[OVERLORD] %s, Overlord, copy INFLTREP. Texaco 11 on station, TACAN 21 Yankee. Texaco, %s.",
-            CFG.CS, Btn("TKR")), CFG.DUR_LONG, CFG.REPLY_GAP, function() SetPhase("REFUEL") end, nil,
-            S("OVERLORD", "ovl_inflrep_nt"))
-        Ack("OVERLORD", false, CFG.BTN.TKR)
-    end
-    QPlay()
-end
+-- v1.8.0: A_Inflrep -> TASKING section (per-tasking results)
 
 -- v1.6.5: A_TexacoCheckIn removed (refuelling uses the native DCS tanker comms)
 
@@ -2339,7 +2384,7 @@ end
 
 -- v1.7.3 OVERLORD divert branch ----------------------------------------------------------
 local DIV_PHASES = {
-    ENROUTE = true, JTAC1 = true, J1_OFF = true, JTAC2 = true,
+    ENROUTE = true, HOLD = true, JTAC1 = true, J1_OFF = true, JTAC2 = true,
     J2_OFF = true, REFUEL = true, TKR_DONE = true, RTB = true,
 }
 
@@ -2521,28 +2566,24 @@ local function MinutesOut(p, tp)
     return math.max(2, math.min(m, 99))
 end
 
---- Pick the TIC JTAC once. math.randomseed is nil in the mission sandbox, so the
---- millisecond of the first call (a pilot F10 press) decides, mixed with math.random.
+--- Pick the TIC JTAC once (v1.8.0: together with the tasking scenario, ScenPick).
 TicPick = function()
     if CD.tic ~= nil then return CD.tic end
-    local w = CFG.TIC.WHO
-    if w ~= "J1" and w ~= "J2" then
-        local e = math.floor(timer.getTime() * 1000) + math.random(0, 1)
-        w = (e % 2 == 0) and "J1" or "J2"
-    end
-    CD.tic = CFG.TIC.ENABLE and w or false
-    env.info("[CD] TIC sequence: " .. (CD.tic and JT[CD.tic].disp or "off"))
+    ScenPick()
     return CD.tic
 end
 
 --- Queued right after OVERLORD's TIC hand-off transmission.
-TicHandoff = function(key)
+--- v1.8.0 opts.noPush: the pilot has already switched (OVERLORD divert), no "push button, buster" readback.
+TicHandoff = function(key, opts)
     local j = JT[key]
     local btn = CFG.BTN[j.btn]
-    local prev = CD.queue[#CD.queue]
-    if prev then prev.hold = 0.1 end
-    Q(string.format("[%s] Push button %d, %s, buster.", CFG.CS, btn, CFG.CS),
-        CFG.DUR_PILOT, 0.8, nil, CFG.PILOT_HOLD, S("OVERLORD", "p_tic_push_" .. btn))
+    if not (opts and opts.noPush) then
+        local prev = CD.queue[#CD.queue]
+        if prev then prev.hold = 0.1 end
+        Q(string.format("[%s] Push button %d, %s, buster.", CFG.CS, btn, CFG.CS),
+            CFG.DUR_PILOT, 0.8, nil, CFG.PILOT_HOLD, S("OVERLORD", "p_tic_push_" .. btn))
+    end
     CD.ticState = { key = key, n = 0, used = {}, next = nil, done = false, bda = false }
     Q(string.format("[%s] %s, %s, TROOPS IN CONTACT, troops in contact! Bravo 2-1 is taking effective "
         .. "fire from enemy armor. Request immediate CAS, say time out.", j.cs, CFG.CS, j.disp),
@@ -2569,7 +2610,10 @@ TicHandoff = function(key)
                 s.next = timer.getTime() + math.random(CFG.TIC.GAP_MIN, CFG.TIC.GAP_MAX)
                 s.ready = true   -- v1.7.11: JTAC_Controller may now offer the check-in
             end
-        end, nil, S(j.ch, j.k .. "_tic_ack"))
+        end, nil, S(j.ch, j.k .. "_tic_ack"), nil)
+    -- v1.8.0: the check-in item opens when the JTAC's call has ENDED (was: when it started)
+    local it = CD.queue[#CD.queue]
+    it.onEnd, it.fn = it.fn, nil
 end
 
 --- Main-tick pump for the tension exchanges.
@@ -2615,6 +2659,7 @@ local function TicBDA(key)
     if not s or s.key ~= key or s.bda then return end
     s.bda, s.done = true, true
     local j = JT[key]
+    CD.awaiting = true   -- v1.8.0: no OVERLORD call (retasking / INFLTREP) before Bravo 2-1's thanks has been heard
     timer.scheduleFunction(function()
         if not JcOn() then   -- v1.6.0: JTAC_Controller already gave the BDA
             Q(string.format("[%s] %s, %s, good hits, good hits! Enemy fire has stopped.", j.cs, CFG.CS, j.disp),
@@ -2624,9 +2669,508 @@ local function TicBDA(key)
         Q(string.format("[%s] %s, Bravo 2-1, contact broken, fire has stopped. Tell that Hornet thanks.",
             FR_CS, j.short), CFG.DUR_SHORT + 2, 1.0, nil, nil, S(j.ch, "fr_" .. j.k .. "_bda"))
         ReadBack(j.ch, CFG.CS .. ", copy. Glad to help.", "p_tic_thanks")
+        CD.queue[#CD.queue].onEnd = function() CD.awaiting = false; MenuRebuild() end   -- v1.8.0
         QPlay()
         env.info("[CD] TIC BDA " .. j.disp)
     end, nil, timer.getTime() + CFG.TIC.BDA_S)
+end
+
+-- ══════════════════════════════════════════════════════════════
+--  TASKING ORDER / SCENARIOS  (v1.8.0, decisions Onur 2026-11-03)
+-- ══════════════════════════════════════════════════════════════
+local OFF_PH = { J1 = "J1_OFF", J2 = "J2_OFF" }
+local MSN    = { J1 = CFG.MSN_J1, J2 = CFG.MSN_J2 }
+local function JD(k) return (k == "J1") and CD.j1 or CD.j2 end
+local function KeyOfPhase(ph)
+    if ph == "JTAC1" or ph == "J1_OFF" then return "J1" elseif ph == "JTAC2" or ph == "J2_OFF" then return "J2" end
+end
+
+--- Entropy: math.randomseed is nil in the mission sandbox; the ms of the first draw (a pilot F10 press)
+--- seeds a Park-Miller generator, mixed with math.random. Rand(n) -> 1..n
+local rngX
+local function Rand(n)
+    if not rngX then
+        rngX = (math.floor(timer.getTime() * 1000) + math.random(0, 9999)) % 2147483646 + 1
+    end
+    rngX = (rngX * 16807) % 2147483647
+    return rngX % n + 1
+end
+local function RandIn(lo, hi) return lo + Rand(hi - lo + 1) - 1 end
+
+local function FlagN(f)
+    local ok, v = pcall(trigger.misc.getUserFlag, tostring(f))
+    return (ok and tonumber(v)) or 0
+end
+
+local function JC_()
+    local jc = _G.TRT and _G.TRT.JC
+    return (jc and jc.active) and jc or nil
+end
+local function JcCall(fn, ...)
+    local jc = JC_()
+    if jc and type(jc[fn]) == "function" then
+        local ok, err = pcall(jc[fn], ...)
+        if not ok then env.info("[CD] JC." .. fn .. " error: " .. tostring(err)) end
+        return ok
+    end
+    return false
+end
+
+local function TargetDead(k) return (k == "J1" and CD.deadJ1) or (k == "J2" and CD.deadJ2) or false end
+local function JtacAlive(k) return #AliveUnits(JT[k].jtac) > 0 end
+
+--- First tasking still to be worked (order), nil when the VUL is complete. A target group destroyed before
+--- its tasking (not by the hero) is cancelled silently.
+NextKey = function()
+    for _, k in ipairs(CD.order) do
+        if not CD.res[k] then
+            if TargetDead(k) and not CD.worked[k] then
+                CD.res[k], CD.why[k] = "cancelled", "target destroyed"
+                env.info("[CD] task " .. k .. " cancelled before tasking: target group already destroyed")
+            elseif k ~= CD.cur or CD.resume == k then
+                return k
+            end
+        end
+    end
+    return nil
+end
+
+local function VulCheck()
+    if CD.vulDone then return end
+    for _, k in ipairs(CD.order) do if not CD.res[k] then return end end
+    CD.vulDone, CD.vulT = true, timer.getAbsTime()
+    env.info(string.format("[CD] VUL complete: J1 %s, J2 %s, VUL extension %.0f s", tostring(CD.res.J1),
+        tostring(CD.res.J2), CD.vulExtS))
+end
+
+--- A worked tasking ended (target group dead, Winchester, ROE termination).
+local function FinishTask(k)
+    local jc = JC_()
+    local inc = JcInc(k)
+    local term = jc and jc.st and jc.st[k] and jc.st[k].phase == "TERMINATED"
+    CD.res[k] = (inc and "incomplete") or (term and "terminated") or "done"
+    if CD.resume == k then CD.resume = nil end
+    if inc then   -- Winchester: nothing left to drop for the remaining taskings
+        for _, o in ipairs(CD.order) do
+            if not CD.res[o] then
+                CD.res[o], CD.why[o] = "cancelled", "winchester"
+                JcCall("cancel", o, "winchester")
+                env.info("[CD] task " .. o .. " cancelled: Winchester at " .. JT[k].disp)
+            end
+        end
+        JD(k).tot = JD(k).tot or timer.getAbsTime()
+    end
+    env.info(string.format("[CD] task %s %s", k, CD.res[k]))
+    VulCheck()
+end
+
+--- Pick the scenario (once). Also picks the TIC JTAC (CD.tic), the order, lost comms and the tanker no-show.
+ScenPick = function()
+    if CD.scen then return CD.scen end
+    local SC = CFG.SCEN
+    local f = FlagN(SC.FLAG_SCEN)
+    local kind = (f == 1 and "A") or (f == 2 and "B") or (f == 3 and "C") or nil
+    local forced = kind ~= nil
+    if not kind then
+        local r = Rand(100)
+        kind = (r <= SC.P.A and "A") or (r <= SC.P.A + SC.P.B and "B") or "C"
+    end
+    local tic
+    local ft = FlagN(SC.FLAG_TIC)
+    if not CFG.TIC.ENABLE or ft == 9 then tic = false
+    elseif kind == "C" then tic = "J2"
+    elseif ft == 1 or ft == 2 then tic = (ft == 1) and "J1" or "J2"
+    elseif CFG.TIC.WHO == "J1" or CFG.TIC.WHO == "J2" then tic = CFG.TIC.WHO
+    else tic = (Rand(2) == 1) and "J1" or "J2" end
+    local order = { "J1", "J2" }
+    local ff = FlagN(SC.FLAG_FIRST)
+    if kind == "B" and (ff == 2 or (ff ~= 1 and Rand(2) == 2)) then order = { "J2", "J1" } end
+    local lc
+    local fl = FlagN(SC.FLAG_LC)
+    if fl >= 1 and fl <= 4 then
+        lc = { key = (fl <= 2) and "J1" or "J2", kind = (fl % 2 == 1) and "tech" or "down", forced = true }
+    elseif fl ~= 9 and kind ~= "C" and Rand(100) <= SC.LC_P then
+        local key = (tic == "J1" and "J2") or (tic == "J2" and "J1") or ((Rand(2) == 1) and "J1" or "J2")
+        lc = { key = key, kind = (Rand(100) <= SC.LC_TECH) and "tech" or "down" }
+    end
+    if lc and kind == "C" then
+        env.info("[CD] scenario C: lost comms ignored (" .. lc.key .. ")"); lc = nil
+    end
+    if lc and tic == lc.key then tic = (lc.key == "J1") and "J2" or "J1" end   -- forced: the JTAC that calls TIC talks
+    local fn = FlagN(SC.FLAG_NOSHOW)
+    local noShow = (fn == 1) or (fn ~= 2 and Rand(1000) <= SC.NOSHOW_PM)
+    CD.tic, CD.order = tic, order
+    CD.scen = { kind = kind, lc = lc, noShow = noShow, forced = forced }
+    if kind == "C" then
+        CD.dv = { state = "armed", at = SC.DV_PHASES[Rand(#SC.DV_PHASES)], delay = RandIn(SC.DV_DELAY[1], SC.DV_DELAY[2]) }
+    end
+    SetFlag(SC.FLAG_PICKED, (kind == "A" and 1) or (kind == "B" and 2) or 3)
+    if lc then JcCall("setNoComm", lc.key, lc.kind) end
+    env.info(string.format("[CD] SCENARIO %s%s: order %s, TIC %s, lost comms %s, tanker no-show %s%s", kind,
+        forced and " (flag)" or "", table.concat(order, " "), tic and JT[tic].disp or "off",
+        lc and (JT[lc.key].disp .. " " .. lc.kind) or "none", noShow and "YES" or "no",
+        CD.dv and string.format(", divert at %s +%d s", CD.dv.at, CD.dv.delay) or ""))
+    return CD.scen
+end
+
+-- ── OVERLORD tasking calls ────────────────────────────────────────────────────────────────
+local LINE = {   -- clip / text of the contact line per JTAC
+    J1 = { on = "ovl_contact_pointer_b", tic = "ovl_tic_pointer_b", res = "ovl_resume_ptr" },
+    J2 = { on = "ovl_contact_eyeball_b", tic = "ovl_tic_eyeball_c" },
+}
+
+--- OVERLORD hands the hero to JTAC k. mode: "cp" (ENROUTE, "CP TIGER bears ..."), "task" (B, after the hold),
+--- "retask" (after "off <JTAC>": "copy. Return to CP TIGER ..."), "cancel" (right after a cancellation call).
+--- The JTAC phase starts when the pilot's readback has ENDED (JTAC_Controller offers the check-in then).
+C_OvlContact = function(k, p, mode)
+    local j = JT[k]
+    local tic = (CD.tic == k) and not CD.ticState
+    local resume = (CD.resume == k)
+    local L = LINE[k]
+    local id = (tic and L.tic) or (resume and L.res) or L.on
+    local line
+    if tic then
+        line = string.format("%s reports TROOPS IN CONTACT, priority immediate. Contact %s, %s, without delay. "
+            .. "Return to this button on check-out.", j.disp, j.disp, Btn(j.btn))
+    elseif resume then
+        line = string.format("%s is holding. Contact %s, %s.", j.disp, j.disp, Btn(j.btn))
+    else
+        line = string.format("%s is on station. Contact %s, %s. Return to this button on check-out.", j.disp,
+            j.disp, Btn(j.btn))
+    end
+    local pre, preSeq = "", {}
+    local pp = p:getPoint()
+    if mode == "cp" then
+        pre = string.format("%s, Overlord. %s %s. ", CFG.CS, CFG.CP_NAME, BrgRng(pp, CFG.CP_POS))
+        preSeq = { "ovl_contact_pointer_a", OBR(pp, CFG.CP_POS), 0.1 }
+    elseif mode == "task" then
+        pre = string.format("%s, Overlord, tasking. ", CFG.CS)
+        preSeq = { "ovl_task_a", 0.1 }
+    elseif mode == "retask" then
+        pre = string.format("%s, Overlord, copy. Return to %s, %s. ", CFG.CS, CFG.CP_NAME, BrgRng(pp, CFG.CP_POS))
+        preSeq = { "ovl_off_pointer_a", OBR(pp, CFG.CP_POS), 0.1 }
+    else
+        pre = string.format("%s, Overlord. ", CFG.CS)
+        preSeq = { "ovl_switch_strike_a", 0.1 }
+    end
+    CD.awaiting = true
+    CD.cur = k
+    Q("[OVERLORD] " .. pre .. line, CFG.DUR_LONG, (mode == "retask") and CFG.REPLY_GAP or 0, nil, nil,
+        Voiced(S("OVERLORD", preSeq, id)))
+    local enter = function()
+        CD.taskT = CD.taskT or {}
+        CD.taskT[k] = timer.getTime()
+        if CD.resume == k then
+            JcCall("resume", k)          -- fresh check-in after the divert
+        end
+        SetPhase(j.phase)
+        QPlay()
+    end
+    if tic then
+        TicHandoff(k)
+        -- the push readback is the item right after OVERLORD's line; the JTAC phase starts when it ends
+        for i = #CD.queue, 1, -1 do
+            local it = CD.queue[i]
+            if it.audio and type(it.audio) == "table" and it.audio[2] == "p_tic_push_" .. CFG.BTN[j.btn] then
+                it.onEnd = enter; break
+            end
+        end
+    else
+        Ack("OVERLORD", false, CFG.BTN[j.btn])
+        CD.queue[#CD.queue].onEnd = enter
+    end
+    env.info(string.format("[CD] tasking %s (%s%s%s)", j.disp, mode, tic and ", TIC" or "", resume and ", resume" or ""))
+end
+
+--- F10 in J1_OFF / J2_OFF while a tasking remains.
+local function A_OvlOffJtac(k)
+    local p = Player(); if not p then return end
+    local nk = NextKey()
+    if not nk then return A_Inflrep() end
+    CD.awaiting = true; MenuRebuild()
+    local j = JT[k]
+    Pilot(string.format("Overlord, %s, off %s, mission %s complete, angels %d, state %s. Ready for retasking.",
+        CFG.CS, j.disp, MSN[k], Angels(p), State(p)),
+        S("OVERLORD", "p_ovl_off_" .. ((k == "J1") and "pointer" or "eyeball") .. "_a", PAS(p), 0.15, "p_ovl_off_pointer_b"))
+    C_OvlContact(nk, p, "retask")
+    QPlay()
+end
+
+-- ── B: hold at CP TIGER ─────────────────────────────────────────────────────────────────
+local function C_OvlHold()
+    local SC = CFG.SCEN
+    CD.awaiting = true
+    Q(string.format("[OVERLORD] %s, Overlord. Hold at %s, angels %d. Expect tasking in five minutes.", CFG.CS,
+        CFG.CP_NAME, SC.HOLD_ANGELS), CFG.DUR_LONG, 0, nil, nil, Voiced(S("OVERLORD", "ovl_hold")))
+    ReadBack("OVERLORD", string.format("%s, holding %s, angels %d.", CFG.CS, CFG.CP_NAME, SC.HOLD_ANGELS), "p_hold_rb")
+    CD.queue[#CD.queue].onEnd = function()
+        CD.hold = { t0 = timer.getTime() }
+        SetPhase("HOLD")
+    end
+    env.info("[CD] B: hold at " .. CFG.CP_NAME)
+end
+
+local function HoldTick(p)
+    local h = CD.hold
+    if not h or CD.phase ~= "HOLD" then return end
+    local SC, now = CFG.SCEN, timer.getTime()
+    if not h.armT and (Dist2D(p:getPoint(), CFG.CP_POS) <= SC.HOLD_NM or now - h.t0 >= SC.HOLD_MAX_S) then
+        h.armT = now
+        h.fireT = now + RandIn(SC.HOLD_WAIT[1], SC.HOLD_WAIT[2])
+        env.info(string.format("[CD] B: hold armed (%.0f s after the call), tasking in %.0f s", now - h.t0, h.fireT - now))
+    end
+    if h.fireT and now >= h.fireT and not CD.awaiting and RadioIdle() then
+        local k = NextKey()
+        CD.vulExtS = CD.vulExtS + (now - h.armT)
+        CD.hold = nil
+        if k then C_OvlContact(k, p, "task"); QPlay() end
+    end
+end
+
+-- ── C: OVERLORD diverts the hero from Pointer 11 to Eyeball 11 (TIC) ──────────────────────────
+local DV_IDX = {}
+for i, ph in ipairs(CFG.SCEN.DV_PHASES) do DV_IDX[ph] = i end
+
+local function PState(u)
+    local i, f = State(u):match("^(%d+)%.(%d)$")
+    return { "cv:p_state", PD(i or "0"), "cv:p_point", PD(f or "0") }
+end
+
+local function DivertTick(p)
+    local dv = CD.dv
+    if not dv or dv.state ~= "armed" or CD.phase ~= "JTAC1" then return end
+    local jc = JC_()
+    local st = jc and jc.st and jc.st.J1
+    if not st then return end
+    -- window: the dialogue phases, and ATTACK until the pilot reports IP inbound (not yet committed to an attack)
+    local inAtk = st.phase == "ATTACK" and st.att and not st.att.ipIn
+    if (st.phase == "ATTACK" and not inAtk) or st.phase == "DONE" or st.phase == "TERMINATED" or st.phase == "NOCOMM"
+        or st.phase == "SILENT" then
+        dv.state = "missed"
+        env.info("[CD] C: divert window missed (Pointer 11 " .. st.phase .. ") -> scenario runs as A")
+        return
+    end
+    local i = DV_IDX[st.phase] or (inAtk and (#CFG.SCEN.DV_PHASES + 1)) or nil
+    if not i or i < DV_IDX[dv.at] then return end
+    local now = timer.getTime()
+    dv.since = dv.since or now            -- first second inside the chosen phase (or later)
+    if now - dv.since < dv.delay then return end
+    if st.busy or not RadioIdle() or CD.awaiting then return end   -- break in between two transmissions
+    local SC = CFG.SCEN
+    local lb, bingo = FuelLb(p), BingoNow(p) or 4100
+    local tp = TicTgtPos(JT.J2) or CFG.JTAC2_POS
+    local need = bingo + Dist2D(p:getPoint(), tp) * SC.DV_BURN_LB_NM + SC.DV_RESERVE_LB
+    if lb < need then
+        dv.state = "nofuel"
+        env.info(string.format("[CD] C: no divert, fuel %.0f < %.0f lb (bingo %.0f + transit + %d)", lb, need, bingo,
+            SC.DV_RESERVE_LB))
+        return
+    end
+    dv.state, dv.t = "asked", now
+    JcCall("freeze", "J1", true)
+    Q(string.format("[OVERLORD] %s, Overlord, divert, divert. Eyeball 11 reports TROOPS IN CONTACT, priority immediate. "
+        .. "Contact Eyeball 11, %s, without delay. Pointer 11 is advised.", CFG.CS, Btn("J2")),
+        CFG.DUR_URGENT + 4, 0, nil, nil, Voiced(S("OVERLORD", "ovl_divert_a", 0.15, "ovl_divert_b")),
+        function() dv.open = true; MenuRebuild() end)
+    env.info(string.format("[CD] C: OVERLORD divert (Pointer 11 in %s, fuel %.0f lb)", st.phase, lb))
+    QPlay()
+end
+
+-- v1.8.0: OVERLORD breaks in between two transmissions -> checked every second, not on the 5 s main tick
+timer.scheduleFunction(function(_, t)
+    if CD.dv and CD.dv.state == "armed" then
+        local p = Player()
+        if p then
+            local ok, err = pcall(DivertTick, p)
+            if not ok then env.info("[CD] divert error: " .. tostring(err)) end
+        end
+    end
+    if CD.phase == "DONE" or CD.phase == "RECOVERY" then return nil end
+    return t + 1
+end, nil, timer.getTime() + 5)
+
+local function A_DivertWilco()
+    local dv = CD.dv; if not dv or not dv.open then return end
+    dv.open, dv.state = false, "accepted"
+    CD.awaiting = true; MenuRebuild()
+    local t1 = CD.taskT and CD.taskT.J1
+    if t1 then CD.vulExtS = CD.vulExtS + (timer.getTime() - t1) end   -- the Pointer work done so far is repeated
+    Q(string.format("[%s] %s, wilco.", CFG.CS, CFG.CS), CFG.DUR_PILOT, 0.3, nil, CFG.PILOT_HOLD,
+        S("OVERLORD", "p_wilco"))
+    Q(string.format("[%s] Pointer 11, %s, diverted by Overlord to troops in contact. Will return when able.", CFG.CS,
+        CFG.CS), CFG.DUR_PILOT + 2, 1.5, nil, CFG.PILOT_HOLD, Voiced(S("POINTER", "p_divert_ptr")))
+    Q(string.format("[POINTER 11] %s, Pointer 11, copy. No other CAS available, we'll hold. Return when able.", CFG.CS),
+        CFG.DUR_SHORT + 2, CFG.REPLY_GAP, function() JcCall("suspend", "J1") end, nil,
+        Voiced(S("POINTER", "ptr_divert_ack")),
+        function()
+            CD.order, CD.resume, CD.cur = { "J2", "J1" }, "J1", "J2"
+            CD.taskT = CD.taskT or {}
+            CD.taskT.J2 = timer.getTime()
+            TicHandoff("J2", { noPush = true })
+            SetPhase("JTAC2")
+            QPlay()
+        end)
+    env.info("[CD] C: divert accepted")
+    QPlay()
+end
+
+local function A_DivertUnable()
+    local dv = CD.dv; if not dv or not dv.open then return end
+    local p = Player(); if not p then return end
+    dv.open, dv.state = false, "refused"
+    CD.awaiting = true; MenuRebuild()
+    Pilot(string.format("Overlord, %s, unable divert, state %s.", CFG.CS, State(p)),
+        Voiced(S("OVERLORD", "p_divert_unable", PState(p))))
+    Q(string.format("[OVERLORD] %s, Overlord, copy. Continue with Pointer 11.", CFG.CS), CFG.DUR_SHORT, CFG.REPLY_GAP,
+        nil, nil, Voiced(S("OVERLORD", "ovl_divert_unable")),
+        function() JcCall("freeze", "J1", false); CD.awaiting = false; MenuRebuild() end)
+    env.info(string.format("[CD] C: divert refused by the pilot, state %s", State(p)))
+    QPlay()
+end
+
+-- ── Lost comms with a JTAC (JTAC_Controller phase NOCOMM after two unanswered calls) ─────────────────
+local function LcAnswer(k)
+    local p = Player(); if not p then return end
+    local j = JT[k]
+    local lc = CD.scen and CD.scen.lc
+    local kind = (lc and lc.key == k and lc.kind) or "down"
+    if not JtacAlive(k) or (CD.lcAlt and CD.lcAlt[k]) then kind = "down" end   -- dead, or already on the alternate
+    CD.lcs[k].kind = kind
+    if kind == "tech" then
+        local alt = CFG.ALT[k]
+        Q(string.format("[OVERLORD] %s, Overlord. %s reports radio failure on primary. Contact %s on alternate, "
+            .. "push button %d (%s).", CFG.CS, j.disp, j.disp, alt.btn, alt.freq), CFG.DUR_LONG, 0, nil, nil,
+            Voiced(S("OVERLORD", "ovl_lc_alt_" .. j.k)))
+        Ack("OVERLORD", false, alt.btn)
+        CD.queue[#CD.queue].onEnd = function()
+            CFG.BTN[j.btn], CFG.FREQ[j.btn], CFG.CHAN[j.ch].hz = alt.btn, alt.freq, alt.hz
+            CD.lcAlt = CD.lcAlt or {}
+            CD.lcAlt[k] = true
+            CD.lcs[k] = nil          -- a second loss (on the alternate) can be reported again
+            JcCall("altFreq", k, alt.btn)
+            CD.awaiting = false; MenuRebuild()
+        end
+        env.info(string.format("[CD] lost comms %s: alternate button %d (%s)", j.disp, alt.btn, alt.freq))
+    else
+        CD.res[k], CD.why[k] = "cancelled", "lost comms"
+        if CD.resume == k then CD.resume = nil end
+        JcCall("cancel", k, "lost comms")
+        Q(string.format("[OVERLORD] %s, Overlord. %s is off the net, unable to raise. Mission %s cancelled.", CFG.CS,
+            j.disp, MSN[k]), CFG.DUR_LONG, 0, nil, nil, Voiced(S("OVERLORD", "ovl_lc_down_" .. j.k)))
+        VulCheck()
+        local nk = NextKey()
+        if nk then
+            C_OvlContact(nk, p, "cancel")
+        else
+            Q(string.format("[OVERLORD] %s, Overlord. Say intentions.", CFG.CS), CFG.DUR_SHORT, 1, nil, nil, "ovl_say_int",
+                function() SetPhase(OFF_PH[k]) end)
+        end
+        env.info(string.format("[CD] lost comms %s: mission %s cancelled%s", j.disp, MSN[k], nk and (", next " .. nk) or ""))
+    end
+    QPlay()
+end
+
+local function A_UnableContact(k)
+    local j = JT[k]
+    if CD.lcs[k] then return end
+    CD.lcs[k] = { t = timer.getTime() }
+    CD.awaiting = true; MenuRebuild()
+    Pilot(string.format("Overlord, %s, unable contact %s.", CFG.CS, j.disp), Voiced(S("OVERLORD", "p_unable_" .. j.k)))
+    Q(string.format("[OVERLORD] %s, Overlord, copy, stand by.", CFG.CS), CFG.DUR_SHORT, CFG.REPLY_GAP, nil, nil,
+        Voiced(S("OVERLORD", "ovl_standby")), function()
+            local w = RandIn(CFG.SCEN.STBY_S[1], CFG.SCEN.STBY_S[2])
+            env.info(string.format("[CD] lost comms %s reported, OVERLORD answer in %d s", j.disp, w))
+            timer.scheduleFunction(function()
+                local ok, err = pcall(LcAnswer, k)
+                if not ok then env.info("[CD] LcAnswer error: " .. tostring(err)); CD.awaiting = false end
+            end, nil, timer.getTime() + w)
+        end)
+    QPlay()
+end
+
+local function LcNeeded(k)
+    local jc = JC_()
+    return (jc and jc.st and jc.st[k] and jc.st[k].phase == "NOCOMM" and CD.lcs[k] == nil) and true or false
+end
+
+-- ── AR1 tanker gone (no-show or lost): say intentions ─────────────────────────────────────────
+C_NoShow = function()
+    CD.tkrLost, CD.ar1Done, CD.ar1Int = true, true, true
+    pcall(function()
+        local t = Tanker()
+        if t then t:getGroup():destroy() end   -- destroy() raises no event (no "mission loss")
+    end)
+    Q(string.format("[OVERLORD] %s, Overlord, Texaco 11 is off station, no tanker available. Say intentions.", CFG.CS),
+        CFG.DUR_LONG, 2, nil, nil, Voiced(S("OVERLORD", "ovl_tkr_lost_si")))
+    env.info("[CD] tanker NO-SHOW: Texaco 11 removed, OVERLORD asks for intentions")
+end
+
+local function A_ContNoTkr()
+    local p = Player(); if not p then return end
+    CD.awaiting = true; MenuRebuild()
+    Pilot(string.format("Overlord, %s, continuing mission without tanker, angels %d, state %s.", CFG.CS, Angels(p), State(p)),
+        Voiced(S("OVERLORD", "p_ovl_cont_notkr_a", PAS(p))))
+    Q(string.format("[OVERLORD] %s, Overlord, copy.", CFG.CS), CFG.DUR_SHORT, CFG.REPLY_GAP, nil, nil,
+        Voiced(S("OVERLORD", "ovl_copy_51")), function() CD.ar1Int = false; CD.awaiting = false; MenuRebuild() end)
+    env.info("[CD] AR1: continuing without tanker")
+    QPlay()
+end
+
+-- ── INFLTREP (JP 3-09.3 Fig V-17), per-tasking results ─────────────────────────────────────
+local function Destroyed(k)
+    local inc = JcInc(k)
+    if inc then return inc.destroyed or 0 end
+    local r = CD.res[k]
+    if r == "done" then return JD(k).size or 0 end
+    local size = JD(k).size or 0
+    return math.max(0, size - #AliveUnits(JT[k].tgt))
+end
+
+A_Inflrep = function()
+    local p = Player(); if not p then return end
+    CD.awaiting = true; MenuRebuild()
+    local n1, n2 = Destroyed("J1"), Destroyed("J2")
+    local rmk, rmkSeq = "Remarks, SAM activity in both target areas.", {}
+    for _, k in ipairs({ "J1", "J2" }) do
+        local r, why = CD.res[k], CD.why[k]
+        local idx = (k == "J1") and "1" or "2"
+        if r == "incomplete" or (r == "cancelled" and why == "winchester") then
+            rmk = rmk .. string.format(" Mission %s incomplete, Winchester.", MSN[k])
+            rmkSeq[#rmkSeq + 1] = "i_rmk_inc" .. idx
+        elseif r == "cancelled" then
+            rmk = rmk .. string.format(" Mission %s cancelled, no JTAC contact.", MSN[k])
+            rmkSeq[#rmkSeq + 1] = "i_rmk_can" .. idx
+        end
+    end
+    Pilot(string.format("Overlord, %s, INFLTREP.\n"
+        .. "Line 1, %s.\nLine 2, mission %s and %s.\nLine 3, %s and %s.\n"
+        .. "Line 4, time on target %s and %s.\nLine 5, %d and %d vehicles destroyed.\n%s",
+        CFG.CS, CFG.CS, CFG.MSN_J1, CFG.MSN_J2,
+        CD.j1.pos and MGRS(CD.j1.pos) or "unknown", CD.j2.pos and MGRS(CD.j2.pos) or "unknown",
+        Clock(CD.j1.tot), Clock(CD.j2.tot), n1, n2, rmk),
+        S("OVERLORD", "i_head", "i_l1", "i_l2",
+          "i_l3", PSpell(CD.j1.pos and MGRS(CD.j1.pos)), 0.1, "cv:p_and", PSpell(CD.j2.pos and MGRS(CD.j2.pos)), 0.25,
+          "i_l4", PClock(CD.j1.tot), 0.1, "cv:p_and", PClock(CD.j2.tot), 0.25,
+          "i_l5", PD(n1), "cv:p_and", PD(n2), "i_l5b", "i_rmk", rmkSeq))
+    -- INFLTREP is long — give it time on screen
+    CD.queue[#CD.queue].dur  = CFG.DUR_LONG + 4
+    CD.queue[#CD.queue].hold = 8
+    if TkAlive() and not CD.tkrLost then                 -- v1.7.0: EMCON 2 RV vector + readback (v1.7.6 alive)
+        TkOpen(2)
+        TkrVector(p, 2)
+    elseif CD.tkrLost then                               -- v1.7.6
+        CD.tk = nil
+        Q(string.format("[OVERLORD] %s, Overlord, copy INFLTREP. No tanker available. Say intentions.", CFG.CS),
+            CFG.DUR_LONG, CFG.REPLY_GAP, function() SetPhase("REFUEL") end, nil,
+            Voiced(S("OVERLORD", "ovl_inflrep_lost")))
+    else
+        CD.tk = nil
+        Q(string.format("[OVERLORD] %s, Overlord, copy INFLTREP. Texaco 11 on station, TACAN 21 Yankee. Texaco, %s.",
+            CFG.CS, Btn("TKR")), CFG.DUR_LONG, CFG.REPLY_GAP, function() SetPhase("REFUEL") end, nil,
+            S("OVERLORD", "ovl_inflrep_nt"))
+        Ack("OVERLORD", false, CFG.BTN.TKR)
+    end
+    QPlay()
 end
 
 local DIR8 = { "n", "ne", "e", "se", "s", "sw", "w", "nw" }
@@ -2776,8 +3320,9 @@ local NEXT = {
     STRIKE_OUT = "Check in with STRIKE " .. BtnL("STRIKE") .. " (F10).",
     STRIKE_CHK = "Stand by, Strike working Mode 4.",
     OVL_OUT    = "Check in with OVERLORD " .. BtnL("OVL") .. " (F10).",
-    ENROUTE    = "Proceed " .. CFG.CP_NAME .. ". OVERLORD hands you to Pointer 11 at "
-                 .. CFG.JTAC_HANDOFF_NM .. " NM.",
+    ENROUTE    = "Proceed " .. CFG.CP_NAME .. ". OVERLORD tasks you about "
+                 .. CFG.JTAC_HANDOFF_NM .. " NM from " .. CFG.CP_NAME .. " (Overlord on COMM2 btn 1).",
+    HOLD       = "Hold at " .. CFG.CP_NAME .. ", angels " .. CFG.SCEN.HOLD_ANGELS .. ". OVERLORD will task you (COMM2 btn 1).",
     JTAC1      = "Work Pointer 11 " .. BtnL("J1") .. " (native JTAC menu). After the 9-line: "
                  .. "readback via F10 > COMMS.",
     J1_OFF     = "Check out with Pointer 11, report to OVERLORD (F10).",
@@ -2802,13 +3347,31 @@ local function PhaseActions()
     if CD.awaiting then return a end
     if ph == "STRIKE_OUT" then a[#a+1] = { "STRIKE: check in (btn " .. CFG.BTN.STRIKE .. ")", A_StrikeCheckInOut } end
     if ph == "OVL_OUT"    then a[#a+1] = { "OVERLORD: check in (btn " .. CFG.BTN.OVL .. ")", A_OvlCheckIn } end
-    if ph == "J1_OFF"     then a[#a+1] = { "OVERLORD: off Pointer 11, ready for retasking", A_OvlOffPointer } end
-    if ph == "J2_OFF"     then a[#a+1] = { "OVERLORD: INFLTREP", A_Inflrep } end
+    if ph == "J1_OFF" or ph == "J2_OFF" then   -- v1.8.0: next tasking or INFLTREP, whatever the order
+        local k = KeyOfPhase(ph)
+        if NextKey() then
+            a[#a+1] = { "OVERLORD: off " .. JT[k].disp .. ", ready for retasking", function() A_OvlOffJtac(k) end }
+        else
+            a[#a+1] = { "OVERLORD: INFLTREP", A_Inflrep }
+        end
+    end
+    if (ph == "JTAC1" or ph == "JTAC2") and LcNeeded(KeyOfPhase(ph)) then   -- v1.8.0 lost comms
+        local k = KeyOfPhase(ph)
+        a[#a+1] = { "OVERLORD: unable contact " .. JT[k].disp, function() A_UnableContact(k) end }
+    end
+    if CD.dv and CD.dv.open then                                          -- v1.8.0 C: divert
+        local p = Player()
+        a[#a+1] = { "OVERLORD: wilco divert (Eyeball 11)", A_DivertWilco }
+        a[#a+1] = { "OVERLORD: unable divert" .. (p and (", state " .. State(p)) or ""), A_DivertUnable }
+    end
+    if ph == "ENROUTE" and CD.ar1Int then                                 -- v1.8.0 AR1 tanker gone
+        a[#a+1] = { "OVERLORD: continuing mission, no tanker", A_ContNoTkr }
+    end
     if ph == "REFUEL" or ph == "TKR_DONE" then
         a[#a+1] = { (ph == "TKR_DONE") and "OVERLORD: RTB" or "OVERLORD: RTB (no tanker)", A_OvlRTB }
     end
     -- v1.7.0 tanker RV (EMCON 2)
-    if ph == "ENROUTE" and not CD.tk and not CD.ar1Done and Tanker() then
+    if ph == "ENROUTE" and not CD.tk and not CD.ar1Done and TkAlive() and not CD.tkrLost then   -- v1.8.0
         a[#a+1] = { "OVERLORD: request Texaco (AR1 top-off)", A_TkrRequest }
         if CFG.TKR.AR1_HOLD then a[#a+1] = { "OVERLORD: skip AR1 (no top-off)", A_SkipAR1 } end
     end
@@ -2829,7 +3392,7 @@ local function PhaseActions()
     if ph == "STRIKE_IN"  then a[#a+1] = { "STRIKE: check in inbound (btn " .. CFG.BTN.STRIKE .. ")", A_StrikeCheckInIn } end
     if RbAvail("J1") then a[#a+1] = { "POINTER 11: 9-line readback (4/6/8)", function() A_Readback("J1") end } end
     if RbAvail("J2") then a[#a+1] = { "EYEBALL 11: 9-line readback (4/6/8)", function() A_Readback("J2") end } end
-    if ph == "ENROUTE" or ph == "JTAC1" or ph == "J1_OFF" or ph == "JTAC2" or ph == "J2_OFF" then
+    if ph == "ENROUTE" or ph == "HOLD" or ph == "JTAC1" or ph == "J1_OFF" or ph == "JTAC2" or ph == "J2_OFF" then
         a[#a+1] = { "OVERLORD: RTB (mission abort)", A_OvlAbort }
     end
     if DIV_PHASES[ph] then a[#a+1] = { "OVERLORD: bingo / divert (nearest field)", A_Divert } end   -- v1.7.3
@@ -2839,9 +3402,17 @@ local function PhaseActions()
     return a
 end
 
+--- v1.8.0: calls that may step on a busy frequency (emergencies, abort, divert); everything else waits until the
+--- frequency is clear, so a menu item never runs ahead of the transmission it answers.
+local URGENT = { [A_OvlAbort] = true, [A_Divert] = true, [A_Breakaway] = true, [A_Overrun] = true, [A_Spokes] = true }
 local function CommsItems()
     local a = PhaseActions()
     if OVL_PHASES[CD.phase] then a[#a + 1] = { "OVERLORD: request picture", A_Picture } end
+    if not RadioIdle() then
+        local u = {}
+        for _, it in ipairs(a) do if URGENT[it[2]] then u[#u + 1] = it end end
+        return u
+    end
     return a
 end
 
@@ -2862,7 +3433,9 @@ local function CardData()
             { n = 3,  f = CFG.FREQ.STRIKE .. " AM",  name = "STRIKE" },
             { n = 4,  f = CFG.FREQ.J1 .. " AM",      name = "POINTER 11 (JTAC-1)" },
             { n = 5,  f = CFG.FREQ.J2 .. " AM",      name = "EYEBALL 11 (JTAC-2)" },
-            { n = 6,  f = CFG.FREQ.OVL .. " AM",     name = "OVERLORD" },
+            { n = 6,  f = CFG.FREQ.OVL .. " AM",     name = "OVERLORD (COMM2 btn 1 = 251.10)" },
+            { n = 9,  f = CFG.ALT.J1.freq .. " AM",  name = "POINTER 11 alternate" },
+            { n = 11, f = CFG.ALT.J2.freq .. " AM",  name = "EYEBALL 11 alternate" },
             { n = 7,  f = CFG.FREQ.TKR .. " AM",     name = "TEXACO 11" },
             { n = 8,  f = "252.30 AM", name = "ARCO 31 (recovery tanker)" },
             { n = 15, f = "263.00 AM", name = "APPROACH" },
@@ -2870,7 +3443,8 @@ local function CardData()
         },
         lines = {
             "CAS-1 FLOW: DEP → (ZIPLIP " .. CFG.DEP_ZIPLIP_NM .. " DME / CASE III cleared) STRIKE → OVERLORD",
-            "→ (CP-20 NM) POINTER → OVERLORD → EYEBALL → OVERLORD INFLTREP → TEXACO",
+            "→ (CP-20 NM) OVERLORD tasking: JTACs in OVERLORD's order (hold at CP / divert possible)",
+            "→ OVERLORD INFLTREP → TEXACO · COMM1 = JTAC / tanker, COMM2 btn 1 = OVERLORD",
             "→ OVERLORD RTB → (90 NM) STRIKE → (50 NM) MARSHAL",
         },
     }
@@ -2878,7 +3452,8 @@ end
 
 local function NextText()
     if CD.phase == "RECOVERY" or CD.phase == "DONE" then return nil end
-    if JcOn() and (CD.phase == "JTAC1" or CD.phase == "JTAC2") then return nil end   -- v1.6.0
+    if JcOn() and (CD.phase == "JTAC1" or CD.phase == "JTAC2") and not (CD.dv and CD.dv.open)
+        and not LcNeeded(KeyOfPhase(CD.phase)) then return nil end   -- v1.6.0
     if CD.phase == "DIVERT" and _G.TRT.FA and _G.TRT.FA.active then return nil end   -- v1.7.5 Field_Arrival
     if CD.phase == "DIVERT" and CD.divert then   -- v1.7.3
         local f
@@ -2887,9 +3462,22 @@ local function NextText()
             CD.divert.name, CD.divert.field, f and f.twr or "?",
             CD.divert.minFuel and " Tell tower: minimum fuel." or "")
     end
-    if CD.tkrLost and (CD.phase == "REFUEL" or CD.phase == "J2_OFF") then   -- v1.7.6
-        return (CD.phase == "J2_OFF") and "Tanker off station. Pass INFLTREP to OVERLORD (F10), then RTB or divert."
+    local offK = (CD.phase == "J1_OFF" or CD.phase == "J2_OFF") and KeyOfPhase(CD.phase) or nil   -- v1.8.0
+    local last = offK and not NextKey()
+    if CD.tkrLost and (CD.phase == "REFUEL" or last) then   -- v1.7.6
+        return last and "Tanker off station. Pass INFLTREP to OVERLORD (F10), then RTB or divert."
             or "Tanker off station: OVERLORD RTB (no tanker) or bingo / divert (F10)."
+    end
+    if offK then
+        local d = JT[offK].disp
+        if CD.res[offK] == "cancelled" then return "Mission cancelled. INFLTREP to OVERLORD (F10), or RTB / divert." end
+        return last and ("Check out with " .. d .. ", pass INFLTREP to OVERLORD (F10).")
+            or ("Check out with " .. d .. ", report to OVERLORD for retasking (F10).")
+    end
+    if CD.phase == "ENROUTE" and CD.ar1Int then return "No tanker. Tell OVERLORD your intentions (F10): continue, RTB or divert." end
+    if CD.dv and CD.dv.open then return "OVERLORD divert: wilco (F10) - you tell Pointer 11 and switch to Eyeball 11 - or unable." end
+    if (CD.phase == "JTAC1" or CD.phase == "JTAC2") and LcNeeded(KeyOfPhase(CD.phase)) then
+        return "No answer from " .. JT[KeyOfPhase(CD.phase)].disp .. ". Report to OVERLORD on COMM2 (F10)."
     end
     return TkrNext() or NEXT[CD.phase]
 end
@@ -2915,7 +3503,10 @@ local function ArmJ2Injects()
     if not CD.inj.i3 then
         local d3 = 55 + math.random(0, 20)
         timer.scheduleFunction(function()
-            if CD.phase == "JTAC2" and not CD.inj.i3 and Roll(CFG.PROB_INJ3) then
+            local jst = JcOn() and _G.TRT.JC.st and _G.TRT.JC.st.J2   -- v1.8.0: only a JTAC that is talking
+            local talking = not jst or ((jst.phase == "SITREP" or jst.phase == "GAMEPLAN" or jst.phase == "NINE"
+                or jst.phase == "READBACK" or jst.phase == "ATTACK") and jst.nocomm == nil)
+            if CD.phase == "JTAC2" and talking and not CD.inj.i3 and Roll(CFG.PROB_INJ3) then
                 CD.inj.i3 = true
                 C_Manpads()
             end
@@ -3098,28 +3689,30 @@ SetPhase = function(new)
 
     if new == "DEPARTURE" then
         Msg("[CAS-1] All radio calls: F10 > COMMS. \"Show: next call\" lists the next step.", CFG.DUR_HANDOFF)
-    elseif new == "J1_OFF" then
-        local txt = "[CAS-1] Pointer 11 tasking complete. Check out, then report to OVERLORD (F10)."
-        if JcInc("J1") then   -- v1.7.13 Winchester
-            CD.j1.tot = CD.j1.tot or timer.getAbsTime()
-            txt = "[CAS-1] Checked out of Pointer 11 (Winchester, mission incomplete). Report to OVERLORD (F10)."
+    elseif new == "J1_OFF" or new == "J2_OFF" then   -- v1.8.0: one handler, whatever the order
+        local k = KeyOfPhase(new)
+        local j, r = JT[k], CD.res[k]
+        local last = not NextKey()
+        local txt
+        if r == "incomplete" then
+            JD(k).tot = JD(k).tot or timer.getAbsTime()
+            txt = string.format("[CAS-1] Checked out of %s (Winchester, mission incomplete). %s", j.disp,
+                last and "INFLTREP to OVERLORD (F10)." or "Report to OVERLORD (F10).")
+            local inc = JcInc(k)
+            if inc then env.info(string.format("[CD] %s Winchester: %d destroyed, %d remaining", k, inc.destroyed or 0,
+                inc.remaining or 0)) end
+        elseif r ~= "cancelled" then
+            txt = string.format("[CAS-1] %s tasking complete. Check out, then %s", j.disp,
+                last and "INFLTREP to OVERLORD (F10)." or "report to OVERLORD (F10).")
         end
-        if JcOn() then   -- v1.6.2: after the JTAC's BDA / termination call
-            timer.scheduleFunction(function() Msg(txt, CFG.DUR_SHORT) end, nil, timer.getTime() + 8)
-        else Msg(txt, CFG.DUR_SHORT) end
-        TicBDA("J1")   -- v1.5.4
-    elseif new == "J2_OFF" then
-        local txt = "[CAS-1] Eyeball 11 tasking complete. Check out, then INFLTREP to OVERLORD (F10)."
-        local inc = JcInc("J2")   -- v1.7.13 Winchester
-        if inc then
-            CD.j2.tot = CD.j2.tot or timer.getAbsTime()
-            txt = "[CAS-1] Checked out of Eyeball 11 (Winchester, mission incomplete). INFLTREP to OVERLORD (F10)."
-            env.info(string.format("[CD] J2 Winchester: %d destroyed, %d remaining", inc.destroyed or 0, inc.remaining or 0))
+        if txt then   -- v1.8.0: shown when the frequency is clear (after the JTAC's BDA / Winchester exchange)
+            local t0 = timer.getTime()
+            timer.scheduleFunction(function(_, tt)
+                if RadioIdle() or tt - t0 > 60 then Msg(txt, CFG.DUR_SHORT); return nil end
+                return tt + 1
+            end, nil, t0 + (JcOn() and 3 or 0.1))
         end
-        if JcOn() then
-            timer.scheduleFunction(function() Msg(txt, CFG.DUR_SHORT) end, nil, timer.getTime() + 8)
-        else Msg(txt, CFG.DUR_SHORT) end
-        if not inc then TicBDA("J2") end
+        if r ~= "incomplete" and r ~= "cancelled" then TicBDA(k) end   -- v1.5.4
     elseif new == "DIVERT" and CD.divert then   -- v1.7.3
         Msg("[CAS-1] " .. (NextText() or "Divert."), CFG.DUR_HANDOFF)
     elseif new == "RECOVERY" then
@@ -3201,20 +3794,31 @@ local function EvalPhase(pUnit, cUnit)
         end
 
     elseif ph == "ENROUTE" then
-        if Dist2D(pPos, CFG.CP_POS) <= CFG.JTAC_HANDOFF_NM and not CD.tk and not CD.awaiting and not Ar1Pending() then  -- v1.7.0/1: not during or before AR1
-            C_OvlContactPointer(pUnit); QPlay()
-            SetPhase("JTAC1")
+        if Dist2D(pPos, CFG.CP_POS) <= CFG.JTAC_HANDOFF_NM and not CD.tk and not CD.awaiting and not Ar1Pending()
+            and not CD.ar1Int and RadioIdle() then  -- v1.7.0/1: not during or before AR1; v1.8.0 intentions given
+            ScenPick()
+            local k = NextKey()
+            if CD.scen.kind == "B" and k then
+                C_OvlHold()
+            elseif k then
+                C_OvlContact(k, pUnit, "cp")
+            else
+                env.info("[CD] ENROUTE: nothing left to task")
+                SetPhase("J2_OFF")
+            end
+            QPlay()
         end
 
-    elseif ph == "JTAC1" then
-        if CD.deadJ1 or JcTerm("J1") then SetPhase("J1_OFF") end
-
-    elseif ph == "JTAC2" then
-        if not CD.j2Armed then
+    elseif ph == "JTAC1" or ph == "JTAC2" then   -- v1.8.0: either JTAC, in any order
+        local k = KeyOfPhase(ph)
+        if k == "J2" and not CD.j2Armed then
             local tgt = CD.j2.pos or CFG.JTAC2_POS
             if Dist2D(pPos, tgt) <= CFG.INJ_ARM_NM then CD.j2Armed = true; ArmJ2Injects() end
         end
-        if CD.deadJ2 or JcTerm("J2") then SetPhase("J2_OFF") end
+        if not CD.res[k] and (TargetDead(k) or JcTerm(k)) then
+            FinishTask(k)
+            SetPhase(OFF_PH[k])
+        end
 
     elseif ph == "REFUEL" then
         if CD.refuelDone then SetPhase("TKR_DONE") end   -- v1.7.0: fallback; normally "clear to leave"
@@ -3222,7 +3826,7 @@ local function EvalPhase(pUnit, cUnit)
 
     -- Inbound: OVERLORD → Strike (also catches a skipped INFLTREP / tanker / RTB call)
     ph = CD.phase
-    if (ph == "J2_OFF" or ph == "REFUEL" or ph == "TKR_DONE" or ph == "RTB")
+    if (((ph == "J1_OFF" or ph == "J2_OFF") and not NextKey()) or ph == "REFUEL" or ph == "TKR_DONE" or ph == "RTB")
         and cPos and Dist2D(pPos, cPos) <= CFG.RTB_STRIKE_NM then
         C_OvlSwitchStrike(pUnit); QPlay()
         SetPhase("STRIKE_IN")
@@ -3348,6 +3952,10 @@ end
 --  MAIN TICK
 -- ══════════════════════════════════════════════════════════════
 -- Pending pilot call → repeated controller call (+ F10 hint)
+local function OffRemind()
+    if NextKey() or (CD.tkrLost) then return string.format("[OVERLORD] %s, Overlord. Say status.", CFG.CS), "ovl_say_status" end
+    return string.format("[OVERLORD] %s, Overlord. Say status, advise when ready for tanker.", CFG.CS), "ovl_say_status_tkr"
+end
 local REMIND = {
     STRIKE_OUT = function()
         if CD.depZiplip then
@@ -3356,8 +3964,11 @@ local REMIND = {
         return string.format("[DEPARTURE] %s, Departure. Contact Strike, %s, how copy?", CFG.CS, Btn("STRIKE")), "dep_contact_strike"
     end,
     OVL_OUT    = function() return string.format("[STRIKE] %s, Strike. Contact Overlord, %s.", CFG.CS, Btn("OVL")), "str_contact_ovl" end,
-    J1_OFF     = function() return string.format("[OVERLORD] %s, Overlord. Say status.", CFG.CS), "ovl_say_status" end,
-    J2_OFF     = function() return string.format("[OVERLORD] %s, Overlord. Say status, advise when ready for tanker.", CFG.CS), "ovl_say_status_tkr" end,
+    J1_OFF     = function() return OffRemind() end,   -- v1.8.0: by what is left, not by the JTAC
+    J2_OFF     = function() return OffRemind() end,
+    ENROUTE    = function()                            -- v1.8.0: AR1 tanker gone, intentions pending
+        if CD.ar1Int then return string.format("[OVERLORD] %s, Overlord. Say intentions.", CFG.CS), "ovl_say_int" end
+    end,
     -- v1.6.5: no REFUEL reminder (the pilot is on the tanker, native DCS comms)
     TKR_DONE   = function() return string.format("[OVERLORD] %s, Overlord. Say intentions.", CFG.CS), "ovl_say_int" end,
     STRIKE_IN  = function() return string.format("[OVERLORD] %s, Overlord. Contact Strike, %s, how copy?", CFG.CS, Btn("STRIKE")), "ovl_contact_strike" end,
@@ -3373,7 +3984,7 @@ Remind = function(now)
     if not audio then Msg(txt, CFG.DUR_HANDOFF); return end      -- v1.4.6: hint already says it
     Q(txt, CFG.DUR_HANDOFF, 0, nil, nil, audio)
     QPlay()
-    Msg("[CAS-1] F10 > COMMS - " .. (NEXT[CD.phase] or ""), CFG.DUR_HANDOFF)
+    Msg("[CAS-1] F10 > COMMS - " .. (NextText() or NEXT[CD.phase] or ""), CFG.DUR_HANDOFF)
 end
 
 -- v1.6.1: air start tag from the hero group's first route point name ("AIRSTART J2")
@@ -3414,6 +4025,7 @@ local function AirStartCheck(p, c)
     SetFlag(200, 0)
     if key == "J2" then
         CD.worked.J1 = true
+        CD.res.J1, CD.cur = "skipped", "J2"   -- v1.8.0
         SetPhase("JTAC2")
         local tic = TicPick() == "J2"
         Q(string.format("[OVERLORD] %s, Overlord. AIR START: check-in assumed. %s %s. %s Contact Eyeball 11, %s.",
@@ -3426,8 +4038,9 @@ local function AirStartCheck(p, c)
         TicPick()   -- as at the OVERLORD check-in: JTAC_Controller spawns Bravo 2-1 from CD.tic
         SetPhase("ENROUTE")
         Q(string.format("[OVERLORD] %s, Overlord. AIR START: check-in assumed. Proceed %s, %s, "
-            .. "hard deck two-zero thousand. Pointer 11 hand-off %d NM from %s.", CFG.CS, CFG.CP_NAME,
+            .. "hard deck two-zero thousand. OVERLORD tasking %d NM from %s.", CFG.CS, CFG.CP_NAME,
             BrgRng(pos, CFG.CP_POS), CFG.JTAC_HANDOFF_NM, CFG.CP_NAME), CFG.DUR_LONG, 2)
+        if CD.scen and CD.scen.noShow then C_NoShow() end   -- v1.8.0
         QPlay()
     end
 end
@@ -3449,6 +4062,8 @@ local function CD_Tick(_, t)
     ChatPump(t)
     local okT, errT = pcall(TicTick, t, p)   -- v1.5.4
     if not okT then env.info("[CD] TIC error: " .. tostring(errT)) end
+    local okH, errH = pcall(HoldTick, p)     -- v1.8.0 (DivertTick has its own 1 s timer)
+    if not okH then env.info("[CD] tasking error: " .. tostring(errH)) end
     if OVL_PHASES[CD.phase] or CD.phase == "DEPARTURE" then SurfaceCheck(p:getPoint()) end
     return t + CFG.TICK
 end
@@ -3492,7 +4107,7 @@ local function CD_Init()
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
     timer.scheduleFunction(MudTick, nil, timer.getTime() + 10)   -- v1.7.9
-    env.info("[CD] Comms_Director v1.7.12 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.8.0 online — CAS-1 Syria")
 end
 
 CD_Init()

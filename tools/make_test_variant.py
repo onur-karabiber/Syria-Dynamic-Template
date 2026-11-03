@@ -1,4 +1,8 @@
-# make_test_variant.py | v1.4.0
+# make_test_variant.py | v1.5.0
+# v1.5.0: tasking scenarios (Comms_Director v1.8.0): --scen A|B|C forces the scenario, --lc J1tech|J1down|J2tech|
+#         J2down|none the lost comms, --noshow yes|no the tanker no-show, --tic J1|J2|off the TIC JTAC, --first J1|J2
+#         the first tasking in B. A mission-start DO SCRIPT sets the ME flags 210-212 / 214 / 215 (read at the
+#         OVERLORD check-in or the air start). The variant name gets the scenario, e.g. "TEST-J1-C".
 # v1.4.0: --start VIS (visual test, Onur 2026-11-02): the J1 air start ("AIRSTART J1": 30 NM before CP TIGER)
 #         plus tools/visual_test.lua injected as a triggerOnce DO SCRIPT: scoreboard and report-card samples
 #         from T+30 s, F10 > Other > VISUAL TEST for the rest ([VTEST] log lines).
@@ -147,7 +151,37 @@ def build_aar(mission, a, key):
                                    a.aar_kt, a.aar_internal_lb))
 
 
+SCEN_N = {"A": 1, "B": 2, "C": 3}
+LC_N = {"J1tech": 1, "J1down": 2, "J2tech": 3, "J2down": 4, "none": 9}
+
+
+def scen_tag(a):
+    parts = []
+    if a.scen: parts.append(a.scen)
+    if a.lc: parts.append("LC" + a.lc)
+    if a.noshow == "yes": parts.append("NOTKR")
+    if a.tic: parts.append("TIC" + a.tic)
+    if a.first: parts.append("1ST" + a.first)
+    return "-".join(parts)
+
+
+def add_scen_flags(mission, a):
+    """v1.5.0: mission-start DO SCRIPT that sets the Comms_Director scenario flags."""
+    sets = []
+    if a.scen: sets.append((210, SCEN_N[a.scen]))
+    if a.lc: sets.append((211, LC_N[a.lc]))
+    if a.noshow: sets.append((212, 1 if a.noshow == "yes" else 2))
+    if a.tic: sets.append((214, {"J1": 1, "J2": 2, "off": 9}[a.tic]))
+    if a.first: sets.append((215, 1 if a.first == "J1" else 2))
+    if not sets:
+        return
+    code = "".join('trigger.action.setUserFlag("%d", %d); ' % fv for fv in sets)
+    code += 'env.info("[TEST] scenario flags: %s")' % ", ".join("%d=%d" % fv for fv in sets)
+    add_do_script(mission, code.encode(), "SCENARIO FLAGS " + scen_tag(a))
+
+
 def build(mission, a, key):
+    add_scen_flags(mission, a)
     if key.startswith("AAR"):
         return build_aar(mission, a, key)
     g = find_group(mission, b"plane", a.group)
@@ -224,6 +258,11 @@ def main():
     ap.add_argument("--cp-name", default="Contact JTAC")
     ap.add_argument("--j2-target", default="SAM YE53 (SA-8)-1")
     ap.add_argument("--keep-red-air", action="store_true", help="keep the random RED air activations")
+    ap.add_argument("--scen", choices=["A", "B", "C"], help="v1.5.0 force the tasking scenario")
+    ap.add_argument("--lc", choices=sorted(LC_N), help="v1.5.0 force lost comms with a JTAC (or none)")
+    ap.add_argument("--noshow", choices=["yes", "no"], help="v1.5.0 force / forbid the tanker no-show")
+    ap.add_argument("--tic", choices=["J1", "J2", "off"], help="v1.5.0 force the TIC JTAC")
+    ap.add_argument("--first", choices=["J1", "J2"], help="v1.5.0 first tasking in scenario B")
     a = ap.parse_args()
     src = os.path.abspath(a.miz)
     if src.startswith(REPO + os.sep):
@@ -237,7 +276,8 @@ def main():
             build(mission, a, key)
             if not a.keep_red_air:
                 strip_red_air(mission)
-            out = os.path.join(os.path.dirname(src), "%s TEST-%s.miz" % (stem, key))
+            tag = scen_tag(a)
+            out = os.path.join(os.path.dirname(src), "%s TEST-%s%s.miz" % (stem, key, ("-" + tag) if tag else ""))
             buf = io.BytesIO()
             with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zout:
                 for info in zin.infolist():
