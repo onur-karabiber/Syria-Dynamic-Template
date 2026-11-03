@@ -1,5 +1,7 @@
--- Comms_Director | v1.8.0
+-- Comms_Director | v1.8.1
 --[[
+  v1.8.1 - CFG.AUDIO: pilot clip jp_abort_ack ("Hornet five one, aborting.") for JTAC_Controller v0.12.0
+           (tools/jc_clips.py --audio-into-cd). No logic change.
   v1.8.0 - tasking scenarios and radio-flow gates (decisions Onur 2026-11-03, project doc
            claude/tasking-scenarios-2026-11-03.md):
             * The JTAC order is a list (CD.order), not the phase chain: JTAC1 / JTAC2 = "working Pointer / Eyeball",
@@ -1209,6 +1211,7 @@ local CFG = {
         jp_off                 = { ch = "PILOT", len = 1.39 },
         jp_dry                 = { ch = "PILOT", len = 0.49 },
         jp_aborting            = { ch = "PILOT", len = 1.35 },
+        jp_abort_ack           = { ch = "PILOT", len = 1.36 },
         jp_cs                  = { ch = "PILOT", len = 0.90 },
         jp_rifle               = { ch = "PILOT", len = 0.58 },
         jp_away                = { ch = "PILOT", len = 0.44 },
@@ -4134,7 +4137,7 @@ local function CD_Init()
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
     timer.scheduleFunction(MudTick, nil, timer.getTime() + 10)   -- v1.7.9
-    env.info("[CD] Comms_Director v1.8.0 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.8.1 online — CAS-1 Syria")
 end
 
 CD_Init()

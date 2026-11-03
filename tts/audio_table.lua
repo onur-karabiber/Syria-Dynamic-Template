@@ -668,6 +668,7 @@
         jp_off                 = { ch = "PILOT", len = 1.39 },
         jp_dry                 = { ch = "PILOT", len = 0.49 },
         jp_aborting            = { ch = "PILOT", len = 1.35 },
+        jp_abort_ack           = { ch = "PILOT", len = 1.36 },
         jp_cs                  = { ch = "PILOT", len = 0.90 },
         jp_rifle               = { ch = "PILOT", len = 0.58 },
         jp_away                = { ch = "PILOT", len = 0.44 },
