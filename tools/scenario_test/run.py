@@ -1,4 +1,8 @@
-# scenario_test/run.py | v1.1.0
+# scenario_test/run.py | v1.2.0
+# v1.2.0: opts "spoof": comply | auth | release | wait (JTAC_Controller >= v0.13.0, ME flag 216 forces the spoofed
+#         abort on Pointer 11): the bot answers the spoof that way (release = a synthetic S_EVENT_SHOT GBU-12);
+#         Pointer's targets are not "killed" until the spoof has been answered. opts "abort_auth": the bot
+#         challenges a real abort (AUTHENTICATE) before ABORTING.
 # v1.1.0: opts "abort": (key, ack_delay_s) - the first IN of that JTAC is flown outside the FAH (-> ABORT); the bot
 #         presses ABORTING ack_delay_s after the end of the abort call (JTAC_Controller >= v0.12.0).
 # Headless walk of the CAS-1 radio flow through every tasking scenario (Comms_Director >= v1.8.0,
@@ -154,6 +158,18 @@ class Run:
         g = self.M.groups[gname]
         return [g.units[i].name for i in range(1, len(g.units) + 1) if g.units[i].life > 0]
 
+    def shoot(self):
+        """v1.2.0: synthetic GBU-12 release from the hero (S_EVENT_SHOT), 'impacts' at T1 after 5 s"""
+        self.rt.execute("""
+            local t0 = MOCK.t
+            local w = { id_ = 9901 }
+            function w:getDesc() return { category = Weapon.Category.BOMB, typeName = "GBU_12", displayName = "GBU-12" } end
+            function w:getTypeName() return "GBU_12" end
+            function w:isExist() return MOCK.t < t0 + 5 end
+            function w:getPoint() return { x = %f, y = 100, z = %f } end
+            MOCK.event({ id = world.event.S_EVENT_SHOT, time = t0, initiator = Unit.getByName("Player_01"), weapon = w })
+        """ % (T1[0], T1[1]))
+
     # ── bot ──────────────────────────────────────────────────────────────────
     def press(self, it, sub=None):
         lbl = self.label(it)
@@ -189,9 +205,39 @@ class Run:
                     return it
             return None
         jc = self.jc()
+        # v1.2.0: spoofed abort on Pointer 11
+        sm = o.get("spoof")
+        if sm:
+            st1 = jc.st.J1
+            a1 = st1.att if str(st1.phase) == "ATTACK" else None
+            sp = a1.spoof if a1 is not None else None
+            if a1 is not None and a1.cleared and not st1.spoofDone:
+                return None, None                           # cleared: wait for the spoof
+            if sp is not None and sp.pending and not sp.onAir:
+                return None, None                           # queued, not on the air yet
+            if sp is not None and sp.pending and sp.onAir:
+                if self.t() - float(sp.onAir) < 3:
+                    return None, None                       # listening
+                if sm == "comply":
+                    return find(r"^POINTER 11: ABORTING$"), None
+                if sm == "auth":
+                    return find(r"^POINTER 11: AUTHENTICATE$"), None
+                if sm == "release" and not self.attack.get("spoof_shot"):
+                    self.attack["spoof_shot"] = True
+                    self.shoot()
+                return None, None
+        if o.get("abort_auth"):
+            a1 = jc.st.J1.att
+            if a1 is not None and a1.aborted and a1.ackPending and not a1.authDone:
+                it = find(r"^POINTER 11: AUTHENTICATE$")
+                if it is not None:
+                    return it, None
         # attack simulation: a cleared pass destroys targets
         for k, g in (("J1", "SAM BV51 (SA-13)-1"), ("J2", "SAM YE53 (SA-8)-1")):
             st = jc.st[k]
+            if sm and k == "J1" and not (st.spoofDone and (st.att is None or st.att.spoof is None
+                                                           or not st.att.spoof.pending)):
+                continue                                    # v1.2.0 hold the kill until the spoof is answered
             if st.phase == "ATTACK" and st.att is not None and st.att.cleared and not self.attack.get(k):
                 self.attack[k] = self.t()
                 left = self.alive(g)
@@ -402,6 +448,27 @@ CASES = [
     ("abort_ack_J1_late", {210: 1, 211: 9, 212: 2, 214: 1}, {"abort": ("J1", 20)},
      lambda r: [r.log_has(r"ABORT ACK J1 \d+\.\d s \(late\)"), r.log_has(r"\[SCORE\] -2 ABORT ACK LATE"),
                 r.cd().res.J1 == "done"]),
+    ("abort_auth_J1", {210: 1, 211: 9, 212: 2, 214: 1, 216: 9}, {"abort": ("J1", 2), "abort_auth": True},
+     lambda r: [r.log_has(r"AUTH J1 challenge \w\w reply \w \(real abort\)"),
+                radio_has(r, r"^\[POINTER 11\] HORNET 51, Pointer 11, I authenticate [A-Z-]+\. ABORT QUEBEC\.$"),
+                r.log_has(r"ABORT ACK J1"), r.cd().res.J1 == "done", not r.log_has(r"VOICE (text only|missing clip)")]),
+    ("spoof_comply_J1", {210: 1, 211: 9, 212: 2, 214: 1, 216: 1}, {"spoof": "comply"},
+     lambda r: [r.log_has(r"SPOOF J1 ABORT [A-Z] \(briefed reply Q\)"), r.log_has(r"SPOOF J1 complied"),
+                r.log_has(r"\[SCORE\] -5 ABORT NOT AUTHENTICATED \(Pointer 11\)"),
+                radio_has(r, r"negative, Pointer 11 did not call abort\. Report IN\."), not r.log_has(r"INCIDENT"),
+                r.cd().res.J1 == "done", not r.log_has(r"VOICE (text only|missing clip)")]),
+    ("spoof_auth_J1", {210: 1, 211: 9, 212: 2, 214: 1, 216: 1}, {"spoof": "auth"},
+     lambda r: [r.log_has(r"AUTH J1 challenge \w\w reply \w \(spoof\)"),
+                radio_has(r, r"I authenticate [A-Z-]+\. Disregard abort, not Pointer 11\. (HORNET 51, cleared hot|Report IN)\.$"),
+                not r.log_has(r"\[SCORE\] -(5|10) "), not r.log_has(r"INCIDENT"), r.cd().res.J1 == "done", not r.log_has(r"VOICE (text only|missing clip)")]),
+    ("spoof_release_J1", {210: 1, 211: 9, 212: 2, 214: 1, 216: 1}, {"spoof": "release"},
+     lambda r: [r.log_has(r"SPOOF J1 unresolved at release"),
+                r.log_has(r"\[SCORE\] -10 RELEASE WITH UNRESOLVED ABORT CALL \(Pointer 11\)"),
+                radio_has(r, r"be advised, last abort was not Pointer 11\.$"), not r.log_has(r"INCIDENT"),
+                r.cd().res.J1 == "done", not r.log_has(r"VOICE (text only|missing clip)")]),
+    ("spoof_wait_J1", {210: 1, 211: 9, 212: 2, 214: 1, 216: 1}, {"spoof": "wait"},
+     lambda r: [r.log_has(r"SPOOF J1 unanswered"), radio_has(r, r"be advised, last abort was not Pointer 11\.$"),
+                not r.log_has(r"\[SCORE\] -(5|10) "), r.cd().res.J1 == "done", not r.log_has(r"VOICE (text only|missing clip)")]),
     ("winchester_J1", {210: 1, 211: 9, 212: 2, 214: 2}, {"winchester": "J1"},
      lambda r: [r.cd().res.J1 == "incomplete", r.cd().res.J2 == "cancelled", radio_has(r, r"copy Winchester"),
                 radio_has(r, r"Mission 4102 incomplete, Winchester"), seq_in(r.phases(), "JTAC1", "J1_OFF", "REFUEL")]),

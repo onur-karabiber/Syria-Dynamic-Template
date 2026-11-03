@@ -1,4 +1,6 @@
-# make_test_variant.py | v1.5.0
+# make_test_variant.py | v1.6.0
+# v1.6.0: --spoof J1|J2|both|off (JTAC_Controller v0.13.0): ME flag 216 forces the spoofed abort on that JTAC
+#         (100 %) or switches it off. Variant name tag "SPF<x>", e.g. "TEST-J1-A-SPFJ1".
 # v1.5.0: tasking scenarios (Comms_Director v1.8.0): --scen A|B|C forces the scenario, --lc J1tech|J1down|J2tech|
 #         J2down|none the lost comms, --noshow yes|no the tanker no-show, --tic J1|J2|off the TIC JTAC, --first J1|J2
 #         the first tasking in B. A mission-start DO SCRIPT sets the ME flags 210-212 / 214 / 215 (read at the
@@ -162,6 +164,7 @@ def scen_tag(a):
     if a.noshow == "yes": parts.append("NOTKR")
     if a.tic: parts.append("TIC" + a.tic)
     if a.first: parts.append("1ST" + a.first)
+    if a.spoof: parts.append("SPF" + a.spoof)   # v1.6.0
     return "-".join(parts)
 
 
@@ -173,6 +176,7 @@ def add_scen_flags(mission, a):
     if a.noshow: sets.append((212, 1 if a.noshow == "yes" else 2))
     if a.tic: sets.append((214, {"J1": 1, "J2": 2, "off": 9}[a.tic]))
     if a.first: sets.append((215, 1 if a.first == "J1" else 2))
+    if a.spoof: sets.append((216, {"J1": 1, "J2": 2, "both": 3, "off": 9}[a.spoof]))   # v1.6.0
     if not sets:
         return
     code = "".join('trigger.action.setUserFlag("%d", %d); ' % fv for fv in sets)
@@ -263,6 +267,7 @@ def main():
     ap.add_argument("--noshow", choices=["yes", "no"], help="v1.5.0 force / forbid the tanker no-show")
     ap.add_argument("--tic", choices=["J1", "J2", "off"], help="v1.5.0 force the TIC JTAC")
     ap.add_argument("--first", choices=["J1", "J2"], help="v1.5.0 first tasking in scenario B")
+    ap.add_argument("--spoof", choices=["J1", "J2", "both", "off"], help="v1.6.0 force the spoofed abort (flag 216)")
     a = ap.parse_args()
     src = os.path.abspath(a.miz)
     if src.startswith(REPO + os.sep):

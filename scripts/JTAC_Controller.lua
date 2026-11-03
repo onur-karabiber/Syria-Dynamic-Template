@@ -1,5 +1,31 @@
--- JTAC_Controller | v0.12.0
+-- JTAC_Controller | v0.13.0
 --[[
+  v0.13.0 (spoofed abort / AUTHENTICATE, decisions Onur 2026-11-03): imitative deception on the JTAC net.
+    * CFG.SPOOF.pct (10 %) per JTAC tasking, rolled at its first CLEARED HOT: once, CFG.SPOOF.delay s after a
+      CLEARED HOT, a transmission in the JTAC's own call sign and voice says "HORNET 51, ABORT <wrong letter> x3.
+      <reason>." The letter is never the briefed reply (kneeboard 06 AUTH). Not while the JTAC is frozen
+      (divert) or silent (lost comms), not after a release in that pass (stays armed for the next pass).
+      ME flag CFG.SPOOF.flag (216): 1 Pointer / 2 Eyeball / 3 both at 100 %, 9 never (test variants).
+    * F10 on every abort, real or spoofed: "ABORTING" and "AUTHENTICATE" (the menu does not give it away).
+      AUTHENTICATE = pilot "<JTAC>, HORNET 51, authenticate <two random letters>" (challenge-reply as in the
+      radio-procedure AUTHENTICATE / I AUTHENTICATE prowords); the real JTAC answers "I authenticate <reply>"
+      (same table, row = 1st letter, the letter right of the 2nd) and then
+        - spoof: "Disregard abort, not <JTAC>. HORNET 51, cleared hot." (still cleared, not released, inside the FAH)
+          or "... Report IN." (the pass is dry: OFF, then IN);
+        - real abort: "ABORT <code>." The ack timer keeps running from the end of the abort call.
+    * Scoring (not ROE incidents; JP 3-09.3 gives no aircrew procedure for a wrong abort code):
+        - "aborting" to a spoof: CFG.SCORE.SPOOF_COMPLY -5. The JTAC: "negative, <JTAC> did not call abort.
+          Report IN." The pass is dry; a release afterwards is a release without clearance (-15, ROE).
+        - release while the spoof is unresolved (heard on the air, neither ABORTING nor AUTHENTICATE):
+          CFG.SCORE.SPOOF_UNVERIFIED -10 (once). The clearance was valid, so it is not an ROE violation and the
+          kills count, but an abort call on the net went unresolved: worse than the safe error (-5), less than
+          a release without clearance (-15) or after a real abort (-25). The JTAC then: "be advised, last abort
+          was not <JTAC>."
+        - no answer and no release: after CFG.SPOOF.jtac_s the JTAC disowns it ("be advised ..."), no penalty
+          (holding ordnance is the safe choice).
+      Events SPOOF / SPOOF_AUTH / SPOOF_COMPLY / SPOOF_RELEASE / SPOOF_TIMEOUT, AUTH (real abort challenged).
+    * Voice: JTAC clips iauth, spf_dis, spf_neg, spf_adv; pilot jp_auth_ptr / jp_auth_eye
+      (tools/jc_clips.py v1.5.0).
   v0.12.0 (abort acknowledgement, Onur 2026-11-03): the abort reply and the OFF call are two calls again.
     v0.5.0 merged them into one F10 item "ABORTING (off dry)" -> "aborting, off <dir>, dry", so the pilot either
     held the acknowledgement until he was off target or called "off" while still pointing at it, and ABORT ACK
@@ -200,7 +226,7 @@ if TRT.JC then env.info("[JC] already loaded, second copy ignored") return end
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "0.12.0",
+    VERSION      = "0.13.0",
     VOICE        = true,      -- v0.7.0 spoken transmissions (needs Comms_Director >= v1.6.4)
     PLAYER_UNIT  = "Player_01",
     CS           = "HORNET 51",
@@ -250,11 +276,15 @@ local CFG = {
     -- v0.6.0: J3 penalties (live)
     SCORE = { ENABLE = true, RB_WRONG = -2, RB_CAP = -6, UNAUTH = -15, AFTER_ABORT = -25,
               TERMINATED = -10, FRIENDLY_M = 150,   -- v0.9.0 FRIENDLY -30 removed (note only)
-              ABORT_ACK_LATE = -2 },                -- v0.12.0 "aborting" later than CFG.ABORT.ack_s
+              ABORT_ACK_LATE = -2,                  -- v0.12.0 "aborting" later than CFG.ABORT.ack_s
+              SPOOF_COMPLY = -5, SPOOF_UNVERIFIED = -10 },   -- v0.13.0 (not ROE incidents)
     IP_MAX_OFF   = 45,          -- deg: pre-briefed IP run-in vs FAH centre, beyond -> keyhole IP
     KEYHOLE_NM   = 10,
     ABORT        = { challenge = "BR",
                      ack_s = 8 },    -- v0.12.0 s from the end of the JTAC's abort call to the pilot's "aborting"
+    -- v0.13.0 spoofed abort (imitative deception), see header
+    SPOOF        = { pct = 10, delay = { 2, 5 }, jtac_s = 25, flag = 216,
+                     reason = "Civilian vehicle entering the target area." },
     -- kneeboard 06 AUTH (tools/make_kneeboard.py AUTH, same seed 20261029) - keep identical
     AUTH = {
         A = "BSIAZTXKDGPQVEMCNWFJYLUHOR", B = "AXYSFZJLHPVECBNDRQTWMOGIUK", C = "GDSIVRKUXELOCFHWJQBZYANMPT",
@@ -427,6 +457,7 @@ local VOICE = {
         ["civilian vehicle entering the target area"] = "ab_civ",
         ["copy winchester bda size"] = "bda_wnc",
         ["destroyed"] = "w_destroyed",
+        ["disregard abort not {s}"] = "spf_dis",
         ["elevation"] = "w_elev",
         ["enemy"] = "ci_enemy",
         ["final attack heading"] = "w_fah",
@@ -455,8 +486,11 @@ local VOICE = {
         ["hornet 51 type 2 control bomb on target"] = "gp_t2",
         ["hornet 51 unable laser no line of sight"] = "unable_los",
         ["hornet 51 {s}"] = "as_a",
+        ["hornet 51 {s} be advised last abort was not {s}"] = "spf_adv",
         ["hornet 51 {s} copy all abort code noted situation update threat the target itself"] = "ci_a",
+        ["hornet 51 {s} i authenticate"] = "iauth",
         ["hornet 51 {s} laser off no cease laser call"] = "laser_to",
+        ["hornet 51 {s} negative {s} did not call abort"] = "spf_neg",
         ["hornet 51 {s} say readback"] = "say_rb",
         ["hornet 51 {s} second unauthorized release terminating control cleared off return to overlord"] = "term",
         ["hornet 51 {s} target area clear"] = "area_clear",
@@ -548,6 +582,7 @@ local VOICE = {
         ["dry"] = "jp_dry",
         ["eyeball 11"] = "jp_rb_eye",
         ["eyeball 11 cease laser"] = "jp_cease_eye",
+        ["eyeball 11 hornet 51 authenticate"] = "jp_auth_eye",
         ["eyeball 11 hornet 51 copy bda switching overlord"] = "jp_bda_eye",
         ["eyeball 11 hornet 51 copy switching overlord"] = "jp_swo_eye",
         ["eyeball 11 hornet 51 how copy"] = "jp_hc_eye",
@@ -577,6 +612,7 @@ local VOICE = {
         ["playtime"] = "jp_playtime",
         ["pointer 11"] = "jp_rb_ptr",
         ["pointer 11 cease laser"] = "jp_cease_ptr",
+        ["pointer 11 hornet 51 authenticate"] = "jp_auth_ptr",
         ["pointer 11 hornet 51 copy bda switching overlord"] = "jp_bda_ptr",
         ["pointer 11 hornet 51 copy switching overlord"] = "jp_swo_ptr",
         ["pointer 11 hornet 51 how copy"] = "jp_hc_ptr",
@@ -1054,12 +1090,18 @@ end
 -- ══════════════════════════════════════════════════════════════
 --  ABORT CODE
 -- ══════════════════════════════════════════════════════════════
-local function AbortReply()
-    local c = CFG.ABORT.challenge
-    local row = CFG.AUTH[c:sub(1, 1)]
-    local i = row and row:find(c:sub(2, 2), 1, true)
+--- v0.13.0: reply letter for any two-letter challenge (row = 1st letter, the letter right of the 2nd, wraps)
+local function Reply(c)
+    local row = CFG.AUTH[c:sub(1, 1):upper()]
+    local i = row and row:find(c:sub(2, 2):upper(), 1, true)
     if not i then return nil end
     return row:sub(i % #row + 1, i % #row + 1)
+end
+local function AbortReply() return Reply(CFG.ABORT.challenge) end
+local function RandLetter(notL)
+    local L
+    repeat L = string.char(64 + math.random(1, 26)) until L ~= notL
+    return L
 end
 local function ChallengeTxt()
     local t = {}
@@ -1542,14 +1584,62 @@ local function Abort(k, reason)
     local w = r and ("ABORT " .. PHON[r]:upper()) or "ABORT"
     local a = st.att
     a.cleared, a.inCalled, a.aborted, a.abortT = false, false, true, timer.getTime()
-    a.ackPending, a.abortEndT = true, nil   -- v0.12.0
+    a.ackPending, a.abortEndT, a.authDone, a.abortOnAir = true, nil, nil, nil   -- v0.12.0 / v0.13.0
     local t0 = a.abortT
     local body = string.format("%s, %s, %s, %s.%s", CFG.CS, w, w, w, reason and (" " .. reason) or "")
-    Say("[" .. J(k).cs .. "] " .. body, CFG.DUR.short, 0, nil, 4, JV(k, body),
+    Say("[" .. J(k).cs .. "] " .. body, CFG.DUR.short, 0,
+        function() if st.att == a and a.abortT == t0 then a.abortOnAir = true; MenuRefresh() end end,   -- v0.13.0
+        4, JV(k, body),
         function() if st.att == a and a.abortT == t0 then a.abortEndT = timer.getTime() end end)   -- v0.12.0
     Log(string.format("ABORT %s (%s)", k, tostring(reason)))
     Emit("ABORT", { key = k, reason = reason })
     MenuRefresh()
+end
+
+-- ══════════════════════════════════════════════════════════════
+--  SPOOFED ABORT (v0.13.0)
+-- ══════════════════════════════════════════════════════════════
+local function SpoofPct(k)
+    local f = trigger.misc.getUserFlag(tostring(CFG.SPOOF.flag)) or 0
+    if f == 9 then return 0 end
+    if f == 3 or (f == 1 and k == "J1") or (f == 2 and k == "J2") then return 100 end
+    return CFG.SPOOF.pct
+end
+
+--- the real JTAC disowns the spoofed call
+local function SpoofAdvise(k)
+    Jtac(k, string.format("%s, %s, be advised, last abort was not %s.", CFG.CS, J(k).disp, J(k).disp))
+end
+
+local function SpoofFire(k, t0)
+    local st = JC.st[k]
+    local a = st.att
+    if st.spoofDone or st.phase ~= "ATTACK" or st.frozen or (Silent and Silent(k)) then return end
+    if not (a and a.cleared and a.clearT == t0 and not a.released and not a.aborted) then return end
+    st.spoofDone = true
+    local wrong = RandLetter(AbortReply())
+    local w = "ABORT " .. PHON[wrong]:upper()
+    local sp = { t = timer.getTime(), letter = wrong, pending = true }
+    a.spoof = sp
+    local body = string.format("%s, %s, %s, %s. %s", CFG.CS, w, w, w, CFG.SPOOF.reason)
+    local function onAir()
+        if not sp.pending then return end   -- released before it went out (void)
+        sp.onAir = timer.getTime()
+        MenuRefresh()
+        timer.scheduleFunction(function()
+            if sp.pending and st.att == a and st.phase == "ATTACK" then
+                sp.pending = false
+                Log("SPOOF " .. k .. " unanswered, the JTAC disowns it (no penalty)")
+                Emit("SPOOF_TIMEOUT", { key = k })
+                SpoofAdvise(k)
+                MenuRefresh()
+            end
+        end, nil, timer.getTime() + CFG.SPOOF.jtac_s)
+    end
+    Say("[" .. J(k).cs .. "] " .. body, CFG.DUR.short, 0, onAir, 4, JV(k, body),
+        function() sp.endT = timer.getTime() end, Tag(k))
+    Log(string.format("SPOOF %s ABORT %s (briefed reply %s)", k, wrong, tostring(AbortReply())))
+    Emit("SPOOF", { key = k, letter = wrong })
 end
 
 local function TryClear(k)
@@ -1577,7 +1667,15 @@ local function TryClear(k)
     JtacF(k, string.format("%s, CLEARED HOT.", CFG.CS))
     Log(string.format("CLEARED HOT %s (Type %d, heading %s)", k, st.type, H3(h)))
     Emit("CLEARED", { key = k })
-    if (j.abort_inject or 0) > 0 and not st.injDone and math.random(1, 100) <= j.abort_inject then
+    if st.spoofArmed == nil then   -- v0.13.0: rolled once per tasking, at its first CLEARED HOT
+        st.spoofArmed = math.random(1, 100) <= SpoofPct(k)
+        if st.spoofArmed then Log("SPOOF armed " .. k) end
+    end
+    if st.spoofArmed and not st.spoofDone then
+        local t0 = a.clearT
+        timer.scheduleFunction(function() SpoofFire(k, t0) end, nil,
+            timer.getTime() + (JC.lastLen or 0) + math.random(CFG.SPOOF.delay[1], CFG.SPOOF.delay[2]))
+    elseif (j.abort_inject or 0) > 0 and not st.injDone and math.random(1, 100) <= j.abort_inject then
         st.injDone = true
         local t0 = a.clearT
         timer.scheduleFunction(function()
@@ -1621,6 +1719,19 @@ end
 local function A_AbortAck(k)
     local st = JC.st[k]
     local a = st.att
+    local sp = a and a.spoof
+    if sp and sp.pending then   -- v0.13.0: "aborting" to a spoofed abort
+        sp.pending, sp.complied = false, true
+        a.cleared, a.inCalled, a.offPending = false, false, true   -- the pass is dry
+        PilotF(string.format("%s, aborting.", CFG.CS))
+        Log(string.format("SPOOF %s complied (aborting) %.1f s after the call", k,
+            timer.getTime() - (sp.endT or sp.onAir or sp.t)))
+        Emit("SPOOF_COMPLY", { key = k })
+        Score(CFG.SCORE.SPOOF_COMPLY, string.format("ABORT NOT AUTHENTICATED (%s)", J(k).disp))
+        Jtac(k, string.format("%s, %s, negative, %s did not call abort. Report IN.", CFG.CS, J(k).disp, J(k).disp))
+        MenuRefresh()
+        return
+    end
     if not (a and a.aborted and a.ackPending) then return end
     a.ackPending = false
     local dt = a.abortEndT and math.max(0, timer.getTime() - a.abortEndT) or 0
@@ -1630,6 +1741,35 @@ local function A_AbortAck(k)
     Emit("ABORT_ACK", { key = k, seconds = dt, late = late })
     if late then
         Score(CFG.SCORE.ABORT_ACK_LATE, string.format("ABORT ACK LATE (%s, %.0f s)", J(k).disp, dt))
+    end
+    MenuRefresh()
+end
+
+--- v0.13.0: challenge the station that called the abort (real or spoofed)
+local function A_Authenticate(k)
+    local st = JC.st[k]
+    local a = st.att
+    if not a then return end
+    local sp = (a.spoof and a.spoof.pending) and a.spoof or nil
+    if not (sp or (a.aborted and a.ackPending and not a.authDone)) then return end
+    local c1 = RandLetter()
+    local c2 = RandLetter(c1)
+    local r = Reply(c1 .. c2)
+    if sp then sp.pending, sp.auth = false, true else a.authDone = true end
+    PilotF(string.format("%s, %s, authenticate %s %s.", J(k).disp, CFG.CS, PHON[c1]:upper(), PHON[c2]:upper()))
+    Log(string.format("AUTH %s challenge %s%s reply %s (%s)", k, c1, c2, tostring(r), sp and "spoof" or "real abort"))
+    if sp then
+        local u = Hero()
+        local ok = a.cleared and not a.released and u ~= nil and (HdgInFah(k, u))
+        if not ok then a.cleared, a.inCalled, a.offPending = false, false, true end
+        Emit("SPOOF_AUTH", { key = k, cleared = ok })
+        Jtac(k, string.format("%s, %s, I authenticate %s. Disregard abort, not %s. %s", CFG.CS, J(k).disp,
+            PHON[r]:upper(), J(k).disp, ok and (CFG.CS .. ", cleared hot.") or "Report IN."))
+    else
+        Emit("AUTH", { key = k })
+        local ar = AbortReply()
+        Jtac(k, string.format("%s, %s, I authenticate %s. ABORT %s.", CFG.CS, J(k).disp, PHON[r]:upper(),
+            PHON[ar]:upper()))
     end
     MenuRefresh()
 end
@@ -1649,6 +1789,7 @@ local function A_Off(k)
     if a.cleared and not a.released then Log("CLEARANCE closed " .. k .. " (dry pass)") end
     a.inCalled, a.cleared, a.released, a.aborted, a.injAbort = false, false, false, false, false
     a.offPending, a.ackPending = false, false
+    a.spoof, a.authDone, a.abortOnAir = nil, nil, nil   -- v0.13.0
     if #TargetUnits(k) > 0 then JtacF(k, string.format("%s, %s", CFG.CS, reply)) end
     MenuRefresh()
 end
@@ -1899,6 +2040,21 @@ local function OnShot(w)
         tostring(rec.laser), st.phase))
     Emit("RELEASE", rec)
     a.released, a.offPending = true, true
+    local sp = a.spoof   -- v0.13.0
+    if sp and sp.pending then
+        sp.pending = false
+        if not sp.onAir then
+            Log("SPOOF " .. k .. " void (release before it went out)")
+        elseif rec.cleared and st.phase ~= "TERMINATED" then
+            sp.released = true
+            Log(string.format("SPOOF %s unresolved at release (%.1f s after it went out)", k, now - sp.onAir))
+            Emit("SPOOF_RELEASE", { key = k })
+            Score(CFG.SCORE.SPOOF_UNVERIFIED, string.format("RELEASE WITH UNRESOLVED ABORT CALL (%s)", J(k).disp))
+            timer.scheduleFunction(function()
+                if st.phase == "ATTACK" then SpoofAdvise(k) end
+            end, nil, now + 5)
+        end
+    end
     if st.phase == "TERMINATED" or rec.afterAbort or not rec.cleared then   -- v0.8.1: kills score nothing
         local okI, wid = pcall(function() return w.id_ end)
         JC.unauthW[#JC.unauthW + 1] = { id = okI and wid or nil, rec = rec }
@@ -2011,8 +2167,15 @@ local function Items(_)
                 local needCorr = (j.method == "BOT") and not corrOk
                 local L = {}
                 local function add(pri, it) L[#L + 1] = { pri, #L, it } end
-                if a.aborted and a.ackPending then   -- v0.12.0: "aborting" first, OFF after it
-                    add(1, { P .. "ABORTING", function() A_AbortAck(k) end })
+                local spf = a.spoof and a.spoof.pending and a.spoof.onAir   -- v0.13.0
+                local abt = a.aborted and a.ackPending
+                if spf or abt then   -- v0.12.0: "aborting" first, OFF after it; v0.13.0 + AUTHENTICATE
+                    if spf or a.abortOnAir then
+                        add(1, { P .. "ABORTING", function() A_AbortAck(k) end })
+                        if spf or not a.authDone then
+                            add(1, { P .. "AUTHENTICATE", function() A_Authenticate(k) end })
+                        end
+                    end
                 elseif a.offPending or a.aborted or (a.inCalled and not a.released) then   -- v0.3.0: dry pass
                     add(1, { P .. "OFF" .. (a.released and "" or " (dry)"), function() A_Off(k) end })
                 elseif not a.ipIn then

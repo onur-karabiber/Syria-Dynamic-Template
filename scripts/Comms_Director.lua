@@ -1,5 +1,7 @@
--- Comms_Director | v1.8.1
+-- Comms_Director | v1.8.2
 --[[
+  v1.8.2 - CFG.AUDIO: spoofed-abort / AUTHENTICATE clips (pj_/ej_ iauth, spf_dis, spf_neg, spf_adv; jp_auth_ptr /
+           jp_auth_eye) for JTAC_Controller v0.13.0. No logic change.
   v1.8.1 - CFG.AUDIO: pilot clip jp_abort_ack ("Hornet five one, aborting.") for JTAC_Controller v0.12.0
            (tools/jc_clips.py --audio-into-cd). No logic change.
   v1.8.0 - tasking scenarios and radio-flow gates (decisions Onur 2026-11-03, project doc
@@ -992,6 +994,10 @@ local CFG = {
         pj_off_copy            = { ch = "POINTER", len = 1.35 },
         pj_off_reatk           = { ch = "POINTER", len = 2.31 },
         pj_area_clear          = { ch = "POINTER", len = 3.32 },
+        pj_iauth               = { ch = "POINTER", len = 2.23 },
+        pj_spf_dis             = { ch = "POINTER", len = 2.23 },
+        pj_spf_neg             = { ch = "POINTER", len = 3.46 },
+        pj_spf_adv             = { ch = "POINTER", len = 4.10 },
         pj_w_and               = { ch = "POINTER", len = 0.46 },
         pj_w_meters            = { ch = "POINTER", len = 0.54 },
         pj_w_point             = { ch = "POINTER", len = 0.44 },
@@ -1170,6 +1176,10 @@ local CFG = {
         ej_off_copy            = { ch = "EYEBALL", len = 1.12 },
         ej_off_reatk           = { ch = "EYEBALL", len = 2.17 },
         ej_area_clear          = { ch = "EYEBALL", len = 2.80 },
+        ej_iauth               = { ch = "EYEBALL", len = 2.31 },
+        ej_spf_dis             = { ch = "EYEBALL", len = 1.86 },
+        ej_spf_neg             = { ch = "EYEBALL", len = 3.71 },
+        ej_spf_adv             = { ch = "EYEBALL", len = 3.82 },
         ej_w_and               = { ch = "EYEBALL", len = 0.33 },
         ej_w_meters            = { ch = "EYEBALL", len = 0.47 },
         ej_w_point             = { ch = "EYEBALL", len = 0.37 },
@@ -1189,6 +1199,8 @@ local CFG = {
         jp_ci_end              = { ch = "PILOT", len = 2.34 },
         jp_ready_ptr           = { ch = "PILOT", len = 2.49 },
         jp_ready_eye           = { ch = "PILOT", len = 2.55 },
+        jp_auth_ptr            = { ch = "PILOT", len = 2.25 },
+        jp_auth_eye            = { ch = "PILOT", len = 2.37 },
         jp_ready_rmk           = { ch = "PILOT", len = 1.02 },
         jp_rb_ptr              = { ch = "PILOT", len = 0.76 },
         jp_rb_eye              = { ch = "PILOT", len = 0.80 },
@@ -4137,7 +4149,7 @@ local function CD_Init()
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
     timer.scheduleFunction(MudTick, nil, timer.getTime() + 10)   -- v1.7.9
-    env.info("[CD] Comms_Director v1.8.1 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.8.2 online — CAS-1 Syria")
 end
 
 CD_Init()

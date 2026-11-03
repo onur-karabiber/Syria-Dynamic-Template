@@ -468,6 +468,10 @@ pj_nj_me;POINTER_JC>POINTER;From my position,;tok:0.1
 pj_off_copy;POINTER_JC>POINTER;Hornet five one, copy.;tok
 pj_off_reatk;POINTER_JC>POINTER;Hornet five one, copy, re-attack approved.;tok
 pj_area_clear;POINTER_JC>POINTER;Hornet five one, Pointer one one, target area clear.;tok
+pj_iauth;POINTER_JC>POINTER;Hornet five one, Pointer one one, I authenticate;tok
+pj_spf_dis;POINTER_JC>POINTER;Disregard abort, not Pointer one one.;tok
+pj_spf_neg;POINTER_JC>POINTER;Hornet five one, Pointer one one, negative, Pointer one one did not call abort.;tok
+pj_spf_adv;POINTER_JC>POINTER;Hornet five one, Pointer one one, be advised, last abort was not Pointer one one.;tok
 pj_w_and;POINTER_JC>POINTER;and;tok
 pj_w_meters;POINTER_JC>POINTER;meters.;tok
 pj_w_point;POINTER_JC>POINTER;point;tok
@@ -646,6 +650,10 @@ ej_nj_me;EYEBALL;From my position,;tok:0.1
 ej_off_copy;EYEBALL;Hornet five one, copy.;tok
 ej_off_reatk;EYEBALL;Hornet five one, copy, re-attack approved.;tok
 ej_area_clear;EYEBALL;Hornet five one, Eyeball one one, target area clear.;tok
+ej_iauth;EYEBALL;Hornet five one, Eyeball one one, I authenticate;tok
+ej_spf_dis;EYEBALL;Disregard abort, not Eyeball one one.;tok
+ej_spf_neg;EYEBALL;Hornet five one, Eyeball one one, negative, Eyeball one one did not call abort.;tok
+ej_spf_adv;EYEBALL;Hornet five one, Eyeball one one, be advised, last abort was not Eyeball one one.;tok
 ej_w_and;EYEBALL;and;tok
 ej_w_meters;EYEBALL;meters.;tok
 ej_w_point;EYEBALL;point;tok
@@ -665,6 +673,8 @@ jp_playtime;PILOT;playtime;tok
 jp_ci_end;PILOT;A T FLIR, laser spot tracker, abort code;tok
 jp_ready_ptr;PILOT;Pointer one one, Hornet five one, ready to copy.;tok
 jp_ready_eye;PILOT;Eyeball one one, Hornet five one, ready to copy.;tok
+jp_auth_ptr;PILOT;Pointer one one, Hornet five one, authenticate;tok
+jp_auth_eye;PILOT;Eyeball one one, Hornet five one, authenticate;tok
 jp_ready_rmk;PILOT;Ready to copy remarks.;tok
 jp_rb_ptr;PILOT;Pointer one one,;tok:0.1
 jp_rb_eye;PILOT;Eyeball one one,;tok:0.1

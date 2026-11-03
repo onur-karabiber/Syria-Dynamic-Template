@@ -1,4 +1,6 @@
-# jc_clips.py | v1.4.0
+# jc_clips.py | v1.5.0
+# v1.5.0: spoofed abort / AUTHENTICATE (JTAC_Controller v0.13.0): JTAC iauth, spf_dis, spf_neg, spf_adv;
+#         pilot jp_auth_ptr / jp_auth_eye.
 # v1.4.0: pilot abort acknowledgement jp_abort_ack "Hornet five one, aborting." for JTAC_Controller v0.12.0
 #         (the OFF after an abort is jp_off + direction + jp_dry; jp_aborting is no longer spoken).
 # v1.3.0: lost comms "how copy?" (jp_hc_ptr / jp_hc_eye) for JTAC_Controller v0.11.0.
@@ -162,6 +164,11 @@ JP = {
     "off_copy": ("hornet 51 copy", "Hornet five one, copy."),
     "off_reatk": ("hornet 51 copy re-attack approved", "Hornet five one, copy, re-attack approved."),
     "area_clear": ("hornet 51 {s} target area clear", "Hornet five one, {S}, target area clear."),
+    # v1.5.0 (JTAC_Controller v0.13.0): spoofed abort, challenge-reply
+    "iauth": ("hornet 51 {s} i authenticate", "Hornet five one, {S}, I authenticate"),
+    "spf_dis": ("disregard abort not {s}", "Disregard abort, not {S}."),
+    "spf_neg": ("hornet 51 {s} negative {s} did not call abort", "Hornet five one, {S}, negative, {S} did not call abort."),
+    "spf_adv": ("hornet 51 {s} be advised last abort was not {s}", "Hornet five one, {S}, be advised, last abort was not {S}."),
     "w_and": ("and", "and"),
     "w_meters": ("meters", "meters."),
     "w_point": (None, "point"),
@@ -183,6 +190,8 @@ PILOT = {   # id -> (written key, spoken)
     "jp_ci_end": ("atflir laser spot tracker abort code", "A T FLIR, laser spot tracker, abort code"),
     "jp_ready_ptr": ("pointer 11 hornet 51 ready to copy", "Pointer one one, Hornet five one, ready to copy."),
     "jp_ready_eye": ("eyeball 11 hornet 51 ready to copy", "Eyeball one one, Hornet five one, ready to copy."),
+    "jp_auth_ptr": ("pointer 11 hornet 51 authenticate", "Pointer one one, Hornet five one, authenticate"),   # v1.5.0
+    "jp_auth_eye": ("eyeball 11 hornet 51 authenticate", "Eyeball one one, Hornet five one, authenticate"),   # v1.5.0
     "jp_ready_rmk": ("ready to copy remarks", "Ready to copy remarks."),
     "jp_rb_ptr": ("pointer 11", "Pointer one one,"),
     "jp_rb_eye": ("eyeball 11", "Eyeball one one,"),
