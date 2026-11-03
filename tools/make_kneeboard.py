@@ -1,4 +1,6 @@
-# make_kneeboard.py | v3.6.0
+# make_kneeboard.py | v3.7.0
+# v3.7.0: 06 AUTH (JTAC_Controller v0.13.0): ABORT CALL block - right letter: ABORTING at once, OFF later;
+#         wrong letter: AUTHENTICATE <two letters>, hold fire, check the JTAC's "I authenticate <x>" (same table).
 # v3.6.0: 02 COMM: alternate JTAC buttons C1-09 POINTER ALT 255.00 / C1-11 EYEBALL ALT 259.00 (lost comms, Comms_Director
 #         v1.8.0); COMM 2 btn 1 = OVERLORD (divert / retasking while working a JTAC on C1); comm flow 4-6 = OVERLORD
 #         tasks the JTACs in its own order (hold at CP TIGER angels 22 possible, divert possible).
@@ -335,8 +337,11 @@ def auth():
     c.line("aborts with the REPLY letter: ABORT <reply> x3.", f=F10)
     c.line("Reply = letter RIGHT of the 2nd challenge letter,", f=F10)
     c.line("in the row of the 1st letter (wraps to start).", f=F10)
-    c.line("Work it out before the push. Wrong letter = not", "r", F10)
-    c.line("an abort from your JTAC.", "r", F10)
+    c.line("Work it out before the push.", f=F10)
+    c.rule(); c.head("ABORT CALL  (F10 > COMMS)")
+    c.line("Right letter : ABORTING at once · OFF <dir> later", "g", F10)
+    c.line("Wrong letter : AUTHENTICATE <2 letters> · hold fire", "r", F10)
+    c.line("  JTAC: \"I authenticate <x>\" -> check <x> in this table", "t", F10)
     c.rule()
     d = c.d
     x0, cw = 26, 14
