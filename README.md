@@ -74,6 +74,8 @@ It replaces only the `.lua` files named in `mapResource` with their `scripts/` c
 ```bash
 python tools/sync_missions.py --dry-run   # report
 python tools/sync_missions.py             # build template, regenerate HOUND, refresh CAS (L), regenerate CAS (L) HOUND
+# shell with a per-call time limit (Claude's device shell, 180 s): the same sync one step per call
+python tools/sync_missions.py --step guards    # then --step template / hound / cas / cas-hound
 ```
 * **HOUND is generated** (`tools/add_elint.py` on the deployed template); do not edit it in the ME. Tower positions live in `add_elint.py` (TOWERS). The tool refuses to regenerate a HOUND whose ME data differs from template + Hound (`--force-hound` overrides); the old file goes to `BackUps/`.
 * **CAS (L) HOUND is generated** the same way (`tools/add_elint.py` on the deployed CAS (L), after its refresh), with the same guard (`--force-cas-hound` / `--skip-cas-hound`).

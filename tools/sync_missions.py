@@ -1,4 +1,8 @@
-# sync_missions.py | v1.2.0
+# sync_missions.py | v1.3.0
+# v1.3.0: --step guards|template|hound|cas|cas-hound runs one step (the device shell of a cloud session has a
+#         180 s limit per call and kills background processes; the whole sync takes longer). Order: guards first
+#         (writes build/sync_guard.json, valid 1 h; the HOUND steps refuse without it), then template, hound,
+#         cas, cas-hound (removes the token). Without --step: all steps in one go, as before (Windows).
 # v1.2.0: fourth mission "Close Air Support (L) HOUND.miz" (decision Onur 2026-11-04: CAS (L), the template and
 #         both HOUND variants always updated together). It is GENERATED: add_elint(CAS (L)) - checked 2026-11-04,
 #         byte-identical to add_elint of the deployed CAS (L). Same guard as the template HOUND, against the CAS (L)
@@ -15,6 +19,7 @@
 #
 #   python tools/sync_missions.py            # all four
 #   python tools/sync_missions.py --dry-run  # report only (build to build/ only, refresh dry run)
+#   python tools/sync_missions.py --step guards   (then template, hound, cas, cas-hound: one call each)
 #   options: --force-template (build.py --force), --force-hound, --force-cas-hound, --skip-cas, --skip-hound,
 #            --skip-cas-hound
 #
@@ -109,15 +114,13 @@ def sound_sets():
     return [d for d in have if d in cas]
 
 
-def main():
-    argv = sys.argv[1:]
-    dry = "--dry-run" in argv
-    ts = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+STEPS = ["guards", "template", "hound", "cas", "cas-hound"]   # v1.3.0
+GUARD_TOKEN = os.path.join(REPO, "build", "sync_guard.json")
+GUARD_MAX_S = 3600
 
-    do_hound = "--skip-hound" not in argv
-    do_cas = "--skip-cas" not in argv
-    do_cas_hound = do_cas and "--skip-cas-hound" not in argv   # v1.2.0
-    # v1.2.0: both guards before anything is written (against the bases as currently deployed)
+
+def step_guards(argv, do_hound, do_cas_hound):
+    """Both guards before anything is written (against the bases as currently deployed)."""
     if do_hound and "--force-hound" not in argv and not hound_guard():
         print("STOP: HOUND not regenerated. Move ME edits into tools/add_elint.py, or --force-hound / --skip-hound.")
         return 2
@@ -125,44 +128,113 @@ def main():
         print("STOP: CAS (L) HOUND not regenerated. Move ME edits into CAS (L) or tools/add_elint.py, "
               "or --force-cas-hound / --skip-cas-hound.")
         return 2
+    return 0
 
+
+def step_template(argv, dry):
     rc = run([PY, "build.py"] + (["--no-deploy"] if dry else []) + (["--force"] if "--force-template" in argv else []))
     if rc != 0:
         print("STOP: build.py returned %d" % rc)
+    return rc
+
+
+def step_hound(dry, ts):
+    if dry:
+        print("dry run: HOUND would be regenerated from %s" % TEMPLATE)
+        return 0
+    rc = regen_hound(HOUND, TEMPLATE, ts)
+    if rc != 0:
+        print("STOP: add_elint.py returned %d" % rc)
+    return rc
+
+
+def step_cas(dry):
+    if not os.path.isfile(CAS):
+        print("no CAS (L) .miz: %s" % CAS)
+        return 0
+    args = [PY, os.path.join("tools", "refresh_scripts.py"), CAS]
+    for s in sound_sets():
+        args += ["--sounds", s]
+    args += ["--kneeboard", os.path.join("src", "KNEEBOARD", "IMAGES")]
+    for fo in PICTURE_FOLDERS:                          # v1.1.0
+        if os.path.isdir(os.path.join(REPO, "src", fo)):
+            args += ["--folder", fo]
+    if dry:
+        args.append("--dry-run")
+    rc = run(args)
+    if rc != 0:
+        print("STOP: refresh_scripts.py returned %d" % rc)
+    return rc
+
+
+def step_cas_hound(dry, ts):
+    if not os.path.isfile(CAS):
+        return 0
+    if dry:
+        print("dry run: CAS (L) HOUND would be regenerated from %s" % CAS)
+        return 0
+    rc = regen_hound(CAS_HOUND, CAS, ts)
+    if rc != 0:
+        print("STOP: add_elint.py (CAS HOUND) returned %d" % rc)
+    return rc
+
+
+def main():
+    argv = sys.argv[1:]
+    dry = "--dry-run" in argv
+    ts = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+    do_hound = "--skip-hound" not in argv
+    do_cas = "--skip-cas" not in argv
+    do_cas_hound = do_cas and "--skip-cas-hound" not in argv   # v1.2.0
+
+    # v1.3.0: --step <name> runs one step (for shells with a per-call time limit). "guards" writes a token
+    # (build/sync_guard.json, valid GUARD_MAX_S); the HOUND steps refuse without a fresh token unless forced.
+    step = argv[argv.index("--step") + 1] if "--step" in argv and argv.index("--step") + 1 < len(argv) else None
+    if step is not None and step not in STEPS:
+        print("unknown --step %s (one of: %s)" % (step, ", ".join(STEPS)))
+        return 2
+    if step:
+        import json
+        if step == "guards":
+            rc = step_guards(argv, do_hound, do_cas_hound)
+            if rc == 0 and not dry:
+                os.makedirs(os.path.dirname(GUARD_TOKEN), exist_ok=True)
+                with open(GUARD_TOKEN, "w") as f:
+                    json.dump({"t": datetime.datetime.utcnow().timestamp(), "ts": ts}, f)
+                print("guards passed, token %s (next: --step template, hound, cas, cas-hound)" % GUARD_TOKEN)
+            return rc
+        if step in ("hound", "cas-hound") and not dry:
+            forced = "--force-hound" in argv if step == "hound" else "--force-cas-hound" in argv
+            tok = None
+            if os.path.isfile(GUARD_TOKEN):
+                with open(GUARD_TOKEN) as f:
+                    tok = json.load(f)
+            if not forced and (not tok or datetime.datetime.utcnow().timestamp() - tok["t"] > GUARD_MAX_S):
+                print("STOP: no fresh guard token; run --step guards first (before --step template)")
+                return 2
+            ts = tok["ts"] if tok else ts
+        if step == "template":
+            return step_template(argv, dry)
+        if step == "hound":
+            return step_hound(dry, ts) if do_hound else 0
+        if step == "cas":
+            return step_cas(dry) if do_cas else 0
+        rc = step_cas_hound(dry, ts) if do_cas_hound else 0
+        if rc == 0 and not dry and os.path.isfile(GUARD_TOKEN):
+            os.remove(GUARD_TOKEN)   # the sequence is complete
+        if rc == 0:
+            print("sync done (steps)")
         return rc
 
-    if do_hound and not dry:
-        rc = regen_hound(HOUND, TEMPLATE, ts)
+    # all steps in one go (Windows)
+    for fn in (lambda: step_guards(argv, do_hound, do_cas_hound),
+               lambda: step_template(argv, dry),
+               lambda: step_hound(dry, ts) if do_hound else 0,
+               lambda: step_cas(dry) if do_cas else 0,
+               lambda: step_cas_hound(dry, ts) if do_cas_hound else 0):
+        rc = fn()
         if rc != 0:
-            print("STOP: add_elint.py returned %d" % rc)
             return rc
-    elif do_hound:
-        print("dry run: HOUND would be regenerated from %s" % TEMPLATE)
-
-    if do_cas:
-        if not os.path.isfile(CAS):
-            print("no CAS (L) .miz: %s" % CAS)
-        else:
-            args = [PY, os.path.join("tools", "refresh_scripts.py"), CAS]
-            for s in sound_sets():
-                args += ["--sounds", s]
-            args += ["--kneeboard", os.path.join("src", "KNEEBOARD", "IMAGES")]
-            for fo in PICTURE_FOLDERS:                          # v1.1.0
-                if os.path.isdir(os.path.join(REPO, "src", fo)):
-                    args += ["--folder", fo]
-            if dry:
-                args.append("--dry-run")
-            rc = run(args)
-            if rc != 0:
-                print("STOP: refresh_scripts.py returned %d" % rc)
-                return rc
-            if do_cas_hound and not dry:   # v1.2.0
-                rc = regen_hound(CAS_HOUND, CAS, ts)
-                if rc != 0:
-                    print("STOP: add_elint.py (CAS HOUND) returned %d" % rc)
-                    return rc
-            elif do_cas_hound:
-                print("dry run: CAS (L) HOUND would be regenerated from %s" % CAS)
     print("sync done" + (" (dry run)" if dry else ""))
     return 0
 
