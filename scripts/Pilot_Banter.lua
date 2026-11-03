@@ -1,4 +1,8 @@
--- Pilot_Banter | v2.1.2
+-- Pilot_Banter | v2.1.3
+-- v2.1.3 (Onur, 2026-11-03): oxygen breathing 30 % quieter. DCS outSound* has no volume argument, so the level
+--         lives in the clips: Sounds/PBO/oxy_breath_01..12.ogg re-encoded at 0.70 amplitude (-3.1 dB, mean level
+--         -3.0 dB measured), sample counts unchanged -> CFG.OXY.LEN unchanged. No code change; CFG.VERSION now matches
+--         the header (was left at 2.1.1 in v2.1.2).
 -- v2.1.2: fence-out at REFUEL after the last tasking in any order (Comms_Director >= v1.8.0 CD.vulDone); HOLD at
 --         CP TIGER counts as outbound for the distance fence-in.
 --[[
@@ -93,7 +97,7 @@ if TRT.PB then
 end
 
 local CFG = {
-    VERSION      = "2.1.1",
+    VERSION      = "2.1.3",
     LEVEL        = "NORMAL",       -- start level: OFF | QUIET | NORMAL | CHATTY
     LEVELS = {
         QUIET  = { cruise = { 120, 240 }, muse = 0.30, max = 80 },
@@ -119,7 +123,7 @@ local CFG = {
     OXY = {                        -- v2.1.0 oxygen mask breathing
         ON      = true,            -- start state (F10 INFO > Breathing)
         DIR     = "Sounds/PBO/",
-        N       = 12,              -- oxy_breath_01 .. _12, played in this order (one recording)
+        N       = 12,              -- oxy_breath_01 .. _12, played in this order (one recording); v2.1.3 level 0.70
         LEN     = { 6.00, 3.50, 4.80, 3.05, 3.80, 2.80, 3.20, 2.90, 2.55, 2.90, 1.90, 2.45 },
         RPM_MIN = 60,              -- % N2; OBOGS needs engine bleed air
         IDLE_TICK = 0.5,           -- s between checks while not breathing

@@ -1,4 +1,6 @@
--- HardDeck | v1.0.3
+-- HardDeck | v1.0.4
+-- v1.0.4 (Onur, 2026-11-03): tolerance doubled, WARNING_TIME 60 -> 120 s before the penalty phase. Still not loaded
+--         (violations unscored); kept in step with Flight_Report v1.3.1 (HARD_DECK badge 30 -> 60 s).
 -- v1.0.3: 20,000 ft MSL (Comms_Director v1.6.3). Still not loaded by any mission (violations unscored).
 -- v1.0.2: hard deck unified to 23,000 ft MSL (was 21,000 / "FL210"), matches Comms_Director v1.2.0.
 -- v1.0.1: PLAYER_UNIT_NAME read from _G.TRT.PLAYER_NAME (default "Player_01").
@@ -10,7 +12,7 @@
 PLAYER_UNIT_NAME = (_G.TRT and _G.TRT.PLAYER_NAME) or "Player_01"
 
 ALT_LIMIT_FT        = 20000     -- eşik (ft MSL)
-WARNING_TIME        = 60        -- saniye (önce uyarı)
+WARNING_TIME        = 120       -- saniye (önce uyarı); v1.0.4: 60 -> 120
 PENALTY_INTERVAL    = 3         -- her 3 sn
 CHECK_INTERVAL      = 1
 
@@ -121,7 +123,7 @@ end
 -- START
 -------------------------------------------------
 MESSAGE:New("Hard Deck altitude monitoring has been initiated.", 10):ToAll()
-env.info("[HardDeck] v1.0.3 loaded. Limit " .. ALT_LIMIT_FT .. " ft MSL")
+env.info("[HardDeck] v1.0.4 loaded. Limit " .. ALT_LIMIT_FT .. " ft MSL")
 
 ALTITUDE_PENALTY_SCHEDULER = SCHEDULER:New(
     nil,

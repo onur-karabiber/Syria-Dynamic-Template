@@ -1,4 +1,6 @@
--- Flight_Report | v1.3.0
+-- Flight_Report | v1.3.1
+-- v1.3.1 (Onur, 2026-11-03): hard deck tolerance doubled, HARD_DECK badge "Below the hard deck" needs 60 s (was 30 s)
+--         below CFG.HARD_DECK_FT in the engagement area. Still a badge only, no points.
 -- v1.3.0 (tasking scenarios, Comms_Director >= v1.8.0): a tasking cancelled for lost comms or a target destroyed
 --         before it was tasked is not the pilot's: it leaves the tasking count (SIERRA HOTEL / UNSAT "all / no JTAC
 --         tasking complete"); cancelled for Winchester stays (counts as not complete). JC cancelled = not complete.
@@ -50,7 +52,7 @@ local TRT = _G.TRT
 if TRT.FlightReport then env.info("[FR] already loaded, second copy ignored") return end
 
 local CFG = {
-    VERSION   = "1.3.0",
+    VERSION   = "1.3.1",
     PLAYER    = TRT.PLAYER_NAME or "Player_01",
     CS        = "HORNET 51",
     DIR       = "FlightReport/",
@@ -65,7 +67,7 @@ local CFG = {
     FLAG_SCORE        = 1908,
     HARD_DECK_FT      = 20000,
     HARD_DECK_NM      = 15,   -- engagement area: within this range of the active JTAC's targets
-    HARD_DECK_BADGE_S = 30,
+    HARD_DECK_BADGE_S = 60,   -- v1.3.1 (was 30): cumulative seconds before the HARD_DECK badge
     TIC_BADGE_S       = 480,  -- TIC call -> first cleared release on that JTAC
     DEF_ACE_N         = 3,
     BANKLER_HI        = 70,   -- badge BANKLER_70 (>= 70 of 75), BANKLER_75 = full 75 / 75
