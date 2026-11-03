@@ -69,13 +69,14 @@ python tools/refresh_scripts.py "<Missions>/Close Air Support (L).miz"          
 ```
 It replaces only the `.lua` files named in `mapResource` with their `scripts/` copies; mission, triggers, sounds and pictures are copied unchanged. Adding a new script still needs the ME or an installer (`tools/score_cards/install_score_display.py`, `tools/pilot_banter/install_pilot_banter.py`).
 
-### 3b. The three parallel missions (2026-11-02)
-`Syria_Dynamic_Template.miz` (built from `src/`), `Syria_Dynamic_Template HOUND.miz` and `Close Air Support (L).miz` are developed in parallel and carry the same scripts, sounds, score cards, plane captain cards and kneeboard pages. The template has the full CAS (L) feature set (JTAC_Controller with the native JTAC tasks of JTAC-1 / JTAC-2 stripped, Pilot_Banter, PlaneCaptain_Carrier, Score_Display; assets under `src/ScoreCards`, `src/PlaneCaptain`, `src/Sounds/PB|PBO|SCORE`; kneeboard pages from `tools/make_kneeboard.py --scripted-jtac` + `kneeboard/cas_l_static`).
+### 3b. The four parallel missions (2026-11-02, CAS (L) HOUND added 2026-11-04)
+`Syria_Dynamic_Template.miz` (built from `src/`), `Syria_Dynamic_Template HOUND.miz`, `Close Air Support (L).miz` and `Close Air Support (L) HOUND.miz` are developed in parallel and **always updated together with `tools/sync_missions.py`** (never one by hand) and carry the same scripts, sounds, score cards, plane captain cards and kneeboard pages. The template has the full CAS (L) feature set (JTAC_Controller with the native JTAC tasks of JTAC-1 / JTAC-2 stripped, Pilot_Banter, PlaneCaptain_Carrier, Score_Display; assets under `src/ScoreCards`, `src/PlaneCaptain`, `src/Sounds/PB|PBO|SCORE`; kneeboard pages from `tools/make_kneeboard.py --scripted-jtac` + `kneeboard/cas_l_static`).
 ```bash
 python tools/sync_missions.py --dry-run   # report
-python tools/sync_missions.py             # build template, regenerate HOUND, refresh CAS (L)
+python tools/sync_missions.py             # build template, regenerate HOUND, refresh CAS (L), regenerate CAS (L) HOUND
 ```
 * **HOUND is generated** (`tools/add_elint.py` on the deployed template); do not edit it in the ME. Tower positions live in `add_elint.py` (TOWERS). The tool refuses to regenerate a HOUND whose ME data differs from template + Hound (`--force-hound` overrides); the old file goes to `BackUps/`.
+* **CAS (L) HOUND is generated** the same way (`tools/add_elint.py` on the deployed CAS (L), after its refresh), with the same guard (`--force-cas-hound` / `--skip-cas-hound`).
 * **CAS (L)** keeps its own mission data (no RAT / ambient radios); the tool refreshes its scripts, every sound set it shares with `src/Sounds`, and the kneeboard pages. ME-level changes (units, triggers) still go into both missions by hand or per tool (`add_script.py --src` / `--miz`, `strip_native_jtac.py --src` / `--miz`).
 * `src/KNEEBOARD/IMAGES/*_LCRA_*` (Jeppesen) is gitignored: packed when present on disk, never pushed.
 
