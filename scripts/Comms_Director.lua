@@ -1,5 +1,20 @@
--- Comms_Director | v1.8.3
+-- Comms_Director | v1.8.4
 --[[
+  v1.8.4 - menu items open when the call they answer STARTS (Onur, TEST-J1-A-SPFboth 2026-11-03: items showed up
+           only after the clip had ended, a player who opens F10 right after the call finds nothing). The queue is
+           FIFO, so a reply pressed while the call is on the air is transmitted after it; timers that measure the
+           pilot still start at the end of the call.
+           * Q(..., ack): automatic pilot acknowledgements (Ack, ReadBack, the TIC "push button, buster" /
+             "copy troops in contact", JTAC_Controller's own acks) are marked ack and do not hold the menu.
+           * Non-urgent COMMS items are hidden only while a non-ack transmission is still WAITING in the queue
+             (GateWaiting, exported as CD.gateWaiting); the one on the air no longer hides them (was RadioIdle).
+           * OVERLORD tasking / retasking: the JTAC phase starts when OVERLORD's "contact <JTAC>, push button N"
+             starts (was: the end of the pilot's push readback). TIC: the check-in opens when the JTAC's "check in
+             when ready" starts. TIC BDA: OVERLORD items open when Bravo 2-1's thanks starts. Lost comms tech: the
+             alternate frequency is set when OVERLORD's "contact on alternate" starts. C divert: OVERLORD breaks in
+             when nothing is waiting (the call on the air ends first); wilco / unable open when the divert starts.
+           * JTAC tasking ended (JTAC_Controller DONE / TERMINATED event) -> J1_OFF / J2_OFF at once (was: the next
+             5 s tick), so "OVERLORD: off <JTAC>" opens while the BDA is on the air.
   v1.8.3 - flight 2026-11-03 (Onur): the pilot's "negative Texaco, state X.X, proceeding CP TIGER" (skip AR1) is voiced
            (p_ovl_neg_tkr_a + state tokens + p_ovl_off_tkr_b); it was text only.
   v1.8.2 - CFG.AUDIO: spoofed-abort / AUTHENTICATE clips (pj_/ej_ iauth, spf_dis, spf_neg, spf_adv; jp_auth_ptr /
@@ -1543,10 +1558,11 @@ local HD_TEXT = "hard deck two-zero thousand MSL in the engagement area"
 -- @param audio  Optional voice clip id (CFG.AUDIO key). Next clip waits for it.
 -- @param onEnd  v1.8.0: callback when the transmission has ENDED (audio + pad, or hold / dur) - menu gates
 -- @param tag    v1.8.0: owner tag ("JC:J1" ...) so a suspended tasking can drop its queued traffic
+-- @param ack    v1.8.4: automatic pilot acknowledgement (does not hold the menu, GateWaiting)
 -- Returns the queued item.
-local function Q(text, dur, after, fn, hold, audio, onEnd, tag)
+local function Q(text, dur, after, fn, hold, audio, onEnd, tag, ack)
     local it = { text = text, dur = dur or CFG.DUR_SHORT, after = after or 1,
-                 fn = fn, hold = hold, audio = audio, onEnd = onEnd, tag = tag }
+                 fn = fn, hold = hold, audio = audio, onEnd = onEnd, tag = tag, ack = ack or nil }
     table.insert(CD.queue, it)
     return it
 end
@@ -1614,6 +1630,20 @@ end
 
 --- v1.8.0: radio idle (nothing on air, nothing queued)
 local function RadioIdle() return not CD.qPlaying and #CD.queue == 0 end
+--- v1.8.4: a transmission that is not an automatic pilot acknowledgement is still waiting (not yet on the air)
+local function GateWaiting()
+    for _, it in ipairs(CD.queue) do if not it.ack then return true end end
+    return false
+end
+CD.gateWaiting = GateWaiting
+--- v1.8.4: run f when the item goes on the air, or when it is dropped from the queue (QClear / QDrop run onEnd),
+--- whichever comes first, once. A gate opened at the start can never stay closed.
+local function AtStart(it, f)
+    local done = false
+    local g = function() if done then return end done = true; f() end
+    it.fn, it.onEnd = g, g
+    return it
+end
 
 --- Pilot transmission followed by controller reply(ies).
 -- @param audio  Optional voice clip id (pilot side, CFG.AUDIO key).
@@ -1674,11 +1704,11 @@ local function Ack(ch, wilco, btn)
     if prev then prev.hold = 0.1 end   -- start after the controller's audio, not its subtitle time
     if btn and not wilco then          -- v1.5.3: read the button back
         Q(string.format("[%s] Push button %d, %s.", CFG.CS, btn, CFG.CS),
-            CFG.DUR_PILOT, 0.8, nil, CFG.PILOT_HOLD, S(ch, "p_push_" .. btn))
+            CFG.DUR_PILOT, 0.8, nil, CFG.PILOT_HOLD, S(ch, "p_push_" .. btn), nil, nil, true)
         return
     end
     Q("[" .. CFG.CS .. "] " .. CFG.CS .. (wilco and ", wilco." or ", switching."),
-        CFG.DUR_PILOT, 0.8, nil, CFG.PILOT_HOLD, S(ch, wilco and "p_wilco" or "p_switching"))
+        CFG.DUR_PILOT, 0.8, nil, CFG.PILOT_HOLD, S(ch, wilco and "p_wilco" or "p_switching"), nil, nil, true)
 end
 
 -- v1.5.3: "button N (frequency)" for subtitles, "btn N" for F10 / hints
@@ -1698,7 +1728,7 @@ _G.TRT.CD_RADIO = { Q = function(...) return Q(...) end, QPlay = function() retu
 local function ReadBack(ch, text, clip)
     local prev = CD.queue[#CD.queue]
     if prev then prev.hold = 0.1 end
-    Q("[" .. CFG.CS .. "] " .. text, CFG.DUR_PILOT + 2, 0.8, nil, CFG.PILOT_HOLD, S(ch, clip))
+    Q("[" .. CFG.CS .. "] " .. text, CFG.DUR_PILOT + 2, 0.8, nil, CFG.PILOT_HOLD, S(ch, clip), nil, nil, true)
 end
 
 -- ══════════════════════════════════════════════════════════════
@@ -2630,7 +2660,7 @@ TicHandoff = function(key, opts)
         local prev = CD.queue[#CD.queue]
         if prev then prev.hold = 0.1 end
         Q(string.format("[%s] Push button %d, %s, buster.", CFG.CS, btn, CFG.CS),
-            CFG.DUR_PILOT, 0.8, nil, CFG.PILOT_HOLD, S("OVERLORD", "p_tic_push_" .. btn))
+            CFG.DUR_PILOT, 0.8, nil, CFG.PILOT_HOLD, S("OVERLORD", "p_tic_push_" .. btn), nil, nil, true)
     end
     CD.ticState = { key = key, n = 0, used = {}, next = nil, done = false, bda = false }
     Q(string.format("[%s] %s, %s, TROOPS IN CONTACT, troops in contact! Bravo 2-1 is taking effective "
@@ -2644,7 +2674,7 @@ TicHandoff = function(key, opts)
     local p = Player()
     local m = p and MinutesOut(p, TicTgtPos(j)) or 5
     Q(string.format("[%s] %s, %s, copy troops in contact, %d minutes out.", CFG.CS, j.disp, CFG.CS, m),
-        CFG.DUR_PILOT, 1.0, nil, CFG.PILOT_HOLD, S(j.ch, "p_tic_copy_" .. j.k, PD(m), "p_min_out"))
+        CFG.DUR_PILOT, 1.0, nil, CFG.PILOT_HOLD, S(j.ch, "p_tic_copy_" .. j.k, PD(m), "p_min_out"), nil, nil, true)
     Q(string.format("[%s] %s, copy. Check in when ready for nine-line, we need you now.", j.cs, CFG.CS),
         CFG.DUR_SHORT + 2, CFG.REPLY_GAP, function()
             if JcOn() then   -- v1.6.0
@@ -2659,9 +2689,9 @@ TicHandoff = function(key, opts)
                 s.ready = true   -- v1.7.11: JTAC_Controller may now offer the check-in
             end
         end, nil, S(j.ch, j.k .. "_tic_ack"), nil)
-    -- v1.8.0: the check-in item opens when the JTAC's call has ENDED (was: when it started)
+    -- v1.8.4: the check-in item opens when the JTAC's call STARTS again (v1.8.0 had moved it to the end)
     local it = CD.queue[#CD.queue]
-    it.onEnd, it.fn = it.fn, nil
+    AtStart(it, it.fn)
 end
 
 --- Main-tick pump for the tension exchanges.
@@ -2714,10 +2744,10 @@ local function TicBDA(key)
                 CFG.DUR_SHORT + 2, 0, nil, nil, S(j.ch, j.k .. "_bda"))
             CD.queue[#CD.queue].hold = 0.1
         end
-        Q(string.format("[%s] %s, Bravo 2-1, contact broken, fire has stopped. Tell that Hornet thanks.",
-            FR_CS, j.short), CFG.DUR_SHORT + 2, 1.0, nil, nil, S(j.ch, "fr_" .. j.k .. "_bda"))
+        AtStart(Q(string.format("[%s] %s, Bravo 2-1, contact broken, fire has stopped. Tell that Hornet thanks.",
+            FR_CS, j.short), CFG.DUR_SHORT + 2, 1.0, nil, nil, S(j.ch, "fr_" .. j.k .. "_bda")),
+            function() CD.awaiting = false; MenuRebuild() end)   -- v1.8.4: at the start of the thanks
         ReadBack(j.ch, CFG.CS .. ", copy. Glad to help.", "p_tic_thanks")
-        CD.queue[#CD.queue].onEnd = function() CD.awaiting = false; MenuRebuild() end   -- v1.8.0
         QPlay()
         env.info("[CD] TIC BDA " .. j.disp)
     end, nil, timer.getTime() + CFG.TIC.BDA_S)
@@ -2903,7 +2933,7 @@ C_OvlContact = function(k, p, mode)
     end
     CD.awaiting = true
     CD.cur = k
-    Q("[OVERLORD] " .. pre .. line, CFG.DUR_LONG, (mode == "retask") and CFG.REPLY_GAP or 0, nil, nil,
+    local ovlIt = Q("[OVERLORD] " .. pre .. line, CFG.DUR_LONG, (mode == "retask") and CFG.REPLY_GAP or 0, nil, nil,
         Voiced(S("OVERLORD", preSeq, id)))
     local enter = function()
         CD.taskT = CD.taskT or {}
@@ -2914,18 +2944,13 @@ C_OvlContact = function(k, p, mode)
         SetPhase(j.phase)
         QPlay()
     end
+    -- v1.8.4: the JTAC phase (its check-in item) starts when OVERLORD's line starts (was: the end of the
+    -- pilot's push readback); a check-in pressed now is transmitted after the readback (FIFO)
+    AtStart(ovlIt, enter)
     if tic then
         TicHandoff(k)
-        -- the push readback is the item right after OVERLORD's line; the JTAC phase starts when it ends
-        for i = #CD.queue, 1, -1 do
-            local it = CD.queue[i]
-            if it.audio and type(it.audio) == "table" and it.audio[2] == "p_tic_push_" .. CFG.BTN[j.btn] then
-                it.onEnd = enter; break
-            end
-        end
     else
         Ack("OVERLORD", false, CFG.BTN[j.btn])
-        CD.queue[#CD.queue].onEnd = enter
     end
     env.info(string.format("[CD] tasking %s (%s%s%s)", j.disp, mode, tic and ", TIC" or "", resume and ", resume" or ""))
 end
@@ -3003,7 +3028,9 @@ local function DivertTick(p)
     local now = timer.getTime()
     dv.since = dv.since or now            -- first second inside the chosen phase (or later)
     if now - dv.since < dv.delay then return end
-    if st.busy or not RadioIdle() or CD.awaiting then return end   -- break in between two transmissions
+    -- v1.8.4: break in right after the call on the air (nothing else waiting); was RadioIdle(), which a pilot
+    -- who answers while the JTAC is still talking (items open at the start of the call) never leaves
+    if st.busy or GateWaiting() or CD.awaiting then return end
     local SC = CFG.SCEN
     local lb, bingo = FuelLb(p), BingoNow(p) or 4100
     local tp = TicTgtPos(JT.J2) or CFG.JTAC2_POS
@@ -3016,10 +3043,10 @@ local function DivertTick(p)
     end
     dv.state, dv.t = "asked", now
     JcCall("freeze", "J1", true)
-    Q(string.format("[OVERLORD] %s, Overlord, divert, divert. Eyeball 11 reports TROOPS IN CONTACT, priority immediate. "
-        .. "Contact Eyeball 11, %s, without delay. Pointer 11 is advised.", CFG.CS, Btn("J2")),
-        CFG.DUR_URGENT + 4, 0, nil, nil, Voiced(S("OVERLORD", "ovl_divert_a", 0.15, "ovl_divert_b")),
-        function() dv.open = true; MenuRebuild() end)
+    AtStart(Q(string.format("[OVERLORD] %s, Overlord, divert, divert. Eyeball 11 reports TROOPS IN CONTACT, priority "
+        .. "immediate. Contact Eyeball 11, %s, without delay. Pointer 11 is advised.", CFG.CS, Btn("J2")),
+        CFG.DUR_URGENT + 4, 0, nil, nil, Voiced(S("OVERLORD", "ovl_divert_a", 0.15, "ovl_divert_b"))),
+        function() dv.open = true; MenuRebuild() end)   -- v1.8.4: wilco / unable open at the start
     env.info(string.format("[CD] C: OVERLORD divert (Pointer 11 in %s, fuel %.0f lb)", st.phase, lb))
     QPlay()
 end
@@ -3086,18 +3113,18 @@ local function LcAnswer(k)
     CD.lcs[k].kind = kind
     if kind == "tech" then
         local alt = CFG.ALT[k]
-        Q(string.format("[OVERLORD] %s, Overlord. %s reports radio failure on primary. Contact %s on alternate, "
-            .. "push button %d (%s).", CFG.CS, j.disp, j.disp, alt.btn, alt.freq), CFG.DUR_LONG, 0, nil, nil,
+        local altIt = Q(string.format("[OVERLORD] %s, Overlord. %s reports radio failure on primary. Contact %s on "
+            .. "alternate, push button %d (%s).", CFG.CS, j.disp, j.disp, alt.btn, alt.freq), CFG.DUR_LONG, 0, nil, nil,
             Voiced(S("OVERLORD", "ovl_lc_alt_" .. j.k)))
         Ack("OVERLORD", false, alt.btn)
-        CD.queue[#CD.queue].onEnd = function()
+        AtStart(altIt, function()   -- v1.8.4: at the start of OVERLORD's call (was: the end of the readback)
             CFG.BTN[j.btn], CFG.FREQ[j.btn], CFG.CHAN[j.ch].hz = alt.btn, alt.freq, alt.hz
             CD.lcAlt = CD.lcAlt or {}
             CD.lcAlt[k] = true
             CD.lcs[k] = nil          -- a second loss (on the alternate) can be reported again
             JcCall("altFreq", k, alt.btn)
             CD.awaiting = false; MenuRebuild()
-        end
+        end)
         env.info(string.format("[CD] lost comms %s: alternate button %d (%s)", j.disp, alt.btn, alt.freq))
     else
         CD.res[k], CD.why[k] = "cancelled", "lost comms"
@@ -3456,7 +3483,7 @@ local URGENT = { [A_OvlAbort] = true, [A_Divert] = true, [A_Breakaway] = true, [
 local function CommsItems()
     local a = PhaseActions()
     if OVL_PHASES[CD.phase] then a[#a + 1] = { "OVERLORD: request picture", A_Picture } end
-    if not RadioIdle() then
+    if GateWaiting() then   -- v1.8.4: was not RadioIdle() (the call on the air no longer hides the items)
         local u = {}
         for _, it in ipairs(a) do if URGENT[it[2]] then u[#u + 1] = it end end
         return u
@@ -4093,8 +4120,26 @@ local function AirStartCheck(p, c)
     end
 end
 
+--- v1.8.4: a JTAC_Controller tasking that ends (BDA queued / Winchester / terminated) moves the phase to J1_OFF /
+--- J2_OFF at once instead of on the next 5 s tick, so "OVERLORD: off <JTAC>" opens while the BDA is on the air.
+local function HookJc()
+    local jc = _G.TRT and _G.TRT.JC
+    if CD.jcHooked or not (jc and jc.on) then return end
+    CD.jcHooked = true
+    jc.on(function(ev)
+        if ev ~= "DONE" and ev ~= "TERMINATED" then return end
+        timer.scheduleFunction(function()   -- after JTAC_Controller has set its own phase
+            local p = Player()
+            if not p or CD.phase == "DONE" or CD.phase == "RECOVERY" then return end
+            local ok, err = pcall(function() TrackTargets(); EvalPhase(p, Carrier()) end)
+            if not ok then env.info("[CD] JC hook error: " .. tostring(err)) end
+        end, nil, timer.getTime() + 0.2)
+    end)
+end
+
 local function CD_Tick(_, t)
     if CD.phase == "DONE" or CD.phase == "RECOVERY" then return end
+    HookJc()   -- v1.8.4
     TrackTargets()
     local p = Player()
     if not p then return t + CFG.TICK end
@@ -4155,7 +4200,7 @@ local function CD_Init()
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
     timer.scheduleFunction(MudTick, nil, timer.getTime() + 10)   -- v1.7.9
-    env.info("[CD] Comms_Director v1.8.3 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.8.4 online — CAS-1 Syria")
 end
 
 CD_Init()

@@ -1,4 +1,8 @@
-# scenario_test/run.py | v1.2.0
+# scenario_test/run.py | v1.3.0
+# v1.3.0: gates follow JTAC_Controller v0.13.2 / Comms_Director v1.8.4 (items open when the call they answer
+#         STARTS): a JTAC dialogue item may not be offered while that JTAC's non-ack call is still WAITING in the
+#         queue; a non-urgent COMMS item not while CD.gateWaiting(). New check: no pilot reply is transmitted
+#         before the JTAC call it answers has started (radio order).
 # v1.2.0: opts "spoof": comply | auth | release | wait (JTAC_Controller >= v0.13.0, ME flag 216 forces the spoofed
 #         abort on Pointer 11): the bot answers the spoof that way (release = a synthetic S_EVENT_SHOT GBU-12);
 #         Pointer's targets are not "killed" until the spoof has been answered. opts "abort_auth": the bot
@@ -129,12 +133,13 @@ class Run:
         return bool(cd.qPlaying) or len(cd.queue) > 0
 
     def tagged_pending(self, tag):
+        """v1.3.0: a non-ack transmission of this owner is still waiting (not yet on the air)"""
         cd = self.cd()
         for i in range(1, len(cd.queue) + 1):
-            if cd.queue[i].tag == tag:
+            it = cd.queue[i]
+            if it.tag == tag and not it.ack:
                 return True
-        oa = cd.onAir
-        return oa is not None and oa.tag == tag and oa.onEnd is not None
+        return False
 
     def move_toward(self, dest, stop_nm, dt):
         p = self.hero.p
@@ -191,9 +196,9 @@ class Run:
                 if ph in DIALOG and self.tagged_pending("JC:" + k):
                     self.fail.append("%.0f GATE: '%s' offered while %s's call is still on the radio (%s)" %
                                      (self.t(), lbl, k, ph))
-            elif re.match(r"(OVERLORD|STRIKE|TEXACO): ", lbl) and self.radio_busy():
+            elif re.match(r"(OVERLORD|STRIKE|TEXACO): ", lbl) and cd.gateWaiting():
                 if not re.search(r"mission abort|divert \(nearest|breakaway|overrun|spokes", lbl):
-                    self.fail.append("%.0f GATE: '%s' offered on a busy frequency" % (self.t(), lbl))
+                    self.fail.append("%.0f GATE: '%s' offered while its call is still waiting" % (self.t(), lbl))
 
     def choose(self, items):
         o = self.opts
@@ -351,6 +356,7 @@ class Run:
                 break
         else:
             self.fail.append("timeout, CD %s" % self.cd().phase)
+        self.check_order()   # v1.3.0
         for i in range(1, len(self.M.errors) + 1):
             self.fail.append("Lua: " + str(self.M.errors[i]))
         for i in range(1, len(self.M.log) + 1):
@@ -370,6 +376,25 @@ class Run:
 
     def radio(self):
         return [str(self.M.texts[i].s) for i in range(1, len(self.M.texts) + 1)]
+
+    # v1.3.0: (pilot reply, the JTAC call it answers) - the reply must come after the call, once per call
+    ORDER = [
+        (r"^\[HORNET 51\] (Pointer|Eyeball) 11, HORNET 51, ready to copy\.$",
+         r"Advise when ready for (game plan|9-line)\.$"),
+        (r"^\[HORNET 51\] Ready to copy remarks\.$", r"Advise when ready for remarks\.$"),
+        (r"^\[HORNET 51\] (Pointer|Eyeball) 11, -?\d+, \d\d\w .*final attack heading",
+         r"(Report IP inbound|Read back)\.$"),
+        (r"^\[HORNET 51\] HORNET 51, IP inbound\.$", r"readback correct\."),
+    ]
+
+    def check_order(self):
+        r = self.radio()
+        for rep_rx, call_rx in self.ORDER:
+            calls = [i for i, x in enumerate(r) if re.search(call_rx, x)]
+            reps = [i for i, x in enumerate(r) if re.search(rep_rx, x)]
+            for i in reps:
+                if not any(c < i for c in calls):
+                    self.fail.append("ORDER: '%s' before the call it answers" % r[i][:70])
 
 
 # ── cases ──────────────────────────────────────────────────────────────────

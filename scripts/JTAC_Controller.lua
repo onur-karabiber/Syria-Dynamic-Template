@@ -1,5 +1,12 @@
--- JTAC_Controller | v0.13.1
+-- JTAC_Controller | v0.13.2
 --[[
+  v0.13.2 (TEST-J1-A-SPFboth 2026-11-03, Onur; needs Comms_Director >= v1.8.4): a JTAC's next F10 item opens when
+    its answer STARTS (check-in reply, game plan, 9-line, remarks, readback correct / negative), not when it has
+    ended: a player who opened F10 right after the clip found nothing. The Comms_Director queue is FIFO, so a
+    reply pressed while the JTAC is still talking is transmitted after the JTAC's call. The readback timer
+    (rbT0, "say readback" prompt) still starts at the END of the remarks / negative call. Jtac(..., fnStart);
+    Pilot(..., ack): the pilot's automatic acknowledgements (wilco, copy BDA / switching Overlord) are marked ack
+    so they do not hold Comms_Director's OVERLORD items (BDA on the air -> "off <JTAC>" is offered).
   v0.13.1 (flight 2026-11-03, Onur): (1) the pilot answers "readback correct ... call for laser. Report IP inbound."
     with "<CS>, wilco." (the call carried two instructions and stayed unanswered); the JTAC's items open when the
     wilco has ended. (2) Lost comms: when the first check-in stays unanswered and "how copy?" opens, an on-screen
@@ -230,7 +237,7 @@ if TRT.JC then env.info("[JC] already loaded, second copy ignored") return end
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "0.13.1",
+    VERSION      = "0.13.2",
     VOICE        = true,      -- v0.7.0 spoken transmissions (needs Comms_Director >= v1.6.4)
     PLAYER_UNIT  = "Player_01",
     CS           = "HORNET 51",
@@ -779,10 +786,10 @@ end
 
 --- text, display s, gap before (s), callback at start, hold (s until the next may start), voice seq,
 --- v0.11.0: onEnd = callback when the transmission has ENDED, tag = "JC:<key>" (Comms_Director QDrop)
-local function Say(text, dur, after, fn, hold, audio, onEnd, tag)
+local function Say(text, dur, after, fn, hold, audio, onEnd, tag, ack)
     local cd = TRT.CD_RADIO
     if cd and cd.Q then
-        cd.Q(text, dur, after, fn, hold, audio, onEnd, tag)
+        cd.Q(text, dur, after, fn, hold, audio, onEnd, tag, ack)   -- v0.13.2 ack (Comms_Director >= v1.8.4)
         cd.QPlay()
         return
     end
@@ -797,19 +804,30 @@ local Silent   -- v0.11.0: Silent(k) -> true when the JTAC cannot transmit (lost
 -- JC.lastLen = airtime (s) of the last voiced JTAC transmission (0 = text only)
 local function PV(text) return Voice("P", JC.vk and J(JC.vk), text) end
 local function JV(k, text) local a, len = Voice("J", J(k), text); JC.lastLen = len or 0; return a end
---- fn at the start of the transmission, fnEnd (v0.11.0) when it has ended
-local function Pilot(text, fn, fnEnd)
-    Say("[" .. CFG.CS .. "] " .. text, CFG.DUR.pilot, 0.3, fn, CFG.DUR.hold_pilot, PV(text), fnEnd, Tag(JC.vk))
+--- fn at the start of the transmission, fnEnd (v0.11.0) when it has ended, ack (v0.13.2) = automatic
+--- acknowledgement (does not hold Comms_Director's menu)
+local function Pilot(text, fn, fnEnd, ack)
+    Say("[" .. CFG.CS .. "] " .. text, CFG.DUR.pilot, 0.3, fn, CFG.DUR.hold_pilot, PV(text), fnEnd, Tag(JC.vk), ack)
 end
---- v0.11.0: fnEnd runs when the JTAC's transmission has ENDED (menu gate: the next item appears after the
---- call was heard, not while it plays). A silent JTAC (lost comms) does not transmit; fnEnd runs at once.
-local function Jtac(k, text, dur, fnEnd, hold)
+--- v0.11.0: fnEnd runs when the JTAC's transmission has ENDED; v0.13.2: fnStart when it STARTS (menu gate: the
+--- next item opens while the answer plays) or, if the call is dropped from the queue, when it is dropped.
+--- A silent JTAC (lost comms) does not transmit; both run at once.
+local function Jtac(k, text, dur, fnEnd, hold, fnStart)
     if Silent and Silent(k) then
         Log("SILENT " .. k .. ": " .. text)
-        if fnEnd then timer.scheduleFunction(function() pcall(fnEnd) end, nil, timer.getTime() + 0.1) end
+        if fnStart or fnEnd then timer.scheduleFunction(function()
+            if fnStart then pcall(fnStart) end
+            if fnEnd then pcall(fnEnd) end
+        end, nil, timer.getTime() + 0.1) end
         return
     end
-    Say("[" .. J(k).cs .. "] " .. text, dur or CFG.DUR.short, 1.5, nil, hold or CFG.DUR.hold, JV(k, text), fnEnd, Tag(k))
+    local started = false
+    local st0 = fnStart and function() if not started then started = true; fnStart() end end
+    local en = (fnStart or fnEnd) and function()
+        if st0 then st0() end   -- dropped before it went out: open the gate anyway
+        if fnEnd then fnEnd() end
+    end
+    Say("[" .. J(k).cs .. "] " .. text, dur or CFG.DUR.short, 1.5, st0, hold or CFG.DUR.hold, JV(k, text), en, Tag(k))
 end
 --- time-critical attack / laser traffic
 local function PilotF(text, fn)
@@ -1400,8 +1418,8 @@ local function SetPhase(k, ph)
     MenuRefresh()
 end
 
--- v0.11.0: while busy (a dialogue exchange is on the radio) the JTAC's items are hidden; Free runs when the JTAC's
--- answer has ENDED, so the next item appears after the call was heard. Watchdog in Tick (CFG.BUSY_MAX_S).
+-- v0.11.0: while busy (a dialogue exchange is on the radio) the JTAC's items are hidden. v0.13.2: Free runs when
+-- the JTAC's answer STARTS (Jtac fnStart), so the next item opens while it plays. Watchdog in Tick (CFG.BUSY_MAX_S).
 local function Busy(k, v) JC.st[k].busy = v; JC.st[k].busyT = v and timer.getTime() or nil end
 local function Free(k) return function() Busy(k, false); MenuRefresh() end end
 
@@ -1437,7 +1455,7 @@ local function A_CheckIn(k)
         .. "Enemy, %s. Friendlies, %s. No artillery. Hazards, winds on the deck %s. Remarks, I have a laser, "
         .. "no IR pointer. Request IN with heading. Advise when ready for game plan.",
         CFG.CS, j.disp, (#thr > 0) and (", plus " .. table.concat(thr, ", ")) or "", tgt, frTxt,
-        tp and WindText(tp) or "unknown"), CFG.DUR.long, Free(k), 8)
+        tp and WindText(tp) or "unknown"), CFG.DUR.long, nil, 8, Free(k))   -- v0.13.2 gate at the start
     st.checkinT = timer.getTime()
     SetPhase(k, "SITREP")
 end
@@ -1459,7 +1477,7 @@ local function A_ReadyGamePlan(k)
     Pilot(string.format("%s, %s, ready to copy.", j.disp, CFG.CS))
     st.type = ChooseType(k)
     Jtac(k, string.format("%s, Type %d control, %s, %s. Advise when ready for 9-line.", CFG.CS, st.type,
-        (j.method == "BOC") and "bomb on coordinate" or "bomb on target", j.ord), CFG.DUR.short, Free(k))
+        (j.method == "BOC") and "bomb on coordinate" or "bomb on target", j.ord), CFG.DUR.short, nil, nil, Free(k))
     Log(string.format("GAME PLAN %s: Type %d %s %s", k, st.type, j.method, j.ord))
     SetPhase(k, "GAMEPLAN")
 end
@@ -1473,12 +1491,11 @@ local function A_ReadyNine(k)
     Jtac(k, string.format("%s\n  %s\n  %s\n  %s\n  %d\n  %s\n  %s\n  %s\n  %s\n  egress %s\n"
         .. "Advise when ready for remarks.", CFG.CS .. ",", n.ip, n.hdg, n.dist, n.elev, n.desc, n.grid,
         n.mark, n.fr, n.egress), CFG.DUR.nine, function()
-            Busy(k, false); MenuRefresh()
             if n.keyhole and n.ipPos then   -- v0.5.0
                 Msg(string.format("[CAS-1] IP %s = %s (from the target %s mag, %s NM).", n.ip, MGRS(n.ipPos),
                     n.ip:match("keyhole (%d+)/") or "?", n.dist), 30)
             end
-        end, 8)
+        end, 8, Free(k))   -- v0.13.2 gate at the start
     SetPhase(k, "NINE")
 end
 
@@ -1516,8 +1533,7 @@ local function A_ReadyRemarks(k)
     Jtac(k, string.format("%s, remarks: %s. Restrictions: final attack heading %s to %s. Report IP inbound.",
         CFG.CS, table.concat(rem, ", "), H3(n.fahLo), H3(n.fahHi)), CFG.DUR.long, function()
             st.rbT0, st.rbPrompted = timer.getTime(), 0   -- v0.11.0: runs at the end of the call
-            Busy(k, false); MenuRefresh()
-        end, 6)
+        end, 6, Free(k))   -- v0.13.2: quiz opens at the start, the readback timer at the end
     NewQuiz(k)
     st.rbTries = 0
     SetPhase(k, "READBACK")
@@ -1546,8 +1562,8 @@ local function A_Quiz(k, choice)
         local laser = (j.mark.kind == "laser")
         Jtac(k, string.format("%s, readback correct.%s Report IP inbound.", CFG.CS,
             laser and string.format(" Laser-to-target line %s, call for laser.", st.nine.ltl or "")
-            or ""), CFG.DUR.short)
-        Pilot(string.format("%s, wilco.", CFG.CS), nil, Free(k))   -- v0.13.1
+            or ""), CFG.DUR.short, nil, nil, Free(k))   -- v0.13.2 gate at the start
+        Pilot(string.format("%s, wilco.", CFG.CS), nil, nil, true)   -- v0.13.1 / v0.13.2 ack
         st.att = { ipIn = false, inCalled = false, cleared = false, aborted = false, corr = nil }
         SetPhase(k, "ATTACK")
     else
@@ -1565,7 +1581,7 @@ local function A_Quiz(k, choice)
             Score(pen, string.format("READBACK ERROR %s (%d item%s)", J(k).disp, #wrong, #wrong > 1 and "s" or ""))
         end
         Jtac(k, string.format("%s, negative. %s. Read back.", CFG.CS, table.concat(fix, ", ")), CFG.DUR.short,
-            function() st.rbT0, st.rbPrompted = timer.getTime(), 0; Busy(k, false); MenuRefresh() end)
+            function() st.rbT0, st.rbPrompted = timer.getTime(), 0 end, nil, Free(k))   -- v0.13.2
         NewQuiz(k)
     end
 end
@@ -1823,7 +1839,7 @@ local function A_Winchester(k)
         .. "Time, %s local. Remarks, mission %s, not complete. Cleared to depart, return to Overlord.", CFG.CS,
         j.disp, sz, (unseen > 0) and string.format(", %s not observed", Word(unseen)) or "", Describe(alive),
         st.units and st.units[1] and MGRS(st.units[1].pos) or "unknown", Clock(), j.msn), CFG.DUR.long)
-    Pilot(string.format("%s, %s, copy BDA, switching Overlord.", j.disp, CFG.CS), nil, Free(k))
+    Pilot(string.format("%s, %s, copy BDA, switching Overlord.", j.disp, CFG.CS), nil, Free(k), true)
     st.incomplete = { destroyed = #(st.units or {}) - #alive, remaining = #alive, total = #(st.units or {}) }
     Log(string.format("WINCHESTER %s: %d destroyed (%d seen), %d remaining%s", k, st.incomplete.destroyed, #seen,
         #alive, lasing and ", laser off" or ""))
@@ -1939,7 +1955,7 @@ local function Assess(k)
             j.disp, lasing and "splash, " or "", sz, (unseen > 0) and string.format(", %s not observed", Word(unseen)) or "",
             st.units and st.units[1] and MGRS(st.units[1].pos) or "unknown", Clock(), j.msn), CFG.DUR.long)
         JC.vk = k   -- v0.8.0: pilot acknowledges the release to Overlord
-        Pilot(string.format("%s, %s, copy BDA, switching Overlord.", j.disp, CFG.CS))
+        Pilot(string.format("%s, %s, copy BDA, switching Overlord.", j.disp, CFG.CS), nil, nil, true)
         Log(string.format("BDA %s: %d seen destroyed, %d not observed", k, #seen, unseen))
         Emit("DONE", { key = k })
         SetPhase(k, "DONE")
@@ -2093,7 +2109,7 @@ local function OnShot(w)
         if st.viol >= 2 then
             JtacF(k, string.format("%s, %s, second unauthorized release. Terminating control. "
                 .. "Cleared off, return to Overlord.", CFG.CS, J(k).disp))
-            Pilot(string.format("%s, %s, copy, switching Overlord.", J(k).disp, CFG.CS))   -- v0.8.0
+            Pilot(string.format("%s, %s, copy, switching Overlord.", J(k).disp, CFG.CS), nil, nil, true)   -- v0.8.0
             Msg(string.format("[CAS-1] %s terminated control after two unauthorized releases (ROE). "
                 .. "Check out with OVERLORD.", J(k).disp), 15)
             Log("TERMINATED " .. k .. " (2 unauthorized releases)")
