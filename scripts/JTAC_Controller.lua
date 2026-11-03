@@ -1,5 +1,18 @@
--- JTAC_Controller | v0.11.0
+-- JTAC_Controller | v0.12.0
 --[[
+  v0.12.0 (abort acknowledgement, Onur 2026-11-03): the abort reply and the OFF call are two calls again.
+    v0.5.0 merged them into one F10 item "ABORTING (off dry)" -> "aborting, off <dir>, dry", so the pilot either
+    held the acknowledgement until he was off target or called "off" while still pointing at it, and ABORT ACK
+    measured menu latency + pull-off time. Now:
+    * At the ABORT the F1 item is "<JTAC>: ABORTING" -> "HORNET 51, aborting." (JP 3-09.3 Fig V-15 gives no
+      aircrew reply; "aborting" is common practice). The JTAC does not answer it. OFF is not offered until then.
+    * ABORT ACK time = from the END of the JTAC's abort transmission (Say onEnd) to the press; pressed while the
+      call is still on the air = 0 s. Logged, Emit("ABORT_ACK", { key, seconds, late }). Slower than
+      CFG.ABORT.ack_s -> CFG.SCORE.ABORT_ACK_LATE (once per abort, not an ROE incident).
+    * After the acknowledgement the item is the normal "OFF (dry)" -> "HORNET 51, off <dir>, dry." with the same
+      JTAC answers as before ("copy, re-attack approved. Report IN." / inject abort: "copy.").
+    * Voice: new pilot clip jp_abort_ack "Hornet five one, aborting." (tools/jc_clips.py v1.4.0). Until it is
+      rendered the acknowledgement is text only (VOICE missing clip). jp_aborting is no longer used.
   v0.11.0 (tasking scenarios, Onur 2026-11-03; needs Comms_Director >= v1.8.0):
     * Radio gate: while a dialogue exchange is on the radio (Busy) the JTAC's F10 items are hidden; Busy is
       released when the JTAC's answer has ENDED (Jtac(..., fnEnd): Comms_Director onEnd), so the next item appears
@@ -141,6 +154,7 @@
     IDLE ─hand-off→ CHECKIN ─F10 check-in→ SITREP ─F10 ready→ GAMEPLAN ─F10 ready→ NINE
     ─F10 ready→ READBACK (multiple choice: Line 4 → Line 6 → restrictions) ─correct→ ATTACK
     ATTACK: IP INBOUND → CONTINUE · IN (direction auto) → CLEARED HOT | CONTINUE | ABORT <code> ×3
+            ABORT → pilot "aborting" (F10, timed) → OFF (direction auto), dry → re-attack (v0.12.0)
             release (S_EVENT_SHOT) → "rifle" / "one away" · OFF (direction auto)
             weapon impact → good hits / "from your hits, <dir> <m>" → next aim unit (re-attack, no new 9-line)
             all target groups dead → SALT-R BDA → DONE (Comms_Director moves on to OVERLORD)
@@ -186,7 +200,7 @@ if TRT.JC then env.info("[JC] already loaded, second copy ignored") return end
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "0.11.0",
+    VERSION      = "0.12.0",
     VOICE        = true,      -- v0.7.0 spoken transmissions (needs Comms_Director >= v1.6.4)
     PLAYER_UNIT  = "Player_01",
     CS           = "HORNET 51",
@@ -235,10 +249,12 @@ local CFG = {
     },
     -- v0.6.0: J3 penalties (live)
     SCORE = { ENABLE = true, RB_WRONG = -2, RB_CAP = -6, UNAUTH = -15, AFTER_ABORT = -25,
-              TERMINATED = -10, FRIENDLY_M = 150 },   -- v0.9.0 FRIENDLY -30 removed (note only)
+              TERMINATED = -10, FRIENDLY_M = 150,   -- v0.9.0 FRIENDLY -30 removed (note only)
+              ABORT_ACK_LATE = -2 },                -- v0.12.0 "aborting" later than CFG.ABORT.ack_s
     IP_MAX_OFF   = 45,          -- deg: pre-briefed IP run-in vs FAH centre, beyond -> keyhole IP
     KEYHOLE_NM   = 10,
-    ABORT        = { challenge = "BR" },
+    ABORT        = { challenge = "BR",
+                     ack_s = 8 },    -- v0.12.0 s from the end of the JTAC's abort call to the pilot's "aborting"
     -- kneeboard 06 AUTH (tools/make_kneeboard.py AUTH, same seed 20261029) - keep identical
     AUTH = {
         A = "BSIAZTXKDGPQVEMCNWFJYLUHOR", B = "AXYSFZJLHPVECBNDRQTWMOGIUK", C = "GDSIVRKUXELOCFHWJQBZYANMPT",
@@ -545,6 +561,7 @@ local VOICE = {
         ["gbu-12"] = "jp_wpn_gbu_12",
         ["gun"] = "jp_gun",
         ["hornet 51"] = "jp_cs",
+        ["hornet 51 aborting"] = "jp_abort_ack",
         ["hornet 51 aborting off"] = "jp_aborting",
         ["hornet 51 captured"] = "jp_captured",
         ["hornet 51 in from the"] = "jp_in",
@@ -1523,9 +1540,13 @@ local function Abort(k, reason)
     local st = JC.st[k]
     local r = AbortReply()
     local w = r and ("ABORT " .. PHON[r]:upper()) or "ABORT"
-    st.att.cleared, st.att.inCalled, st.att.aborted, st.att.abortT = false, false, true, timer.getTime()
+    local a = st.att
+    a.cleared, a.inCalled, a.aborted, a.abortT = false, false, true, timer.getTime()
+    a.ackPending, a.abortEndT = true, nil   -- v0.12.0
+    local t0 = a.abortT
     local body = string.format("%s, %s, %s, %s.%s", CFG.CS, w, w, w, reason and (" " .. reason) or "")
-    Say("[" .. J(k).cs .. "] " .. body, CFG.DUR.short, 0, nil, 4, JV(k, body))
+    Say("[" .. J(k).cs .. "] " .. body, CFG.DUR.short, 0, nil, 4, JV(k, body),
+        function() if st.att == a and a.abortT == t0 then a.abortEndT = timer.getTime() end end)   -- v0.12.0
     Log(string.format("ABORT %s (%s)", k, tostring(reason)))
     Emit("ABORT", { key = k, reason = reason })
     MenuRefresh()
@@ -1596,16 +1617,30 @@ local function A_In(k)
     MenuRefresh()
 end
 
+--- v0.12.0: immediate reply to an ABORT, separate from the later OFF call
+local function A_AbortAck(k)
+    local st = JC.st[k]
+    local a = st.att
+    if not (a and a.aborted and a.ackPending) then return end
+    a.ackPending = false
+    local dt = a.abortEndT and math.max(0, timer.getTime() - a.abortEndT) or 0
+    local late = dt > CFG.ABORT.ack_s
+    PilotF(string.format("%s, aborting.", CFG.CS))
+    Log(string.format("ABORT ACK %s %.1f s%s", k, dt, late and " (late)" or ""))
+    Emit("ABORT_ACK", { key = k, seconds = dt, late = late })
+    if late then
+        Score(CFG.SCORE.ABORT_ACK_LATE, string.format("ABORT ACK LATE (%s, %.0f s)", J(k).disp, dt))
+    end
+    MenuRefresh()
+end
+
 local function A_Off(k)
     local st, u = JC.st[k], Hero()
     local a = st.att
     local dir = u and Dir8(HeroHdgT(u)) or "north"
     local reply
-    if a.aborted and not a.released then   -- v0.5.0: abort acknowledgement
-        local dt = timer.getTime() - (a.abortT or timer.getTime())
-        PilotF(string.format("%s, aborting, off %s, dry.", CFG.CS, dir))
-        Log(string.format("ABORT ACK %s %.1f s", k, dt))
-        Emit("ABORT_ACK", { key = k, seconds = dt })
+    if a.aborted and not a.released then   -- v0.12.0: OFF after the "aborting" acknowledgement (A_AbortAck)
+        PilotF(string.format("%s, off %s, dry.", CFG.CS, dir))
         reply = a.injAbort and "copy." or "copy, re-attack approved. Report IN."
     else
         PilotF(string.format("%s, off %s%s.", CFG.CS, dir, a.released and "" or ", dry"))
@@ -1613,7 +1648,7 @@ local function A_Off(k)
     end
     if a.cleared and not a.released then Log("CLEARANCE closed " .. k .. " (dry pass)") end
     a.inCalled, a.cleared, a.released, a.aborted, a.injAbort = false, false, false, false, false
-    a.offPending = false
+    a.offPending, a.ackPending = false, false
     if #TargetUnits(k) > 0 then JtacF(k, string.format("%s, %s", CFG.CS, reply)) end
     MenuRefresh()
 end
@@ -1976,10 +2011,10 @@ local function Items(_)
                 local needCorr = (j.method == "BOT") and not corrOk
                 local L = {}
                 local function add(pri, it) L[#L + 1] = { pri, #L, it } end
-                if a.offPending or a.aborted or (a.inCalled and not a.released) then   -- v0.3.0: dry pass
-                    local lab = (a.aborted and not a.released) and "ABORTING (off dry)"    -- v0.5.0
-                        or ("OFF" .. (a.released and "" or " (dry)"))
-                    add(1, { P .. lab, function() A_Off(k) end })
+                if a.aborted and a.ackPending then   -- v0.12.0: "aborting" first, OFF after it
+                    add(1, { P .. "ABORTING", function() A_AbortAck(k) end })
+                elseif a.offPending or a.aborted or (a.inCalled and not a.released) then   -- v0.3.0: dry pass
+                    add(1, { P .. "OFF" .. (a.released and "" or " (dry)"), function() A_Off(k) end })
                 elseif not a.ipIn then
                     add(3, { P .. "IP INBOUND", function() A_IpInbound(k) end })
                 elseif not a.inCalled then

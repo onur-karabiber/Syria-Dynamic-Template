@@ -1,4 +1,6 @@
-# scenario_test/run.py | v1.0.0
+# scenario_test/run.py | v1.1.0
+# v1.1.0: opts "abort": (key, ack_delay_s) - the first IN of that JTAC is flown outside the FAH (-> ABORT); the bot
+#         presses ABORTING ack_delay_s after the end of the abort call (JTAC_Controller >= v0.12.0).
 # Headless walk of the CAS-1 radio flow through every tasking scenario (Comms_Director >= v1.8.0,
 # JTAC_Controller >= v0.11.0), with the real Menu_Manager / Comms_Director / JTAC_Controller in a DCS mock
 # (dcs_mock.lua, lupa / Lua 5.4). A bot pilot presses the F10 items as soon as they appear (adversarial: it never
@@ -215,8 +217,16 @@ class Run:
                             n = jc.st[k].nine
                             lo, hi = float(n.fahLo), float(n.fahHi)
                             mid = (lo + ((hi - lo) % 360) / 2.0) % 360
+                            ab = o.get("abort")
+                            if ab and ab[0] == k and not self.attack.get("abort_" + k):   # v1.1.0
+                                self.attack["abort_" + k] = True
+                                mid = (mid + 180) % 360
                             import math
                             self.hero.hdg = math.radians((mid + MAGVAR) % 360)
+                        if re.search(r": ABORTING$", lbl) and o.get("abort"):   # v1.1.0
+                            t0 = a.abortEndT
+                            if t0 is None or self.t() - float(t0) < o["abort"][1]:
+                                return None, None
                         return it, None
         order = [
             r"WINCHESTER", r": ABORTING", r": OFF", r"how copy", r"(POINTER|EYEBALL) 11: check in",
@@ -385,6 +395,13 @@ CASES = [
      {"events": [{"when": lambda r: str(r.cd().phase) == "ENROUTE",
                   "do": lambda r: setattr(r.M.units["TANKER-1-1"], "life", 0)}]},
      lambda r: [radio_has(r, r"Texaco 11 is off station.*Say intentions"), bool(r.cd().tkrLost)]),
+    ("abort_ack_J1", {210: 1, 211: 9, 212: 2, 214: 1}, {"abort": ("J1", 2)},
+     lambda r: [r.log_has(r"ABORT J1 \(Outside final attack heading"), r.log_has(r"ABORT ACK J1 \d+\.\d s$"),
+                not r.log_has(r"ABORT ACK LATE"), radio_has(r, r"^\[HORNET 51\] HORNET 51, aborting\.$"),
+                radio_has(r, r"re-attack approved"), r.cd().res.J1 == "done"]),
+    ("abort_ack_J1_late", {210: 1, 211: 9, 212: 2, 214: 1}, {"abort": ("J1", 20)},
+     lambda r: [r.log_has(r"ABORT ACK J1 \d+\.\d s \(late\)"), r.log_has(r"\[SCORE\] -2 ABORT ACK LATE"),
+                r.cd().res.J1 == "done"]),
     ("winchester_J1", {210: 1, 211: 9, 212: 2, 214: 2}, {"winchester": "J1"},
      lambda r: [r.cd().res.J1 == "incomplete", r.cd().res.J2 == "cancelled", radio_has(r, r"copy Winchester"),
                 radio_has(r, r"Mission 4102 incomplete, Winchester"), seq_in(r.phases(), "JTAC1", "J1_OFF", "REFUEL")]),

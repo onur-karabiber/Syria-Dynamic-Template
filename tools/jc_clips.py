@@ -1,4 +1,6 @@
-# jc_clips.py | v1.3.0
+# jc_clips.py | v1.4.0
+# v1.4.0: pilot abort acknowledgement jp_abort_ack "Hornet five one, aborting." for JTAC_Controller v0.12.0
+#         (the OFF after an abort is jp_off + direction + jp_dry; jp_aborting is no longer spoken).
 # v1.3.0: lost comms "how copy?" (jp_hc_ptr / jp_hc_eye) for JTAC_Controller v0.11.0.
 # v1.2.0: Winchester check-out (JTAC_Controller v0.10.0): bda_wnc, w_activity, w_none_obs, w_remaining, bda_end_inc,
 #         pilot jp_wnc_ptr / jp_wnc_eye.
@@ -202,7 +204,8 @@ PILOT = {   # id -> (written key, spoken)
     "jp_in": ("hornet 51 in from the", "Hornet five one, IN from the"),
     "jp_off": ("hornet 51 off", "Hornet five one, off"),
     "jp_dry": ("dry", "dry."),
-    "jp_aborting": ("hornet 51 aborting off", "Hornet five one, aborting, off"),
+    "jp_aborting": ("hornet 51 aborting off", "Hornet five one, aborting, off"),   # unused since JC v0.12.0
+    "jp_abort_ack": ("hornet 51 aborting", "Hornet five one, aborting."),           # v1.4.0
     "jp_cs": ("hornet 51", "Hornet five one,"),
     "jp_rifle": ("rifle", "rifle,"),
     "jp_away": ("away", "away."),

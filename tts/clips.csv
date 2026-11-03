@@ -687,6 +687,7 @@ jp_in;PILOT;Hornet five one, IN from the;tok
 jp_off;PILOT;Hornet five one, off;tok
 jp_dry;PILOT;dry.;tok
 jp_aborting;PILOT;Hornet five one, aborting, off;tok
+jp_abort_ack;PILOT;Hornet five one, aborting.;tok
 jp_cs;PILOT;Hornet five one,;tok:0.1
 jp_rifle;PILOT;rifle,;tok:0.1
 jp_away;PILOT;away.;tok
