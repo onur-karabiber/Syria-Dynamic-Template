@@ -80,6 +80,7 @@ python tools/sync_missions.py --step guards    # then --step template / hound / 
 * **HOUND is generated** (`tools/add_elint.py` on the deployed template); do not edit it in the ME. Tower positions live in `add_elint.py` (TOWERS). The tool refuses to regenerate a HOUND whose ME data differs from template + Hound (`--force-hound` overrides); the old file goes to `BackUps/`.
 * **CAS (L) HOUND is generated** the same way (`tools/add_elint.py` on the deployed CAS (L), after its refresh), with the same guard (`--force-cas-hound` / `--skip-cas-hound`).
 * **CAS (L)** keeps its own mission data (no RAT / ambient radios); the tool refreshes its scripts, every sound set it shares with `src/Sounds`, and the kneeboard pages. ME-level changes (units, triggers) still go into both missions by hand or per tool (`add_script.py --src` / `--miz`, `strip_native_jtac.py --src` / `--miz`).
+* **ME changes made in CAS (L)** reach the template with `python tools/port_cas_me.py [--dry-run]` (groups replaced by name only when groupId / unitIds match, zone SA8_3, Tanker_Defenders_Activate on flag 3011, OWN_SCRIPTS order), then `sync_missions.py`. Extend its GROUPS / ZONES lists when CAS (L) gets new ME edits. Audit 2026-11-04: scripts and media were in step, the ME layer was not.
 * `src/KNEEBOARD/IMAGES/*_LCRA_*` (Jeppesen) is gitignored: packed when present on disk, never pushed.
 
 ### 3c. Flight report (report card) — 2026-11-02

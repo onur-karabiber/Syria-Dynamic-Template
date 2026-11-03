@@ -1,4 +1,6 @@
-# sync_missions.py | v1.3.0
+# sync_missions.py | v1.3.1
+# v1.3.1: cas-hound step expires the guard token (t = 0) when it cannot delete it (cloud device shell without
+#         delete permission: PermissionError after a successful CAS HOUND regeneration, 2026-11-04).
 # v1.3.0: --step guards|template|hound|cas|cas-hound runs one step (the device shell of a cloud session has a
 #         180 s limit per call and kills background processes; the whole sync takes longer). Order: guards first
 #         (writes build/sync_guard.json, valid 1 h; the HOUND steps refuse without it), then template, hound,
@@ -221,7 +223,11 @@ def main():
             return step_cas(dry) if do_cas else 0
         rc = step_cas_hound(dry, ts) if do_cas_hound else 0
         if rc == 0 and not dry and os.path.isfile(GUARD_TOKEN):
-            os.remove(GUARD_TOKEN)   # the sequence is complete
+            try:
+                os.remove(GUARD_TOKEN)   # the sequence is complete
+            except OSError:              # v1.3.1: a device shell without delete permission -> expire it instead
+                with open(GUARD_TOKEN, "w") as f:
+                    json.dump({"t": 0, "ts": "expired"}, f)
         if rc == 0:
             print("sync done (steps)")
         return rc

@@ -4263,6 +4263,8 @@ mission =
 															["number"] = 1,
 															["params"] = 
 															{
+																["maxDist"] = 46300,
+																["maxDistEnabled"] = true,
 																["priority"] = 0,
 																["targetTypes"] = 
 																{
@@ -4451,8 +4453,8 @@ mission =
 															["number"] = 1,
 															["params"] = 
 															{
-																["maxDist"] = 15000,
-																["maxDistEnabled"] = false,
+																["maxDist"] = 46300,
+																["maxDistEnabled"] = true,
 																["noTargetTypes"] = 
 																{
 																	[1] = "Helicopters",
@@ -8076,6 +8078,12 @@ mission =
 											["alt"] = 7315.2,
 											["alt_type"] = "BARO",
 											["formation_template"] = "",
+											["properties"] = 
+											{
+												["addopt"] = 
+												{
+												},
+											},
 											["speed"] = 154.16666666667,
 											["speed_locked"] = true,
 											["task"] = 
@@ -8148,13 +8156,19 @@ mission =
 										},
 										[5] = 
 										{
-											["ETA"] = 1489.4297255929,
+											["ETA"] = 1141.5581887203,
 											["ETA_locked"] = false,
 											["action"] = "Landing",
 											["airdromeId"] = 16,
 											["alt"] = 58,
 											["alt_type"] = "BARO",
 											["formation_template"] = "",
+											["properties"] = 
+											{
+												["addopt"] = 
+												{
+												},
+											},
 											["speed"] = 138.88888888889,
 											["speed_locked"] = true,
 											["task"] = 
@@ -9201,6 +9215,12 @@ mission =
 											["alt"] = 4572,
 											["alt_type"] = "BARO",
 											["formation_template"] = "",
+											["properties"] = 
+											{
+												["addopt"] = 
+												{
+												},
+											},
 											["speed"] = 174.72222222222,
 											["speed_locked"] = true,
 											["task"] = 
@@ -9505,7 +9525,7 @@ mission =
 															["number"] = 1,
 															["params"] = 
 															{
-																["maxDist"] = 111120,
+																["maxDist"] = 46300,
 																["maxDistEnabled"] = true,
 																["priority"] = 0,
 																["targetTypes"] = 
@@ -9681,8 +9701,8 @@ mission =
 												},
 											},
 											["type"] = "Turning Point",
-											["x"] = 53018.231164278,
-											["y"] = -14678.575187798,
+											["x"] = 107601,
+											["y"] = -43145,
 										},
 										[2] = 
 										{
@@ -9724,8 +9744,8 @@ mission =
 												},
 											},
 											["type"] = "Turning Point",
-											["x"] = 43981.841689934,
-											["y"] = -6402.2558561561,
+											["x"] = 70561,
+											["y"] = -43145,
 										},
 									},
 									["routeRelativeTOT"] = true,
@@ -9828,7 +9848,7 @@ mission =
 												},
 											},
 										},
-										["heading"] = 2.400068755584,
+										["heading"] = 3.1415926535898,
 										["livery_id"] = "vmfa-251",
 										["name"] = "CAP-2-1",
 										["onboard_num"] = "028",
@@ -9889,13 +9909,13 @@ mission =
 												},
 											},
 										},
-										["psi"] = -2.400068755584,
+										["psi"] = -3.1415926535898,
 										["skill"] = "Excellent",
 										["speed"] = 138.88888888889,
 										["type"] = "FA-18C_hornet",
 										["unitId"] = 249,
-										["x"] = 53018.231164278,
-										["y"] = -14678.575187798,
+										["x"] = 107601,
+										["y"] = -43145,
 									},
 									[2] = 
 									{
@@ -9955,7 +9975,7 @@ mission =
 												},
 											},
 										},
-										["heading"] = 2.400068755584,
+										["heading"] = 3.1415926535898,
 										["livery_id"] = "vmfa-251",
 										["name"] = "CAP-2-2",
 										["onboard_num"] = "073",
@@ -10016,13 +10036,13 @@ mission =
 												},
 											},
 										},
-										["psi"] = -2.400068755584,
+										["psi"] = -3.1415926535898,
 										["skill"] = "Excellent",
 										["speed"] = 138.88888888889,
 										["type"] = "FA-18C_hornet",
 										["unitId"] = 250,
-										["x"] = 52978.231164278,
-										["y"] = -14638.575187798,
+										["x"] = 107561,
+										["y"] = -43105,
 									},
 									[3] = 
 									{
@@ -10082,7 +10102,7 @@ mission =
 												},
 											},
 										},
-										["heading"] = 2.400068755584,
+										["heading"] = 3.1415926535898,
 										["livery_id"] = "vmfa-251",
 										["name"] = "CAP-2-3",
 										["onboard_num"] = "075",
@@ -10143,13 +10163,13 @@ mission =
 												},
 											},
 										},
-										["psi"] = -2.400068755584,
+										["psi"] = -3.1415926535898,
 										["skill"] = "Excellent",
 										["speed"] = 138.88888888889,
 										["type"] = "FA-18C_hornet",
 										["unitId"] = 252,
-										["x"] = 52938.231164278,
-										["y"] = -14598.575187798,
+										["x"] = 107521,
+										["y"] = -43065,
 									},
 									[4] = 
 									{
@@ -10209,7 +10229,7 @@ mission =
 												},
 											},
 										},
-										["heading"] = 2.400068755584,
+										["heading"] = 3.1415926535898,
 										["livery_id"] = "vmfa-251",
 										["name"] = "CAP-2-4",
 										["onboard_num"] = "076",
@@ -10270,17 +10290,17 @@ mission =
 												},
 											},
 										},
-										["psi"] = -2.400068755584,
+										["psi"] = -3.1415926535898,
 										["skill"] = "Excellent",
 										["speed"] = 138.88888888889,
 										["type"] = "FA-18C_hornet",
 										["unitId"] = 251,
-										["x"] = 52898.231164278,
-										["y"] = -14558.575187798,
+										["x"] = 107481,
+										["y"] = -43025,
 									},
 								},
-								["x"] = 53018.231164278,
-								["y"] = -14678.575187798,
+								["x"] = 107601,
+								["y"] = -43145,
 							},
 							[22] = 
 							{
@@ -10331,7 +10351,7 @@ mission =
 															["number"] = 1,
 															["params"] = 
 															{
-																["maxDist"] = 111120,
+																["maxDist"] = 46300,
 																["maxDistEnabled"] = true,
 																["priority"] = 0,
 																["targetTypes"] = 
@@ -10507,8 +10527,8 @@ mission =
 												},
 											},
 											["type"] = "Turning Point",
-											["x"] = 42384.138750386,
-											["y"] = -34149.324633319,
+											["x"] = 127582,
+											["y"] = 19186,
 										},
 										[2] = 
 										{
@@ -10556,38 +10576,8 @@ mission =
 												},
 											},
 											["type"] = "Turning Point",
-											["x"] = 37036.749136577,
-											["y"] = 12353.867186767,
-										},
-										[3] = 
-										{
-											["ETA"] = 250.79686670894,
-											["ETA_locked"] = false,
-											["action"] = "Turning Point",
-											["alt"] = 7315.2,
-											["alt_type"] = "BARO",
-											["formation_template"] = "",
-											["properties"] = 
-											{
-												["addopt"] = 
-												{
-												},
-											},
-											["speed"] = 241.52777777778,
-											["speed_locked"] = true,
-											["task"] = 
-											{
-												["id"] = "ComboTask",
-												["params"] = 
-												{
-													["tasks"] = 
-													{
-													},
-												},
-											},
-											["type"] = "Turning Point",
-											["x"] = 25746.625416466,
-											["y"] = 20228.019983647,
+											["x"] = 90542,
+											["y"] = 19186,
 										},
 									},
 									["routeRelativeTOT"] = true,
@@ -10690,7 +10680,7 @@ mission =
 												},
 											},
 										},
-										["heading"] = 1.6852832206181,
+										["heading"] = 3.1415926535898,
 										["livery_id"] = "vmfa-251",
 										["name"] = "CAP-1-1",
 										["onboard_num"] = "077",
@@ -10751,13 +10741,13 @@ mission =
 												},
 											},
 										},
-										["psi"] = -1.6852832206181,
+										["psi"] = -3.1415926535898,
 										["skill"] = "Excellent",
 										["speed"] = 138.88888888889,
 										["type"] = "FA-18C_hornet",
 										["unitId"] = 253,
-										["x"] = 42384.138750386,
-										["y"] = -34149.324633319,
+										["x"] = 127582,
+										["y"] = 19186,
 									},
 									[2] = 
 									{
@@ -10817,7 +10807,7 @@ mission =
 												},
 											},
 										},
-										["heading"] = 1.6852832206181,
+										["heading"] = 3.1415926535898,
 										["livery_id"] = "vmfa-251",
 										["name"] = "CAP-1-2",
 										["onboard_num"] = "078",
@@ -10878,13 +10868,13 @@ mission =
 												},
 											},
 										},
-										["psi"] = -1.6852832206181,
+										["psi"] = -3.1415926535898,
 										["skill"] = "Excellent",
 										["speed"] = 138.88888888889,
 										["type"] = "FA-18C_hornet",
 										["unitId"] = 254,
-										["x"] = 42344.138750386,
-										["y"] = -34109.324633319,
+										["x"] = 127542,
+										["y"] = 19226,
 									},
 									[3] = 
 									{
@@ -10944,7 +10934,7 @@ mission =
 												},
 											},
 										},
-										["heading"] = 1.6852832206181,
+										["heading"] = 3.1415926535898,
 										["livery_id"] = "vmfa-251",
 										["name"] = "CAP-1-3",
 										["onboard_num"] = "079",
@@ -11005,13 +10995,13 @@ mission =
 												},
 											},
 										},
-										["psi"] = -1.6852832206181,
+										["psi"] = -3.1415926535898,
 										["skill"] = "Excellent",
 										["speed"] = 138.88888888889,
 										["type"] = "FA-18C_hornet",
 										["unitId"] = 256,
-										["x"] = 42304.138750386,
-										["y"] = -34069.324633319,
+										["x"] = 127502,
+										["y"] = 19266,
 									},
 									[4] = 
 									{
@@ -11071,7 +11061,7 @@ mission =
 												},
 											},
 										},
-										["heading"] = 1.6852832206181,
+										["heading"] = 3.1415926535898,
 										["livery_id"] = "vmfa-251",
 										["name"] = "CAP-1-4",
 										["onboard_num"] = "080",
@@ -11132,17 +11122,17 @@ mission =
 												},
 											},
 										},
-										["psi"] = -1.6852832206181,
+										["psi"] = -3.1415926535898,
 										["skill"] = "Excellent",
 										["speed"] = 138.88888888889,
 										["type"] = "FA-18C_hornet",
 										["unitId"] = 255,
-										["x"] = 42264.138750386,
-										["y"] = -34029.324633319,
+										["x"] = 127462,
+										["y"] = 19306,
 									},
 								},
-								["x"] = 42384.138750386,
-								["y"] = -34149.324633319,
+								["x"] = 127582,
+								["y"] = 19186,
 							},
 							[23] = 
 							{
@@ -12742,6 +12732,68 @@ mission =
 											["type"] = "Turning Point",
 											["x"] = 73640.283050887,
 											["y"] = -39914.06718488,
+										},
+										[4] = 
+										{
+											["ETA"] = 2838.9761893506425,
+											["ETA_locked"] = false,
+											["action"] = "Turning Point",
+											["alt"] = 7315.200000000001,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["name"] = "IP LYNX",
+											["properties"] = 
+											{
+												["addopt"] = 
+												{
+												},
+											},
+											["speed"] = 179.86111111111,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 48774.0,
+											["y"] = 23511.0,
+										},
+										[5] = 
+										{
+											["ETA"] = 3084.3678009471096,
+											["ETA_locked"] = false,
+											["action"] = "Turning Point",
+											["alt"] = 7315.200000000001,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["name"] = "IP PUMA",
+											["properties"] = 
+											{
+												["addopt"] = 
+												{
+												},
+											},
+											["speed"] = 179.86111111111,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 73444.0,
+											["y"] = -13087.0,
 										},
 									},
 								},
@@ -20741,7 +20793,7 @@ mission =
 											["ETA"] = 0,
 											["ETA_locked"] = true,
 											["action"] = "Off Road",
-											["alt"] = 174,
+											["alt"] = 165,
 											["alt_type"] = "BARO",
 											["formation_template"] = "",
 											["speed"] = 0,
@@ -20871,8 +20923,8 @@ mission =
 												},
 											},
 											["type"] = "Turning Point",
-											["x"] = 41151.457611249,
-											["y"] = 45862.460184018,
+											["x"] = 40608.0,
+											["y"] = 44502.0,
 										},
 									},
 									["spans"] = 
@@ -20897,13 +20949,13 @@ mission =
 										["skill"] = "Excellent",
 										["type"] = "M1134 Stryker ATGM",
 										["unitId"] = 278,
-										["x"] = 41151.457611249,
-										["y"] = 45862.460184018,
+										["x"] = 40608.0,
+										["y"] = 44502.0,
 									},
 								},
 								["visible"] = false,
-								["x"] = 41151.457611249,
-								["y"] = 45862.460184018,
+								["x"] = 40608.0,
+								["y"] = 44502.0,
 							},
 							[2] = 
 							{
@@ -21051,8 +21103,8 @@ mission =
 												},
 											},
 											["type"] = "Turning Point",
-											["x"] = 59457.791202832,
-											["y"] = -1658.8366664097,
+											["x"] = 58960.0,
+											["y"] = -1371.0,
 										},
 									},
 									["spans"] = 
@@ -21077,13 +21129,13 @@ mission =
 										["skill"] = "Excellent",
 										["type"] = "M1134 Stryker ATGM",
 										["unitId"] = 279,
-										["x"] = 59457.791202832,
-										["y"] = -1658.8366664097,
+										["x"] = 58960.0,
+										["y"] = -1371.0,
 									},
 								},
 								["visible"] = false,
-								["x"] = 59457.791202832,
-								["y"] = -1658.8366664097,
+								["x"] = 58960.0,
+								["y"] = -1371.0,
 							},
 							[3] = 
 							{
@@ -25526,12 +25578,18 @@ mission =
 										},
 										[2] = 
 										{
-											["ETA"] = 175.17970917306,
+											["ETA"] = 164.3946780657,
 											["ETA_locked"] = false,
 											["action"] = "Turning Point",
 											["alt"] = 2000,
 											["alt_type"] = "BARO",
 											["formation_template"] = "",
+											["properties"] = 
+											{
+												["addopt"] = 
+												{
+												},
+											},
 											["speed"] = 138.88888888889,
 											["speed_locked"] = true,
 											["task"] = 
@@ -135798,8 +135856,8 @@ mission =
 											["name"] = "",
 											["speed"] = 0,
 											["type"] = "",
-											["x"] = 41142.31443702,
-											["y"] = 44695.492130872,
+											["x"] = 40766.620095934,
+											["y"] = 44205.86986222,
 										},
 									},
 								},
@@ -135817,12 +135875,12 @@ mission =
 										},
 										["type"] = "Camouflage07",
 										["unitId"] = 1211,
-										["x"] = 41142.31443702,
-										["y"] = 44695.492130872,
+										["x"] = 40766.620095934,
+										["y"] = 44205.86986222,
 									},
 								},
-								["x"] = 41142.31443702,
-								["y"] = 44695.492130872,
+								["x"] = 40766.620095934,
+								["y"] = 44205.86986222,
 							},
 							[39] = 
 							{
@@ -135843,8 +135901,8 @@ mission =
 											["name"] = "",
 											["speed"] = 0,
 											["type"] = "",
-											["x"] = 59243.76819363,
-											["y"] = -1098.2172812672,
+											["x"] = 59231.877389468,
+											["y"] = -1096.2014809302,
 										},
 									},
 								},
@@ -135862,12 +135920,12 @@ mission =
 										},
 										["type"] = "Camouflage07",
 										["unitId"] = 1218,
-										["x"] = 59243.76819363,
-										["y"] = -1098.2172812672,
+										["x"] = 59231.877389468,
+										["y"] = -1096.2014809302,
 									},
 								},
-								["x"] = 59243.76819363,
-								["y"] = -1098.2172812672,
+								["x"] = 59231.877389468,
+								["y"] = -1096.2014809302,
 							},
 							[40] = 
 							{
@@ -135888,8 +135946,8 @@ mission =
 											["name"] = "",
 											["speed"] = 0,
 											["type"] = "",
-											["x"] = 59121.499393467,
-											["y"] = -1177.2031278669,
+											["x"] = 59121.562386057,
+											["y"] = -1166.8030831129,
 										},
 									},
 								},
@@ -135907,12 +135965,12 @@ mission =
 										},
 										["type"] = "Camouflage05",
 										["unitId"] = 4049,
-										["x"] = 59121.499393467,
-										["y"] = -1177.2031278669,
+										["x"] = 59121.562386057,
+										["y"] = -1166.8030831129,
 									},
 								},
-								["x"] = 59121.499393467,
-								["y"] = -1177.2031278669,
+								["x"] = 59121.562386057,
+								["y"] = -1166.8030831129,
 							},
 							[41] = 
 							{
@@ -135933,8 +135991,8 @@ mission =
 											["name"] = "",
 											["speed"] = 0,
 											["type"] = "",
-											["x"] = 59312.114697535,
-											["y"] = -1179.1955197045,
+											["x"] = 59295.880370309,
+											["y"] = -1181.2122638994,
 										},
 									},
 								},
@@ -135952,12 +136010,12 @@ mission =
 										},
 										["type"] = "Camouflage07",
 										["unitId"] = 4050,
-										["x"] = 59312.114697535,
-										["y"] = -1179.1955197045,
+										["x"] = 59295.880370309,
+										["y"] = -1181.2122638994,
 									},
 								},
-								["x"] = 59312.114697535,
-								["y"] = -1179.1955197045,
+								["x"] = 59295.880370309,
+								["y"] = -1181.2122638994,
 							},
 						},
 					},
@@ -136045,8 +136103,8 @@ mission =
 												},
 											},
 											["type"] = "Turning Point",
-											["x"] = 59300.125718947,
-											["y"] = -1186.3986911756,
+											["x"] = 59279.312840934,
+											["y"] = -1210.6532969686,
 										},
 									},
 									["spans"] = 
@@ -136055,13 +136113,13 @@ mission =
 										{
 											[1] = 
 											{
-												["x"] = 59300.125718947,
-												["y"] = -1186.3986911756,
+												["x"] = 59279.312840934,
+												["y"] = -1210.6532969686,
 											},
 											[2] = 
 											{
-												["x"] = 59300.125718947,
-												["y"] = -1186.3986911756,
+												["x"] = 59279.312840934,
+												["y"] = -1210.6532969686,
 											},
 										},
 									},
@@ -136084,8 +136142,8 @@ mission =
 										["skill"] = "Average",
 										["type"] = "Osa 9A33 ln",
 										["unitId"] = 1053,
-										["x"] = 59300.125718947,
-										["y"] = -1186.3986911756,
+										["x"] = 59279.312840934,
+										["y"] = -1210.6532969686,
 									},
 									[2] = 
 									{
@@ -136096,8 +136154,8 @@ mission =
 										["skill"] = "Average",
 										["type"] = "BTR-80",
 										["unitId"] = 1054,
-										["x"] = 59236.388058536,
-										["y"] = -1102.6453518529,
+										["x"] = 59214.226988922,
+										["y"] = -1108.6119188139,
 									},
 									[3] = 
 									{
@@ -136108,8 +136166,8 @@ mission =
 										["skill"] = "Average",
 										["type"] = "Osa 9A33 ln",
 										["unitId"] = 1056,
-										["x"] = 59108.29319587,
-										["y"] = -1181.1324463843,
+										["x"] = 59119.356085989,
+										["y"] = -1180.8682460478,
 									},
 									[4] = 
 									{
@@ -136120,13 +136178,13 @@ mission =
 										["skill"] = "Average",
 										["type"] = "T-72B",
 										["unitId"] = 1055,
-										["x"] = 59439.160000452,
-										["y"] = -1234.5730532653,
+										["x"] = 59414.884464375,
+										["y"] = -1248.7147310203,
 									},
 								},
 								["visible"] = false,
-								["x"] = 59300.125718947,
-								["y"] = -1186.3986911756,
+								["x"] = 59279.312840934,
+								["y"] = -1210.6532969686,
 							},
 							[2] = 
 							{
@@ -136144,7 +136202,7 @@ mission =
 											["ETA"] = 0,
 											["ETA_locked"] = true,
 											["action"] = "Off Road",
-											["alt"] = 165,
+											["alt"] = 161,
 											["alt_type"] = "BARO",
 											["formation_template"] = "",
 											["speed"] = 0,
@@ -136208,8 +136266,8 @@ mission =
 												},
 											},
 											["type"] = "Turning Point",
-											["x"] = 41142.399452429,
-											["y"] = 44701.873678047,
+											["x"] = 40766.128705302,
+											["y"] = 44219.335827556,
 										},
 									},
 									["spans"] = 
@@ -136218,13 +136276,13 @@ mission =
 										{
 											[1] = 
 											{
-												["x"] = 41142.399452429,
-												["y"] = 44701.873678047,
+												["x"] = 40766.128705302,
+												["y"] = 44219.335827556,
 											},
 											[2] = 
 											{
-												["x"] = 41142.399452429,
-												["y"] = 44701.873678047,
+												["x"] = 40766.128705302,
+												["y"] = 44219.335827556,
 											},
 										},
 									},
@@ -136247,8 +136305,8 @@ mission =
 										["skill"] = "Average",
 										["type"] = "T-55",
 										["unitId"] = 1057,
-										["x"] = 41142.399452429,
-										["y"] = 44701.873678047,
+										["x"] = 40766.128705302,
+										["y"] = 44219.335827556,
 									},
 									[2] = 
 									{
@@ -136259,13 +136317,13 @@ mission =
 										["skill"] = "Average",
 										["type"] = "Strela-10M3",
 										["unitId"] = 1058,
-										["x"] = 40949.17662597,
-										["y"] = 44679.17766351,
+										["x"] = 40581.021084453,
+										["y"] = 44191.099071834,
 									},
 								},
 								["visible"] = false,
-								["x"] = 41142.399452429,
-								["y"] = 44701.873678047,
+								["x"] = 40766.128705302,
+								["y"] = 44219.335827556,
 							},
 							[3] = 
 							{
@@ -165209,7 +165267,7 @@ mission =
 		{
 			[1] = "a_set_flag_value(\"100\", 3);a_set_flag_value(\"102\", 2);",
 			[2] = "a_do_script_file(getValueResourceByKey(\"ResKey_Action_286\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_287\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_316\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_297\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_298\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_299\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_311\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_301\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_302\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_312\"));",
-			[3] = "a_do_script_file(getValueResourceByKey(\"ResKey_Action_279\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_315\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_282\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_283\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_303\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_313\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_314\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_317\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_319\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_320\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_321\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_322\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_323\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_324\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_325\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_326\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_327\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_328\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_329\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_330\"));",
+			[3] = "a_do_script_file(getValueResourceByKey(\"ResKey_Action_279\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_315\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_282\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_283\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_303\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_313\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_314\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_317\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_326\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_319\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_327\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_328\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_320\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_321\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_329\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_322\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_323\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_324\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_325\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_330\"));",
 			[4] = "a_do_script_file(getValueResourceByKey(\"ResKey_Action_227\")); mission.trig.func[4]=nil;",
 			[5] = "a_do_script(\"SetSuperCarrier(true)\"); mission.trig.func[5]=nil;",
 			[6] = "a_do_script_file(getValueResourceByKey(\"ResKey_Action_213\")); mission.trig.func[6]=nil;",
@@ -165383,7 +165441,7 @@ mission =
 			[71] = "return(c_time_since_flag(\"1126\", 10) )",
 			[72] = "return(c_all_of_coalition_out_zone(\"red\", 874, \"ALL\") )",
 			[73] = "return(c_all_of_coalition_out_zone(\"red\", 875, \"ALL\") )",
-			[74] = "return(c_part_of_coalition_in_zone(\"red\", 2320, \"ALL\") )",
+			[74] = "return(c_flag_is_true(\"3011\") )",
 			[75] = "return(c_time_after(15) and c_flag_is_false(\"5001\") and c_random_less(5) )",
 			[76] = "return(c_time_after(15) and c_flag_is_false(\"5001\") and c_random_less(5) )",
 			[77] = "return(c_time_after(15) and c_flag_is_false(\"5001\") and c_random_less(5) )",
@@ -166908,8 +166966,8 @@ mission =
 				},
 				["radius"] = 12192,
 				["type"] = 0,
-				["x"] = 59300.119636231,
-				["y"] = -1186.3918786668,
+				["x"] = 59279.185207154,
+				["y"] = -1211.4923917178,
 				["zoneId"] = 2566,
 			},
 			[56] = 
@@ -167325,57 +167383,57 @@ mission =
 				},
 				[9] = 
 				{
-					["file"] = "ResKey_Action_319",
+					["file"] = "ResKey_Action_326",
 					["predicate"] = "a_do_script_file",
 				},
 				[10] = 
 				{
-					["file"] = "ResKey_Action_320",
+					["file"] = "ResKey_Action_319",
 					["predicate"] = "a_do_script_file",
 				},
 				[11] = 
 				{
-					["file"] = "ResKey_Action_321",
+					["file"] = "ResKey_Action_327",
 					["predicate"] = "a_do_script_file",
 				},
 				[12] = 
 				{
-					["file"] = "ResKey_Action_322",
+					["file"] = "ResKey_Action_328",
 					["predicate"] = "a_do_script_file",
 				},
 				[13] = 
 				{
-					["file"] = "ResKey_Action_323",
+					["file"] = "ResKey_Action_320",
 					["predicate"] = "a_do_script_file",
 				},
 				[14] = 
 				{
-					["file"] = "ResKey_Action_324",
+					["file"] = "ResKey_Action_321",
 					["predicate"] = "a_do_script_file",
 				},
 				[15] = 
 				{
-					["file"] = "ResKey_Action_325",
+					["file"] = "ResKey_Action_329",
 					["predicate"] = "a_do_script_file",
 				},
 				[16] = 
 				{
-					["file"] = "ResKey_Action_326",
+					["file"] = "ResKey_Action_322",
 					["predicate"] = "a_do_script_file",
 				},
 				[17] = 
 				{
-					["file"] = "ResKey_Action_327",
+					["file"] = "ResKey_Action_323",
 					["predicate"] = "a_do_script_file",
 				},
 				[18] = 
 				{
-					["file"] = "ResKey_Action_328",
+					["file"] = "ResKey_Action_324",
 					["predicate"] = "a_do_script_file",
 				},
 				[19] = 
 				{
-					["file"] = "ResKey_Action_329",
+					["file"] = "ResKey_Action_325",
 					["predicate"] = "a_do_script_file",
 				},
 				[20] = 
@@ -169307,10 +169365,8 @@ mission =
 			{
 				[1] = 
 				{
-					["coalitionlist"] = "red",
-					["predicate"] = "c_part_of_coalition_in_zone",
-					["unitType"] = "ALL",
-					["zone"] = 2320,
+					["flag"] = "3011",
+					["predicate"] = "c_flag_is_true",
 				},
 			},
 		},
