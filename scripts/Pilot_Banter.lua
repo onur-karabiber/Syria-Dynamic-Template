@@ -1,4 +1,7 @@
--- Pilot_Banter | v2.1.3
+-- Pilot_Banter | v2.1.4
+-- v2.1.4 (JTAC roster, Comms_Director >= v1.10.0): JTAC3 / JTAC4 silent and on station like JTAC1 / JTAC2, J3_OFF /
+--         J4_OFF cruise; "good hits" for every roster JTAC's target (deadJ1 .. deadJ4); fence out on REFUEL by
+--         vulDone (deadJ2 only for Comms_Director < v1.8.0).
 -- v2.1.3 (Onur, 2026-11-03): oxygen breathing 30 % quieter. DCS outSound* has no volume argument, so the level
 --         lives in the clips: Sounds/PBO/oxy_breath_01..12.ogg re-encoded at 0.70 amplitude (-3.1 dB, mean level
 --         -3.0 dB measured), sample counts unchanged -> CFG.OXY.LEN unchanged. No code change; CFG.VERSION now matches
@@ -97,7 +100,7 @@ if TRT.PB then
 end
 
 local CFG = {
-    VERSION      = "2.1.3",
+    VERSION      = "2.1.4",
     LEVEL        = "NORMAL",       -- start level: OFF | QUIET | NORMAL | CHATTY
     LEVELS = {
         QUIET  = { cruise = { 120, 240 }, muse = 0.30, max = 80 },
@@ -165,14 +168,14 @@ local CFG = {
         ZIPLIP = true, B_UPWIND = true, B_DOWNWIND = true, B_ABEAM = true,
     },
     -- Comms_Director phases with no banter while the NATIVE JTAC talks (no JTAC_Controller)
-    SILENT_CD = { JTAC1 = true, JTAC2 = true },
+    SILENT_CD = { JTAC1 = true, JTAC2 = true, JTAC3 = true, JTAC4 = true },   -- v2.1.4 roster
     -- JTAC_Controller phases of a 9-line in progress
     JC_SILENT = { CHECKIN = true, SITREP = true, GAMEPLAN = true, NINE = true, READBACK = true },
     -- cruise contexts (Comms_Director phases)
-    CRUISE_CD  = { STRIKE_OUT = true, ENROUTE = true, J1_OFF = true, J2_OFF = true, REFUEL = true,
+    CRUISE_CD  = { STRIKE_OUT = true, ENROUTE = true, J1_OFF = true, J2_OFF = true, J3_OFF = true, J4_OFF = true, REFUEL = true,
                    TKR_DONE = true, RTB = true, OVL_OUT = true, STRIKE_IN = true, INBOUND = true,
                    DIVERT = true },
-    STATION_CD = { JTAC1 = true, JTAC2 = true },
+    STATION_CD = { JTAC1 = true, JTAC2 = true, JTAC3 = true, JTAC4 = true },
     OUTBOUND_CD = { STRIKE_OUT = true, ENROUTE = true, HOLD = true },   -- v2.1.2 HOLD
     INBOUND_CD = { TKR_DONE = true, RTB = true, OVL_OUT = true, STRIKE_IN = true, INBOUND = true },
     FENCE_OUT_CD = { RTB = true, OVL_OUT = true, STRIKE_IN = true, INBOUND = true, DIVERT = true, RECOVERY = true },
@@ -2491,10 +2494,12 @@ local function WatchModules(u, air)
                 Fire((cd.surf == "LAND") and "feet_dry" or "feet_wet", "surface " .. prev .. " -> " .. cd.surf)
             end
         end
-        if W.dead1 == nil then W.dead1 = cd.deadJ1 and true or false end
-        if W.dead2 == nil then W.dead2 = cd.deadJ2 and true or false end
-        if cd.deadJ1 and not W.dead1 then W.dead1 = true; Fire("good_hits", "JTAC-1 target dead") end
-        if cd.deadJ2 and not W.dead2 then W.dead2 = true; Fire("good_hits", "JTAC-2 target dead") end
+        W.dead = W.dead or {}                                -- v2.1.4: every roster JTAC (deadJ1 .. deadJ4)
+        for n = 1, 4 do
+            local d = cd["deadJ" .. n]
+            if W.dead[n] == nil then W.dead[n] = d and true or false end
+            if d and not W.dead[n] then W.dead[n] = true; Fire("good_hits", "JTAC-" .. n .. " target dead") end
+        end
         local sp = cd.splashes or 0
         if W.splashes == nil then W.splashes = sp end
         if sp > W.splashes then W.splashes = sp; if air then Fire("cap_splash", "CAP splash") end end
@@ -2509,12 +2514,12 @@ local function WatchModules(u, air)
         if ph ~= W.cdPhase then
             local prev = W.cdPhase
             W.cdPhase = ph
-            if CFG.STATION_CD[ph] or ph == "J1_OFF" or ph == "J2_OFF" then
+            if CFG.STATION_CD[ph] or tostring(ph):match("^J%d_OFF$") then   -- v2.1.4
                 if not W.fenceIn and air and prev then W.fenceIn = true; Fire("fence_in", "CD " .. tostring(prev) .. " -> " .. ph) end
                 W.wasStation = true
             end
             if W.wasStation and not W.fenceOut and air
-                and (CFG.FENCE_OUT_CD[ph] or (ph == "REFUEL" and (cd.vulDone or cd.deadJ2))) then
+                and (CFG.FENCE_OUT_CD[ph] or (ph == "REFUEL" and (cd.vulDone or (cd.vulDone == nil and cd.deadJ2)))) then
                 W.fenceOut = true
                 Fire("fence_out", "CD " .. tostring(prev) .. " -> " .. tostring(ph))
             end

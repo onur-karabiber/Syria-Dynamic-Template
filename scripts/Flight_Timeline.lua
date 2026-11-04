@@ -1,4 +1,6 @@
--- Flight_Timeline | v1.3.1
+-- Flight_Timeline | v1.3.2
+-- v1.3.2 (JTAC roster, Comms_Director >= v1.10.0): the phases of JTACs 3 / 4 (JTAC3 / J3_OFF / JTAC4 / J4_OFF) count
+--         as mission / on-station phases like JTAC1 / JTAC2; the timeline text still names JTAC-1 / JTAC-2.
 -- v1.3.1 (2026-11-04): hero group, carrier, CP name / route point name / fallback position from CAS_PACK
 --         (scripts/CAS_Pack.lua) when it is loaded; the literals below remain the defaults without a pack.
 -- v1.3.0 (tasking scenarios, Comms_Director >= v1.8.0): VUL END (T3) = every tasking ended (CD.vulDone / vulT), in
@@ -94,7 +96,7 @@ end
 
 local PK = type(_G.CAS_PACK) == "table" and _G.CAS_PACK or { cp = { pos = {} } }   -- v1.3.1
 local CFG = {
-    VERSION        = "1.3.1",
+    VERSION        = "1.3.2",
     PLAYER_UNIT    = TRT.PLAYER_NAME or "Player_01",
     GROUP          = PK.group or "CAS-1",               -- ME group whose route builds the ATO
     CARRIER        = PK.carrier or "CVN",
@@ -173,12 +175,14 @@ local ORDER = { "M1", "M2", "T1", "T2", "T3", "T4" }
 local MISSION_PH = {
     STRIKE_OUT = true, STRIKE_CHK = true, OVL_OUT = true, ENROUTE = true, HOLD = true, JTAC1 = true, J1_OFF = true,
     JTAC2 = true, J2_OFF = true, REFUEL = true, TKR_DONE = true,
+    JTAC3 = true, J3_OFF = true, JTAC4 = true, J4_OFF = true,   -- v1.3.2 roster (Comms_Director >= v1.10.0)
 }
-local STATION_PH = { JTAC1 = true, J1_OFF = true, JTAC2 = true, J2_OFF = true, HOLD = true }   -- v1.3.0
+local STATION_PH = { JTAC1 = true, J1_OFF = true, JTAC2 = true, J2_OFF = true, HOLD = true,   -- v1.3.0
+                     JTAC3 = true, J3_OFF = true, JTAC4 = true, J4_OFF = true }              -- v1.3.2
 --- v1.3.0: on station = working / holding, or between two taskings
 local function onStationPh(cd)
     if not (cd and STATION_PH[cd.phase]) then return false end
-    if (cd.phase == "J1_OFF" or cd.phase == "J2_OFF") and cd.vulDone ~= nil then return not cd.vulDone end
+    if tostring(cd.phase):match("^J%d_OFF$") and cd.vulDone ~= nil then return not cd.vulDone end   -- v1.3.2
     return cd.phase ~= "J2_OFF"   -- CD < v1.8.0: J2_OFF = VUL complete
 end
 local function vulExt() local cd = TRT and TRT.CD; return (cd and tonumber(cd.vulExtS)) or 0 end
@@ -816,7 +820,7 @@ local function tick()
             TL.phase = cd.phase
             if not TL.phaseT[cd.phase] then TL.phaseT[cd.phase] = t end
             log("phase " .. tostring(cd.phase) .. " " .. clock(t))
-            if cd.phase == "RECOVERY" or ((cd.phase == "J1_OFF" or cd.phase == "J2_OFF") and onStationPh(cd) == false) then
+            if cd.phase == "RECOVERY" or (tostring(cd.phase):match("^J%d_OFF$") and onStationPh(cd) == false) then
                 snap("PH " .. cd.phase)
             end
         end

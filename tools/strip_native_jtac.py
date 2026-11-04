@@ -1,4 +1,5 @@
-# strip_native_jtac.py | v1.0.0
+# strip_native_jtac.py | v1.1.0
+# v1.1.0: plane and helicopter groups too (FAC-1 MQ-9, JTAC roster P3); their Orbit / other route tasks stay.
 # Removes the native DCS JTAC tasks (FAC, FAC_AttackGroup, FAC_EngageGroup, FAC_AttackUnit)
 # from the route tasks of the named ground groups, so that JTAC_Controller is the only JTAC
 # talking on their frequencies (plan claude/jtac-plan-2026-10-29.md, J2). Other route tasks
@@ -38,7 +39,8 @@ def strip(mission, names, dct=None):
     removed = 0
     for side in mission[b"coalition"].values():
         for c in side.get(b"country", {}).values():
-            for g in c.get(b"vehicle", {}).get(b"group", {}).values():
+            for g in [g for cat in (b"vehicle", b"plane", b"helicopter")   # v1.1.0
+                      for g in c.get(cat, {}).get(b"group", {}).values()]:
                 gn = resolve(g.get(b"name"), dct)
                 if gn not in want:
                     continue

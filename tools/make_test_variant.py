@@ -1,4 +1,6 @@
-# make_test_variant.py | v1.9.0
+# make_test_variant.py | v1.10.0
+# v1.10.0 (JTAC roster P3): --tasked J3,J4 sets CAS_PACK.tasked (the sortie's two taskings, fragged order) in the
+#          DO SCRIPT before Tasking_Pick (>= v1.3.0); tag "TSK34". --pick also takes J3 / J4 (flags 223 / 224).
 # v1.9.0: --audit (Tasking_Pick >= v1.1.0 / JTAC_Controller >= v0.14.2): flag 221 = 1, set before Tasking_Pick like
 #         --pick -> site check + dry JTAC post search for EVERY pool entry in one load. Tag "AUDIT".
 # v1.8.0: --pick J1=B,J2=C forces target-pool entries (Tasking_Pick v1.0.0, flags 217 / 219 = entry index in
@@ -194,11 +196,13 @@ def scen_tag(a):
     if a.first: parts.append("1ST" + a.first)
     if a.spoof: parts.append("SPF" + a.spoof)   # v1.6.0
     if getattr(a, "audit", False): parts.append("AUDIT")   # v1.9.0
-    if a.pick: parts.append("PK" + "".join(PICKS(a.pick).get(k, ("-", 0))[0] for k in ("J1", "J2")))   # v1.8.0
+    if getattr(a, "tasked", None): parts.append("TSK" + "".join(k[1:] for k in a.tasked.split(",")))   # v1.10.0
+    if a.pick: parts.append("PK" + "".join(PICKS(a.pick).get(k, ("-", 0))[0] for k in ("J1", "J2", "J3", "J4")
+                                           if k in PICKS(a.pick) or k in ("J1", "J2")))   # v1.8.0
     return "-".join(parts)
 
 
-PICK_FLAG = {"J1": 217, "J2": 219}   # v1.8.0 = Tasking_Pick CFG.FLAG
+PICK_FLAG = {"J1": 217, "J2": 219, "J3": 223, "J4": 224}   # v1.8.0 = Tasking_Pick CFG.FLAG (J3 / J4 v1.10.0)
 
 
 def PICKS(spec):
@@ -228,6 +232,12 @@ def add_pick_flags(mission, mapres, a):
         sets.append((221, 1))                                 # v1.9.0 Tasking_Pick audit mode
     code = "".join('trigger.action.setUserFlag("%d", %d); ' % fv for fv in sets)
     code += 'env.info("[TEST] pick flags: %s")' % ", ".join("%d=%d" % fv for fv in sets)
+    if getattr(a, "tasked", None):                            # v1.10.0
+        ks = [k.strip() for k in a.tasked.split(",")]
+        pack = dcslua.parse(open(os.path.join(REPO, "scripts", "CAS_Pack.lua"), "rb").read())[1]
+        if len(ks) != 2 or any(k.encode() not in pack[b"jtacs"] for k in ks):
+            sys.exit("--tasked: two JTAC keys of CAS_Pack.lua, e.g. J3,J4")
+        code += '; CAS_PACK.tasked = { "%s", "%s" }; env.info("[TEST] tasked %s %s")' % (ks[0], ks[1], ks[0], ks[1])
     acts = [rules[rk][b"actions"][i] for i in sorted(rules[rk][b"actions"])]
     pos = next(i for i, x in enumerate(acts) if x.get(b"file") == key)
     acts.insert(pos, {b"predicate": b"a_do_script", b"text": code.encode()})
@@ -341,6 +351,7 @@ def main():
     ap.add_argument("--spoof", choices=["J1", "J2", "both", "off"], help="v1.6.0 force the spoofed abort (flag 216)")
     ap.add_argument("--pick", help="v1.8.0 force target-pool entries, e.g. J1=B,J2=C (flags 217 / 219)")
     ap.add_argument("--audit", action="store_true", help="v1.9.0 audit every target-pool entry in one load (flag 221)")
+    ap.add_argument("--tasked", help="v1.10.0 the two taskings, e.g. J3,J4 (CAS_PACK.tasked before Tasking_Pick)")
     a = ap.parse_args()
     src = os.path.abspath(a.miz)
     if src.startswith(REPO + os.sep):
@@ -353,7 +364,7 @@ def main():
             _, mission = dcslua.parse(raw)
             print(stem, "->", key)
             build(mission, a, key)
-            if a.pick or a.audit:
+            if a.pick or a.audit or a.tasked:
                 add_pick_flags(mission, mapres, a)
             if not a.keep_red_air:
                 strip_red_air(mission)

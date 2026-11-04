@@ -1,5 +1,10 @@
--- Tasking_Pick | v1.2.0
+-- Tasking_Pick | v1.3.0
 --[[
+  v1.3.0 - JTAC roster (P3, CAS_PACK >= v1.3.0 with four JTACs): CAS_PACK.tasked = the sortie's two taskings
+           (written here when the pack has none: the first two of CAS_PACK.order; P4 will draw them). The weapons
+           check counts only the tasked JTACs; every JTAC with a pool still gets its pick (its world stays
+           consistent). Forced-pick flags J3 223 / J4 224. A pool with one weighted entry is picked without a
+           math.random draw (the later modules see the same random sequence whatever the roster size).
   v1.2.0 - effects-based tasking: the picked entry's objective goes into the pack (jtacs[k].objective); weapons
            check before anything is activated: the objectives of all picked entries together <= loadout MAV + LGB - 2
            (one spare per type, decision Onur 2026-11-04), random picks re-drawn up to CFG.TRIES times ("[PICK]
@@ -31,10 +36,10 @@ local TRT = _G.TRT
 if TRT.PICK then env.info("[PICK] already loaded, second copy ignored") return end
 
 local CFG = {
-    VERSION   = "1.2.0",
+    VERSION   = "1.3.0",
     TRIES     = 20,                       -- v1.2.0 re-draws for the weapons check
     AUDIT_FLAG = 221,                     -- v1.1.0 > 0: audit every pool entry
-    FLAG      = { J1 = 217, J2 = 219 },   -- forced entry index (0 = random)
+    FLAG      = { J1 = 217, J2 = 219, J3 = 223, J4 = 224 },   -- forced entry index (0 = random)
     SLOPE_MAX = 12,                       -- deg; steeper -> CHECK
     SCENERY_R = 12,                       -- m
 }
@@ -114,8 +119,12 @@ Log(string.format("rng %.6f (first math.random value this mission)", math.random
 local function Choose(k, pool)
     local f = CFG.FLAG[k] and Flag(CFG.FLAG[k]) or 0
     if f >= 1 and f <= #pool then return f, true end
-    local sum = 0
-    for _, e in ipairs(pool) do sum = sum + math.max(0, e.w or 0) end
+    local sum, nOn, only = 0, 0, nil
+    for i, e in ipairs(pool) do
+        sum = sum + math.max(0, e.w or 0)
+        if (e.w or 0) > 0 then nOn, only = nOn + 1, i end
+    end
+    if nOn == 1 then return only, false end   -- v1.3.0: one candidate, no draw (math.random sequence unchanged)
     if sum > 0 then
         local r, acc = math.random() * sum, 0
         for i, e in ipairs(pool) do
@@ -135,6 +144,11 @@ for _, k in ipairs(P.order or {}) do
     local j = P.jtacs[k]
     if j and type(j.pool) == "table" and #j.pool > 0 then keys[#keys + 1] = k end
 end
+-- v1.3.0: the two taskings of this sortie (Comms_Director CD.tasked reads it)
+if type(P.tasked) ~= "table" then P.tasked = { (P.order or {})[1], (P.order or {})[2] } end
+local tasked = {}
+for _, k in ipairs(P.tasked) do tasked[k] = true end
+Log("tasked: " .. table.concat(P.tasked, " "))
 local L = P.loadout or {}
 local cap = (L.MAV and L.LGB) and (L.MAV + L.LGB - 2) or nil
 local settled = false
@@ -144,8 +158,10 @@ for try = 1, CFG.TRIES do
         local j = P.jtacs[k]
         local idx, forced = Choose(k, j.pool)
         picks[k] = { idx = idx, forced = forced }
-        need = need + ObjN(j, j.pool[idx])
-        anyRandom = anyRandom or not forced
+        if tasked[k] then                                   -- v1.3.0
+            need = need + ObjN(j, j.pool[idx])
+            anyRandom = anyRandom or not forced
+        end
     end
     if not cap or need <= cap or not anyRandom then
         Log(string.format("weapons check: objectives %d, cap %s (try %d)%s", need, tostring(cap), try,

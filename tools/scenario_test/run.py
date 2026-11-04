@@ -1,4 +1,8 @@
-# scenario_test/run.py | v1.7.0
+# scenario_test/run.py | v1.8.0
+# v1.8.0: JTAC roster P3: world has AXEMAN 11 (JTAC-8, BASE YE55 insurgents) and DARKNIGHT 11 (ground team JTAC-4,
+#         MQ-9 FAC-1-1 designator, SAM BV53 + pool B / C); the bot takes the tasked pair from CAS_PACK.tasked
+#         (Tasking_Pick >= v1.3.0) and reads JTAC menu items by the pack call signs. Cases tasked_J3J4_* (A / B / C).
+#         ROSTER2=1 (environment): every case on the old two-JTAC pack (regression against older radio logs).
 # v1.7.0: opts pack_lua = Lua run right after CAS_Pack.lua (roster tests, Comms_Director v1.10.0 / JTAC_Controller
 #         v0.15.1): cases roster_J3_* replace J2 by a key J3 (same groups and voice) -> phases JTAC1 / J1_OFF / JTAC2 /
 #         J3_OFF, the scenarios on the slots.
@@ -44,11 +48,15 @@ CVN = (0.0, -420000.0)
 CP = (73640.0, -39914.0)
 T1 = (93640.0, -19914.0)          # Pointer 11 targets (SAM BV51 (SA-13)-1)
 T2 = (59271.0, -1176.0)           # Eyeball 11 targets (SAM YE53 (SA-8)-1), Comms_Director CFG.JTAC2_POS
+T3 = (71867.0, -8368.0)           # v1.8.0 Axeman 11 targets (BASE YE55 (Insurgent)-1)
+T4 = (53640.0, -19914.0)          # v1.8.0 Darknight 11 targets (SAM BV53 (SA-13)-1), mock position
 DEAD_S = 420
 POOL = [("CAS J1-B (Armor)-1", (T1[0] + 900, T1[1] + 400), ["T-72B", "BMP-1"]),
         ("CAS J1-C (Battery)-1", (T1[0] + 1500, T1[1] + 1500), ["SAU Gvozdika", "SAU Gvozdika"]),
         ("CAS J2-B (Armor)-1", (T2[0] + 900, T2[1] + 200), ["T-72B", "T-72B", "T-72B", "BMP-1"]),
-        ("CAS J2-C (Battery)-1", (T2[0] + 1500, T2[1] + 1200), ["SAU Gvozdika"] * 4)]
+        ("CAS J2-C (Battery)-1", (T2[0] + 1500, T2[1] + 1200), ["SAU Gvozdika"] * 4),
+        ("CAS J4-B (Armor)-1", (T4[0] + 900, T4[1] + 400), ["T-72B", "BMP-1"]),          # v1.8.0
+        ("CAS J4-C (Trucks)-1", (T4[0] + 1300, T4[1] + 1300), ["Ural-375", "Ural-375"])]
 MAGVAR = 5          # JTAC_Controller CFG.MAGVAR (east)
 MAX_S = 3 * 3600
 
@@ -77,14 +85,20 @@ class Run:
         for f in ("CAS_Pack.lua", "Tasking_Pick.lua", "Menu_Manager.lua", "Comms_Director.lua", "JTAC_Controller.lua"):
             if f == "Tasking_Pick.lua" and opts.get("pack_lua"):                         # v1.7.0
                 lua.execute(opts["pack_lua"])
+            elif f == "Tasking_Pick.lua" and os.environ.get("ROSTER2"):                  # v1.8.0 regression mode:
+                lua.execute("CAS_PACK.jtacs.J3, CAS_PACK.jtacs.J4 = nil, nil; "          # the 2-JTAC pack of
+                            "CAS_PACK.order = { 'J1', 'J2' }")                            # v1.2.x
             src = open(os.path.join(SCRIPTS, f), encoding="utf-8").read()
             ok = lua.eval("function(s, n) local f, e = load(s, '@' .. n); if not f then return e end "
                           "local ok, err = pcall(f); return ok and 'OK' or tostring(err) end")(src, f)
             if ok != "OK":
                 self.fail.append("load %s: %s" % (f, ok))
         self.TRT = lua.globals().TRT
-        o = lua.globals().CAS_PACK.order                                             # v1.7.0 roster keys
+        P = lua.globals().CAS_PACK                                                   # v1.7.0 roster keys
+        o = P.tasked or P.order                                                       # v1.8.0 the tasked pair
         self.K1, self.K2 = str(o[1]), str(o[2])
+        self.CS = {str(P.jtacs[k].cs): str(k) for k in P.order.values()}            # "AXEMAN 11" -> J3
+        self.TPOS = {"J1": T1, "J2": T2, "J3": T3, "J4": T4}
 
     # ── world ────────────────────────────────────────────────────────────────
     def setup_world(self):
@@ -126,6 +140,18 @@ class Run:
             g.inactive = True
         add("JTAC-1", 2, 2, units([{"name": "JTAC-1-1", "type": "Soldier M4", "x": T1[0] - 3000, "z": T1[1] - 1000}]))
         add("JTAC-2", 2, 2, units([{"name": "JTAC-2-1", "type": "Soldier M4", "x": T2[0] - 2500, "z": T2[1] - 1000}]))
+        # v1.8.0 roster P3
+        add("BASE YE55 (Insurgent)-1", 1, 2, units(
+            [{"name": "YE55-%d" % i, "type": t, "x": T3[0] + 15 * i, "z": T3[1] + 10 * (i % 3)}
+             for i, t in enumerate(["HL_DSHK", "Soldier AK", "Soldier AK", "Soldier RPG", "Soldier AK", "HL_DSHK",
+                                    "Soldier AK", "HL_DSHK"], 1)]))
+        add("SAM BV53 (SA-13)-1", 1, 2, units([{"name": "BV53-1", "type": "T-55", "x": T4[0], "z": T4[1]},
+                                              {"name": "BV53-2", "type": "Strela-10M3", "x": T4[0] - 300, "z": T4[1]}]))
+        add("JTAC-8", 2, 2, units([{"name": "JTAC-8-1", "type": "M1134 Stryker ATGM", "x": T3[0] - 450, "z": T3[1] - 160}]))
+        add("JTAC-4", 2, 2, units([{"name": "JTAC-4-1", "type": "M1134 Stryker ATGM", "x": T4[0] - 3200, "z": T4[1] - 3800}]))
+        fac = add("FAC-1", 2, 0, units([{"name": "FAC-1-1", "type": "MQ-9 Reaper", "x": T4[0] + 6900, "z": T4[1] - 2500,
+                                         "y": 7010}]))
+        fac.units[1].air = True
 
     # ── helpers ──────────────────────────────────────────────────────────────
     def t(self):
@@ -238,9 +264,9 @@ class Run:
         jc, cd = self.jc(), self.cd()
         for it in items:
             lbl = self.label(it)
-            m = re.match(r"(POINTER|EYEBALL) 11: ", lbl)
-            if m:
-                k = self.K1 if m.group(1) == "POINTER" else self.K2
+            m = re.match(r"([A-Z]+ 11): ", lbl)
+            if m and m.group(1) in self.CS:
+                k = self.CS[m.group(1)]
                 ph = jc.st[k].phase
                 if ph in DIALOG and self.tagged_pending("JC:" + k):
                     self.fail.append("%.0f GATE: '%s' offered while %s's call is still on the radio (%s)" %
@@ -312,7 +338,8 @@ class Run:
             if st.phase != "ATTACK":
                 self.attack.pop(k, None)
         # ATTACK: JTAC_Controller puts the next normal-flow call first (F1); never CEASE / NEGATIVE LASER
-        for k, who in ((self.K1, "POINTER"), (self.K2, "EYEBALL")):
+        for k in (self.K1, self.K2):
+            who = str(jc.CFG.JTACS[k].cs)[:-3]   # "POINTER 11" -> "POINTER"
             a = jc.st[k].att
             if str(jc.st[k].phase) == "ATTACK" and a is not None and a.inCalled and not a.cleared \
                     and not a.aborted and self.t() - float(a.inT or 0) < 30:
@@ -338,7 +365,7 @@ class Run:
                                 return None, None
                         return it, None
         order = [
-            r"WINCHESTER", r": ABORTING", r": OFF", r"how copy", r"(POINTER|EYEBALL) 11: check in",
+            r"WINCHESTER", r": ABORTING", r": OFF", r"how copy", r"[A-Z]+ 11: check in",
             r"ready for game plan", r"ready for 9-line", r"ready for remarks", r"READBACK \d/3",
             r"STRIKE: check in \(btn", r"OVERLORD: check in", r"OVERLORD: skip AR1",
             r"OVERLORD: continuing mission, no tanker",
@@ -352,7 +379,7 @@ class Run:
                 continue
             lbl = self.label(it)
             if re.search(r"READBACK \d/3", lbl):
-                k = self.K1 if lbl.startswith("POINTER") else self.K2
+                k = self.CS[lbl.split(":")[0]]
                 q = jc.st[k].quiz
                 cor = q["items"][q.step].correct
                 sub = it.sub
@@ -374,9 +401,9 @@ class Run:
         # movement
         if ph in ("IDLE", "DEPARTURE", "STRIKE_OUT", "STRIKE_CHK", "OVL_OUT", "ENROUTE", "HOLD"):
             self.move_toward(CP, 3 if ph == "HOLD" else 0, dt)
-        elif ph in ("JTAC1", self.K1 + "_OFF", "JTAC2", self.K2 + "_OFF"):
-            k = cd.cur or (self.K1 if ph in ("JTAC1", self.K1 + "_OFF") else self.K2)
-            self.move_toward(T1 if k == self.K1 else T2, 8, dt)
+        elif re.match(r"^JTAC\d$", ph) or ph.endswith("_OFF"):                     # v1.8.0 any roster JTAC
+            k = str(cd.cur) if cd.cur else self.K1
+            self.move_toward(self.TPOS[k], 8, dt)
         elif ph in ("REFUEL", "TKR_DONE", "RTB"):
             self.move_toward(CVN, 0, dt)
         self.burn(dt)
@@ -601,6 +628,21 @@ CASES = [
     ("roster_J3_LC_down", {210: 1, 211: 4, 212: 2, 214: 1}, {"pack_lua": J3_PACK},
      lambda r: [r.cd().res.J3 == "cancelled", radio_has(r, r"Eyeball 11 is off the net"),
                 seq_in(r.phases(), "JTAC1", "J1_OFF", "JTAC2", "J3_OFF", "REFUEL")]),
+    # v1.8.0 roster P3: AXEMAN 11 (J3) and DARKNIGHT 11 (J4, MQ-9 designator) tasked
+    ("tasked_J3J4_A", {210: 1, 211: 9, 212: 2, 214: 2}, {"pack_lua": "CAS_PACK.tasked = { 'J3', 'J4' }"},
+     lambda r: [seq_in(r.phases(), "ENROUTE", "JTAC3", "J3_OFF", "JTAC4", "J4_OFF", "REFUEL"),
+                r.cd().res.J3 == "done" and r.cd().res.J4 == "done", bool(r.cd().vulDone),
+                r.log_has(r"LASER ON J4 -> .* \(designator FAC-1-1\)"), r.log_has(r"GAME PLAN J4: Type 2"),
+                r.log_has(r"OBJECTIVE J3: destroy two technicals"), radio_has(r, r"DARKNIGHT 11.*TROOPS IN CONTACT"),
+                radio_has(r, r"mission 4103 and 4104"), radio_has(r, r"Line 2, mission 4103 and 4104")]),
+    ("tasked_J3J4_C", {210: 3, 212: 2}, {"pack_lua": "CAS_PACK.tasked = { 'J3', 'J4' }", "seed": 1},
+     lambda r: [seq_in(r.phases(), "JTAC3", "JTAC4", "J4_OFF", "JTAC3", "J3_OFF", "REFUEL"),
+                radio_has(r, r"divert, divert\. Darknight 11"), r.cd().dv.state == "accepted",
+                r.log_has(r"SUSPEND J3"), r.log_has(r"RESUME J3"),
+                r.cd().res.J3 == "done" and r.cd().res.J4 == "done"]),
+    ("tasked_J4J3_B", {210: 2, 211: 9, 212: 2, 214: 1, 215: 2}, {"pack_lua": "CAS_PACK.tasked = { 'J4', 'J3' }"},
+     lambda r: [seq_in(r.phases(), "HOLD", "JTAC3", "J3_OFF", "JTAC4", "J4_OFF", "REFUEL"),
+                r.cd().res.J3 == "done" and r.cd().res.J4 == "done", radio_has(r, r"off Axeman 11, mission 4103 complete")]),
 ] + [("random_%02d" % i, {}, {"seed": 100 + i}, lambda r: [bool(r.cd().vulDone)]) for i in range(1, 13)]
 
 

@@ -1,4 +1,6 @@
-# check_pack.py | v1.2.0
+# check_pack.py | v1.3.0
+# v1.3.0 (JTAC roster P3): weapons worst case = the two largest JTAC objectives (two taskings per sortie, not the
+#         whole roster); designator unit exists; JTAC button / alternate presets unique across the roster.
 # v1.2.0 (effects-based tasking): pack loadout (MAV / LGB) = the hero's pylons in the mission (known CLSIDs:
 #         AGM-65E single rail, GBU-12 single / BRU-33 pair); every pool entry has an objective whose n is not larger
 #         than its group(s); the largest possible pair of objectives vs MAV + LGB - 2 (Tasking_Pick re-draws above it).
@@ -104,6 +106,14 @@ def main():
     for k in p["order"]:
         if k not in p["jtacs"]:
             err.append("order: %s not in jtacs" % k)
+    btns = {}
+    for k, j in p["jtacs"].items():                             # v1.3.0
+        if j.get("designator") and j["designator"] not in units:
+            err.append("%s designator unit %r not in the mission" % (k, j["designator"]))
+        for b in (j["btn"], j["alt"]["btn"]):
+            if b in btns:
+                err.append("COMM1 button %d used by %s and %s" % (b, btns[b], k))
+            btns[b] = k
 
     for k, j in p["jtacs"].items():                             # v1.1.0 target pool
         pool = j.get("pool") or []
@@ -163,8 +173,9 @@ def main():
             if p["loadout"].get(cls) != have[cls]:
                 err.append("loadout %s: pack %s, %s pylons carry %d" % (cls, p["loadout"].get(cls), p["hero"], have[cls]))
         cap = p["loadout"].get("MAV", 0) + p["loadout"].get("LGB", 0) - 2
-        worst = sum(max((((e.get("objective") or j.get("objective") or {}).get("n") or 0) for e in (j.get("pool") or [j])),
-                        default=0) for j in p["jtacs"].values())
+        per = sorted((max((((e.get("objective") or j.get("objective") or {}).get("n") or 0) for e in (j.get("pool") or [j])),
+                          default=0) for j in p["jtacs"].values()), reverse=True)
+        worst = sum(per[:2])   # v1.3.0: two taskings per sortie
         if worst > cap:
             warn.append("weapons: the largest objectives together need %d > cap %d (Tasking_Pick re-draws random picks)"
                         % (worst, cap))

@@ -1,4 +1,5 @@
--- Flight_Report | v1.3.1
+-- Flight_Report | v1.3.2
+-- v1.3.2 (JTAC roster): the hard-deck count follows any working JTAC phase (JTAC<n> -> CAS_PACK.order[n]).
 -- v1.3.1 (Onur, 2026-11-03): hard deck tolerance doubled, HARD_DECK badge "Below the hard deck" needs 60 s (was 30 s)
 --         below CFG.HARD_DECK_FT in the engagement area. Still a badge only, no points.
 -- v1.3.0 (tasking scenarios, Comms_Director >= v1.8.0): a tasking cancelled for lost comms or a target destroyed
@@ -52,7 +53,7 @@ local TRT = _G.TRT
 if TRT.FlightReport then env.info("[FR] already loaded, second copy ignored") return end
 
 local CFG = {
-    VERSION   = "1.3.1",
+    VERSION   = "1.3.2",
     PLAYER    = TRT.PLAYER_NAME or "Player_01",
     CS        = "HORNET 51",
     DIR       = "FlightReport/",
@@ -180,7 +181,8 @@ end
 local function HardDeckTick()
     local u, cd, jc = Hero(), TRT.CD, TRT.JC
     if not (u and cd and jc and jc.st and u:inAir()) then return end
-    local k = (cd.phase == "JTAC1" and "J1") or (cd.phase == "JTAC2" and "J2")
+    local n = tonumber(tostring(cd.phase):match("^JTAC(%d)$"))   -- v1.3.2 roster index (Comms_Director >= v1.10.0)
+    local k = n and ((_G.CAS_PACK and _G.CAS_PACK.order and _G.CAS_PACK.order[n]) or ("J" .. n))
     local st = k and jc.st[k]
     if not (st and st.units and st.units[1] and st.units[1].pos) then return end
     local p, t = u:getPoint(), st.units[1].pos

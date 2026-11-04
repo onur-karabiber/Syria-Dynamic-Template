@@ -977,43 +977,8 @@ mission =
 														{
 															["auto"] = true,
 															["enabled"] = true,
-															["id"] = "FAC",
-															["number"] = 3,
-															["params"] = 
-															{
-																["callname"] = 3,
-																["datalink"] = true,
-																["designation"] = "Auto",
-																["frequency"] = 333100000,
-																["modulation"] = 0,
-																["number"] = 1,
-															},
-														},
-														[4] = 
-														{
-															["auto"] = false,
-															["enabled"] = true,
-															["id"] = "FAC_AttackGroup",
-															["number"] = 4,
-															["params"] = 
-															{
-																["callname"] = 3,
-																["datalink"] = true,
-																["designation"] = "Laser",
-																["frequency"] = 333100000,
-																["groupId"] = 1272,
-																["laserCode"] = 1688,
-																["modulation"] = 0,
-																["number"] = 1,
-																["weaponType"] = 9663676414,
-															},
-														},
-														[5] = 
-														{
-															["auto"] = true,
-															["enabled"] = true,
 															["id"] = "WrappedAction",
-															["number"] = 5,
+															["number"] = 3,
 															["params"] = 
 															{
 																["action"] = 
@@ -1027,12 +992,12 @@ mission =
 																},
 															},
 														},
-														[6] = 
+														[4] = 
 														{
 															["auto"] = true,
 															["enabled"] = true,
 															["id"] = "WrappedAction",
-															["number"] = 6,
+															["number"] = 4,
 															["params"] = 
 															{
 																["action"] = 
@@ -1046,12 +1011,12 @@ mission =
 																},
 															},
 														},
-														[7] = 
+														[5] = 
 														{
 															["auto"] = false,
 															["enabled"] = true,
 															["id"] = "Orbit",
-															["number"] = 7,
+															["number"] = 5,
 															["params"] = 
 															{
 																["altitude"] = 7010.4,
@@ -12795,6 +12760,66 @@ mission =
 											["x"] = 73444.0,
 											["y"] = -13087.0,
 										},
+										[6] = 
+										{
+											["ETA_locked"] = false,
+											["action"] = "Turning Point",
+											["alt"] = 7315.200000000001,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["name"] = "IP JACKAL",
+											["properties"] = 
+											{
+												["addopt"] = 
+												{
+												},
+											},
+											["speed"] = 179.86111111111,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 91114.0,
+											["y"] = -19480.0,
+										},
+										[7] = 
+										{
+											["ETA_locked"] = false,
+											["action"] = "Turning Point",
+											["alt"] = 7315.200000000001,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["name"] = "IP COBRA",
+											["properties"] = 
+											{
+												["addopt"] = 
+												{
+												},
+											},
+											["speed"] = 179.86111111111,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 82158.0,
+											["y"] = 39005.0,
+										},
 									},
 								},
 								["start_time"] = 0,
@@ -12833,11 +12858,11 @@ mission =
 													[7] = 252.1,
 													[8] = 252.3,
 													[9] = 255,
-													[10] = 262,
+													[10] = 333.5,
 													[11] = 259,
-													[12] = 268,
-													[13] = 252.2,
-													[14] = 260,
+													[12] = 333.1,
+													[13] = 256.0,
+													[14] = 258.0,
 													[15] = 263,
 													[16] = 261,
 													[17] = 267,
@@ -21242,30 +21267,8 @@ mission =
 														{
 															["auto"] = false,
 															["enabled"] = true,
-															["id"] = "FAC_AttackGroup",
-															["number"] = 5,
-															["params"] = 
-															{
-																["callname"] = 7,
-																["counterbattaryRadius"] = 0,
-																["datalink"] = true,
-																["designation"] = "Laser",
-																["frequency"] = 333500000,
-																["groupId"] = 944,
-																["laserCode"] = 1688,
-																["modulation"] = 0,
-																["number"] = 1,
-																["weaponType"] = 9663676414,
-																["x"] = 70592.189094607,
-																["y"] = 11461.140236946,
-															},
-														},
-														[6] = 
-														{
-															["auto"] = false,
-															["enabled"] = true,
 															["id"] = "WrappedAction",
-															["number"] = 6,
+															["number"] = 5,
 															["params"] = 
 															{
 																["action"] = 
@@ -21280,12 +21283,12 @@ mission =
 																},
 															},
 														},
-														[7] = 
+														[6] = 
 														{
 															["auto"] = false,
 															["enabled"] = true,
 															["id"] = "WrappedAction",
-															["number"] = 7,
+															["number"] = 6,
 															["params"] = 
 															{
 																["action"] = 
@@ -21293,7 +21296,7 @@ mission =
 																	["id"] = "SetCallsign",
 																	["params"] = 
 																	{
-																		["callname"] = 7,
+																		["callname"] = 1,
 																		["callnameFlag"] = true,
 																		["number"] = 1,
 																	},
@@ -25499,6 +25502,166 @@ mission =
 								["visible"] = false,
 								["x"] = 137763.02562542,
 								["y"] = -269000.32750679,
+							},
+							[24] = 
+							{
+								["groupId"] = 3178,
+								["hidden"] = true,
+								["hiddenOnPlanner"] = true,
+								["name"] = "JTAC-4",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["ETA"] = 0,
+											["ETA_locked"] = true,
+											["action"] = "Off Road",
+											["alt"] = 165,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["speed"] = 0,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+														[1] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 1,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "Option",
+																	["params"] = 
+																	{
+																		["name"] = 0,
+																		["value"] = 4,
+																	},
+																},
+															},
+														},
+														[2] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 2,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "SetInvisible",
+																	["params"] = 
+																	{
+																		["value"] = true,
+																	},
+																},
+															},
+														},
+														[3] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 3,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "SetImmortal",
+																	["params"] = 
+																	{
+																		["value"] = true,
+																	},
+																},
+															},
+														},
+														[4] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 4,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "SetFrequency",
+																	["params"] = 
+																	{
+																		["frequency"] = 333100000,
+																		["modulation"] = 0,
+																		["power"] = 10000,
+																	},
+																},
+															},
+														},
+														[5] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 5,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "SetCallsign",
+																	["params"] = 
+																	{
+																		["callname"] = 2,
+																		["callnameFlag"] = true,
+																		["number"] = 1,
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 56720.069602,
+											["y"] = 35174.929724,
+										},
+									},
+									["spans"] = 
+									{
+									},
+								},
+								["start_time"] = 0,
+								["task"] = "Ground Nothing",
+								["taskSelected"] = true,
+								["tasks"] = 
+								{
+								},
+								["uncontrollable"] = false,
+								["units"] = 
+								{
+									[1] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 5.1487212933833,
+										["name"] = "JTAC-4-1",
+										["playerCanDrive"] = true,
+										["skill"] = "Excellent",
+										["type"] = "M1134 Stryker ATGM",
+										["unitId"] = 5592,
+										["x"] = 56720.069602,
+										["y"] = 35174.929724,
+									},
+								},
+								["visible"] = false,
+								["x"] = 56720.069602,
+								["y"] = 35174.929724,
 							},
 						},
 					},
@@ -95527,6 +95690,324 @@ mission =
 								["visible"] = false,
 								["x"] = -200098.46451194,
 								["y"] = -57080.438192095,
+							},
+							[90] = 
+							{
+								["groupId"] = 3179,
+								["hidden"] = true,
+								["hiddenOnMFD"] = true,
+								["hiddenOnPlanner"] = true,
+								["lateActivation"] = true,
+								["name"] = "CAS J4-B (Armor)-1",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["ETA"] = 0,
+											["ETA_locked"] = true,
+											["action"] = "Off Road",
+											["alt"] = 161,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["speed"] = 0,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+														[1] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 1,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "Option",
+																	["params"] = 
+																	{
+																		["name"] = 30,
+																		["value"] = 31.0896,
+																	},
+																},
+															},
+														},
+														[2] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 2,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "Option",
+																	["params"] = 
+																	{
+																		["name"] = 0,
+																		["value"] = 4,
+																	},
+																},
+															},
+														},
+														[3] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "Hold",
+															["number"] = 3,
+															["params"] = 
+															{
+																["templateId"] = "",
+															},
+														},
+														[4] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 4,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "Option",
+																	["params"] = 
+																	{
+																		["name"] = 8,
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 61437.515843,
+											["y"] = 39552.384168,
+										},
+									},
+									["spans"] = 
+									{
+										[1] = 
+										{
+											[1] = 
+											{
+												["x"] = 61437.515843,
+												["y"] = 39552.384168,
+											},
+											[2] = 
+											{
+												["x"] = 61437.515843,
+												["y"] = 39552.384168,
+											},
+										},
+									},
+								},
+								["start_time"] = 0,
+								["task"] = "Ground Nothing",
+								["taskSelected"] = true,
+								["tasks"] = 
+								{
+								},
+								["uncontrollable"] = false,
+								["units"] = 
+								{
+									[1] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 3.490659,
+										["name"] = "CAS J4-B (Armor)-1-1",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "T-72B",
+										["unitId"] = 5593,
+										["x"] = 61428.96534,
+										["y"] = 39575.876484,
+									},
+									[2] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 3.490659,
+										["name"] = "CAS J4-B (Armor)-1-2",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "BMP-1",
+										["unitId"] = 5594,
+										["x"] = 61446.066347,
+										["y"] = 39528.891853,
+									},
+								},
+								["visible"] = false,
+								["x"] = 61437.515843,
+								["y"] = 39552.384168,
+							},
+							[91] = 
+							{
+								["groupId"] = 3180,
+								["hidden"] = true,
+								["hiddenOnMFD"] = true,
+								["hiddenOnPlanner"] = true,
+								["lateActivation"] = true,
+								["name"] = "CAS J4-C (Trucks)-1",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["ETA"] = 0,
+											["ETA_locked"] = true,
+											["action"] = "Off Road",
+											["alt"] = 161,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["speed"] = 0,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+														[1] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 1,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "Option",
+																	["params"] = 
+																	{
+																		["name"] = 30,
+																		["value"] = 31.0896,
+																	},
+																},
+															},
+														},
+														[2] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 2,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "Option",
+																	["params"] = 
+																	{
+																		["name"] = 0,
+																		["value"] = 4,
+																	},
+																},
+															},
+														},
+														[3] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "Hold",
+															["number"] = 3,
+															["params"] = 
+															{
+																["templateId"] = "",
+															},
+														},
+														[4] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 4,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "Option",
+																	["params"] = 
+																	{
+																		["name"] = 8,
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 61334.00765,
+											["y"] = 41430.02307,
+										},
+									},
+									["spans"] = 
+									{
+										[1] = 
+										{
+											[1] = 
+											{
+												["x"] = 61334.00765,
+												["y"] = 41430.02307,
+											},
+											[2] = 
+											{
+												["x"] = 61334.00765,
+												["y"] = 41430.02307,
+											},
+										},
+									},
+								},
+								["start_time"] = 0,
+								["task"] = "Ground Nothing",
+								["taskSelected"] = true,
+								["tasks"] = 
+								{
+								},
+								["uncontrollable"] = false,
+								["units"] = 
+								{
+									[1] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 3.490659,
+										["name"] = "CAS J4-C (Trucks)-1-1",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "Ural-375",
+										["unitId"] = 5595,
+										["x"] = 61327.167247,
+										["y"] = 41448.816922,
+									},
+									[2] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 3.490659,
+										["name"] = "CAS J4-C (Trucks)-1-2",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "Ural-375",
+										["unitId"] = 5596,
+										["x"] = 61367.328731,
+										["y"] = 41426.188285,
+									},
+								},
+								["visible"] = false,
+								["x"] = 61334.00765,
+								["y"] = 41430.02307,
 							},
 						},
 					},

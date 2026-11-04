@@ -1,4 +1,8 @@
-# make_clips.py | v1.12.2
+# make_clips.py | v1.13.0
+# v1.13.0: voices AXEMAN (AXEMAN 11, JTAC-8) / DARKNIGHT (DARKNIGHT 11, FAC-1 area): libritts-high speakers 825
+#          (male, F0 ~128 Hz) / 625 (female, F0 ~200 Hz). Picked 2026-11-04 out of 60 speakers: one-word token
+#          "eight" not collapsed, then call sign / laser code / grid digits through the radio chain scored by an
+#          ASR model (20/24 each, best of 12); A/B listened and approved by Onur 2026-11-04 13:01.
 # v1.12.2: voices AI41 / AI42 (Traffic.lua AI receivers Hornet 41 / 42 at the tanker): libritts-high speakers
 #          300 / 200 (the LTAG_GND / LTAG_APP men; never on the air together with Incirlik). Not A/B listened.
 # v1.12.1: voice TOWER (CV Tower / Air Boss, libritts-high speaker 120) for the CV_Comms v1.7.4 t_* clips.
@@ -101,6 +105,8 @@ VOICE = {
     'VIPER21':   'en_US-bryce-medium.onnx',   # v1.7.0 INTER-2 lead
     'AI41':      ('en_US-libritts-high.onnx', 1.0, 300, 1.0),  # v1.12.2 Traffic AI receiver Hornet 41
     'AI42':      ('en_US-libritts-high.onnx', 1.0, 200, 1.0),  # v1.12.2 Traffic AI receiver Hornet 42
+    'AXEMAN':    ('en_US-libritts-high.onnx', 1.0, 825, 1.0),  # v1.13.0 AXEMAN 11 (JTAC-8, CAS_PACK J3)
+    'DARKNIGHT': ('en_US-libritts-high.onnx', 1.0, 625, 1.0),  # v1.13.0 DARKNIGHT 11 (FAC-1 area, CAS_PACK J4)
     # Field_Comms (--set fc). Civil / foreign ATC is cast British so the switch
     # to Strike (US Navy, joe) lands as an audible change of world; Cyprus ATC
     # English is British-influenced anyway. No Turkish Piper voice exists.

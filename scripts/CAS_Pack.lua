@@ -1,4 +1,9 @@
--- CAS_Pack | v1.2.1
+-- CAS_Pack | v1.3.0
+-- v1.3.0 (2026-11-04, roster P3, decisions Onur 12:41): J3 AXEMAN 11 (JTAC-8, BASE YE55 insurgents, IP JACKAL,
+--         COMM1 10 / alternate 13) and J4 DARKNIGHT 11 (ground team JTAC-4, MQ-9 FAC-1 = designator, SAM BV53,
+--         IP COBRA, COMM1 12 / alternate 14). jtacs[k].designator = unit that lases and observes (JTAC_Controller
+--         >= v0.16.0); no op table: the JTAC stays at its ME position. order = the roster; CD.tasked = the
+--         first two (Pointer 11, Eyeball 11) until P4 picks two at random.
 -- v1.2.1 (2026-11-04, roster P2): jtacs[k].cn = clip name of the JTAC in OVERLORD / pilot clips (ovl_contact_<cn>_b,
 --         p_ovl_off_<cn>_a); jtacs[k].injects = true: the abort / rearm / MANPADS injects belong to this JTAC
 --         (Comms_Director >= v1.10.0). order = the roster (index n -> CD phase JTAC<n>).
@@ -22,7 +27,7 @@
 -- Positions: DCS world x = north (ME x), z = east (ME y), metres.
 
 CAS_PACK = {
-    version = "1.2.1",
+    version = "1.3.0",
 
     hero    = "Player_01",       -- unit
     group   = "CAS-1",           -- hero's ME group (route = ATO)
@@ -105,8 +110,55 @@ CAS_PACK = {
             friendly_ofs = { brg = 200, m = 1000 },
             op = { auto = true, brg = 250, m = 2500, dmin = 1500, dmax = 4000, step = 150 },
         },
+        J3 = {                                       -- v1.3.0 (P3)
+            cs = "AXEMAN 11", disp = "Axeman 11", short = "Axeman",
+            group = "JTAC-8",
+            btn = 10, freq = "333.50", ch = "AXEMAN",
+            alt = { btn = 13, freq = "256.00" },
+            vp = "aj", ck = "axe", cn = "axeman",
+            msn = "4103",
+            area = "YE 55",
+            targets = { "BASE YE55 (Insurgent)-1" },     -- SAM YE55 (SA-8)-1 sits next to it (threat remark)
+            pool = {
+                { id = "A", name = "insurgent technicals", targets = { "BASE YE55 (Insurgent)-1" }, w = 1,
+                  objective = { n = 2, types = { "HL_DSHK" } } },
+            },
+            ip = { name = "JACKAL", mgrs = "36S YE 3968 6905" },
+            egress = "northwest, feet wet",
+            mark = { kind = "laser", code = 1688 },
+            ord = "one GBU-12",
+            objective = { n = 2, types = { "HL_DSHK" } },
+            friendly_ofs = { brg = 200, m = 1000 },
+            op = { auto = true, brg = 250, m = 2500, dmin = 1500, dmax = 4000, step = 150 },
+        },
+        J4 = {
+            cs = "DARKNIGHT 11", disp = "Darknight 11", short = "Darknight",
+            group = "JTAC-4",                            -- ground team (tools/add_roster_jtacs.py)
+            designator = "FAC-1-1",                      -- MQ-9 Reaper: lases and observes (no terrain masking)
+            btn = 12, freq = "333.10", ch = "DARKNIGHT",
+            alt = { btn = 14, freq = "258.00" },
+            vp = "dj", ck = "dkn", cn = "darknight",
+            msn = "4104",
+            area = "BV 53",
+            targets = { "SAM BV53 (SA-13)-1" },
+            pool = {
+                { id = "A", name = "SHORAD site",   targets = { "SAM BV53 (SA-13)-1" }, w = 1,
+                  objective = { n = 1, types = { "Strela-10M3" } } },
+                { id = "B", name = "armor section", targets = { "CAS J4-B (Armor)-1" },  w = 0,
+                  objective = { n = 1, types = { "T-72B" } } },
+                { id = "C", name = "supply trucks", targets = { "CAS J4-C (Trucks)-1" }, w = 0,
+                  objective = { n = 1, types = { "Ural-375" } } },
+            },
+            ip = { name = "COBRA", mgrs = "37S BV 5620 6202" },
+            egress = "west to TIGER",
+            mark = { kind = "laser", code = 1688 },
+            ord = "one AGM-65E",
+            objective = { n = 1, types = { "Strela-10M3" } },
+            friendly_ofs = { brg = 200, m = 1200 },
+            -- no op: the ground team stays at its ME position (the MQ-9 observes and lases)
+        },
     },
-    order = { "J1", "J2" },      -- roster (index n -> CD phase JTAC<n>); CD.tasked = the first two (P2), fragged order
+    order = { "J1", "J2", "J3", "J4" },   -- roster (index n -> CD phase JTAC<n>); CD.tasked = the first two (P2), fragged order
 
     friendly = { name = "Bravo 2-1", cs = "BRAVO 2-1",
                  units = { "M-2 Bradley", "M-2 Bradley", "Soldier M4", "Soldier M4", "Soldier M4" } },

@@ -1,4 +1,10 @@
-# jc_clips.py | v1.5.1
+# jc_clips.py | v1.6.0
+# v1.6.0 (JTAC roster P3): JTACs aj (AXEMAN 11, voice AXEMAN) and dj (DARKNIGHT 11, voice DARKNIGHT, spoken
+#         "Dark Knight one one": written as one word Piper / listeners hear "dark bank"); their pilot / OVERLORD
+#         rows are copies of the Eyeball rows (ROSTER below); label "technical" (HL_DSHK); IPs Jackal / Cobra;
+#         the Lua egress map lists every JTAC prefix. The JTAC_Controller v0.14.1 / v0.15.0 tokens that had been
+#         added to the generated blocks by hand (self-propelled howitzer, desired effect destroy, withdrawing,
+#         location, still a threat to friendlies) are now in this file (same ids, same texts).
 # v1.5.1: pilot "Hornet five one, wilco." (jp_wilco) after "readback correct ... report IP inbound" (JTAC_Controller v0.13.1).
 # v1.5.0: spoofed abort / AUTHENTICATE (JTAC_Controller v0.13.0): JTAC iauth, spf_dis, spf_neg, spf_adv;
 #         pilot jp_auth_ptr / jp_auth_eye.
@@ -38,7 +44,12 @@ LBEGIN, LEND = "-- BEGIN VOICE (tools/jc_clips.py)", "-- END VOICE"
 JTACS = {   # prefix -> (voice, written self, spoken self, written egress, spoken egress)
     "pj": ("POINTER_JC>POINTER", "pointer 11", "Pointer one one", "egress north to tiger", "Egress north to Tiger."),
     "ej": ("EYEBALL", "eyeball 11", "Eyeball one one", "egress northwest feet wet", "Egress north west, feet wet."),
+    "aj": ("AXEMAN", "axeman 11", "Axeman one one", "egress northwest feet wet", "Egress north west, feet wet."),   # v1.6.0
+    "dj": ("DARKNIGHT", "darknight 11", "Dark Knight one one", "egress west to tiger", "Egress west to Tiger."),
 }
+# v1.6.0: JTACs beyond Pointer / Eyeball: Comms_Director clip key (ck) -> (written, spoken) call sign. Their pilot
+# (jp_*_<ck>) and OVERLORD (ovl_rep_<ck>) rows are the Eyeball rows with the call sign replaced.
+ROSTER = {"axe": ("axeman 11", "Axeman one one"), "dkn": ("darknight 11", "Dark Knight one one")}
 DIGITS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "niner"]
 NATO = ["Alfa", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel", "India", "Juliett", "Kilo",
         "Lima", "Mike", "November", "Oscar", "Papa", "Quebec", "Romeo", "Sierra", "Tango", "Uniform",
@@ -71,7 +82,10 @@ LABELS = {
     "BMP": ("B M P", "B M Ps"),
     "truck": ("truck", "trucks"),
     "infantry": ("infantry", "infantry"),
+    "technical": ("technical", "technicals"),   # v1.6.0 HL_DSHK
+    "self-propelled howitzer": ("self propelled howitzer", "self propelled howitzers"),   # JC v0.14.1
 }
+LABEL_ID = {"self-propelled howitzer": "sp_howitzer"}   # v1.6.0: clip id suffix where it is not slug(label)
 ORDS = {"one AGM-65E": "one A G M sixty five echo", "one GBU-12": "one G B U twelve"}
 
 # name -> (written key, spoken)   {s} / {S} = own call sign
@@ -96,6 +110,8 @@ JP = {
     "cs": ("hornet 51", "Hornet five one,"),
     "ip_lynx": ("lynx", "Lynx."),
     "ip_puma": ("puma", "Puma."),
+    "ip_jackal": ("jackal", "Jackal."),   # v1.6.0
+    "ip_cobra": ("cobra", "Cobra."),
     "w_keyhole": ("keyhole", "Keyhole"),
     "w_laser": ("laser", "Laser"),
     "w_toc": ("troops in contact", "troops in contact."),
@@ -172,6 +188,11 @@ JP = {
     "spf_adv": ("hornet 51 {s} be advised last abort was not {s}", "Hornet five one, {S}, be advised, last abort was not {S}."),
     "w_and": ("and", "and"),
     "w_meters": ("meters", "meters."),
+    # JTAC_Controller v0.15.0 effects-based tasking
+    "w_desired_destroy": ("desired effect destroy", "Desired effect, destroy"),
+    "w_withdrawing": ("withdrawing", "withdrawing"),
+    "w_location": ("location", "Location,"),
+    "w_still_threat": ("still a threat to friendlies", "still a threat to friendlies."),
     "w_point": (None, "point"),
     "w_hundred": (None, "hundred"),
     "w_thousand": (None, "thousand"),
@@ -244,6 +265,17 @@ OVL = {
 }
 
 
+def _roster_copies(tab):   # v1.6.0
+    for ck, (w, sp) in ROSTER.items():
+        for cid, (kw, ksp) in list(tab.items()):
+            if cid.endswith("_eye"):
+                tab[cid[:-4] + "_" + ck] = (kw.replace("eyeball 11", w), ksp.replace("Eyeball one one", sp))
+
+
+_roster_copies(PILOT)
+_roster_copies(OVL)
+
+
 def norm(t):
     t = t.lower().replace("\n", " ")
     t = re.sub(r"(\d)\.(\d)", r"\1<dot>\2", t)
@@ -260,9 +292,10 @@ def label_keys():
     for lab, (sg, pl) in LABELS.items():
         w = norm(lab)
         wpl = w if (lab == "infantry" or "MANPADS" in lab) else w + "s"
-        out.append(("lab_" + slug(lab), w, sg))
+        sid = LABEL_ID.get(lab, slug(lab))
+        out.append(("lab_" + sid, w, sg))
         if wpl != w:
-            out.append(("lab_" + slug(lab) + "_pl", wpl, pl))
+            out.append(("lab_" + sid + "_pl", wpl, pl))
     return out
 
 
@@ -304,9 +337,9 @@ def lua_dict():
     pl = {w: k for k, (w, _) in PILOT.items()}
     ov = {w: k for k, (w, _) in OVL.items()}
     maxlen = max(len(w.split()) for w in list(jt) + list(pl) + list(ov))
-    L = [LBEGIN, "-- generated by tools/jc_clips.py v1.1.0 - do not edit by hand", "local VOICE = {"]
+    L = [LBEGIN, "-- generated by tools/jc_clips.py v1.6.0 - do not edit by hand", "local VOICE = {"]
     L.append("    maxlen = %d," % maxlen)
-    L.append("    egress = { pj = %s, ej = %s }," % (q(JTACS["pj"][3]), q(JTACS["ej"][3])))
+    L.append("    egress = { %s }," % ", ".join("%s = %s" % (p, q(v[3])) for p, v in JTACS.items()))   # v1.6.0
     L.append("    jtac = {   -- written key ({s} = own call sign) -> suffix (<prefix>_<suffix>)")
     for w in sorted(jt):
         L.append("        [%s] = %s," % (q(w), q(jt[w])))

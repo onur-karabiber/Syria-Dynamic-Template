@@ -295,6 +295,74 @@ p_ovl_neg_tkr_a;PILOT;Overlord, Hornet five one, negative Texaco,;tok:0.1
 p_ovl_cont_notkr_a;PILOT;Overlord, Hornet five one, continuing mission without tanker,;tok:0.1
 i_rmk_can1;PILOT;Mission four one zero one cancelled, no JTAC contact.;tok
 i_rmk_can2;PILOT;Mission four one zero two cancelled, no JTAC contact.;tok
+i_l2_a;PILOT;Line two, mission;tok:0.1
+i_rmk_msn;PILOT;Mission;tok:0.05
+i_rmk_inc_b;PILOT;incomplete, Winchester.;tok
+i_rmk_can_b;PILOT;cancelled, no JTAC contact.;tok
+# BEGIN ROSTER (tools/roster_clips.py)
+axe_tic;AXEMAN;Hornet five one, Axeman one one, troops in contact! Troops in contact! Bravo two one is taking effective fire from enemy armor. Request immediate close air support, say time out.;tok
+axe_tic_ack;AXEMAN;Hornet five one, copy. Check in when ready for nine-line, we need you now.;tok
+fr_axe_1;FRIENDLY>AXEMAN;Axeman, Bravo two one! We are pinned down, taking heavy fire from the ridge. Where is my air?;tok
+fr_axe_2;FRIENDLY>AXEMAN;Axeman, Bravo two one, we have one wounded! I need that air now!;tok
+fr_axe_3;FRIENDLY>AXEMAN;Axeman, Bravo two one, enemy armor is pushing toward our position!;tok
+fr_axe_4;FRIENDLY>AXEMAN;Axeman, Bravo two one, we are running low on ammo. We can't hold much longer!;tok
+fr_axe_bda;FRIENDLY>AXEMAN;Axeman, Bravo two one, contact broken, fire has stopped. Tell that Hornet thanks.;tok
+axe_t1;AXEMAN;Bravo two one, Axeman. Fast movers inbound, minutes out. Keep your heads down.;tok
+axe_t2;AXEMAN;Copy one wounded. Hornet five one, Axeman, friendlies are taking casualties. Expedite.;tok
+axe_t3;AXEMAN;Bravo two one, hold what you've got. Hornet five one, Axeman, enemy is closing on friendlies. Say time out.;tok
+axe_t4;AXEMAN;Copy, Bravo two one. Air is almost overhead, hang on.;tok
+axe_bda;AXEMAN;Hornet five one, Axeman one one, good hits, good hits! Enemy fire has stopped.;tok
+axe_rb_ok;AXEMAN;Hornet five one, Axeman one one, readback correct.;tok
+axe_laser_on;AXEMAN;Hornet five one, Axeman one one, laser on, code one six eight eight.;tok
+axe_laser_shift;AXEMAN;Axeman one one, shifting laser to next target, same code.;tok
+axe_laser_off;AXEMAN;Axeman one one, laser off.;tok
+p_rb_axe;PILOT>AXEMAN;Axeman one one, Hornet five one, readback.;tok:0.2
+p_rel_axe;PILOT>AXEMAN;Axeman one one, Hornet five one,;tok:0.08
+p_tic_copy_axe;PILOT>AXEMAN;Axeman one one, Hornet five one, copy troops in contact,;tok:0.1
+p_unable_axe;PILOT>OVERLORD;Overlord, Hornet five one, unable contact Axeman one one.;tok
+ovl_contact_axeman_b;OVERLORD;Axeman one one is on station. Contact Axeman one one, push button ten. Return to this button on check-out.;tok
+ovl_tic_axeman_b;OVERLORD;Axeman one one reports troops in contact, priority immediate. Contact Axeman one one, push button ten, without delay. Return to this button on check-out.;tok
+p_ovl_off_axeman_a;PILOT;Overlord, Hornet five one, off Axeman one one, mission four one zero three complete,;tok:0.1
+ovl_lc_alt_axe;OVERLORD;Hornet five one, Overlord. Axeman one one reports radio failure on primary. Contact Axeman one one on alternate, push button thirteen.;tok
+ovl_lc_down_axe;OVERLORD;Hornet five one, Overlord. Axeman one one is off the net, unable to raise. Mission four one zero three cancelled.;tok
+p_divert_axe;PILOT>AXEMAN;Axeman one one, Hornet five one, diverted by Overlord to troops in contact. Will return when able.;tok
+axe_divert_ack;AXEMAN;Hornet five one, Axeman one one, copy. No other CAS available, we'll hold. Return when able.;tok
+ovl_resume_axe;OVERLORD;Axeman one one is holding. Contact Axeman one one, push button ten.;tok
+p_push_10;PILOT;Push button ten, Hornet five one.;tok
+p_push_13;PILOT;Push button thirteen, Hornet five one.;tok
+p_tic_push_10;PILOT>OVERLORD;Push button ten, Hornet five one, buster.;tok
+dkn_tic;DARKNIGHT;Hornet five one, Dark Knight one one, troops in contact! Troops in contact! Bravo two one is taking effective fire from enemy armor. Request immediate close air support, say time out.;tok
+dkn_tic_ack;DARKNIGHT;Hornet five one, copy. Check in when ready for nine-line, we need you now.;tok
+fr_dkn_1;FRIENDLY>DARKNIGHT;Dark Knight, Bravo two one! We are pinned down, taking heavy fire from the ridge. Where is my air?;tok
+fr_dkn_2;FRIENDLY>DARKNIGHT;Dark Knight, Bravo two one, we have one wounded! I need that air now!;tok
+fr_dkn_3;FRIENDLY>DARKNIGHT;Dark Knight, Bravo two one, enemy armor is pushing toward our position!;tok
+fr_dkn_4;FRIENDLY>DARKNIGHT;Dark Knight, Bravo two one, we are running low on ammo. We can't hold much longer!;tok
+fr_dkn_bda;FRIENDLY>DARKNIGHT;Dark Knight, Bravo two one, contact broken, fire has stopped. Tell that Hornet thanks.;tok
+dkn_t1;DARKNIGHT;Bravo two one, Dark Knight. Fast movers inbound, minutes out. Keep your heads down.;tok
+dkn_t2;DARKNIGHT;Copy one wounded. Hornet five one, Dark Knight, friendlies are taking casualties. Expedite.;tok
+dkn_t3;DARKNIGHT;Bravo two one, hold what you've got. Hornet five one, Dark Knight, enemy is closing on friendlies. Say time out.;tok
+dkn_t4;DARKNIGHT;Copy, Bravo two one. Air is almost overhead, hang on.;tok
+dkn_bda;DARKNIGHT;Hornet five one, Dark Knight one one, good hits, good hits! Enemy fire has stopped.;tok
+dkn_rb_ok;DARKNIGHT;Hornet five one, Dark Knight one one, readback correct.;tok
+dkn_laser_on;DARKNIGHT;Hornet five one, Dark Knight one one, laser on, code one six eight eight.;tok
+dkn_laser_shift;DARKNIGHT;Dark Knight one one, shifting laser to next target, same code.;tok
+dkn_laser_off;DARKNIGHT;Dark Knight one one, laser off.;tok
+p_rb_dkn;PILOT>DARKNIGHT;Dark Knight one one, Hornet five one, readback.;tok:0.2
+p_rel_dkn;PILOT>DARKNIGHT;Dark Knight one one, Hornet five one,;tok:0.08
+p_tic_copy_dkn;PILOT>DARKNIGHT;Dark Knight one one, Hornet five one, copy troops in contact,;tok:0.1
+p_unable_dkn;PILOT>OVERLORD;Overlord, Hornet five one, unable contact Dark Knight one one.;tok
+ovl_contact_darknight_b;OVERLORD;Dark Knight one one is on station. Contact Dark Knight one one, push button twelve. Return to this button on check-out.;tok
+ovl_tic_darknight_b;OVERLORD;Dark Knight one one reports troops in contact, priority immediate. Contact Dark Knight one one, push button twelve, without delay. Return to this button on check-out.;tok
+p_ovl_off_darknight_a;PILOT;Overlord, Hornet five one, off Dark Knight one one, mission four one zero four complete,;tok:0.1
+ovl_lc_alt_dkn;OVERLORD;Hornet five one, Overlord. Dark Knight one one reports radio failure on primary. Contact Dark Knight one one on alternate, push button fourteen.;tok
+ovl_lc_down_dkn;OVERLORD;Hornet five one, Overlord. Dark Knight one one is off the net, unable to raise. Mission four one zero four cancelled.;tok
+p_divert_dkn;PILOT>DARKNIGHT;Dark Knight one one, Hornet five one, diverted by Overlord to troops in contact. Will return when able.;tok
+dkn_divert_ack;DARKNIGHT;Hornet five one, Dark Knight one one, copy. No other CAS available, we'll hold. Return when able.;tok
+ovl_resume_dkn;OVERLORD;Dark Knight one one is holding. Contact Dark Knight one one, push button twelve.;tok
+p_push_12;PILOT;Push button twelve, Hornet five one.;tok
+p_push_14;PILOT;Push button fourteen, Hornet five one.;tok
+p_tic_push_12;PILOT>OVERLORD;Push button twelve, Hornet five one, buster.;tok
+# END ROSTER
 # BEGIN JC (tools/jc_clips.py)
 pj_n_0;POINTER_JC>POINTER;zero;tok
 pj_n_1;POINTER_JC>POINTER;one;tok
@@ -380,11 +448,13 @@ pj_lab_btr;POINTER_JC>POINTER;B T R;tok
 pj_lab_btr_pl;POINTER_JC>POINTER;B T Rs;tok
 pj_lab_bmp;POINTER_JC>POINTER;B M P;tok
 pj_lab_bmp_pl;POINTER_JC>POINTER;B M Ps;tok
-pj_lab_sp_howitzer;POINTER_JC>POINTER;self propelled howitzer;tok
-pj_lab_sp_howitzer_pl;POINTER_JC>POINTER;self propelled howitzers;tok
 pj_lab_truck;POINTER_JC>POINTER;truck;tok
 pj_lab_truck_pl;POINTER_JC>POINTER;trucks;tok
 pj_lab_infantry;POINTER_JC>POINTER;infantry;tok
+pj_lab_technical;POINTER_JC>POINTER;technical;tok
+pj_lab_technical_pl;POINTER_JC>POINTER;technicals;tok
+pj_lab_sp_howitzer;POINTER_JC>POINTER;self propelled howitzer;tok
+pj_lab_sp_howitzer_pl;POINTER_JC>POINTER;self propelled howitzers;tok
 pj_ord_one_agm_65e;POINTER_JC>POINTER;one A G M sixty five echo;tok
 pj_ord_one_gbu_12;POINTER_JC>POINTER;one G B U twelve;tok
 pj_egress;POINTER_JC>POINTER;Egress north to Tiger.;tok
@@ -405,6 +475,8 @@ pj_gp_end;POINTER_JC>POINTER;Advise when ready for nine line.;tok
 pj_cs;POINTER_JC>POINTER;Hornet five one,;tok:0.1
 pj_ip_lynx;POINTER_JC>POINTER;Lynx.;tok
 pj_ip_puma;POINTER_JC>POINTER;Puma.;tok
+pj_ip_jackal;POINTER_JC>POINTER;Jackal.;tok
+pj_ip_cobra;POINTER_JC>POINTER;Cobra.;tok
 pj_w_keyhole;POINTER_JC>POINTER;Keyhole;tok
 pj_w_laser;POINTER_JC>POINTER;Laser;tok
 pj_w_toc;POINTER_JC>POINTER;troops in contact.;tok
@@ -464,10 +536,6 @@ pj_bda_wnc;POINTER_JC>POINTER;copy Winchester. B D A. Size,;tok:0.1
 pj_w_none_obs;POINTER_JC>POINTER;none observed.;tok
 pj_w_activity;POINTER_JC>POINTER;Activity,;tok:0.1
 pj_w_remaining;POINTER_JC>POINTER;remaining. Location,;tok:0.1
-pj_w_desired_destroy;POINTER_JC>POINTER;Desired effect, destroy;tok
-pj_w_withdrawing;POINTER_JC>POINTER;withdrawing;tok
-pj_w_location;POINTER_JC>POINTER;Location,;tok:0.1
-pj_w_still_threat;POINTER_JC>POINTER;still a threat to friendlies.;tok
 pj_bda_end_inc;POINTER_JC>POINTER;not complete. Cleared to depart, return to Overlord.;tok
 pj_nj_a;POINTER_JC>POINTER;Hornet five one, target is the;tok
 pj_nj_bravo;POINTER_JC>POINTER;From Bravo two one,;tok:0.1
@@ -481,6 +549,10 @@ pj_spf_neg;POINTER_JC>POINTER;Hornet five one, Pointer one one, negative, Pointe
 pj_spf_adv;POINTER_JC>POINTER;Hornet five one, Pointer one one, be advised, last abort was not Pointer one one.;tok
 pj_w_and;POINTER_JC>POINTER;and;tok
 pj_w_meters;POINTER_JC>POINTER;meters.;tok
+pj_w_desired_destroy;POINTER_JC>POINTER;Desired effect, destroy;tok
+pj_w_withdrawing;POINTER_JC>POINTER;withdrawing;tok
+pj_w_location;POINTER_JC>POINTER;Location,;tok:0.1
+pj_w_still_threat;POINTER_JC>POINTER;still a threat to friendlies.;tok
 pj_w_point;POINTER_JC>POINTER;point;tok
 pj_w_hundred;POINTER_JC>POINTER;hundred;tok
 pj_w_thousand;POINTER_JC>POINTER;thousand;tok
@@ -568,11 +640,13 @@ ej_lab_btr;EYEBALL;B T R;tok
 ej_lab_btr_pl;EYEBALL;B T Rs;tok
 ej_lab_bmp;EYEBALL;B M P;tok
 ej_lab_bmp_pl;EYEBALL;B M Ps;tok
-ej_lab_sp_howitzer;EYEBALL;self propelled howitzer;tok
-ej_lab_sp_howitzer_pl;EYEBALL;self propelled howitzers;tok
 ej_lab_truck;EYEBALL;truck;tok
 ej_lab_truck_pl;EYEBALL;trucks;tok
 ej_lab_infantry;EYEBALL;infantry;tok
+ej_lab_technical;EYEBALL;technical;tok
+ej_lab_technical_pl;EYEBALL;technicals;tok
+ej_lab_sp_howitzer;EYEBALL;self propelled howitzer;tok
+ej_lab_sp_howitzer_pl;EYEBALL;self propelled howitzers;tok
 ej_ord_one_agm_65e;EYEBALL;one A G M sixty five echo;tok
 ej_ord_one_gbu_12;EYEBALL;one G B U twelve;tok
 ej_egress;EYEBALL;Egress north west, feet wet.;tok
@@ -593,6 +667,8 @@ ej_gp_end;EYEBALL;Advise when ready for nine line.;tok
 ej_cs;EYEBALL;Hornet five one,;tok:0.1
 ej_ip_lynx;EYEBALL;Lynx.;tok
 ej_ip_puma;EYEBALL;Puma.;tok
+ej_ip_jackal;EYEBALL;Jackal.;tok
+ej_ip_cobra;EYEBALL;Cobra.;tok
 ej_w_keyhole;EYEBALL;Keyhole;tok
 ej_w_laser;EYEBALL;Laser;tok
 ej_w_toc;EYEBALL;troops in contact.;tok
@@ -652,10 +728,6 @@ ej_bda_wnc;EYEBALL;copy Winchester. B D A. Size,;tok:0.1
 ej_w_none_obs;EYEBALL;none observed.;tok
 ej_w_activity;EYEBALL;Activity,;tok:0.1
 ej_w_remaining;EYEBALL;remaining. Location,;tok:0.1
-ej_w_desired_destroy;EYEBALL;Desired effect, destroy;tok
-ej_w_withdrawing;EYEBALL;withdrawing;tok
-ej_w_location;EYEBALL;Location,;tok:0.1
-ej_w_still_threat;EYEBALL;still a threat to friendlies.;tok
 ej_bda_end_inc;EYEBALL;not complete. Cleared to depart, return to Overlord.;tok
 ej_nj_a;EYEBALL;Hornet five one, target is the;tok
 ej_nj_bravo;EYEBALL;From Bravo two one,;tok:0.1
@@ -669,9 +741,397 @@ ej_spf_neg;EYEBALL;Hornet five one, Eyeball one one, negative, Eyeball one one d
 ej_spf_adv;EYEBALL;Hornet five one, Eyeball one one, be advised, last abort was not Eyeball one one.;tok
 ej_w_and;EYEBALL;and;tok
 ej_w_meters;EYEBALL;meters.;tok
+ej_w_desired_destroy;EYEBALL;Desired effect, destroy;tok
+ej_w_withdrawing;EYEBALL;withdrawing;tok
+ej_w_location;EYEBALL;Location,;tok:0.1
+ej_w_still_threat;EYEBALL;still a threat to friendlies.;tok
 ej_w_point;EYEBALL;point;tok
 ej_w_hundred;EYEBALL;hundred;tok
 ej_w_thousand;EYEBALL;thousand;tok
+aj_n_0;AXEMAN;zero;tok
+aj_n_1;AXEMAN;one;tok
+aj_n_2;AXEMAN;two;tok
+aj_n_3;AXEMAN;three;tok
+aj_n_4;AXEMAN;four;tok
+aj_n_5;AXEMAN;five;tok
+aj_n_6;AXEMAN;six;tok
+aj_n_7;AXEMAN;seven;tok
+aj_n_8;AXEMAN;eight;tok
+aj_n_9;AXEMAN;niner;tok
+aj_l_a;AXEMAN;Alfa;tok
+aj_l_b;AXEMAN;Bravo;tok
+aj_l_c;AXEMAN;Charlie;tok
+aj_l_d;AXEMAN;Delta;tok
+aj_l_e;AXEMAN;Echo;tok
+aj_l_f;AXEMAN;Foxtrot;tok
+aj_l_g;AXEMAN;Golf;tok
+aj_l_h;AXEMAN;Hotel;tok
+aj_l_i;AXEMAN;India;tok
+aj_l_j;AXEMAN;Juliett;tok
+aj_l_k;AXEMAN;Kilo;tok
+aj_l_l;AXEMAN;Lima;tok
+aj_l_m;AXEMAN;Mike;tok
+aj_l_n;AXEMAN;November;tok
+aj_l_o;AXEMAN;Oscar;tok
+aj_l_p;AXEMAN;Papa;tok
+aj_l_q;AXEMAN;Quebec;tok
+aj_l_r;AXEMAN;Romeo;tok
+aj_l_s;AXEMAN;Sierra;tok
+aj_l_t;AXEMAN;Tango;tok
+aj_l_u;AXEMAN;Uniform;tok
+aj_l_v;AXEMAN;Victor;tok
+aj_l_w;AXEMAN;Whiskey;tok
+aj_l_x;AXEMAN;X-ray;tok
+aj_l_y;AXEMAN;Yankee;tok
+aj_l_z;AXEMAN;Zulu;tok
+aj_d_north;AXEMAN;north;tok
+aj_d_northeast;AXEMAN;north east;tok
+aj_d_east;AXEMAN;east;tok
+aj_d_southeast;AXEMAN;south east;tok
+aj_d_south;AXEMAN;south;tok
+aj_d_southwest;AXEMAN;south west;tok
+aj_d_west;AXEMAN;west;tok
+aj_d_northwest;AXEMAN;north west;tok
+aj_lab_sa_8_launcher;AXEMAN;S A eight launcher;tok
+aj_lab_sa_8_launcher_pl;AXEMAN;S A eight launchers;tok
+aj_lab_sa_13_launcher;AXEMAN;S A thirteen launcher;tok
+aj_lab_sa_13_launcher_pl;AXEMAN;S A thirteen launchers;tok
+aj_lab_sa_15;AXEMAN;S A fifteen;tok
+aj_lab_sa_15_pl;AXEMAN;S A fifteens;tok
+aj_lab_sa_15_m2;AXEMAN;S A fifteen M two;tok
+aj_lab_sa_15_m2_pl;AXEMAN;S A fifteen M twos;tok
+aj_lab_sa_6_radar;AXEMAN;S A six radar;tok
+aj_lab_sa_6_radar_pl;AXEMAN;S A six radars;tok
+aj_lab_sa_6_launcher;AXEMAN;S A six launcher;tok
+aj_lab_sa_6_launcher_pl;AXEMAN;S A six launchers;tok
+aj_lab_sa_6;AXEMAN;S A six;tok
+aj_lab_sa_6_pl;AXEMAN;S A sixes;tok
+aj_lab_sa_3;AXEMAN;S A three;tok
+aj_lab_sa_3_pl;AXEMAN;S A threes;tok
+aj_lab_sa_10;AXEMAN;S A ten;tok
+aj_lab_sa_10_pl;AXEMAN;S A tens;tok
+aj_lab_sa_11;AXEMAN;S A eleven;tok
+aj_lab_sa_11_pl;AXEMAN;S A elevens;tok
+aj_lab_sa_8;AXEMAN;S A eight;tok
+aj_lab_sa_8_pl;AXEMAN;S A eights;tok
+aj_lab_sa_19;AXEMAN;S A nineteen;tok
+aj_lab_sa_19_pl;AXEMAN;S A nineteens;tok
+aj_lab_zsu_23_4;AXEMAN;Z S U twenty three four;tok
+aj_lab_zsu_23_4_pl;AXEMAN;Z S U twenty three fours;tok
+aj_lab_sa_14_manpads;AXEMAN;S A fourteen manpads;tok
+aj_lab_sa_18_manpads;AXEMAN;S A eighteen manpads;tok
+aj_lab_sa_3_radar;AXEMAN;S A three radar;tok
+aj_lab_sa_3_radar_pl;AXEMAN;S A three radars;tok
+aj_lab_sa_3_launcher;AXEMAN;S A three launcher;tok
+aj_lab_sa_3_launcher_pl;AXEMAN;S A three launchers;tok
+aj_lab_t_55_tank;AXEMAN;T fifty five tank;tok
+aj_lab_t_55_tank_pl;AXEMAN;T fifty five tanks;tok
+aj_lab_t_72_tank;AXEMAN;T seventy two tank;tok
+aj_lab_t_72_tank_pl;AXEMAN;T seventy two tanks;tok
+aj_lab_btr;AXEMAN;B T R;tok
+aj_lab_btr_pl;AXEMAN;B T Rs;tok
+aj_lab_bmp;AXEMAN;B M P;tok
+aj_lab_bmp_pl;AXEMAN;B M Ps;tok
+aj_lab_truck;AXEMAN;truck;tok
+aj_lab_truck_pl;AXEMAN;trucks;tok
+aj_lab_infantry;AXEMAN;infantry;tok
+aj_lab_technical;AXEMAN;technical;tok
+aj_lab_technical_pl;AXEMAN;technicals;tok
+aj_lab_sp_howitzer;AXEMAN;self propelled howitzer;tok
+aj_lab_sp_howitzer_pl;AXEMAN;self propelled howitzers;tok
+aj_ord_one_agm_65e;AXEMAN;one A G M sixty five echo;tok
+aj_ord_one_gbu_12;AXEMAN;one G B U twelve;tok
+aj_egress;AXEMAN;Egress north west, feet wet.;tok
+aj_ci_a;AXEMAN;Hornet five one, Axeman one one, copy all, abort code noted. Situation update. Threat, the target itself,;tok:0.1
+aj_w_plus;AXEMAN;plus;tok
+aj_ci_enemy;AXEMAN;Enemy,;tok:0.1
+aj_ci_fr_bravo;AXEMAN;Friendlies, Bravo two one, mech platoon, in contact. All friendlies;tok
+aj_ci_fr_team;AXEMAN;Friendlies, my team only. All friendlies;tok
+aj_w_of_tgt;AXEMAN;of the target.;tok
+aj_ci_wind;AXEMAN;No artillery. Hazards, winds on the deck;tok
+aj_ci_calm;AXEMAN;No artillery. Hazards, winds on the deck calm.;tok
+aj_w_at;AXEMAN;at;tok
+aj_ci_end;AXEMAN;Remarks, I have a laser, no I R pointer. Request IN with heading. Advise when ready for game plan.;tok
+aj_gp_t1;AXEMAN;Hornet five one, type one control, bomb on target,;tok:0.1
+aj_gp_t2;AXEMAN;Hornet five one, type two control, bomb on target,;tok:0.1
+aj_gp_t2c;AXEMAN;Hornet five one, type two control, bomb on coordinate,;tok:0.1
+aj_gp_end;AXEMAN;Advise when ready for nine line.;tok
+aj_cs;AXEMAN;Hornet five one,;tok:0.1
+aj_ip_lynx;AXEMAN;Lynx.;tok
+aj_ip_puma;AXEMAN;Puma.;tok
+aj_ip_jackal;AXEMAN;Jackal.;tok
+aj_ip_cobra;AXEMAN;Cobra.;tok
+aj_w_keyhole;AXEMAN;Keyhole;tok
+aj_w_laser;AXEMAN;Laser;tok
+aj_w_toc;AXEMAN;troops in contact.;tok
+aj_nl_end;AXEMAN;Advise when ready for remarks.;tok
+aj_rm_a;AXEMAN;Hornet five one, remarks.;tok
+aj_rm_ltl;AXEMAN;Laser to target line;tok
+aj_rm_threat;AXEMAN;Threat;tok
+aj_rm_caution;AXEMAN;Caution, no run in clear of;tok
+aj_rm_via;AXEMAN;Proceed to the I P via;tok
+aj_w_caution;AXEMAN;Caution,;tok:0.1
+aj_rm_route;AXEMAN;on the route to the I P.;tok
+aj_rm_req;AXEMAN;Request;tok
+aj_rm_hd;AXEMAN;Hard deck two zero thousand in effect.;tok
+aj_rm_fah;AXEMAN;Restrictions. Final attack heading;tok
+aj_w_to;AXEMAN;to;tok
+aj_rm_end;AXEMAN;Report I P inbound.;tok
+aj_rb_ok;AXEMAN;Hornet five one, readback correct.;tok
+aj_w_call_laser;AXEMAN;Call for laser.;tok
+aj_rb_neg;AXEMAN;Hornet five one, negative.;tok
+aj_w_elev;AXEMAN;Elevation;tok
+aj_w_grid;AXEMAN;grid;tok
+aj_w_fah;AXEMAN;final attack heading;tok
+aj_w_readback;AXEMAN;Read back.;tok
+aj_say_rb;AXEMAN;Hornet five one, Axeman one one, say readback.;tok
+aj_cont;AXEMAN;Hornet five one, continue.;tok
+aj_clr_hot;AXEMAN;Hornet five one, cleared hot.;tok
+aj_blind;AXEMAN;Hornet five one, blind. Continue.;tok
+aj_cont_tally;AXEMAN;Hornet five one, continue. Say when tally or captured.;tok
+aj_w_abort;AXEMAN;abort;tok
+aj_ab_fah;AXEMAN;Outside final attack heading, heading;tok
+aj_ab_civ;AXEMAN;Civilian vehicle entering the target area.;tok
+aj_lasing;AXEMAN;Axeman one one, lasing;tok
+aj_unable_los;AXEMAN;Hornet five one, unable laser, no line of sight.;tok
+aj_neg_resp;AXEMAN;Hornet five one, laser on, code;tok
+aj_laser_off;AXEMAN;Axeman one one, laser off.;tok
+aj_laser_to;AXEMAN;Hornet five one, Axeman one one, laser off, no cease laser call.;tok
+aj_not_clr;AXEMAN;Hornet five one, Axeman one one, you were not cleared. Hold fire.;tok
+aj_aft_abort;AXEMAN;Hornet five one, Axeman one one, weapon released after abort. Hold fire.;tok
+aj_term;AXEMAN;Hornet five one, Axeman one one, second unauthorized release. Terminating control. Cleared off, return to Overlord.;tok
+aj_as_a;AXEMAN;Hornet five one, Axeman one one,;tok:0.1
+aj_w_splash;AXEMAN;splash,;tok:0.1
+aj_as_good;AXEMAN;good hits.;tok
+aj_as_next;AXEMAN;Next target,;tok:0.1
+aj_as_from;AXEMAN;From your hits,;tok:0.1
+aj_as_shift;AXEMAN;Call shift.;tok
+aj_as_rin;AXEMAN;Report IN.;tok
+aj_as_miss;AXEMAN;miss.;tok
+aj_bda_a;AXEMAN;B D A. Size,;tok:0.1
+aj_w_destroyed;AXEMAN;destroyed,;tok:0.1
+aj_w_notobs;AXEMAN;not observed.;tok
+aj_bda_act;AXEMAN;Activity, none observed. Location,;tok:0.1
+aj_w_time;AXEMAN;Time,;tok:0.1
+aj_w_local;AXEMAN;local.;tok
+aj_bda_rmk;AXEMAN;Remarks, mission;tok
+aj_bda_end;AXEMAN;successful. Cleared to depart, return to Overlord.;tok
+aj_bda_wnc;AXEMAN;copy Winchester. B D A. Size,;tok:0.1
+aj_w_none_obs;AXEMAN;none observed.;tok
+aj_w_activity;AXEMAN;Activity,;tok:0.1
+aj_w_remaining;AXEMAN;remaining. Location,;tok:0.1
+aj_bda_end_inc;AXEMAN;not complete. Cleared to depart, return to Overlord.;tok
+aj_nj_a;AXEMAN;Hornet five one, target is the;tok
+aj_nj_bravo;AXEMAN;From Bravo two one,;tok:0.1
+aj_nj_me;AXEMAN;From my position,;tok:0.1
+aj_off_copy;AXEMAN;Hornet five one, copy.;tok
+aj_off_reatk;AXEMAN;Hornet five one, copy, re-attack approved.;tok
+aj_area_clear;AXEMAN;Hornet five one, Axeman one one, target area clear.;tok
+aj_iauth;AXEMAN;Hornet five one, Axeman one one, I authenticate;tok
+aj_spf_dis;AXEMAN;Disregard abort, not Axeman one one.;tok
+aj_spf_neg;AXEMAN;Hornet five one, Axeman one one, negative, Axeman one one did not call abort.;tok
+aj_spf_adv;AXEMAN;Hornet five one, Axeman one one, be advised, last abort was not Axeman one one.;tok
+aj_w_and;AXEMAN;and;tok
+aj_w_meters;AXEMAN;meters.;tok
+aj_w_desired_destroy;AXEMAN;Desired effect, destroy;tok
+aj_w_withdrawing;AXEMAN;withdrawing;tok
+aj_w_location;AXEMAN;Location,;tok:0.1
+aj_w_still_threat;AXEMAN;still a threat to friendlies.;tok
+aj_w_point;AXEMAN;point;tok
+aj_w_hundred;AXEMAN;hundred;tok
+aj_w_thousand;AXEMAN;thousand;tok
+dj_n_0;DARKNIGHT;zero;tok
+dj_n_1;DARKNIGHT;one;tok
+dj_n_2;DARKNIGHT;two;tok
+dj_n_3;DARKNIGHT;three;tok
+dj_n_4;DARKNIGHT;four;tok
+dj_n_5;DARKNIGHT;five;tok
+dj_n_6;DARKNIGHT;six;tok
+dj_n_7;DARKNIGHT;seven;tok
+dj_n_8;DARKNIGHT;eight;tok
+dj_n_9;DARKNIGHT;niner;tok
+dj_l_a;DARKNIGHT;Alfa;tok
+dj_l_b;DARKNIGHT;Bravo;tok
+dj_l_c;DARKNIGHT;Charlie;tok
+dj_l_d;DARKNIGHT;Delta;tok
+dj_l_e;DARKNIGHT;Echo;tok
+dj_l_f;DARKNIGHT;Foxtrot;tok
+dj_l_g;DARKNIGHT;Golf;tok
+dj_l_h;DARKNIGHT;Hotel;tok
+dj_l_i;DARKNIGHT;India;tok
+dj_l_j;DARKNIGHT;Juliett;tok
+dj_l_k;DARKNIGHT;Kilo;tok
+dj_l_l;DARKNIGHT;Lima;tok
+dj_l_m;DARKNIGHT;Mike;tok
+dj_l_n;DARKNIGHT;November;tok
+dj_l_o;DARKNIGHT;Oscar;tok
+dj_l_p;DARKNIGHT;Papa;tok
+dj_l_q;DARKNIGHT;Quebec;tok
+dj_l_r;DARKNIGHT;Romeo;tok
+dj_l_s;DARKNIGHT;Sierra;tok
+dj_l_t;DARKNIGHT;Tango;tok
+dj_l_u;DARKNIGHT;Uniform;tok
+dj_l_v;DARKNIGHT;Victor;tok
+dj_l_w;DARKNIGHT;Whiskey;tok
+dj_l_x;DARKNIGHT;X-ray;tok
+dj_l_y;DARKNIGHT;Yankee;tok
+dj_l_z;DARKNIGHT;Zulu;tok
+dj_d_north;DARKNIGHT;north;tok
+dj_d_northeast;DARKNIGHT;north east;tok
+dj_d_east;DARKNIGHT;east;tok
+dj_d_southeast;DARKNIGHT;south east;tok
+dj_d_south;DARKNIGHT;south;tok
+dj_d_southwest;DARKNIGHT;south west;tok
+dj_d_west;DARKNIGHT;west;tok
+dj_d_northwest;DARKNIGHT;north west;tok
+dj_lab_sa_8_launcher;DARKNIGHT;S A eight launcher;tok
+dj_lab_sa_8_launcher_pl;DARKNIGHT;S A eight launchers;tok
+dj_lab_sa_13_launcher;DARKNIGHT;S A thirteen launcher;tok
+dj_lab_sa_13_launcher_pl;DARKNIGHT;S A thirteen launchers;tok
+dj_lab_sa_15;DARKNIGHT;S A fifteen;tok
+dj_lab_sa_15_pl;DARKNIGHT;S A fifteens;tok
+dj_lab_sa_15_m2;DARKNIGHT;S A fifteen M two;tok
+dj_lab_sa_15_m2_pl;DARKNIGHT;S A fifteen M twos;tok
+dj_lab_sa_6_radar;DARKNIGHT;S A six radar;tok
+dj_lab_sa_6_radar_pl;DARKNIGHT;S A six radars;tok
+dj_lab_sa_6_launcher;DARKNIGHT;S A six launcher;tok
+dj_lab_sa_6_launcher_pl;DARKNIGHT;S A six launchers;tok
+dj_lab_sa_6;DARKNIGHT;S A six;tok
+dj_lab_sa_6_pl;DARKNIGHT;S A sixes;tok
+dj_lab_sa_3;DARKNIGHT;S A three;tok
+dj_lab_sa_3_pl;DARKNIGHT;S A threes;tok
+dj_lab_sa_10;DARKNIGHT;S A ten;tok
+dj_lab_sa_10_pl;DARKNIGHT;S A tens;tok
+dj_lab_sa_11;DARKNIGHT;S A eleven;tok
+dj_lab_sa_11_pl;DARKNIGHT;S A elevens;tok
+dj_lab_sa_8;DARKNIGHT;S A eight;tok
+dj_lab_sa_8_pl;DARKNIGHT;S A eights;tok
+dj_lab_sa_19;DARKNIGHT;S A nineteen;tok
+dj_lab_sa_19_pl;DARKNIGHT;S A nineteens;tok
+dj_lab_zsu_23_4;DARKNIGHT;Z S U twenty three four;tok
+dj_lab_zsu_23_4_pl;DARKNIGHT;Z S U twenty three fours;tok
+dj_lab_sa_14_manpads;DARKNIGHT;S A fourteen manpads;tok
+dj_lab_sa_18_manpads;DARKNIGHT;S A eighteen manpads;tok
+dj_lab_sa_3_radar;DARKNIGHT;S A three radar;tok
+dj_lab_sa_3_radar_pl;DARKNIGHT;S A three radars;tok
+dj_lab_sa_3_launcher;DARKNIGHT;S A three launcher;tok
+dj_lab_sa_3_launcher_pl;DARKNIGHT;S A three launchers;tok
+dj_lab_t_55_tank;DARKNIGHT;T fifty five tank;tok
+dj_lab_t_55_tank_pl;DARKNIGHT;T fifty five tanks;tok
+dj_lab_t_72_tank;DARKNIGHT;T seventy two tank;tok
+dj_lab_t_72_tank_pl;DARKNIGHT;T seventy two tanks;tok
+dj_lab_btr;DARKNIGHT;B T R;tok
+dj_lab_btr_pl;DARKNIGHT;B T Rs;tok
+dj_lab_bmp;DARKNIGHT;B M P;tok
+dj_lab_bmp_pl;DARKNIGHT;B M Ps;tok
+dj_lab_truck;DARKNIGHT;truck;tok
+dj_lab_truck_pl;DARKNIGHT;trucks;tok
+dj_lab_infantry;DARKNIGHT;infantry;tok
+dj_lab_technical;DARKNIGHT;technical;tok
+dj_lab_technical_pl;DARKNIGHT;technicals;tok
+dj_lab_sp_howitzer;DARKNIGHT;self propelled howitzer;tok
+dj_lab_sp_howitzer_pl;DARKNIGHT;self propelled howitzers;tok
+dj_ord_one_agm_65e;DARKNIGHT;one A G M sixty five echo;tok
+dj_ord_one_gbu_12;DARKNIGHT;one G B U twelve;tok
+dj_egress;DARKNIGHT;Egress west to Tiger.;tok
+dj_ci_a;DARKNIGHT;Hornet five one, Dark Knight one one, copy all, abort code noted. Situation update. Threat, the target itself,;tok:0.1
+dj_w_plus;DARKNIGHT;plus;tok
+dj_ci_enemy;DARKNIGHT;Enemy,;tok:0.1
+dj_ci_fr_bravo;DARKNIGHT;Friendlies, Bravo two one, mech platoon, in contact. All friendlies;tok
+dj_ci_fr_team;DARKNIGHT;Friendlies, my team only. All friendlies;tok
+dj_w_of_tgt;DARKNIGHT;of the target.;tok
+dj_ci_wind;DARKNIGHT;No artillery. Hazards, winds on the deck;tok
+dj_ci_calm;DARKNIGHT;No artillery. Hazards, winds on the deck calm.;tok
+dj_w_at;DARKNIGHT;at;tok
+dj_ci_end;DARKNIGHT;Remarks, I have a laser, no I R pointer. Request IN with heading. Advise when ready for game plan.;tok
+dj_gp_t1;DARKNIGHT;Hornet five one, type one control, bomb on target,;tok:0.1
+dj_gp_t2;DARKNIGHT;Hornet five one, type two control, bomb on target,;tok:0.1
+dj_gp_t2c;DARKNIGHT;Hornet five one, type two control, bomb on coordinate,;tok:0.1
+dj_gp_end;DARKNIGHT;Advise when ready for nine line.;tok
+dj_cs;DARKNIGHT;Hornet five one,;tok:0.1
+dj_ip_lynx;DARKNIGHT;Lynx.;tok
+dj_ip_puma;DARKNIGHT;Puma.;tok
+dj_ip_jackal;DARKNIGHT;Jackal.;tok
+dj_ip_cobra;DARKNIGHT;Cobra.;tok
+dj_w_keyhole;DARKNIGHT;Keyhole;tok
+dj_w_laser;DARKNIGHT;Laser;tok
+dj_w_toc;DARKNIGHT;troops in contact.;tok
+dj_nl_end;DARKNIGHT;Advise when ready for remarks.;tok
+dj_rm_a;DARKNIGHT;Hornet five one, remarks.;tok
+dj_rm_ltl;DARKNIGHT;Laser to target line;tok
+dj_rm_threat;DARKNIGHT;Threat;tok
+dj_rm_caution;DARKNIGHT;Caution, no run in clear of;tok
+dj_rm_via;DARKNIGHT;Proceed to the I P via;tok
+dj_w_caution;DARKNIGHT;Caution,;tok:0.1
+dj_rm_route;DARKNIGHT;on the route to the I P.;tok
+dj_rm_req;DARKNIGHT;Request;tok
+dj_rm_hd;DARKNIGHT;Hard deck two zero thousand in effect.;tok
+dj_rm_fah;DARKNIGHT;Restrictions. Final attack heading;tok
+dj_w_to;DARKNIGHT;to;tok
+dj_rm_end;DARKNIGHT;Report I P inbound.;tok
+dj_rb_ok;DARKNIGHT;Hornet five one, readback correct.;tok
+dj_w_call_laser;DARKNIGHT;Call for laser.;tok
+dj_rb_neg;DARKNIGHT;Hornet five one, negative.;tok
+dj_w_elev;DARKNIGHT;Elevation;tok
+dj_w_grid;DARKNIGHT;grid;tok
+dj_w_fah;DARKNIGHT;final attack heading;tok
+dj_w_readback;DARKNIGHT;Read back.;tok
+dj_say_rb;DARKNIGHT;Hornet five one, Dark Knight one one, say readback.;tok
+dj_cont;DARKNIGHT;Hornet five one, continue.;tok
+dj_clr_hot;DARKNIGHT;Hornet five one, cleared hot.;tok
+dj_blind;DARKNIGHT;Hornet five one, blind. Continue.;tok
+dj_cont_tally;DARKNIGHT;Hornet five one, continue. Say when tally or captured.;tok
+dj_w_abort;DARKNIGHT;abort;tok
+dj_ab_fah;DARKNIGHT;Outside final attack heading, heading;tok
+dj_ab_civ;DARKNIGHT;Civilian vehicle entering the target area.;tok
+dj_lasing;DARKNIGHT;Dark Knight one one, lasing;tok
+dj_unable_los;DARKNIGHT;Hornet five one, unable laser, no line of sight.;tok
+dj_neg_resp;DARKNIGHT;Hornet five one, laser on, code;tok
+dj_laser_off;DARKNIGHT;Dark Knight one one, laser off.;tok
+dj_laser_to;DARKNIGHT;Hornet five one, Dark Knight one one, laser off, no cease laser call.;tok
+dj_not_clr;DARKNIGHT;Hornet five one, Dark Knight one one, you were not cleared. Hold fire.;tok
+dj_aft_abort;DARKNIGHT;Hornet five one, Dark Knight one one, weapon released after abort. Hold fire.;tok
+dj_term;DARKNIGHT;Hornet five one, Dark Knight one one, second unauthorized release. Terminating control. Cleared off, return to Overlord.;tok
+dj_as_a;DARKNIGHT;Hornet five one, Dark Knight one one,;tok:0.1
+dj_w_splash;DARKNIGHT;splash,;tok:0.1
+dj_as_good;DARKNIGHT;good hits.;tok
+dj_as_next;DARKNIGHT;Next target,;tok:0.1
+dj_as_from;DARKNIGHT;From your hits,;tok:0.1
+dj_as_shift;DARKNIGHT;Call shift.;tok
+dj_as_rin;DARKNIGHT;Report IN.;tok
+dj_as_miss;DARKNIGHT;miss.;tok
+dj_bda_a;DARKNIGHT;B D A. Size,;tok:0.1
+dj_w_destroyed;DARKNIGHT;destroyed,;tok:0.1
+dj_w_notobs;DARKNIGHT;not observed.;tok
+dj_bda_act;DARKNIGHT;Activity, none observed. Location,;tok:0.1
+dj_w_time;DARKNIGHT;Time,;tok:0.1
+dj_w_local;DARKNIGHT;local.;tok
+dj_bda_rmk;DARKNIGHT;Remarks, mission;tok
+dj_bda_end;DARKNIGHT;successful. Cleared to depart, return to Overlord.;tok
+dj_bda_wnc;DARKNIGHT;copy Winchester. B D A. Size,;tok:0.1
+dj_w_none_obs;DARKNIGHT;none observed.;tok
+dj_w_activity;DARKNIGHT;Activity,;tok:0.1
+dj_w_remaining;DARKNIGHT;remaining. Location,;tok:0.1
+dj_bda_end_inc;DARKNIGHT;not complete. Cleared to depart, return to Overlord.;tok
+dj_nj_a;DARKNIGHT;Hornet five one, target is the;tok
+dj_nj_bravo;DARKNIGHT;From Bravo two one,;tok:0.1
+dj_nj_me;DARKNIGHT;From my position,;tok:0.1
+dj_off_copy;DARKNIGHT;Hornet five one, copy.;tok
+dj_off_reatk;DARKNIGHT;Hornet five one, copy, re-attack approved.;tok
+dj_area_clear;DARKNIGHT;Hornet five one, Dark Knight one one, target area clear.;tok
+dj_iauth;DARKNIGHT;Hornet five one, Dark Knight one one, I authenticate;tok
+dj_spf_dis;DARKNIGHT;Disregard abort, not Dark Knight one one.;tok
+dj_spf_neg;DARKNIGHT;Hornet five one, Dark Knight one one, negative, Dark Knight one one did not call abort.;tok
+dj_spf_adv;DARKNIGHT;Hornet five one, Dark Knight one one, be advised, last abort was not Dark Knight one one.;tok
+dj_w_and;DARKNIGHT;and;tok
+dj_w_meters;DARKNIGHT;meters.;tok
+dj_w_desired_destroy;DARKNIGHT;Desired effect, destroy;tok
+dj_w_withdrawing;DARKNIGHT;withdrawing;tok
+dj_w_location;DARKNIGHT;Location,;tok:0.1
+dj_w_still_threat;DARKNIGHT;still a threat to friendlies.;tok
+dj_w_point;DARKNIGHT;point;tok
+dj_w_hundred;DARKNIGHT;hundred;tok
+dj_w_thousand;DARKNIGHT;thousand;tok
 jp_ci_ptr;PILOT;Pointer one one, Hornet five one, mission;tok
 jp_ci_eye;PILOT;Eyeball one one, Hornet five one, mission;tok
 jp_one_hornet;PILOT;one Hornet,;tok:0.1
@@ -723,6 +1183,30 @@ jp_hc_ptr;PILOT;Pointer one one, Hornet five one, how copy?;tok
 jp_hc_eye;PILOT;Eyeball one one, Hornet five one, how copy?;tok
 jp_wnc_ptr;PILOT;Pointer one one, Hornet five one, Winchester.;tok
 jp_wnc_eye;PILOT;Eyeball one one, Hornet five one, Winchester.;tok
+jp_ci_axe;PILOT;Axeman one one, Hornet five one, mission;tok
+jp_ready_axe;PILOT;Axeman one one, Hornet five one, ready to copy.;tok
+jp_auth_axe;PILOT;Axeman one one, Hornet five one, authenticate;tok
+jp_rb_axe;PILOT;Axeman one one,;tok:0.1
+jp_lon_axe;PILOT;Axeman one one, laser on.;tok
+jp_shift_axe;PILOT;Axeman one one, shift.;tok
+jp_cease_axe;PILOT;Axeman one one, cease laser.;tok
+jp_bda_axe;PILOT;Axeman one one, Hornet five one, copy B D A, switching Overlord.;tok
+jp_swo_axe;PILOT;Axeman one one, Hornet five one, copy, switching Overlord.;tok
+jp_hc_axe;PILOT;Axeman one one, Hornet five one, how copy?;tok
+jp_wnc_axe;PILOT;Axeman one one, Hornet five one, Winchester.;tok
+jp_ci_dkn;PILOT;Dark Knight one one, Hornet five one, mission;tok
+jp_ready_dkn;PILOT;Dark Knight one one, Hornet five one, ready to copy.;tok
+jp_auth_dkn;PILOT;Dark Knight one one, Hornet five one, authenticate;tok
+jp_rb_dkn;PILOT;Dark Knight one one,;tok:0.1
+jp_lon_dkn;PILOT;Dark Knight one one, laser on.;tok
+jp_shift_dkn;PILOT;Dark Knight one one, shift.;tok
+jp_cease_dkn;PILOT;Dark Knight one one, cease laser.;tok
+jp_bda_dkn;PILOT;Dark Knight one one, Hornet five one, copy B D A, switching Overlord.;tok
+jp_swo_dkn;PILOT;Dark Knight one one, Hornet five one, copy, switching Overlord.;tok
+jp_hc_dkn;PILOT;Dark Knight one one, Hornet five one, how copy?;tok
+jp_wnc_dkn;PILOT;Dark Knight one one, Hornet five one, Winchester.;tok
 ovl_rep_ptr;OVERLORD;Hornet five one, Overlord. Pointer one one reports an unauthorized weapons release. The incident has been reported to CAG. Report to CAG on recovery.;tok
 ovl_rep_eye;OVERLORD;Hornet five one, Overlord. Eyeball one one reports an unauthorized weapons release. The incident has been reported to CAG. Report to CAG on recovery.;tok
+ovl_rep_axe;OVERLORD;Hornet five one, Overlord. Axeman one one reports an unauthorized weapons release. The incident has been reported to CAG. Report to CAG on recovery.;tok
+ovl_rep_dkn;OVERLORD;Hornet five one, Overlord. Dark Knight one one reports an unauthorized weapons release. The incident has been reported to CAG. Report to CAG on recovery.;tok
 # END JC

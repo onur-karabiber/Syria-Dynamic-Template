@@ -1,4 +1,6 @@
-# add_pool_sets.py | v1.0.0
+# add_pool_sets.py | v1.1.0
+# v1.1.0 (JTAC roster P3): DARKNIGHT 11 (J4, FAC-1 area) sets B (armor section) and C (supply trucks) next to
+#         SAM BV53 (SA-13)-1, 2 units each like set A.
 # CAS-1 target pool, first batch (decisions Onur 2026-11-04 03:28: ME late-activated groups, placed by tool,
 # sets B + C per JTAC; plan claude/target-pool-tasking-pack-plan-2026-11-04.md). Writes four late-activated RED
 # vehicle groups into src/mission, in the country of each JTAC's existing set A (Syria), with set A's route task
@@ -39,6 +41,10 @@ SETS = [
      [(0, 0, "T-72B"), (-40, -40, "T-72B"), (-40, 40, "T-72B"), (-80, 0, "BMP-1")]),
     ("CAS J2-C (Battery)-1", "SAM YE53 (SA-8)-1", 40, 3000,
      [(0, -75, "SAU Gvozdika"), (0, -25, "SAU Gvozdika"), (0, 25, "SAU Gvozdika"), (0, 75, "SAU Gvozdika")]),
+    ("CAS J4-B (Armor)-1", "SAM BV53 (SA-13)-1", 20, 1600,                     # v1.1.0
+     [(0, -25, "T-72B"), (0, 25, "BMP-1")]),
+    ("CAS J4-C (Trucks)-1", "SAM BV53 (SA-13)-1", 60, 2800,
+     [(0, -20, "Ural-375"), (-30, 15, "Ural-375")]),
 ]
 
 
