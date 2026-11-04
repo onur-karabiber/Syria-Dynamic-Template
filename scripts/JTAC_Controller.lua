@@ -1,5 +1,8 @@
--- JTAC_Controller | v0.16.1
+-- JTAC_Controller | v0.16.2
 --[[
+  v0.16.2 - laser (TEST-J1-C flight 2026-11-04, Onur): CFG.LASER_TIMEOUT_S 180 -> 300, and the timeout never switches
+           the laser off while a released weapon of the tasking is still in the air (st.pass.pending > 0) - the
+           flight lost a GBU-12 (released 5 s before the 180 s timeout, 3.5 km miss) and an AGM-65E that way.
   v0.16.1 - audit SUGGEST (DCS audit 2026-11-04: Pointer B / C have no JTAC post with LOS, B sits on a 25 deg
            slope): in audit mode every pool entry after the first that ends CHECK gets a search for a new centre
            around entry A: rings CFG.SUGGEST.D (m) x every CFG.SUGGEST.STEP deg; the entry's own ME formation is moved
@@ -309,7 +312,7 @@ end
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "0.16.1",
+    VERSION      = "0.16.2",
     SUGGEST      = { D = { 600, 900, 1200, 1500, 1800, 2100, 2500, 3000 }, STEP = 15, SLOPE = 8, PREF = 1500,
                      SCENERY_R = 12 },   -- v0.16.1 audit
     VOICE        = true,      -- v0.7.0 spoken transmissions (needs Comms_Director >= v1.6.4)
@@ -333,7 +336,7 @@ local CFG = {
     LASER_SAFE   = 10,
     LASER_MAX    = 60,
     FRIEND_SEP   = 25,           -- 30 left no window when the JTAC is both designator and friendly
-    LASER_TIMEOUT_S = 180,
+    LASER_TIMEOUT_S = 300,   -- v0.16.2 (was 180)
     LASER_SRC    = { x = 0, y = 3, z = 0 },
     EYE_M        = 2.5,
     IMPACT_WAIT_S = 3,
@@ -1612,7 +1615,8 @@ local function LaserTick(k, now)
         local p = u:getPoint()
         pcall(st.spot.setPoint, st.spot, { x = p.x, y = p.y + 1, z = p.z })
     end
-    if now - st.laserT0 > CFG.LASER_TIMEOUT_S then
+    local inAir = st.pass and (st.pass.pending or 0) > 0   -- v0.16.2: never while a weapon is guiding
+    if now - st.laserT0 > CFG.LASER_TIMEOUT_S and not inAir then
         LaserOff(k, "timeout")
         Emit("LASER_TIMEOUT", { key = k })
         Jtac(k, string.format("%s, %s, laser off, no cease laser call.", CFG.CS, J(k).disp))   -- v0.7.0

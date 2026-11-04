@@ -1,5 +1,9 @@
--- Comms_Director | v1.11.0
+-- Comms_Director | v1.11.1
 --[[
+  v1.11.1 - C divert (TEST-J1-C flight 2026-11-04): after an accepted divert the TIC JTAC's call comes CFG.TIC.DV_S
+           (3 s) after the diverted JTAC's "we'll hold" instead of FIRST_S (10 s, the gap after the pilot's "push
+           button" readback, which the divert has not got). The flight's 59 s real time from the switch to the
+           check-in item was mostly game pause (mission time 29 s, Radio_Log stamps); this takes 7 s off it.
   v1.11.0 - P4 XCAS (decisions Onur 2026-11-04 14:34; CAS_PACK.xcas set by Tasking_Pick >= v1.4.0, OFF by default):
            * check-in "checking in as fragged, XCAS" / OVERLORD "close air support on call" (no JTAC names, no
              mission numbers); OVERLORD gives the mission number with the tasking ("Mission 4137. Axeman 11 is on
@@ -510,6 +514,7 @@ local CFG = {
         ENABLE    = true,
         WHO       = nil,    -- a tasked JTAC key ("J1" Pointer 11 / "J2" Eyeball 11) / nil = random
         FIRST_S   = 10,     -- s after the pilot's "push button" readback: JTAC TIC call
+        DV_S      = 3,      -- v1.11.1 s after the diverted JTAC's "we'll hold" (no push readback)
         GAP_MIN   = 60,     -- s between tension exchanges
         GAP_MAX   = 90,
         MAX_CALLS = 3,      -- tension exchanges (of 4)
@@ -3255,7 +3260,7 @@ TicHandoff = function(key, opts)
     CD.ticState = { key = key, n = 0, used = {}, next = nil, done = false, bda = false }
     Q(string.format("[%s] %s, %s, TROOPS IN CONTACT, troops in contact! " .. P.friendly.name .. " is taking effective "
         .. "fire from enemy armor. Request immediate CAS, say time out.", j.cs, CFG.CS, j.disp),
-        CFG.DUR_URGENT, CFG.TIC.FIRST_S, function()
+        CFG.DUR_URGENT, (opts and opts.noPush) and CFG.TIC.DV_S or CFG.TIC.FIRST_S, function()   -- v1.11.1
             env.info("[CD] TIC call " .. j.disp)
             if CD.ticState then CD.ticState.callT = timer.getTime() end   -- v1.7.12
         end, nil,
@@ -4827,7 +4832,7 @@ local function CD_Init()
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
     timer.scheduleFunction(MudTick, nil, timer.getTime() + 10)   -- v1.7.9
-    env.info("[CD] Comms_Director v1.11.0 online — CAS-1 Syria (pack " .. tostring(P.version) .. ")")
+    env.info("[CD] Comms_Director v1.11.1 online — CAS-1 Syria (pack " .. tostring(P.version) .. ")")
 end
 
 CD_Init()
