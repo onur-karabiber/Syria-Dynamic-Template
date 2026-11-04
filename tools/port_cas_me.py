@@ -1,4 +1,6 @@
 # port_cas_me.py | v1.0.0
+# ONE-OFF (2026-11-04): superseded the same night by tools/make_cas_l.py (CAS (L) is now generated from the
+# template and must not be edited in the ME). Kept for the record; running it again reports "no change".
 # Carries Mission Editor changes made in Close Air Support (L).miz into the template (src/mission).
 # Audit 2026-11-04 (project doc claude/sync-audit-2026-11-04.md): scripts and media were in step in all four
 # missions, the ME layer was not; CAS (L) was ahead. Decision Onur 2026-11-04 02:46: everything below goes into

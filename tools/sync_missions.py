@@ -1,4 +1,8 @@
-# sync_missions.py | v1.3.1
+# sync_missions.py | v1.4.0
+# v1.4.0: CAS (L) is GENERATED from the template (tools/make_cas_l.py, decision Onur 2026-11-04 03:12). The cas
+#         step backs up the old file and regenerates it (was: refresh_scripts.py on an own mission). Guard: the
+#         deployed CAS (L) must equal make_cas_l(deployed template) in its ME data, else it was edited in the ME
+#         and regenerating would lose that -> stop (--force-cas). The cas step now needs the guard token too.
 # v1.3.1: cas-hound step expires the guard token (t = 0) when it cannot delete it (cloud device shell without
 #         delete permission: PermissionError after a successful CAS HOUND regeneration, 2026-11-04).
 # v1.3.0: --step guards|template|hound|cas|cas-hound runs one step (the device shell of a cloud session has a
@@ -15,14 +19,14 @@
 # Keeps the four parallel missions in step (decisions Onur 2026-11-02 / 2026-11-04):
 #   Syria_Dynamic_Template.miz          <- built from src/ + scripts/ (build.py)
 #   Syria_Dynamic_Template HOUND.miz    <- GENERATED: template + Hound ELINT (tools/add_elint.py)
-#   Close Air Support (L).miz           <- own mission (lighter, no RAT / ambient radios); scripts, sounds and
-#                                          kneeboard pages refreshed from the repo (tools/refresh_scripts.py)
+#   Close Air Support (L).miz           <- GENERATED (v1.4.0): template minus tools/cas_l_spec.json (no RAT /
+#                                          ambient radios ...), tools/make_cas_l.py
 #   Close Air Support (L) HOUND.miz     <- GENERATED: CAS (L) + Hound ELINT (tools/add_elint.py)
 #
 #   python tools/sync_missions.py            # all four
 #   python tools/sync_missions.py --dry-run  # report only (build to build/ only, refresh dry run)
 #   python tools/sync_missions.py --step guards   (then template, hound, cas, cas-hound: one call each)
-#   options: --force-template (build.py --force), --force-hound, --force-cas-hound, --skip-cas, --skip-hound,
+#   options: --force-template (build.py --force), --force-hound, --force-cas (v1.4.0), --force-cas-hound, --skip-cas, --skip-hound,
 #            --skip-cas-hound
 #
 # Steps
@@ -32,11 +36,11 @@
 #      Tower positions belong in tools/add_elint.py TOWERS, not in a HOUND .miz.
 #   2. python build.py  (its copy guard refuses when the deployed template has unextracted ME edits)
 #   3. HOUND: old file -> BackUps/<name>_before-sync-<UTC time>.miz, then add_elint(template, HOUND)
-#   4. CAS (L): refresh_scripts.py --sounds <every src/Sounds set the CAS .miz also has>
-#      --kneeboard src/KNEEBOARD/IMAGES --folder <pictures> (backup by refresh_scripts itself)
+#   4. CAS (L): old file -> BackUps/<name>_before-sync-<UTC time>.miz, then make_cas_l(template, CAS (L))
 #   5. CAS (L) HOUND: old file -> BackUps/<name>_before-sync-<UTC time>.miz, then add_elint(CAS (L), CAS HOUND)
-# Not covered: ME-level changes (units, triggers) in CAS (L): those stay manual / per-tool (add_script.py --miz, ...);
-# the TEST variants (tools/make_test_variant.py) are rebuilt separately from CAS (L).
+# ME edits go into the template only (src/, via the ME + extract.py); CAS (L) follows on the next sync. New template
+# groups go into CAS (L) too and are reported (tools/make_cas_l.py: delete_groups or --accept-new).
+# Not covered: the TEST variants (tools/make_test_variant.py) are rebuilt separately from CAS (L).
 
 import datetime
 import os
@@ -57,7 +61,6 @@ CAS = os.path.join(config.MISSIONS_DIR, "Close Air Support (L).miz")
 CAS_HOUND = os.path.join(config.MISSIONS_DIR, "Close Air Support (L) HOUND.miz")   # v1.2.0
 ME_DATA = ["mission", "l10n/DEFAULT/dictionary", "l10n/DEFAULT/mapResource", "options", "warehouses"]
 PY = sys.executable or "python"
-PICTURE_FOLDERS = ["FlightReport", "ScoreCards", "PlaneCaptain"]   # v1.1.0
 
 
 def run(args):
@@ -108,12 +111,19 @@ def regen_hound(hound, base, ts):
     return run([PY, os.path.join("tools", "add_elint.py"), base, hound])
 
 
-def sound_sets():
-    src = os.path.join(REPO, "src", "Sounds")
-    have = sorted(d for d in os.listdir(src) if os.path.isdir(os.path.join(src, d)))
-    with zipfile.ZipFile(CAS) as z:
-        cas = {n.split("/")[1] for n in z.namelist() if n.startswith("Sounds/") and n.count("/") >= 2}
-    return [d for d in have if d in cas]
+def backup(path, ts):
+    bdir = os.path.join(config.MISSIONS_DIR, "BackUps")
+    os.makedirs(bdir, exist_ok=True)
+    bak = os.path.join(bdir, "%s_before-sync-%s.miz" % (os.path.splitext(os.path.basename(path))[0], ts))
+    shutil.copy2(path, bak)
+    print("backup " + bak)
+
+
+def cas_guard():
+    """v1.4.0: True if CAS (L) is missing or equals make_cas_l(deployed template) in its ME data."""
+    if not os.path.isfile(CAS):
+        return True
+    return run([PY, os.path.join("tools", "make_cas_l.py"), "--check", TEMPLATE, CAS]) == 0
 
 
 STEPS = ["guards", "template", "hound", "cas", "cas-hound"]   # v1.3.0
@@ -121,10 +131,14 @@ GUARD_TOKEN = os.path.join(REPO, "build", "sync_guard.json")
 GUARD_MAX_S = 3600
 
 
-def step_guards(argv, do_hound, do_cas_hound):
+def step_guards(argv, do_hound, do_cas_hound, do_cas=True):
     """Both guards before anything is written (against the bases as currently deployed)."""
     if do_hound and "--force-hound" not in argv and not hound_guard():
         print("STOP: HOUND not regenerated. Move ME edits into tools/add_elint.py, or --force-hound / --skip-hound.")
+        return 2
+    if do_cas and "--force-cas" not in argv and not cas_guard():   # v1.4.0
+        print("STOP: CAS (L) differs from make_cas_l(template): it was edited in the ME. Make those edits in the "
+              "template (src/), or --force-cas / --skip-cas.")
         return 2
     if do_cas_hound and "--force-cas-hound" not in argv and os.path.isfile(CAS) and not hound_guard(CAS_HOUND, CAS):
         print("STOP: CAS (L) HOUND not regenerated. Move ME edits into CAS (L) or tools/add_elint.py, "
@@ -150,22 +164,16 @@ def step_hound(dry, ts):
     return rc
 
 
-def step_cas(dry):
-    if not os.path.isfile(CAS):
-        print("no CAS (L) .miz: %s" % CAS)
-        return 0
-    args = [PY, os.path.join("tools", "refresh_scripts.py"), CAS]
-    for s in sound_sets():
-        args += ["--sounds", s]
-    args += ["--kneeboard", os.path.join("src", "KNEEBOARD", "IMAGES")]
-    for fo in PICTURE_FOLDERS:                          # v1.1.0
-        if os.path.isdir(os.path.join(REPO, "src", fo)):
-            args += ["--folder", fo]
+def step_cas(dry, ts):
+    """v1.4.0: CAS (L) = make_cas_l(deployed template)."""
     if dry:
-        args.append("--dry-run")
-    rc = run(args)
+        print("dry run: CAS (L) would be regenerated from %s" % TEMPLATE)
+        return 0
+    if os.path.isfile(CAS):
+        backup(CAS, ts)
+    rc = run([PY, os.path.join("tools", "make_cas_l.py"), TEMPLATE, CAS])
     if rc != 0:
-        print("STOP: refresh_scripts.py returned %d" % rc)
+        print("STOP: make_cas_l.py returned %d" % rc)
     return rc
 
 
@@ -198,15 +206,15 @@ def main():
     if step:
         import json
         if step == "guards":
-            rc = step_guards(argv, do_hound, do_cas_hound)
+            rc = step_guards(argv, do_hound, do_cas_hound, do_cas)
             if rc == 0 and not dry:
                 os.makedirs(os.path.dirname(GUARD_TOKEN), exist_ok=True)
                 with open(GUARD_TOKEN, "w") as f:
                     json.dump({"t": datetime.datetime.utcnow().timestamp(), "ts": ts}, f)
                 print("guards passed, token %s (next: --step template, hound, cas, cas-hound)" % GUARD_TOKEN)
             return rc
-        if step in ("hound", "cas-hound") and not dry:
-            forced = "--force-hound" in argv if step == "hound" else "--force-cas-hound" in argv
+        if step in ("hound", "cas", "cas-hound") and not dry:
+            forced = {"hound": "--force-hound", "cas": "--force-cas", "cas-hound": "--force-cas-hound"}[step] in argv
             tok = None
             if os.path.isfile(GUARD_TOKEN):
                 with open(GUARD_TOKEN) as f:
@@ -220,7 +228,7 @@ def main():
         if step == "hound":
             return step_hound(dry, ts) if do_hound else 0
         if step == "cas":
-            return step_cas(dry) if do_cas else 0
+            return step_cas(dry, ts) if do_cas else 0
         rc = step_cas_hound(dry, ts) if do_cas_hound else 0
         if rc == 0 and not dry and os.path.isfile(GUARD_TOKEN):
             try:
@@ -233,10 +241,10 @@ def main():
         return rc
 
     # all steps in one go (Windows)
-    for fn in (lambda: step_guards(argv, do_hound, do_cas_hound),
+    for fn in (lambda: step_guards(argv, do_hound, do_cas_hound, do_cas),
                lambda: step_template(argv, dry),
                lambda: step_hound(dry, ts) if do_hound else 0,
-               lambda: step_cas(dry) if do_cas else 0,
+               lambda: step_cas(dry, ts) if do_cas else 0,
                lambda: step_cas_hound(dry, ts) if do_cas_hound else 0):
         rc = fn()
         if rc != 0:
