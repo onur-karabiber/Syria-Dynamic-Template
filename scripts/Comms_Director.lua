@@ -1,5 +1,15 @@
--- Comms_Director | v1.9.2
+-- Comms_Director | v1.10.0
 --[[
+  v1.10.0 - JTAC roster (P2, plan claude/jtac-roster-effects-plan-2026-11-04.md; zero behaviour change for the pack
+           roster { J1, J2 }): every JTAC of CAS_PACK.order gets its phases from its roster index n - "JTAC<n>" (working
+           it) and "<key>_OFF" (that tasking ended); buttons, frequencies, alternates, voice and MUD channels, F10
+           items, NEXT / REMIND, target tracking (CD.dead[k] / CD.seen[k] / CD.jd[k], aliases deadJ1 / seenJ1 / j1 ...
+           kept for Flight_Timeline / Pilot_Banter / Flight_Report) are built per roster key. CD.tasked = the two
+           taskings of the sortie in fragged order (slots; P2: the first two roster keys, P4 picks them at random);
+           scenarios A / B / C, TIC, lost comms, INFLTREP and the OVERLORD check-in work on CD.tasked: C diverts from
+           slot 1 to slot 2 (the TIC JTAC). Injects (abort / rearm / MANPADS) belong to the pack JTAC with
+           injects = true (Eyeball 11). Clip ids for keys other than J1 / J2 come from the pack's cn / ck; missing
+           clips fall back to text. Pack >= v1.2.1 (cn, injects).
   v1.9.2 - CFG.AUDIO: pj_ / ej_w_desired_destroy, _withdrawing, _location, _still_threat (Piper, same voices).
            effects-based tasking (JTAC_Controller v0.15.0): a JTAC tasking whose objective is destroyed (TRT.JC.st[k]
            .objDone) counts as "target dead" (deadJ1 / deadJ2) even when units of the group are left (withdrawing /
@@ -472,27 +482,18 @@ local CFG = {
     TANKER_UNIT    = P.tanker,        -- KC-130, Texaco 11
     CS             = P.cs,
 
-    -- Mission numbers (kneeboard 01 ADMIN)
-    MSN_J1         = P.jtacs.J1.msn,
-    MSN_J2         = P.jtacs.J2.msn,
-
     -- CP = CAS-1 route point (DCS world coords: ME x = north -> vec3.x, ME y = east -> vec3.z)
     CP_NAME        = P.cp.name,
     CP_POS         = { x = P.cp.pos.x, z = P.cp.pos.z },
 
-    -- JTAC target groups
-    JTAC1_TGT_GROUP = P.jtacs.J1.targets[1],
-    JTAC2_TGT_GROUP = P.jtacs.J2.targets[1],
-    JTAC2_POS      = P.jtacs.J2.tgt_fallback,            -- fallback; live centroid preferred
-    JTAC1_GROUP    = P.jtacs.J1.group,                   -- v1.5.4: friendlies for Line 8 / TIC
-    JTAC2_GROUP    = P.jtacs.J2.group,
+    -- v1.10.0: JTAC target / friendly groups per roster key -> JT (TROOPS IN CONTACT section)
     RB_NM          = 30,
     REL_AGG_S      = 2,     -- v1.5.6: release call aggregation window (s)    -- v1.5.5: readback item outside the JTAC phase within this range
 
     -- v1.5.4: troops-in-contact sequence (one JTAC per flight)
     TIC = {
         ENABLE    = true,
-        WHO       = nil,    -- "J1" (Pointer 11) / "J2" (Eyeball 11) / nil = random
+        WHO       = nil,    -- a tasked JTAC key ("J1" Pointer 11 / "J2" Eyeball 11) / nil = random
         FIRST_S   = 10,     -- s after the pilot's "push button" readback: JTAC TIC call
         GAP_MIN   = 60,     -- s between tension exchanges
         GAP_MAX   = 90,
@@ -529,9 +530,8 @@ local CFG = {
         DV_BURN_LB_NM = 14,        -- C: fuel guard, transit burn
         DV_RESERVE_LB = 1000,      -- C: fuel guard, margin above the station BINGO after the transit
     },
-    -- v1.8.0 alternate JTAC frequencies = unused COMM1 presets (Player_01 ME: btn 9 255.00, btn 11 259.00)
-    ALT = { J1 = { btn = P.jtacs.J1.alt.btn, freq = P.jtacs.J1.alt.freq, hz = math.floor(tonumber(P.jtacs.J1.alt.freq) * 1e6 + 0.5) * 1.0 },
-            J2 = { btn = P.jtacs.J2.alt.btn, freq = P.jtacs.J2.alt.freq, hz = math.floor(tonumber(P.jtacs.J2.alt.freq) * 1e6 + 0.5) * 1.0 } },
+    -- v1.8.0 alternate JTAC frequencies = unused COMM1 presets (v1.10.0: per roster key, filled below)
+    ALT = {},
 
     -- Hand-off geometry (NM)
     DEP_HANDOFF_NM  = 20,    -- only without CV_Comms (legacy)
@@ -556,13 +556,11 @@ local CFG = {
     INTERNAL_FUEL_LB = 10860,
 
     -- v1.5.3: Player_01 COMM1 preset buttons (ME, checked 2026-10-28)
-    BTN = { DEP = P.nets.DEP.btn, STRIKE = P.nets.STRIKE.btn, J1 = P.jtacs.J1.btn, J2 = P.jtacs.J2.btn, OVL = P.nets.OVL.btn,
+    BTN = { DEP = P.nets.DEP.btn, STRIKE = P.nets.STRIKE.btn, OVL = P.nets.OVL.btn,   -- v1.10.0 + JTAC keys below
             TKR = P.nets.TKR.btn, MARSHAL = P.nets.MARSHAL.btn },
     FREQ = {
         DEP     = P.nets.DEP.freq,
         STRIKE  = P.nets.STRIKE.freq,
-        J1      = P.jtacs.J1.freq,
-        J2      = P.jtacs.J2.freq,
         OVL     = P.nets.OVL.freq,
         TKR     = P.nets.TKR.freq,
         MARSHAL = P.nets.MARSHAL.freq,
@@ -576,8 +574,6 @@ local CFG = {
         [P.nets.DEP.ch]    = { hz = math.floor(tonumber(P.nets.DEP.freq) * 1e6 + 0.5) * 1.0,    mod = radio.modulation.AM },
         [P.nets.STRIKE.ch] = { hz = math.floor(tonumber(P.nets.STRIKE.freq) * 1e6 + 0.5) * 1.0, mod = radio.modulation.AM },
         [P.nets.OVL.ch]    = { hz = math.floor(tonumber(P.nets.OVL.freq) * 1e6 + 0.5) * 1.0,    mod = radio.modulation.AM },
-        [P.jtacs.J1.ch]           = { hz = math.floor(tonumber(P.jtacs.J1.freq) * 1e6 + 0.5) * 1.0,           mod = radio.modulation.AM },   -- v1.5.4
-        [P.jtacs.J2.ch]           = { hz = math.floor(tonumber(P.jtacs.J2.freq) * 1e6 + 0.5) * 1.0,           mod = radio.modulation.AM },
         [P.nets.TKR.ch]    = { hz = math.floor(tonumber(P.nets.TKR.freq) * 1e6 + 0.5) * 1.0,    mod = radio.modulation.AM },
     },
     -- generated by tts/make_clips.py; len = clip length (s)
@@ -1371,12 +1367,20 @@ local CFG = {
         -- CD phase -> frequency the hero is working (no entry = no call)
         CH = { STRIKE_OUT = "STRIKE", STRIKE_CHK = "STRIKE", STRIKE_IN = "STRIKE", INBOUND = "STRIKE",
                OVL_OUT = "OVERLORD", ENROUTE = "OVERLORD", REFUEL = "OVERLORD", TKR_DONE = "OVERLORD",
-               RTB = "OVERLORD", J1_OFF = "OVERLORD", J2_OFF = "OVERLORD", DIVERT = "OVERLORD", HOLD = "OVERLORD",
-               JTAC1 = "POINTER", JTAC2 = "EYEBALL" },
+               RTB = "OVERLORD", DIVERT = "OVERLORD", HOLD = "OVERLORD" },   -- v1.10.0 + JTAC phases below
     },
     REMIND_FIRST   = 60,     -- s after a check-in becomes due before the first repeat
     REMIND_EVERY   = 120,    -- s between further repeats
 }
+do   -- v1.10.0 roster: per JTAC key (CAS_PACK.order) button, frequency, alternate, voice channel, MUD channel
+    for i, k in ipairs(P.order) do
+        local j = P.jtacs[k]
+        CFG.BTN[k], CFG.FREQ[k] = j.btn, j.freq
+        CFG.ALT[k] = { btn = j.alt.btn, freq = j.alt.freq, hz = math.floor(tonumber(j.alt.freq) * 1e6 + 0.5) * 1.0 }
+        CFG.CHAN[j.ch] = { hz = math.floor(tonumber(j.freq) * 1e6 + 0.5) * 1.0, mod = radio.modulation.AM }
+        CFG.MUD.CH["JTAC" .. i], CFG.MUD.CH[k .. "_OFF"] = j.ch, "OVERLORD"
+    end
+end
 
 -- ══════════════════════════════════════════════════════════════
 --  MODULE STATE
@@ -1385,11 +1389,10 @@ local CD = {
     phase         = "IDLE",
     queue         = {},
     qPlaying      = false,
-    seenJ1 = false, seenJ2 = false,
-    deadJ1 = false, deadJ2 = false,
-    j1 = { pos = nil, size = 0, tot = nil },   -- INFLTREP data
-    j2 = { pos = nil, size = 0, tot = nil },
-    j2Armed       = false,
+    seen          = {},       -- v1.10.0 key -> target group seen alive (aliases seenJ1 / seenJ2 ...)
+    dead          = {},       -- v1.10.0 key -> target group dead / objective done (aliases deadJ1 / deadJ2 ...)
+    jd            = {},       -- v1.10.0 key -> INFLTREP data { pos, size, tot } (aliases j1 / j2 ...)
+    injArmed      = false,    -- v1.10.0 (was j2Armed): injects of the pack JTAC with injects = true
     tkrCheckedIn  = false,
     refuelDone    = false,
     tk            = nil,      -- v1.7.0 open tanker RV { ar = 1|2, vec, init, judy, bra, rcvd, state, clear }
@@ -1410,7 +1413,8 @@ local CD = {
     worked        = {},       -- v1.5.5 J1 / J2 = true once JTAC1 / JTAC2 was entered      -- v1.5.4 { key, n, used, next, done, bda } after the TIC hand-off
     -- v1.8.0 tasking order (read-only for other modules)
     scen          = nil,      -- { kind = "A"|"B"|"C", lc = nil | { key, kind = "tech"|"down" }, noShow }
-    order         = { "J1", "J2" },
+    tasked        = { P.order[1], P.order[2] },   -- v1.10.0 the sortie's two taskings, fragged order (slots)
+    order         = { P.order[1], P.order[2] },
     cur           = nil,      -- JTAC key being worked (or last worked)
     res           = {},       -- key -> "done" | "incomplete" | "terminated" | "cancelled" | "skipped"
     why           = {},       -- key -> reason of a cancellation ("lost comms", "winchester", ...)
@@ -1425,11 +1429,29 @@ local CD = {
 _G.TRT = _G.TRT or {}
 _G.TRT.CD = CD   -- v1.5.1: read-only view for Flight_Timeline; do not write from outside
 
--- Phases in which the player is (or should be) working OVERLORD
+-- Phases in which the player is (or should be) working OVERLORD (v1.10.0: + JTAC<n> / <key>_OFF from the roster)
 local OVL_PHASES = {
-    ENROUTE = true, HOLD = true, JTAC1 = true, J1_OFF = true, JTAC2 = true,
-    J2_OFF = true, REFUEL = true, TKR_DONE = true, RTB = true,
+    ENROUTE = true, HOLD = true, REFUEL = true, TKR_DONE = true, RTB = true,
 }
+
+-- v1.10.0 roster (ONE local: the main chunk is at Lua's 200-local limit). Per key k of CAS_PACK.order (index n):
+-- RS.ph[k] = "JTAC<n>", RS.off[k] = "<k>_OFF", RS.MSN[k]; RS.key[phase] -> k; RS.chKey[voice channel] -> k;
+-- RS.injKey = the JTAC with injects = true; RS.idx[k] = n.
+local RS = { ph = {}, off = {}, MSN = {}, key = {}, chKey = {}, idx = {} }
+for i, k in ipairs(P.order) do
+    local j = P.jtacs[k]
+    RS.ph[k], RS.off[k], RS.MSN[k], RS.idx[k] = "JTAC" .. i, k .. "_OFF", j.msn, i
+    RS.key[RS.ph[k]], RS.key[RS.off[k]], RS.chKey[j.ch] = k, k, k
+    OVL_PHASES[RS.ph[k]], OVL_PHASES[RS.off[k]] = true, true
+    if j.injects then RS.injKey = k end
+    CD.jd[k] = { pos = nil, size = 0, tot = nil }
+    CD[k:lower()] = CD.jd[k]                        -- CD.j1 / CD.j2 (Flight_Timeline: j2.tot)
+    CD["seen" .. k], CD["dead" .. k] = false, false -- CD.deadJ2 (Flight_Timeline, Pilot_Banter)
+end
+RS.JD = function(k) return CD.jd[k] end
+RS.isJ = function(ph) local k = RS.key[ph]; return k ~= nil and RS.ph[k] == ph end     -- working a JTAC
+RS.isOff = function(ph) local k = RS.key[ph]; return k ~= nil and RS.off[k] == ph end  -- a tasking ended
+RS.other = function(k) return (k == CD.tasked[1]) and CD.tasked[2] or CD.tasked[1] end -- the other slot
 
 -- ══════════════════════════════════════════════════════════════
 --  UTILITIES
@@ -1950,21 +1972,24 @@ end
 -- Urgent calls bypass the queue: shown immediately, queued routine traffic is dropped.
 local function C_Abort()
     QClear()
-    Msg(string.format("[" .. P.jtacs.J2.cs .. "] %s, abort, abort, abort. Civilian vehicle in target area.", CFG.CS),
+    local J = P.jtacs[RS.injKey]   -- v1.10.0
+    Msg(string.format("[" .. J.cs .. "] %s, abort, abort, abort. Civilian vehicle in target area.", CFG.CS),
         CFG.DUR_URGENT + 2)
-    Tx("eye_abort", true)
+    Tx(J.ck .. "_abort", true)
     SetFlag(201, 1)
 end
 
 local function C_Rearm()
-    Q(string.format("[" .. P.jtacs.J2.cs .. "] %s, target area clear. Continue as briefed.", CFG.CS), 10, 6, nil, nil, "eye_area_clear")
+    local J = P.jtacs[RS.injKey]   -- v1.10.0
+    Q(string.format("[" .. J.cs .. "] %s, target area clear. Continue as briefed.", CFG.CS), 10, 6, nil, nil, J.ck .. "_area_clear")
     SetFlag(201, 2)
 end
 
 local function C_Manpads()
-    Msg(string.format("[" .. P.jtacs.J2.cs .. "] %s, MANPADS launch observed one klick east of the target. "
+    local J = P.jtacs[RS.injKey]   -- v1.10.0
+    Msg(string.format("[" .. J.cs .. "] %s, MANPADS launch observed one klick east of the target. "
         .. "Remain at or above hard deck, two-zero thousand MSL.", CFG.CS), CFG.DUR_URGENT + 1)
-    Tx("eye_manpads", true)
+    Tx(J.ck .. "_manpads", true)
     SetFlag(203, 1)
 end
 
@@ -2037,11 +2062,12 @@ local function A_OvlCheckIn()
     local p = Player(); if not p then return end
     TicPick()   -- v1.5.4: press time = entropy (math.randomseed is not in the sandbox)
     CD.awaiting = true; MenuRebuild()
+    local T = CD.tasked   -- v1.10.0
     Pilot(string.format("Overlord, %s, checking in as fragged, mission %s and %s, angels %d, state %s.",
-        CFG.CS, CFG.MSN_J1, CFG.MSN_J2, Angels(p), State(p)), S("OVERLORD", "p_ovl_checkin_a", PAS(p)))
+        CFG.CS, RS.MSN[T[1]], RS.MSN[T[2]], Angels(p), State(p)), S("OVERLORD", "p_ovl_checkin_a", PAS(p)))
     local picTxt, picSeq = PictureParts(p:getPoint())
     Q(string.format("[OVERLORD] %s, Overlord, radar contact. %s "
-        .. "Mission as fragged, " .. P.jtacs.J1.disp .. " and " .. P.jtacs.J2.disp .. " on station. Proceed %s, %s. "
+        .. "Mission as fragged, " .. P.jtacs[T[1]].disp .. " and " .. P.jtacs[T[2]].disp .. " on station. Proceed %s, %s. "
         .. "SAM activity reported in both target areas, %s. Report feet dry.",
         CFG.CS, picTxt, CFG.CP_NAME, BrgRng(p:getPoint(), CFG.CP_POS), HD_TEXT),
         CFG.DUR_LONG + 4, CFG.REPLY_GAP, function() SetPhase("ENROUTE") end, nil,
@@ -2373,7 +2399,7 @@ local function TkrLostTick()
     CD.tk = nil
     local ar1 = (ph == "ENROUTE") and not CD.ar1Done
     if ar1 then CD.ar1Done = true end
-    local lastOff = (ph == "J1_OFF" or ph == "J2_OFF") and not NextKey()   -- v1.8.0
+    local lastOff = RS.isOff(ph) and not NextKey()   -- v1.8.0 (v1.10.0 roster)
     if not OVL_PHASES[ph] or not (ar1 or wasOpen or ph == "REFUEL" or lastOff) then MenuRebuild(); return end
     CD.awaiting = false
     if ar1 then   -- v1.8.0 (Onur): say intentions, the pilot decides (continue / RTB / divert)
@@ -2441,7 +2467,7 @@ end
 local function TkrNext()
     local tk = CD.tk
     if not tk and CD.phase == "ENROUTE" and Ar1Pending() and not CD.awaiting then   -- v1.7.1
-        return "AR1 top-off: OVERLORD, request Texaco (F10), or skip AR1 (F10). The hand-off to " .. P.jtacs.J1.disp .. " waits for AR1."
+        return "AR1 top-off: OVERLORD, request Texaco (F10), or skip AR1 (F10). The hand-off to " .. P.jtacs[CD.tasked[1]].disp .. " waits for AR1."
     end
     if not tk or not (CD.phase == "ENROUTE" or CD.phase == "REFUEL" or CD.phase == "TKR_DONE") then return nil end
     local btn = BtnL("TKR")
@@ -2493,10 +2519,8 @@ local function A_OvlAbort()
 end
 
 -- v1.7.3 OVERLORD divert branch ----------------------------------------------------------
-local DIV_PHASES = {
-    ENROUTE = true, HOLD = true, JTAC1 = true, J1_OFF = true, JTAC2 = true,
-    J2_OFF = true, REFUEL = true, TKR_DONE = true, RTB = true,
-}
+local DIV_PHASES = {}   -- v1.10.0: = the OVERLORD phases (incl. the roster's JTAC phases)
+for ph in pairs(OVL_PHASES) do DIV_PHASES[ph] = true end
 
 --- Nearest divert field to pos: field, NM.
 local function DivertField(pos)
@@ -2599,12 +2623,12 @@ end
 -- ══════════════════════════════════════════════════════════════
 --  TROOPS IN CONTACT + 9-LINE READBACK  (v1.5.4)
 -- ══════════════════════════════════════════════════════════════
-local JT = {
-    J1 = { ch = P.jtacs.J1.ch, k = P.jtacs.J1.ck, cs = P.jtacs.J1.cs, disp = P.jtacs.J1.disp, short = P.jtacs.J1.short,   -- v1.9.0 from CAS_PACK
-           tgt = CFG.JTAC1_TGT_GROUP, jtac = CFG.JTAC1_GROUP, phase = "JTAC1", btn = "J1" },
-    J2 = { ch = P.jtacs.J2.ch, k = P.jtacs.J2.ck, cs = P.jtacs.J2.cs, disp = P.jtacs.J2.disp, short = P.jtacs.J2.short,
-           tgt = CFG.JTAC2_TGT_GROUP, jtac = CFG.JTAC2_GROUP, phase = "JTAC2", btn = "J2" },
-}
+local JT = {}   -- v1.9.0 from CAS_PACK; v1.10.0 one entry per roster key (tgt = target group after Tasking_Pick)
+for _, k in ipairs(P.order) do
+    local j = P.jtacs[k]
+    JT[k] = { ch = j.ch, k = j.ck, cn = j.cn, cs = j.cs, disp = j.disp, short = j.short, tgt = j.targets[1],
+              jtac = j.group, phase = RS.ph[k], btn = k, pos = j.tgt_fallback }
+end
 local FR_CS = P.friendly.cs
 
 -- Tension exchanges: Bravo 2-1 -> JTAC (-> pilot). <J> = JTAC short callsign, <CS> = hero.
@@ -2788,12 +2812,7 @@ end
 -- ══════════════════════════════════════════════════════════════
 --  TASKING ORDER / SCENARIOS  (v1.8.0, decisions Onur 2026-11-03)
 -- ══════════════════════════════════════════════════════════════
-local OFF_PH = { J1 = "J1_OFF", J2 = "J2_OFF" }
-local MSN    = { J1 = CFG.MSN_J1, J2 = CFG.MSN_J2 }
-local function JD(k) return (k == "J1") and CD.j1 or CD.j2 end
-local function KeyOfPhase(ph)
-    if ph == "JTAC1" or ph == "J1_OFF" then return "J1" elseif ph == "JTAC2" or ph == "J2_OFF" then return "J2" end
-end
+local function KeyOfPhase(ph) return RS.key[ph] end   -- v1.10.0 roster (OFF_PH / MSN / JD -> RS)
 
 --- Entropy: math.randomseed is nil in the mission sandbox; the ms of the first draw (a pilot F10 press)
 --- seeds a Park-Miller generator, mixed with math.random. Rand(n) -> 1..n
@@ -2826,7 +2845,7 @@ local function JcCall(fn, ...)
     return false
 end
 
-local function TargetDead(k) return (k == "J1" and CD.deadJ1) or (k == "J2" and CD.deadJ2) or false end
+local function TargetDead(k) return CD.dead[k] or false end
 local function JtacAlive(k) return #AliveUnits(JT[k].jtac) > 0 end
 
 --- First tasking still to be worked (order), nil when the VUL is complete. A target group destroyed before
@@ -2849,8 +2868,9 @@ local function VulCheck()
     if CD.vulDone then return end
     for _, k in ipairs(CD.order) do if not CD.res[k] then return end end
     CD.vulDone, CD.vulT = true, timer.getAbsTime()
-    env.info(string.format("[CD] VUL complete: J1 %s, J2 %s, VUL extension %.0f s", tostring(CD.res.J1),
-        tostring(CD.res.J2), CD.vulExtS))
+    local r = {}
+    for _, k in ipairs(CD.tasked) do r[#r + 1] = k .. " " .. tostring(CD.res[k]) end
+    env.info(string.format("[CD] VUL complete: %s, VUL extension %.0f s", table.concat(r, ", "), CD.vulExtS))
 end
 
 --- A worked tasking ended (target group dead, Winchester, ROE termination).
@@ -2868,7 +2888,7 @@ local function FinishTask(k)
                 env.info("[CD] task " .. o .. " cancelled: Winchester at " .. JT[k].disp)
             end
         end
-        JD(k).tot = JD(k).tot or timer.getAbsTime()
+        RS.JD(k).tot = RS.JD(k).tot or timer.getAbsTime()
     end
     env.info(string.format("[CD] task %s %s", k, CD.res[k]))
     VulCheck()
@@ -2885,34 +2905,37 @@ ScenPick = function()
         local r = Rand(100)
         kind = (r <= SC.P.A and "A") or (r <= SC.P.A + SC.P.B and "B") or "C"
     end
+    -- v1.10.0: on the slots T = CD.tasked (flags 214 / 215 / 211: 1 / 2 = slot 1 / 2); same Rand sequence as v1.9
+    local T = CD.tasked
     local tic
     local ft = FlagN(SC.FLAG_TIC)
     if not CFG.TIC.ENABLE or ft == 9 then tic = false
-    elseif kind == "C" then tic = "J2"
-    elseif ft == 1 or ft == 2 then tic = (ft == 1) and "J1" or "J2"
-    elseif CFG.TIC.WHO == "J1" or CFG.TIC.WHO == "J2" then tic = CFG.TIC.WHO
-    else tic = (Rand(2) == 1) and "J1" or "J2" end
-    local order = { "J1", "J2" }
+    elseif kind == "C" then tic = T[2]
+    elseif ft == 1 or ft == 2 then tic = T[ft]
+    elseif CFG.TIC.WHO == T[1] or CFG.TIC.WHO == T[2] then tic = CFG.TIC.WHO
+    else tic = T[Rand(2)] end
+    local order = { T[1], T[2] }
     local ff = FlagN(SC.FLAG_FIRST)
-    if kind == "B" and (ff == 2 or (ff ~= 1 and Rand(2) == 2)) then order = { "J2", "J1" } end
+    if kind == "B" and (ff == 2 or (ff ~= 1 and Rand(2) == 2)) then order = { T[2], T[1] } end
     local lc
     local fl = FlagN(SC.FLAG_LC)
     if fl >= 1 and fl <= 4 then
-        lc = { key = (fl <= 2) and "J1" or "J2", kind = (fl % 2 == 1) and "tech" or "down", forced = true }
+        lc = { key = T[(fl <= 2) and 1 or 2], kind = (fl % 2 == 1) and "tech" or "down", forced = true }
     elseif fl ~= 9 and kind ~= "C" and Rand(100) <= SC.LC_P then
-        local key = (tic == "J1" and "J2") or (tic == "J2" and "J1") or ((Rand(2) == 1) and "J1" or "J2")
+        local key = tic and RS.other(tic) or T[Rand(2)]
         lc = { key = key, kind = (Rand(100) <= SC.LC_TECH) and "tech" or "down" }
     end
     if lc and kind == "C" then
         env.info("[CD] scenario C: lost comms ignored (" .. lc.key .. ")"); lc = nil
     end
-    if lc and tic == lc.key then tic = (lc.key == "J1") and "J2" or "J1" end   -- forced: the JTAC that calls TIC talks
+    if lc and tic == lc.key then tic = RS.other(lc.key) end   -- forced: the JTAC that calls TIC talks
     local fn = FlagN(SC.FLAG_NOSHOW)
     local noShow = (fn == 1) or (fn ~= 2 and Rand(1000) <= SC.NOSHOW_PM)
     CD.tic, CD.order = tic, order
     CD.scen = { kind = kind, lc = lc, noShow = noShow, forced = forced }
     if kind == "C" then
-        CD.dv = { state = "armed", at = SC.DV_PHASES[Rand(#SC.DV_PHASES)], delay = RandIn(SC.DV_DELAY[1], SC.DV_DELAY[2]) }
+        CD.dv = { state = "armed", at = SC.DV_PHASES[Rand(#SC.DV_PHASES)], delay = RandIn(SC.DV_DELAY[1], SC.DV_DELAY[2]),
+                  first = T[1], tic = T[2] }   -- v1.10.0: diverted from slot 1 to slot 2
     end
     SetFlag(SC.FLAG_PICKED, (kind == "A" and 1) or (kind == "B" and 2) or 3)
     if lc then JcCall("setNoComm", lc.key, lc.kind) end
@@ -2928,6 +2951,10 @@ local LINE = {   -- clip / text of the contact line per JTAC
     J1 = { on = "ovl_contact_pointer_b", tic = "ovl_tic_pointer_b", res = "ovl_resume_ptr" },
     J2 = { on = "ovl_contact_eyeball_b", tic = "ovl_tic_eyeball_c" },
 }
+for k, j in pairs(JT) do   -- v1.10.0: other roster keys by their pack clip names (cn / ck)
+    LINE[k] = LINE[k] or { on = "ovl_contact_" .. tostring(j.cn) .. "_b", tic = "ovl_tic_" .. tostring(j.cn) .. "_b",
+                           res = "ovl_resume_" .. j.k }
+end
 
 --- OVERLORD hands the hero to JTAC k. mode: "cp" (ENROUTE, "CP TIGER bears ..."), "task" (B, after the hold),
 --- "retask" (after "off <JTAC>": "copy. Return to CP TIGER ..."), "cancel" (right after a cancellation call).
@@ -2995,8 +3022,8 @@ local function A_OvlOffJtac(k)
     CD.awaiting = true; MenuRebuild()
     local j = JT[k]
     Pilot(string.format("Overlord, %s, off %s, mission %s complete, angels %d, state %s. Ready for retasking.",
-        CFG.CS, j.disp, MSN[k], Angels(p), State(p)),
-        S("OVERLORD", "p_ovl_off_" .. ((k == "J1") and "pointer" or "eyeball") .. "_a", PAS(p), 0.15, "p_ovl_off_pointer_b"))
+        CFG.CS, j.disp, RS.MSN[k], Angels(p), State(p)),
+        S("OVERLORD", "p_ovl_off_" .. tostring(j.cn) .. "_a", PAS(p), 0.15, "p_ovl_off_pointer_b"))
     C_OvlContact(nk, p, "retask")
     QPlay()
 end
@@ -3043,16 +3070,17 @@ end
 
 local function DivertTick(p)
     local dv = CD.dv
-    if not dv or dv.state ~= "armed" or CD.phase ~= "JTAC1" then return end
+    if not dv or dv.state ~= "armed" or CD.phase ~= RS.ph[dv.first] then return end
     local jc = JC_()
-    local st = jc and jc.st and jc.st.J1
+    local st = jc and jc.st and jc.st[dv.first]
+    local J1, J2 = P.jtacs[dv.first], P.jtacs[dv.tic]   -- v1.10.0: slot 1 (diverted from) / slot 2 (TIC)
     if not st then return end
     -- window: the dialogue phases, and ATTACK until the pilot reports IP inbound (not yet committed to an attack)
     local inAtk = st.phase == "ATTACK" and st.att and not st.att.ipIn
     if (st.phase == "ATTACK" and not inAtk) or st.phase == "DONE" or st.phase == "TERMINATED" or st.phase == "NOCOMM"
         or st.phase == "SILENT" then
         dv.state = "missed"
-        env.info("[CD] C: divert window missed (" .. P.jtacs.J1.disp .. " " .. st.phase .. ") -> scenario runs as A")
+        env.info("[CD] C: divert window missed (" .. J1.disp .. " " .. st.phase .. ") -> scenario runs as A")
         return
     end
     local i = DV_IDX[st.phase] or (inAtk and (#CFG.SCEN.DV_PHASES + 1)) or nil
@@ -3065,7 +3093,7 @@ local function DivertTick(p)
     if st.busy or GateWaiting() or CD.awaiting then return end
     local SC = CFG.SCEN
     local lb, bingo = FuelLb(p), BingoNow(p) or 4100
-    local tp = TicTgtPos(JT.J2) or CFG.JTAC2_POS
+    local tp = TicTgtPos(JT[dv.tic]) or JT[dv.tic].pos
     local need = bingo + Dist2D(p:getPoint(), tp) * SC.DV_BURN_LB_NM + SC.DV_RESERVE_LB
     if lb < need then
         dv.state = "nofuel"
@@ -3074,12 +3102,13 @@ local function DivertTick(p)
         return
     end
     dv.state, dv.t = "asked", now
-    JcCall("freeze", "J1", true)
-    AtStart(Q(string.format("[OVERLORD] %s, Overlord, divert, divert. " .. P.jtacs.J2.disp .. " reports TROOPS IN CONTACT, priority "
-        .. "immediate. Contact " .. P.jtacs.J2.disp .. ", %s, without delay. " .. P.jtacs.J1.disp .. " is advised.", CFG.CS, Btn("J2")),
-        CFG.DUR_URGENT + 4, 0, nil, nil, Voiced(S("OVERLORD", "ovl_divert_a", 0.15, "ovl_divert_b"))),
+    JcCall("freeze", dv.first, true)
+    local clip = (dv.first == "J1" and dv.tic == "J2") and S("OVERLORD", "ovl_divert_a", 0.15, "ovl_divert_b") or nil
+    AtStart(Q(string.format("[OVERLORD] %s, Overlord, divert, divert. " .. J2.disp .. " reports TROOPS IN CONTACT, priority "
+        .. "immediate. Contact " .. J2.disp .. ", %s, without delay. " .. J1.disp .. " is advised.", CFG.CS, Btn(dv.tic)),
+        CFG.DUR_URGENT + 4, 0, nil, nil, clip and Voiced(clip)),
         function() dv.open = true; MenuRebuild() end)   -- v1.8.4: wilco / unable open at the start
-    env.info(string.format("[CD] C: OVERLORD divert (" .. P.jtacs.J1.disp .. " in %s, fuel %.0f lb)", st.phase, lb))
+    env.info(string.format("[CD] C: OVERLORD divert (" .. J1.disp .. " in %s, fuel %.0f lb)", st.phase, lb))
     QPlay()
 end
 
@@ -3100,21 +3129,23 @@ local function A_DivertWilco()
     local dv = CD.dv; if not dv or not dv.open then return end
     dv.open, dv.state = false, "accepted"
     CD.awaiting = true; MenuRebuild()
-    local t1 = CD.taskT and CD.taskT.J1
-    if t1 then CD.vulExtS = CD.vulExtS + (timer.getTime() - t1) end   -- the Pointer work done so far is repeated
+    local f, t = dv.first, dv.tic   -- v1.10.0 slots
+    local jf = JT[f]
+    local t1 = CD.taskT and CD.taskT[f]
+    if t1 then CD.vulExtS = CD.vulExtS + (timer.getTime() - t1) end   -- the slot-1 work done so far is repeated
     Q(string.format("[%s] %s, wilco.", CFG.CS, CFG.CS), CFG.DUR_PILOT, 0.3, nil, CFG.PILOT_HOLD,
         S("OVERLORD", "p_wilco"))
-    Q(string.format("[%s] " .. P.jtacs.J1.disp .. ", %s, diverted by Overlord to troops in contact. Will return when able.", CFG.CS,
-        CFG.CS), CFG.DUR_PILOT + 2, 1.5, nil, CFG.PILOT_HOLD, Voiced(S("POINTER", "p_divert_ptr")))
-    Q(string.format("[" .. P.jtacs.J1.cs .. "] %s, " .. P.jtacs.J1.disp .. ", copy. No other CAS available, we'll hold. Return when able.", CFG.CS),
-        CFG.DUR_SHORT + 2, CFG.REPLY_GAP, function() JcCall("suspend", "J1") end, nil,
-        Voiced(S("POINTER", "ptr_divert_ack")),
+    Q(string.format("[%s] " .. jf.disp .. ", %s, diverted by Overlord to troops in contact. Will return when able.", CFG.CS,
+        CFG.CS), CFG.DUR_PILOT + 2, 1.5, nil, CFG.PILOT_HOLD, Voiced(S(jf.ch, "p_divert_" .. jf.k)))
+    Q(string.format("[" .. jf.cs .. "] %s, " .. jf.disp .. ", copy. No other CAS available, we'll hold. Return when able.", CFG.CS),
+        CFG.DUR_SHORT + 2, CFG.REPLY_GAP, function() JcCall("suspend", f) end, nil,
+        Voiced(S(jf.ch, jf.k .. "_divert_ack")),
         function()
-            CD.order, CD.resume, CD.cur = { "J2", "J1" }, "J1", "J2"
+            CD.order, CD.resume, CD.cur = { t, f }, f, t
             CD.taskT = CD.taskT or {}
-            CD.taskT.J2 = timer.getTime()
-            TicHandoff("J2", { noPush = true })
-            SetPhase("JTAC2")
+            CD.taskT[t] = timer.getTime()
+            TicHandoff(t, { noPush = true })
+            SetPhase(RS.ph[t])
             QPlay()
         end)
     env.info("[CD] C: divert accepted")
@@ -3128,9 +3159,9 @@ local function A_DivertUnable()
     CD.awaiting = true; MenuRebuild()
     Pilot(string.format("Overlord, %s, unable divert, state %s.", CFG.CS, State(p)),
         Voiced(S("OVERLORD", "p_divert_unable", PState(p))))
-    Q(string.format("[OVERLORD] %s, Overlord, copy. Continue with " .. P.jtacs.J1.disp .. ".", CFG.CS), CFG.DUR_SHORT, CFG.REPLY_GAP,
-        nil, nil, Voiced(S("OVERLORD", "ovl_divert_unable")),
-        function() JcCall("freeze", "J1", false); CD.awaiting = false; MenuRebuild() end)
+    Q(string.format("[OVERLORD] %s, Overlord, copy. Continue with " .. P.jtacs[dv.first].disp .. ".", CFG.CS), CFG.DUR_SHORT,
+        CFG.REPLY_GAP, nil, nil, (dv.first == "J1") and Voiced(S("OVERLORD", "ovl_divert_unable")) or nil,
+        function() JcCall("freeze", dv.first, false); CD.awaiting = false; MenuRebuild() end)
     env.info(string.format("[CD] C: divert refused by the pilot, state %s", State(p)))
     QPlay()
 end
@@ -3163,16 +3194,16 @@ local function LcAnswer(k)
         if CD.resume == k then CD.resume = nil end
         JcCall("cancel", k, "lost comms")
         Q(string.format("[OVERLORD] %s, Overlord. %s is off the net, unable to raise. Mission %s cancelled.", CFG.CS,
-            j.disp, MSN[k]), CFG.DUR_LONG, 0, nil, nil, Voiced(S("OVERLORD", "ovl_lc_down_" .. j.k)))
+            j.disp, RS.MSN[k]), CFG.DUR_LONG, 0, nil, nil, Voiced(S("OVERLORD", "ovl_lc_down_" .. j.k)))
         VulCheck()
         local nk = NextKey()
         if nk then
             C_OvlContact(nk, p, "cancel")
         else
             Q(string.format("[OVERLORD] %s, Overlord. Say intentions.", CFG.CS), CFG.DUR_SHORT, 1, nil, nil, "ovl_say_int",
-                function() SetPhase(OFF_PH[k]) end)
+                function() SetPhase(RS.off[k]) end)
         end
-        env.info(string.format("[CD] lost comms %s: mission %s cancelled%s", j.disp, MSN[k], nk and (", next " .. nk) or ""))
+        env.info(string.format("[CD] lost comms %s: mission %s cancelled%s", j.disp, RS.MSN[k], nk and (", next " .. nk) or ""))
     end
     QPlay()
 end
@@ -3228,36 +3259,37 @@ local function Destroyed(k)
     local inc = JcInc(k)
     if inc then return inc.destroyed or 0 end
     local r = CD.res[k]
-    if r == "done" then return JD(k).size or 0 end
-    local size = JD(k).size or 0
+    if r == "done" then return RS.JD(k).size or 0 end
+    local size = RS.JD(k).size or 0
     return math.max(0, size - #AliveUnits(JT[k].tgt))
 end
 
 A_Inflrep = function()
     local p = Player(); if not p then return end
     CD.awaiting = true; MenuRebuild()
-    local n1, n2 = Destroyed("J1"), Destroyed("J2")
+    local T = CD.tasked                    -- v1.10.0: the two taskings in fragged order (slots)
+    local d1, d2 = RS.JD(T[1]), RS.JD(T[2])
+    local n1, n2 = Destroyed(T[1]), Destroyed(T[2])
     local rmk, rmkSeq = "Remarks, SAM activity in both target areas.", {}
-    for _, k in ipairs({ "J1", "J2" }) do
+    for idx, k in ipairs(T) do
         local r, why = CD.res[k], CD.why[k]
-        local idx = (k == "J1") and "1" or "2"
         if r == "incomplete" or (r == "cancelled" and why == "winchester") then
-            rmk = rmk .. string.format(" Mission %s incomplete, Winchester.", MSN[k])
+            rmk = rmk .. string.format(" Mission %s incomplete, Winchester.", RS.MSN[k])
             rmkSeq[#rmkSeq + 1] = "i_rmk_inc" .. idx
         elseif r == "cancelled" then
-            rmk = rmk .. string.format(" Mission %s cancelled, no JTAC contact.", MSN[k])
+            rmk = rmk .. string.format(" Mission %s cancelled, no JTAC contact.", RS.MSN[k])
             rmkSeq[#rmkSeq + 1] = "i_rmk_can" .. idx
         end
     end
     Pilot(string.format("Overlord, %s, INFLTREP.\n"
         .. "Line 1, %s.\nLine 2, mission %s and %s.\nLine 3, %s and %s.\n"
         .. "Line 4, time on target %s and %s.\nLine 5, %d and %d vehicles destroyed.\n%s",
-        CFG.CS, CFG.CS, CFG.MSN_J1, CFG.MSN_J2,
-        CD.j1.pos and MGRS(CD.j1.pos) or "unknown", CD.j2.pos and MGRS(CD.j2.pos) or "unknown",
-        Clock(CD.j1.tot), Clock(CD.j2.tot), n1, n2, rmk),
+        CFG.CS, CFG.CS, RS.MSN[T[1]], RS.MSN[T[2]],
+        d1.pos and MGRS(d1.pos) or "unknown", d2.pos and MGRS(d2.pos) or "unknown",
+        Clock(d1.tot), Clock(d2.tot), n1, n2, rmk),
         S("OVERLORD", "i_head", "i_l1", "i_l2",
-          "i_l3", PSpell(CD.j1.pos and MGRS(CD.j1.pos)), 0.1, "cv:p_and", PSpell(CD.j2.pos and MGRS(CD.j2.pos)), 0.25,
-          "i_l4", PClock(CD.j1.tot), 0.1, "cv:p_and", PClock(CD.j2.tot), 0.25,
+          "i_l3", PSpell(d1.pos and MGRS(d1.pos)), 0.1, "cv:p_and", PSpell(d2.pos and MGRS(d2.pos)), 0.25,
+          "i_l4", PClock(d1.tot), 0.1, "cv:p_and", PClock(d2.tot), 0.25,
           "i_l5", PD(n1), "cv:p_and", PD(n2), "i_l5b", "i_rmk", rmkSeq))
     -- INFLTREP is long — give it time on screen
     CD.queue[#CD.queue].dur  = CFG.DUR_LONG + 4
@@ -3331,7 +3363,7 @@ local function RbAvail(key)
     if JcOn() then return false end   -- v1.6.0
     if not CD.worked[key] then return false end
     if CD.phase == j.phase then return true end
-    if not OVL_PHASES[CD.phase] or CD.phase == "JTAC1" or CD.phase == "JTAC2" then return false end
+    if not OVL_PHASES[CD.phase] or RS.isJ(CD.phase) then return false end
     local p, tp = Player(), TicTgtPos(j)
     return (p and tp and Dist2D(p:getPoint(), tp) <= CFG.RB_NM) and true or false
 end
@@ -3339,10 +3371,11 @@ end
 --- v1.5.5: JTAC_Laser spot events -> JTAC radio calls (JTAC-2 / Eyeball 11 only).
 local function OnSpot(ev, info)
     if JcOn() then return end   -- v1.6.0
-    local key = (info.jtac == JT.J2.jtac and "J2") or (info.jtac == JT.J1.jtac and "J1") or nil
+    local key
+    for i = #P.order, 1, -1 do if info.jtac == JT[P.order[i]].jtac then key = P.order[i] end end   -- v1.10.0
     if not key then return end
     local j = JT[key]
-    if not CD.worked[key] or not OVL_PHASES[CD.phase] or CD.phase == "JTAC1" then return end
+    if not CD.worked[key] or not OVL_PHASES[CD.phase] or CD.phase == RS.ph[P.order[1]] then return end
     if ev == "OFF" and (info.why == "target group dead" or info.why == "hero not airborne") then return end
     local std = tonumber(info.code) == 1688
     local txt, clip
@@ -3363,10 +3396,10 @@ end
 
 --- v1.5.6: the JTAC the hero is working right now, or nil.
 local function RelKey()
-    if CD.phase == "JTAC1" then return "J1" elseif CD.phase == "JTAC2" then return "J2" end
+    if RS.isJ(CD.phase) then return RS.key[CD.phase] end   -- v1.10.0
     local p, best, bd = Player(), nil, nil
     if not p then return nil end
-    for _, k in ipairs({ "J1", "J2" }) do
+    for _, k in ipairs(P.order) do
         if RbAvail(k) then
             local d = Dist2D(p:getPoint(), TicTgtPos(JT[k]))
             if not bd or d < bd then best, bd = k, d end
@@ -3430,12 +3463,6 @@ local NEXT = {
     ENROUTE    = "Proceed " .. CFG.CP_NAME .. ". OVERLORD tasks you about "
                  .. CFG.JTAC_HANDOFF_NM .. " NM from " .. CFG.CP_NAME .. " (Overlord on COMM2 btn 1).",
     HOLD       = "Hold at " .. CFG.CP_NAME .. ", angels " .. CFG.SCEN.HOLD_ANGELS .. ". OVERLORD will task you (COMM2 btn 1).",
-    JTAC1      = "Work " .. P.jtacs.J1.disp .. " " .. BtnL("J1") .. " (native JTAC menu). After the 9-line: "
-                 .. "readback via F10 > COMMS.",
-    J1_OFF     = "Check out with " .. P.jtacs.J1.disp .. ", report to OVERLORD (F10).",
-    JTAC2      = "Work " .. P.jtacs.J2.disp .. " " .. BtnL("J2") .. " (native JTAC menu). After the 9-line: "
-                 .. "readback via F10 > COMMS.",
-    J2_OFF     = "Check out with " .. P.jtacs.J2.disp .. ", pass INFLTREP to OVERLORD (F10).",
     REFUEL     = "Refuel with TEXACO 11 " .. BtnL("TKR") .. ", TACAN 21Y: use the DCS radio menu (intent to refuel). "
         .. "Then report RTB to OVERLORD (F10).",
     TKR_DONE   = "Report RTB to OVERLORD (F10).",
@@ -3445,6 +3472,12 @@ local NEXT = {
     INBOUND    = "Switch Marshal " .. BtnL("MARSHAL") .. " at " .. CFG.RECOVERY_NM .. " NM.",
     RECOVERY   = "Marshal / AIRBOSS.",
 }
+for i, k in ipairs(P.order) do   -- v1.10.0 roster (NextText normally answers the OFF phases itself)
+    NEXT[RS.ph[k]] = "Work " .. JT[k].disp .. " " .. BtnL(k) .. " (native JTAC menu). After the 9-line: "
+        .. "readback via F10 > COMMS."
+    NEXT[RS.off[k]] = "Check out with " .. JT[k].disp .. ((i == #P.order) and ", pass INFLTREP to OVERLORD (F10)."
+        or ", report to OVERLORD (F10).")
+end
 
 -- ══════════════════════════════════════════════════════════════
 --  F10 MENU (rebuilt on every phase change)
@@ -3454,7 +3487,7 @@ local function PhaseActions()
     if CD.awaiting then return a end
     if ph == "STRIKE_OUT" then a[#a+1] = { "STRIKE: check in (btn " .. CFG.BTN.STRIKE .. ")", A_StrikeCheckInOut } end
     if ph == "OVL_OUT"    then a[#a+1] = { "OVERLORD: check in (btn " .. CFG.BTN.OVL .. ")", A_OvlCheckIn } end
-    if ph == "J1_OFF" or ph == "J2_OFF" then   -- v1.8.0: next tasking or INFLTREP, whatever the order
+    if RS.isOff(ph) then   -- v1.8.0: next tasking or INFLTREP, whatever the order
         local k = KeyOfPhase(ph)
         if NextKey() then
             a[#a+1] = { "OVERLORD: off " .. JT[k].disp .. ", ready for retasking", function() A_OvlOffJtac(k) end }
@@ -3462,13 +3495,13 @@ local function PhaseActions()
             a[#a+1] = { "OVERLORD: INFLTREP", A_Inflrep }
         end
     end
-    if (ph == "JTAC1" or ph == "JTAC2") and LcNeeded(KeyOfPhase(ph)) then   -- v1.8.0 lost comms
+    if RS.isJ(ph) and LcNeeded(KeyOfPhase(ph)) then   -- v1.8.0 lost comms
         local k = KeyOfPhase(ph)
         a[#a+1] = { "OVERLORD: unable contact " .. JT[k].disp, function() A_UnableContact(k) end }
     end
     if CD.dv and CD.dv.open then                                          -- v1.8.0 C: divert
         local p = Player()
-        a[#a+1] = { "OVERLORD: wilco divert (" .. P.jtacs.J2.disp .. ")", A_DivertWilco }
+        a[#a+1] = { "OVERLORD: wilco divert (" .. P.jtacs[CD.dv.tic].disp .. ")", A_DivertWilco }
         a[#a+1] = { "OVERLORD: unable divert" .. (p and (", state " .. State(p)) or ""), A_DivertUnable }
     end
     if ph == "ENROUTE" and CD.ar1Int then                                 -- v1.8.0 AR1 tanker gone
@@ -3497,9 +3530,10 @@ local function PhaseActions()
         if br.spk then a[#a+1] = { "TEXACO: spokes (drogue damaged)", A_Spokes } end
     end
     if ph == "STRIKE_IN"  then a[#a+1] = { "STRIKE: check in inbound (btn " .. CFG.BTN.STRIKE .. ")", A_StrikeCheckInIn } end
-    if RbAvail("J1") then a[#a+1] = { P.jtacs.J1.cs .. ": 9-line readback (4/6/8)", function() A_Readback("J1") end } end
-    if RbAvail("J2") then a[#a+1] = { P.jtacs.J2.cs .. ": 9-line readback (4/6/8)", function() A_Readback("J2") end } end
-    if ph == "ENROUTE" or ph == "HOLD" or ph == "JTAC1" or ph == "J1_OFF" or ph == "JTAC2" or ph == "J2_OFF" then
+    for _, k in ipairs(P.order) do   -- v1.10.0
+        if RbAvail(k) then a[#a+1] = { P.jtacs[k].cs .. ": 9-line readback (4/6/8)", function() A_Readback(k) end } end
+    end
+    if ph == "ENROUTE" or ph == "HOLD" or RS.key[ph] then
         a[#a+1] = { "OVERLORD: RTB (mission abort)", A_OvlAbort }
     end
     if DIV_PHASES[ph] then a[#a+1] = { "OVERLORD: bingo / divert (nearest field)", A_Divert } end   -- v1.7.3
@@ -3533,22 +3567,26 @@ local function InfoItems(ph)
 end
 
 local function CardData()
-    return {
-        buttons = {   -- v1.9.0 from CAS_PACK
-            { n = P.nets.TOWER.btn,    f = P.nets.TOWER.freq .. " AM",    name = "TOWER / PADDLES" },
-            { n = CFG.BTN.DEP,         f = CFG.FREQ.DEP .. " AM",         name = "DEPARTURE" },
-            { n = CFG.BTN.STRIKE,      f = CFG.FREQ.STRIKE .. " AM",      name = "STRIKE" },
-            { n = CFG.BTN.J1,          f = CFG.FREQ.J1 .. " AM",          name = P.jtacs.J1.cs .. " (" .. P.jtacs.J1.group .. ")" },
-            { n = CFG.BTN.J2,          f = CFG.FREQ.J2 .. " AM",          name = P.jtacs.J2.cs .. " (" .. P.jtacs.J2.group .. ")" },
-            { n = CFG.BTN.OVL,         f = CFG.FREQ.OVL .. " AM",
-              name = "OVERLORD (COMM2 btn " .. P.nets.OVL.comm2 .. " = " .. CFG.FREQ.OVL .. ")" },
-            { n = CFG.ALT.J1.btn,      f = CFG.ALT.J1.freq .. " AM",      name = P.jtacs.J1.cs .. " alternate" },
-            { n = CFG.ALT.J2.btn,      f = CFG.ALT.J2.freq .. " AM",      name = P.jtacs.J2.cs .. " alternate" },
+    local b = {   -- v1.9.0 from CAS_PACK; v1.10.0 JTAC primaries / alternates per roster key
+        { n = P.nets.TOWER.btn,    f = P.nets.TOWER.freq .. " AM",    name = "TOWER / PADDLES" },
+        { n = CFG.BTN.DEP,         f = CFG.FREQ.DEP .. " AM",         name = "DEPARTURE" },
+        { n = CFG.BTN.STRIKE,      f = CFG.FREQ.STRIKE .. " AM",      name = "STRIKE" },
+    }
+    for _, k in ipairs(P.order) do
+        b[#b + 1] = { n = CFG.BTN[k], f = CFG.FREQ[k] .. " AM", name = P.jtacs[k].cs .. " (" .. P.jtacs[k].group .. ")" }
+    end
+    b[#b + 1] = { n = CFG.BTN.OVL, f = CFG.FREQ.OVL .. " AM",
+                  name = "OVERLORD (COMM2 btn " .. P.nets.OVL.comm2 .. " = " .. CFG.FREQ.OVL .. ")" }
+    for _, k in ipairs(P.order) do
+        b[#b + 1] = { n = CFG.ALT[k].btn, f = CFG.ALT[k].freq .. " AM", name = P.jtacs[k].cs .. " alternate" }
+    end
+    for _, x in ipairs({
             { n = CFG.BTN.TKR,         f = CFG.FREQ.TKR .. " AM",         name = "TEXACO 11" },
             { n = P.nets.ARCO.btn,     f = P.nets.ARCO.freq .. " AM",     name = "ARCO 31 (recovery tanker)" },
             { n = P.nets.APPROACH.btn, f = P.nets.APPROACH.freq .. " AM", name = "APPROACH" },
-            { n = CFG.BTN.MARSHAL,     f = CFG.FREQ.MARSHAL .. " AM",     name = "MARSHAL" },
-        },
+            { n = CFG.BTN.MARSHAL,     f = CFG.FREQ.MARSHAL .. " AM",     name = "MARSHAL" } }) do b[#b + 1] = x end
+    return {
+        buttons = b,
         lines = {
             "CAS-1 FLOW: DEP → (ZIPLIP " .. CFG.DEP_ZIPLIP_NM .. " DME / CASE III cleared) STRIKE → OVERLORD",
             "→ (CP-20 NM) OVERLORD tasking: JTACs in OVERLORD's order (hold at CP / divert possible)",
@@ -3560,7 +3598,7 @@ end
 
 local function NextText()
     if CD.phase == "RECOVERY" or CD.phase == "DONE" then return nil end
-    if JcOn() and (CD.phase == "JTAC1" or CD.phase == "JTAC2") and not (CD.dv and CD.dv.open)
+    if JcOn() and RS.isJ(CD.phase) and not (CD.dv and CD.dv.open)
         and not LcNeeded(KeyOfPhase(CD.phase)) then return nil end   -- v1.6.0
     if CD.phase == "DIVERT" and _G.TRT.FA and _G.TRT.FA.active then return nil end   -- v1.7.5 Field_Arrival
     if CD.phase == "DIVERT" and CD.divert then   -- v1.7.3
@@ -3570,7 +3608,7 @@ local function NextText()
             CD.divert.name, CD.divert.field, f and f.twr or "?",
             CD.divert.minFuel and " Tell tower: minimum fuel." or "")
     end
-    local offK = (CD.phase == "J1_OFF" or CD.phase == "J2_OFF") and KeyOfPhase(CD.phase) or nil   -- v1.8.0
+    local offK = RS.isOff(CD.phase) and KeyOfPhase(CD.phase) or nil   -- v1.8.0
     local last = offK and not NextKey()
     if CD.tkrLost and (CD.phase == "REFUEL" or last) then   -- v1.7.6
         return last and "Tanker off station. Pass INFLTREP to OVERLORD (F10), then RTB or divert."
@@ -3583,8 +3621,8 @@ local function NextText()
             or ("Check out with " .. d .. ", report to OVERLORD for retasking (F10).")
     end
     if CD.phase == "ENROUTE" and CD.ar1Int then return "No tanker. Tell OVERLORD your intentions (F10): continue, RTB or divert." end
-    if CD.dv and CD.dv.open then return "OVERLORD divert: wilco (F10) - you tell " .. P.jtacs.J1.disp .. " and switch to " .. P.jtacs.J2.disp .. " - or unable." end
-    if (CD.phase == "JTAC1" or CD.phase == "JTAC2") and LcNeeded(KeyOfPhase(CD.phase)) then
+    if CD.dv and CD.dv.open then return "OVERLORD divert: wilco (F10) - you tell " .. P.jtacs[CD.dv.first].disp .. " and switch to " .. P.jtacs[CD.dv.tic].disp .. " - or unable." end
+    if RS.isJ(CD.phase) and LcNeeded(KeyOfPhase(CD.phase)) then
         return "No answer from " .. JT[KeyOfPhase(CD.phase)].disp .. ". Report to OVERLORD on COMM2 (F10)."
     end
     return TkrNext() or NEXT[CD.phase]
@@ -3605,16 +3643,17 @@ else
 end
 
 -- ══════════════════════════════════════════════════════════════
---  INJECTS (JTAC-2)
+--  INJECTS (v1.10.0: the pack JTAC with injects = true, RS.injKey; Eyeball 11)
 -- ══════════════════════════════════════════════════════════════
-local function ArmJ2Injects()
+local function ArmInjects()
+    local IK = RS.injKey
     if not CD.inj.i3 then
         local d3 = 55 + math.random(0, 20)
         timer.scheduleFunction(function()
-            local jst = JcOn() and _G.TRT.JC.st and _G.TRT.JC.st.J2   -- v1.8.0: only a JTAC that is talking
+            local jst = JcOn() and _G.TRT.JC.st and _G.TRT.JC.st[IK]   -- v1.8.0: only a JTAC that is talking
             local talking = not jst or ((jst.phase == "SITREP" or jst.phase == "GAMEPLAN" or jst.phase == "NINE"
                 or jst.phase == "READBACK" or jst.phase == "ATTACK") and jst.nocomm == nil)
-            if CD.phase == "JTAC2" and talking and not CD.inj.i3 and Roll(CFG.PROB_INJ3) then
+            if CD.phase == RS.ph[IK] and talking and not CD.inj.i3 and Roll(CFG.PROB_INJ3) then
                 CD.inj.i3 = true
                 C_Manpads()
             end
@@ -3623,11 +3662,11 @@ local function ArmJ2Injects()
     if not CD.inj.i1 and not JcOn() then   -- v1.6.0: JTAC_Controller owns the abort inject
         local d1 = 85 + math.random(0, 60)
         timer.scheduleFunction(function()
-            if CD.phase == "JTAC2" and not CD.inj.i1 and Roll(CFG.PROB_INJ1) then
+            if CD.phase == RS.ph[IK] and not CD.inj.i1 and Roll(CFG.PROB_INJ1) then
                 CD.inj.i1 = true
                 C_Abort()
                 timer.scheduleFunction(function()
-                    if CD.phase == "JTAC2" or CD.phase == "J2_OFF" then C_Rearm(); QPlay() end
+                    if CD.phase == RS.ph[IK] or CD.phase == RS.off[IK] then C_Rearm(); QPlay() end
                 end, nil, timer.getTime() + 45)
             end
         end, nil, timer.getTime() + d1)
@@ -3691,8 +3730,8 @@ local function MudCall(ch, r, uPos, pPos, how, dNm)
     if ch == "OVERLORD" then
         items[2] = { text = string.format("[OVERLORD] %s, Overlord, copy.", CFG.CS), dur = CFG.DUR_SHORT,
                      after = CFG.REPLY_GAP, audio = Voiced(S("OVERLORD", "ovl_copy_51")) }
-    elseif ch == "POINTER" or ch == "EYEBALL" then   -- v1.7.11: the JTAC acknowledges too
-        local key = (ch == "POINTER") and "J1" or "J2"
+    elseif RS.chKey[ch] then   -- v1.7.11: the JTAC acknowledges too (v1.10.0 any roster JTAC)
+        local key = RS.chKey[ch]
         local txt = string.format("%s, copy.", CFG.CS)
         local jc = TRT.JC
         local seq = jc and type(jc.voice) == "function" and (jc.voice("J", key, txt)) or nil
@@ -3788,8 +3827,8 @@ SetPhase = function(new)
         TRT.Menu.SetHint("CD", hint)
     end
 
-    if new == "JTAC1" then CD.worked.J1 = true elseif new == "JTAC2" then CD.worked.J2 = true end  -- v1.5.5
-    if new == "JTAC1" or new == "JTAC2" or new == "J1_OFF" or new == "J2_OFF" then
+    if RS.isJ(new) then CD.worked[RS.key[new]] = true end  -- v1.5.5 (v1.10.0 roster)
+    if RS.key[new] then
         SetFlag(200, 1)
     else
         SetFlag(200, 0)
@@ -3797,13 +3836,13 @@ SetPhase = function(new)
 
     if new == "DEPARTURE" then
         Msg("[CAS-1] All radio calls: F10 > COMMS. \"Show: next call\" lists the next step.", CFG.DUR_HANDOFF)
-    elseif new == "J1_OFF" or new == "J2_OFF" then   -- v1.8.0: one handler, whatever the order
+    elseif RS.isOff(new) then   -- v1.8.0: one handler, whatever the order
         local k = KeyOfPhase(new)
         local j, r = JT[k], CD.res[k]
         local last = not NextKey()
         local txt
         if r == "incomplete" then
-            JD(k).tot = JD(k).tot or timer.getAbsTime()
+            RS.JD(k).tot = RS.JD(k).tot or timer.getAbsTime()
             txt = string.format("[CAS-1] Checked out of %s (Winchester, mission incomplete). %s", j.disp,
                 last and "INFLTREP to OVERLORD (F10)." or "Report to OVERLORD (F10).")
             local inc = JcInc(k)
@@ -3857,20 +3896,15 @@ end
 local function TrackTargets()
     local jc = TRT.JC   -- v1.9.2 objective destroyed = target dead
     local function ObjDone(k) return jc and jc.st and jc.st[k] and jc.st[k].objDone end
-    if not CD.deadJ1 then
-        if GroupAlive(CFG.JTAC1_TGT_GROUP) and not ObjDone("J1") then
-            if not CD.seenJ1 then CD.seenJ1 = true; Snapshot(CFG.JTAC1_TGT_GROUP, CD.j1) end
-        elseif CD.seenJ1 then
-            CD.deadJ1 = true; CD.j1.tot = timer.getAbsTime()
-            env.info("[CD] JTAC-1 target group destroyed: " .. CFG.JTAC1_TGT_GROUP)
-        end
-    end
-    if not CD.deadJ2 then
-        if GroupAlive(CFG.JTAC2_TGT_GROUP) and not ObjDone("J2") then
-            if not CD.seenJ2 then CD.seenJ2 = true; Snapshot(CFG.JTAC2_TGT_GROUP, CD.j2) end
-        elseif CD.seenJ2 then
-            CD.deadJ2 = true; CD.j2.tot = timer.getAbsTime()
-            env.info("[CD] JTAC-2 target group destroyed: " .. CFG.JTAC2_TGT_GROUP)
+    for i, k in ipairs(P.order) do   -- v1.10.0 roster (aliases deadJ1 / seenJ1 ... kept for other modules)
+        if not CD.dead[k] then
+            local g = JT[k].tgt
+            if GroupAlive(g) and not ObjDone(k) then
+                if not CD.seen[k] then CD.seen[k] = true; CD["seen" .. k] = true; Snapshot(g, CD.jd[k]) end
+            elseif CD.seen[k] then
+                CD.dead[k] = true; CD["dead" .. k] = true; CD.jd[k].tot = timer.getAbsTime()
+                env.info("[CD] JTAC-" .. i .. " target group destroyed: " .. g)
+            end
         end
     end
 end
@@ -3914,20 +3948,20 @@ local function EvalPhase(pUnit, cUnit)
                 C_OvlContact(k, pUnit, "cp")
             else
                 env.info("[CD] ENROUTE: nothing left to task")
-                SetPhase("J2_OFF")
+                SetPhase(RS.off[CD.order[#CD.order]])
             end
             QPlay()
         end
 
-    elseif ph == "JTAC1" or ph == "JTAC2" then   -- v1.8.0: either JTAC, in any order
+    elseif RS.isJ(ph) then   -- v1.8.0: either JTAC, in any order (v1.10.0 roster)
         local k = KeyOfPhase(ph)
-        if k == "J2" and not CD.j2Armed then
-            local tgt = CD.j2.pos or CFG.JTAC2_POS
-            if Dist2D(pPos, tgt) <= CFG.INJ_ARM_NM then CD.j2Armed = true; ArmJ2Injects() end
+        if k == RS.injKey and not CD.injArmed then
+            local tgt = CD.jd[k].pos or JT[k].pos
+            if tgt and Dist2D(pPos, tgt) <= CFG.INJ_ARM_NM then CD.injArmed = true; ArmInjects() end
         end
         if not CD.res[k] and (TargetDead(k) or JcTerm(k)) then
             FinishTask(k)
-            SetPhase(OFF_PH[k])
+            SetPhase(RS.off[k])
         end
 
     elseif ph == "REFUEL" then
@@ -3936,7 +3970,7 @@ local function EvalPhase(pUnit, cUnit)
 
     -- Inbound: OVERLORD → Strike (also catches a skipped INFLTREP / tanker / RTB call)
     ph = CD.phase
-    if (((ph == "J1_OFF" or ph == "J2_OFF") and not NextKey()) or ph == "REFUEL" or ph == "TKR_DONE" or ph == "RTB")
+    if ((RS.isOff(ph) and not NextKey()) or ph == "REFUEL" or ph == "TKR_DONE" or ph == "RTB")
         and cPos and Dist2D(pPos, cPos) <= CFG.RTB_STRIKE_NM then
         C_OvlSwitchStrike(pUnit); QPlay()
         SetPhase("STRIKE_IN")
@@ -4074,8 +4108,6 @@ local REMIND = {
         return string.format("[DEPARTURE] %s, Departure. Contact Strike, %s, how copy?", CFG.CS, Btn("STRIKE")), "dep_contact_strike"
     end,
     OVL_OUT    = function() return string.format("[STRIKE] %s, Strike. Contact Overlord, %s.", CFG.CS, Btn("OVL")), "str_contact_ovl" end,
-    J1_OFF     = function() return OffRemind() end,   -- v1.8.0: by what is left, not by the JTAC
-    J2_OFF     = function() return OffRemind() end,
     ENROUTE    = function()                            -- v1.8.0: AR1 tanker gone, intentions pending
         if CD.ar1Int then return string.format("[OVERLORD] %s, Overlord. Say intentions.", CFG.CS), "ovl_say_int" end
     end,
@@ -4083,6 +4115,7 @@ local REMIND = {
     TKR_DONE   = function() return string.format("[OVERLORD] %s, Overlord. Say intentions.", CFG.CS), "ovl_say_int" end,
     STRIKE_IN  = function() return string.format("[OVERLORD] %s, Overlord. Contact Strike, %s, how copy?", CFG.CS, Btn("STRIKE")), "ovl_contact_strike" end,
 }
+for _, ph in pairs(RS.off) do REMIND[ph] = OffRemind end   -- v1.8.0: by what is left, not by the JTAC (v1.10.0 roster)
 
 Remind = function(now)
     local f = REMIND[CD.phase]
@@ -4129,20 +4162,22 @@ local function AirStartCheck(p, c)
     local spd = math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
     local far = (not c) or Dist2D(pos, c:getPoint()) > CFG.AIRSTART.NM
     if not (agl > CFG.AIRSTART.ALT_AGL_M and spd > CFG.AIRSTART.SPD_MS and far) then return end
-    local key = AirStartTag() or "J1"
+    local key = AirStartTag() or CD.tasked[1]
     CD.airStart = key
     env.info(string.format("[CD] AIR START detected (%s): AGL %.0f m, %.0f m/s", key, agl, spd))
     SetFlag(200, 0)
-    if key == "J2" then
-        CD.worked.J1 = true
-        CD.res.J1, CD.cur = "skipped", "J2"   -- v1.8.0
-        SetPhase("JTAC2")
-        local tic = TicPick() == "J2"
-        Q(string.format("[OVERLORD] %s, Overlord. AIR START: check-in assumed. %s %s. %s Contact " .. P.jtacs.J2.disp .. ", %s.",
+    if key == CD.tasked[2] then   -- v1.10.0: "AIRSTART <slot-2 key>" -> straight to the second tasking
+        local f = CD.tasked[1]
+        CD.worked[f] = true
+        CD.res[f], CD.cur = "skipped", key   -- v1.8.0
+        SetPhase(RS.ph[key])
+        local tic = TicPick() == key
+        local d = P.jtacs[key].disp
+        Q(string.format("[OVERLORD] %s, Overlord. AIR START: check-in assumed. %s %s. %s Contact " .. d .. ", %s.",
             CFG.CS, CFG.CP_NAME, BrgRng(pos, CFG.CP_POS),
-            tic and P.jtacs.J2.disp .. " reports TROOPS IN CONTACT, priority immediate." or P.jtacs.J2.disp .. " is on station.",
-            Btn("J2")), CFG.DUR_LONG, 2)
-        if tic then TicHandoff("J2") else Ack("OVERLORD", false, CFG.BTN.J2) end
+            tic and d .. " reports TROOPS IN CONTACT, priority immediate." or d .. " is on station.",
+            Btn(key)), CFG.DUR_LONG, 2)
+        if tic then TicHandoff(key) else Ack("OVERLORD", false, CFG.BTN[key]) end
         QPlay()
     else
         TicPick()   -- as at the OVERLORD check-in: JTAC_Controller spawns Bravo 2-1 from CD.tic
@@ -4235,7 +4270,7 @@ local function CD_Init()
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
     timer.scheduleFunction(MudTick, nil, timer.getTime() + 10)   -- v1.7.9
-    env.info("[CD] Comms_Director v1.9.2 online — CAS-1 Syria (pack " .. tostring(P.version) .. ")")
+    env.info("[CD] Comms_Director v1.10.0 online — CAS-1 Syria (pack " .. tostring(P.version) .. ")")
 end
 
 CD_Init()

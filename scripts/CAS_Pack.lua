@@ -1,4 +1,7 @@
--- CAS_Pack | v1.2.0
+-- CAS_Pack | v1.2.1
+-- v1.2.1 (2026-11-04, roster P2): jtacs[k].cn = clip name of the JTAC in OVERLORD / pilot clips (ovl_contact_<cn>_b,
+--         p_ovl_off_<cn>_a); jtacs[k].injects = true: the abort / rearm / MANPADS injects belong to this JTAC
+--         (Comms_Director >= v1.10.0). order = the roster (index n -> CD phase JTAC<n>).
 -- v1.2.0 (2026-11-04, effects-based tasking): objective per pool entry ({ n = units to destroy, types = which ones
 --         count }, JTAC_Controller >= v0.15.0) and per JTAC (default = entry A); loadout (Tasking_Pick weapons
 --         check: the picked objectives together <= MAV + LGB - 2, one spare per type).
@@ -19,7 +22,7 @@
 -- Positions: DCS world x = north (ME x), z = east (ME y), metres.
 
 CAS_PACK = {
-    version = "1.2.0",
+    version = "1.2.1",
 
     hero    = "Player_01",       -- unit
     group   = "CAS-1",           -- hero's ME group (route = ATO)
@@ -50,7 +53,7 @@ CAS_PACK = {
             group = "JTAC-1",
             btn = 4, freq = "333.30", ch = "POINTER",
             alt = { btn = 9, freq = "255.00" },      -- lost comms "tech": radio failure on primary
-            vp = "pj", ck = "ptr",                   -- clip prefixes: JTAC_Controller / Comms_Director
+            vp = "pj", ck = "ptr", cn = "pointer",   -- clip prefixes: JTAC_Controller / Comms_Director / OVERLORD + pilot
             msn = "4101",
             area = "BV 62",                          -- briefed target area (kneeboard); the target comes with the 9-line
             targets = { "SAM BV51 (SA-13)-1" },
@@ -79,7 +82,8 @@ CAS_PACK = {
             group = "JTAC-2",
             btn = 5, freq = "333.40", ch = "EYEBALL",
             alt = { btn = 11, freq = "259.00" },
-            vp = "ej", ck = "eye",
+            vp = "ej", ck = "eye", cn = "eyeball",
+            injects = true,                          -- abort / rearm / MANPADS injects (Comms_Director)
             msn = "4102",
             area = "YE 53",
             targets = { "SAM YE53 (SA-8)-1" },
@@ -102,7 +106,7 @@ CAS_PACK = {
             op = { auto = true, brg = 250, m = 2500, dmin = 1500, dmax = 4000, step = 150 },
         },
     },
-    order = { "J1", "J2" },      -- fragged order
+    order = { "J1", "J2" },      -- roster (index n -> CD phase JTAC<n>); CD.tasked = the first two (P2), fragged order
 
     friendly = { name = "Bravo 2-1", cs = "BRAVO 2-1",
                  units = { "M-2 Bradley", "M-2 Bradley", "Soldier M4", "Soldier M4", "Soldier M4" } },

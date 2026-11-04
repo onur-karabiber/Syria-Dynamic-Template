@@ -1,4 +1,7 @@
-# scenario_test/run.py | v1.6.0
+# scenario_test/run.py | v1.7.0
+# v1.7.0: opts pack_lua = Lua run right after CAS_Pack.lua (roster tests, Comms_Director v1.10.0 / JTAC_Controller
+#         v0.15.1): cases roster_J3_* replace J2 by a key J3 (same groups and voice) -> phases JTAC1 / J1_OFF / JTAC2 /
+#         J3_OFF, the scenarios on the slots.
 # v1.6.0: opts passes=True: a cleared attack is a real pass - the hero releases the weapon the JTAC asked for (st.ord) at
 #         the aim unit, only that unit dies at the impact, the hero's ammo goes down (JTAC_Controller v0.15.0 effects-based
 #         tasking: objective, aftermath via flag 222). Cases aft_withdraw / aft_threat / aft_ignore.
@@ -72,12 +75,16 @@ class Run:
                     "TRT.addScore = function(d, r, c) env.info(string.format('[SCORE] %+d %s', d, tostring(r))) end")
         lua.execute("MOCK.missionFromGroups()")                                        # v1.5.0
         for f in ("CAS_Pack.lua", "Tasking_Pick.lua", "Menu_Manager.lua", "Comms_Director.lua", "JTAC_Controller.lua"):
+            if f == "Tasking_Pick.lua" and opts.get("pack_lua"):                         # v1.7.0
+                lua.execute(opts["pack_lua"])
             src = open(os.path.join(SCRIPTS, f), encoding="utf-8").read()
             ok = lua.eval("function(s, n) local f, e = load(s, '@' .. n); if not f then return e end "
                           "local ok, err = pcall(f); return ok and 'OK' or tostring(err) end")(src, f)
             if ok != "OK":
                 self.fail.append("load %s: %s" % (f, ok))
         self.TRT = lua.globals().TRT
+        o = lua.globals().CAS_PACK.order                                             # v1.7.0 roster keys
+        self.K1, self.K2 = str(o[1]), str(o[2])
 
     # ── world ────────────────────────────────────────────────────────────────
     def setup_world(self):
@@ -233,7 +240,7 @@ class Run:
             lbl = self.label(it)
             m = re.match(r"(POINTER|EYEBALL) 11: ", lbl)
             if m:
-                k = "J1" if m.group(1) == "POINTER" else "J2"
+                k = self.K1 if m.group(1) == "POINTER" else self.K2
                 ph = jc.st[k].phase
                 if ph in DIALOG and self.tagged_pending("JC:" + k):
                     self.fail.append("%.0f GATE: '%s' offered while %s's call is still on the radio (%s)" %
@@ -255,7 +262,7 @@ class Run:
         # v1.2.0: spoofed abort on Pointer 11
         sm = o.get("spoof")
         if sm:
-            st1 = jc.st.J1
+            st1 = jc.st[self.K1]
             a1 = st1.att if str(st1.phase) == "ATTACK" else None
             sp = a1.spoof if a1 is not None else None
             if a1 is not None and a1.cleared and not st1.spoofDone:
@@ -274,16 +281,16 @@ class Run:
                     self.shoot()
                 return None, None
         if o.get("abort_auth"):
-            a1 = jc.st.J1.att
+            a1 = jc.st[self.K1].att
             if a1 is not None and a1.aborted and a1.ackPending and not a1.authDone:
                 it = find(r"^POINTER 11: AUTHENTICATE$")
                 if it is not None:
                     return it, None
         # attack simulation: a cleared pass destroys targets
-        for k in ("J1", "J2"):
+        for k in (self.K1, self.K2):
             g = jc.CFG.JTACS[k].targets[1]                  # v1.5.0 the picked target group
             st = jc.st[k]
-            if sm and k == "J1" and not (st.spoofDone and (st.att is None or st.att.spoof is None
+            if sm and k == self.K1 and not (st.spoofDone and (st.att is None or st.att.spoof is None
                                                            or not st.att.spoof.pending)):
                 continue                                    # v1.2.0 hold the kill until the spoof is answered
             if o.get("passes"):                             # v1.6.0 real passes
@@ -305,7 +312,7 @@ class Run:
             if st.phase != "ATTACK":
                 self.attack.pop(k, None)
         # ATTACK: JTAC_Controller puts the next normal-flow call first (F1); never CEASE / NEGATIVE LASER
-        for k, who in (("J1", "POINTER"), ("J2", "EYEBALL")):
+        for k, who in ((self.K1, "POINTER"), (self.K2, "EYEBALL")):
             a = jc.st[k].att
             if str(jc.st[k].phase) == "ATTACK" and a is not None and a.inCalled and not a.cleared \
                     and not a.aborted and self.t() - float(a.inT or 0) < 30:
@@ -345,7 +352,7 @@ class Run:
                 continue
             lbl = self.label(it)
             if re.search(r"READBACK \d/3", lbl):
-                k = "J1" if lbl.startswith("POINTER") else "J2"
+                k = self.K1 if lbl.startswith("POINTER") else self.K2
                 q = jc.st[k].quiz
                 cor = q["items"][q.step].correct
                 sub = it.sub
@@ -367,9 +374,9 @@ class Run:
         # movement
         if ph in ("IDLE", "DEPARTURE", "STRIKE_OUT", "STRIKE_CHK", "OVL_OUT", "ENROUTE", "HOLD"):
             self.move_toward(CP, 3 if ph == "HOLD" else 0, dt)
-        elif ph in ("JTAC1", "J1_OFF", "JTAC2", "J2_OFF"):
-            k = cd.cur or ("J1" if ph in ("JTAC1", "J1_OFF") else "J2")
-            self.move_toward(T1 if k == "J1" else T2, 8, dt)
+        elif ph in ("JTAC1", self.K1 + "_OFF", "JTAC2", self.K2 + "_OFF"):
+            k = cd.cur or (self.K1 if ph in ("JTAC1", self.K1 + "_OFF") else self.K2)
+            self.move_toward(T1 if k == self.K1 else T2, 8, dt)
         elif ph in ("REFUEL", "TKR_DONE", "RTB"):
             self.move_toward(CVN, 0, dt)
         self.burn(dt)
@@ -394,7 +401,7 @@ class Run:
         while self.t() < MAX_S:
             self.step(1.0)
             cd, jc = self.cd(), self.jc()
-            sig = (str(cd.phase), str(jc.st.J1.phase), str(jc.st.J2.phase), len(self.presses), len(cd.queue),
+            sig = (str(cd.phase), str(jc.st[self.K1].phase), str(jc.st[self.K2].phase), len(self.presses), len(cd.queue),
                    bool(cd.qPlaying))
             if sig != last_sig:
                 last_sig, last_t = sig, self.t()
@@ -402,7 +409,7 @@ class Run:
                 break
             if self.t() - last_t > DEAD_S:
                 self.fail.append("%.0f DEAD END: CD %s, J1 %s, J2 %s, menu [%s]" % (
-                    self.t(), cd.phase, jc.st.J1.phase, jc.st.J2.phase,
+                    self.t(), cd.phase, jc.st[self.K1].phase, jc.st[self.K2].phase,
                     " | ".join(self.label(i) for i in self.menu())))
                 break
         else:
@@ -466,6 +473,9 @@ def kill_jtac_when(k, phase):
     return {"when": lambda r: str(r.jc().st[k].phase) == phase,
             "do": lambda r: r.kill(["JTAC-%s-1" % k[1]])}
 
+
+J3_PACK = ("CAS_PACK.jtacs.J3 = CAS_PACK.jtacs.J2; CAS_PACK.jtacs.J2 = nil; "    # v1.7.0 roster test
+           "CAS_PACK.order = { 'J1', 'J3' }")
 
 CASES = [
     ("pick_B", {210: 1, 211: 9, 212: 2, 214: 1, 217: 2, 219: 2}, {},
@@ -576,6 +586,21 @@ CASES = [
      lambda r: [seq_in(r.phases(), "ENROUTE", "JTAC1", "JTAC2", "J2_OFF", "JTAC1", "J1_OFF"), r.cd().airStart == "J1"]),
     ("airstart_noshow_B", {210: 2, 211: 9, 212: 1}, {"start": (CP[0] - 30 * NM, CP[1] - 5 * NM)},
      lambda r: [radio_has(r, r"Texaco 11 is off station.*Say intentions"), seq_in(r.phases(), "ENROUTE", "HOLD")]),
+    # v1.7.0 roster: J2 renamed J3 (Comms_Director v1.10.0 slots; JTAC_Controller JBEH defaults for J3)
+    ("roster_J3_A", {210: 1, 211: 9, 212: 2, 214: 2}, {"pack_lua": J3_PACK},
+     lambda r: [seq_in(r.phases(), "ENROUTE", "JTAC1", "J1_OFF", "JTAC2", "J3_OFF", "REFUEL"),
+                r.cd().res.J1 == "done" and r.cd().res.J3 == "done", bool(r.cd().vulDone), bool(r.cd().deadJ3),
+                radio_has(r, r"EYEBALL 11.*TROOPS IN CONTACT"), radio_has(r, r"mission 4101 and 4102")]),
+    ("roster_J3_B", {210: 2, 211: 9, 212: 2, 214: 1, 215: 2}, {"pack_lua": J3_PACK},
+     lambda r: [seq_in(r.phases(), "HOLD", "JTAC2", "J3_OFF", "JTAC1", "J1_OFF", "REFUEL"),
+                r.cd().res.J1 == "done" and r.cd().res.J3 == "done", radio_has(r, r"off Eyeball 11, mission 4102 complete")]),
+    ("roster_J3_C", {210: 3, 212: 2}, {"pack_lua": J3_PACK, "seed": 1},
+     lambda r: [seq_in(r.phases(), "JTAC1", "JTAC2", "J3_OFF", "JTAC1", "J1_OFF", "REFUEL"),
+                radio_has(r, r"divert, divert. Eyeball 11"), r.cd().dv.state == "accepted",
+                r.cd().res.J1 == "done" and r.cd().res.J3 == "done"]),
+    ("roster_J3_LC_down", {210: 1, 211: 4, 212: 2, 214: 1}, {"pack_lua": J3_PACK},
+     lambda r: [r.cd().res.J3 == "cancelled", radio_has(r, r"Eyeball 11 is off the net"),
+                seq_in(r.phases(), "JTAC1", "J1_OFF", "JTAC2", "J3_OFF", "REFUEL")]),
 ] + [("random_%02d" % i, {}, {"seed": 100 + i}, lambda r: [bool(r.cd().vulDone)]) for i in range(1, 13)]
 
 

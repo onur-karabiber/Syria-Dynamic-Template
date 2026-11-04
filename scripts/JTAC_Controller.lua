@@ -1,5 +1,8 @@
--- JTAC_Controller | v0.15.0
+-- JTAC_Controller | v0.15.1
 --[[
+  v0.15.1 - roster (P2, plan claude/jtac-roster-effects-plan-2026-11-04.md): cdPhase = "JTAC<n>", n = the JTAC's
+           index in CAS_PACK.order (Comms_Director >= v1.10.0 names its phases the same way); a pack JTAC without a
+           JBEH entry gets control auto, method BOT, abort_inject 0. J1 / J2 unchanged (JTAC1 / JTAC2).
   v0.15.0 - effects-based tasking (decisions Onur 2026-11-04 11:15, plan claude/jtac-roster-effects-plan-2026-11-04.md):
            * objective: at the hand-off the JTAC picks the units the tasking needs destroyed (J.objective = { n, types }
              from the pool entry / pack; none = every unit, the old behaviour) - "OBJECTIVE <k>: destroy ..." in the log;
@@ -272,15 +275,17 @@ local function Copy(t)
     return o
 end
 -- v0.14.0 behaviour per JTAC (not in the pack)
-local JBEH = {
-    J1 = { cdPhase = "JTAC1", control = "auto", method = "BOT", abort_inject = 0 },
-    J2 = { cdPhase = "JTAC2", control = "auto", method = "BOT", abort_inject = 30 },
+local JBEH = {   -- v0.15.1: cdPhase = "JTAC<n>" from the roster index (Comms_Director >= v1.10.0), not set here
+    J1 = { control = "auto", method = "BOT", abort_inject = 0 },
+    J2 = { control = "auto", method = "BOT", abort_inject = 30 },
 }
 local function PackJtacs()
-    local out = {}
+    local out, idx = {}, {}
+    for i, k in ipairs(P.order or {}) do idx[k] = i end   -- v0.15.1 roster index -> CD phase JTAC<n>
     for k, pj in pairs(P.jtacs) do
         local j = Copy(pj)
-        for f, v in pairs(JBEH[k] or {}) do j[f] = v end
+        for f, v in pairs(JBEH[k] or { control = "auto", method = "BOT", abort_inject = 0 }) do j[f] = v end
+        j.cdPhase = "JTAC" .. tostring(idx[k] or k)
         out[k] = j
     end
     return out
@@ -290,7 +295,7 @@ end
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "0.15.0",
+    VERSION      = "0.15.1",
     VOICE        = true,      -- v0.7.0 spoken transmissions (needs Comms_Director >= v1.6.4)
     PLAYER_UNIT  = P.hero,
     CS           = P.cs,
