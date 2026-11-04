@@ -1,5 +1,9 @@
--- Score_Display | v1.2.8
+-- Score_Display | v1.2.9
 --[[
+  v1.2.9: a score card that comes while a plane captain card is on screen waits until that card is gone (Onur
+          2026-11-05, option B: the start-up / checks points drew over "Engines ready" / the checks end card;
+          v1.1.1's "they do not overlap in time" was wrong). Deltas keep summing meanwhile (one card, one sound).
+          The PC card is "on screen" until its own duration ends or pcClear(); a newer PC card restarts it.
   v1.2.8: CFG.CRT size 40 % of image: Onur's pick from the TEST-VIS size picker (3840x2160, GUI scale 1.5,
           2026-11-02). 100 % of image is NOT native pixels in DCS (it drew ~2x too large on that screen).
   v1.2.7: total digits by length (make_cards.py >= v0.5.1): crt_t2 (1-2 chars, largest), crt_t3 (3), crt_t (4).
@@ -72,7 +76,7 @@
 _G.TRT = _G.TRT or {}
 local TRT = _G.TRT
 
-local VERSION = "1.2.8"
+local VERSION = "1.2.9"
 
 local CFG = {
     DIR         = "ScoreCards/",
@@ -177,8 +181,15 @@ end
 -- AGGREGATION
 ----------------------------------------------------------------
 local Q = { pending = 0, armed = false }
+local PCV = { untilT = 0 }   -- v1.2.9 plane captain card on screen until this time
 
 local function flush()
+    if timer.getTime() < PCV.untilT then                                  -- v1.2.9 wait for the PC card
+        local h = Unit.getByName(TRT.PLAYER_NAME or "Player_01")
+        local air = h and h:isExist() and h:inAir()
+        if not air then return timer.getTime() + 1 end                    -- deck cards only on deck
+        PCV.untilT = 0
+    end
     Q.armed = false
     local d = Q.pending
     Q.pending = 0
@@ -253,6 +264,7 @@ local function pcCard(id, dur)
     if dur then lay = { dur = dur, h = CFG.PC.h, v = CFG.PC.v, size = CFG.PC.size, units = CFG.PC.units } end
     local ok = pic(CFG.PC.dir .. id .. ".png", lay, true)
     pcShown = pcShown or ok
+    if ok then PCV.untilT = timer.getTime() + lay.dur end   -- v1.2.9
     return ok
 end
 
@@ -260,6 +272,7 @@ local function pcClear()
     if not (canPic and pcShown) then return end
     pic(CFG.PC.dir .. "blank.png", { dur = 1, h = CFG.PC.h, v = CFG.PC.v, size = 1, units = 1 }, true)
     pcShown = false
+    PCV.untilT = 0   -- v1.2.9
 end
 
 local function pcOk()
