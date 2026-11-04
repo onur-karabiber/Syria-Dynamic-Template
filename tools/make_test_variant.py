@@ -1,4 +1,6 @@
-# make_test_variant.py | v1.8.0
+# make_test_variant.py | v1.9.0
+# v1.9.0: --audit (Tasking_Pick >= v1.1.0 / JTAC_Controller >= v0.14.2): flag 221 = 1, set before Tasking_Pick like
+#         --pick -> site check + dry JTAC post search for EVERY pool entry in one load. Tag "AUDIT".
 # v1.8.0: --pick J1=B,J2=C forces target-pool entries (Tasking_Pick v1.0.0, flags 217 / 219 = entry index in
 #         scripts/CAS_Pack.lua). The flags must be set BEFORE Tasking_Pick runs at load, so they go in as a DO SCRIPT
 #         action right before Tasking_Pick's Do Script File action in its trigger (not a later triggerOnce).
@@ -191,6 +193,7 @@ def scen_tag(a):
     if a.tic: parts.append("TIC" + a.tic)
     if a.first: parts.append("1ST" + a.first)
     if a.spoof: parts.append("SPF" + a.spoof)   # v1.6.0
+    if getattr(a, "audit", False): parts.append("AUDIT")   # v1.9.0
     if a.pick: parts.append("PK" + "".join(PICKS(a.pick).get(k, ("-", 0))[0] for k in ("J1", "J2")))   # v1.8.0
     return "-".join(parts)
 
@@ -219,8 +222,10 @@ def add_pick_flags(mission, mapres, a):
         sys.exit("--pick: Tasking_Pick.lua not in mapResource")
     rules, trig = mission[b"trigrules"], mission[b"trig"]
     rk = next((i for i, r in rules.items() if any(x.get(b"file") == key for x in r[b"actions"].values())), None)
-    picks = PICKS(a.pick)
+    picks = PICKS(a.pick) if a.pick else {}
     sets = [(PICK_FLAG[k], idx) for k, (pid, idx) in sorted(picks.items())]
+    if a.audit:
+        sets.append((221, 1))                                 # v1.9.0 Tasking_Pick audit mode
     code = "".join('trigger.action.setUserFlag("%d", %d); ' % fv for fv in sets)
     code += 'env.info("[TEST] pick flags: %s")' % ", ".join("%d=%d" % fv for fv in sets)
     acts = [rules[rk][b"actions"][i] for i in sorted(rules[rk][b"actions"])]
@@ -335,6 +340,7 @@ def main():
     ap.add_argument("--first", choices=["J1", "J2"], help="v1.5.0 first tasking in scenario B")
     ap.add_argument("--spoof", choices=["J1", "J2", "both", "off"], help="v1.6.0 force the spoofed abort (flag 216)")
     ap.add_argument("--pick", help="v1.8.0 force target-pool entries, e.g. J1=B,J2=C (flags 217 / 219)")
+    ap.add_argument("--audit", action="store_true", help="v1.9.0 audit every target-pool entry in one load (flag 221)")
     a = ap.parse_args()
     src = os.path.abspath(a.miz)
     if src.startswith(REPO + os.sep):
@@ -347,7 +353,7 @@ def main():
             _, mission = dcslua.parse(raw)
             print(stem, "->", key)
             build(mission, a, key)
-            if a.pick:
+            if a.pick or a.audit:
                 add_pick_flags(mission, mapres, a)
             if not a.keep_red_air:
                 strip_red_air(mission)

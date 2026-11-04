@@ -1,5 +1,8 @@
--- Tasking_Pick | v1.0.0
+-- Tasking_Pick | v1.1.0
 --[[
+  v1.1.0 - audit mode (ME flag 221 > 0, tools/make_test_variant.py --audit): the site check runs for EVERY pool entry
+           of every JTAC (not only the picked one), and JTAC_Controller (>= v0.14.2) runs its post search dry for every
+           entry ("[JC] AUDIT ..."). One mission load audits the whole pool. TRT.PICK.audit, TRT.PICK.meUnits(name).
   CAS-1 target pool pick (B3, decisions Onur 2026-11-04: ME late-activated groups, sets B + C per JTAC; plan
   claude/target-pool-tasking-pack-plan-2026-11-04.md).
   Runs once at load, right after CAS_Pack.lua in the MOOSE trigger, i.e. BEFORE Skynet init and before every
@@ -24,7 +27,8 @@ local TRT = _G.TRT
 if TRT.PICK then env.info("[PICK] already loaded, second copy ignored") return end
 
 local CFG = {
-    VERSION   = "1.0.0",
+    VERSION   = "1.1.0",
+    AUDIT_FLAG = 221,                     -- v1.1.0 > 0: audit every pool entry
     FLAG      = { J1 = 217, J2 = 219 },   -- forced entry index (0 = random)
     SLOPE_MAX = 12,                       -- deg; steeper -> CHECK
     SCENERY_R = 12,                       -- m
@@ -96,6 +100,9 @@ local function SiteCheck(k, e)
 end
 
 TRT.PICK = { version = CFG.VERSION }
+TRT.PICK.meUnits = function(name) local g = MeGroup(name); return g and g.units or {} end   -- v1.1.0
+TRT.PICK.audit = Flag(CFG.AUDIT_FLAG) > 0
+if TRT.PICK.audit then Log("AUDIT mode (flag " .. CFG.AUDIT_FLAG .. "): site check of every pool entry") end
 Log(string.format("rng %.6f (first math.random value this mission)", math.random()))
 
 for _, k in ipairs(P.order or {}) do
@@ -144,8 +151,12 @@ for _, k in ipairs(P.order or {}) do
         TRT.PICK[k] = { idx = idx, id = e.id, name = e.name, forced = forced }
         Log(string.format("%s -> %s %s (%s, entry %d of %d)", k, tostring(e.id), tostring(e.name),
             forced and ("forced by flag " .. CFG.FLAG[k]) or "random", idx, #pool))
-        local ok, err = pcall(SiteCheck, k, e)
-        if not ok then Log("site check failed: " .. tostring(err)) end
+        for i, o in ipairs(pool) do
+            if i == idx or TRT.PICK.audit then
+                local ok, err = pcall(SiteCheck, k, o)
+                if not ok then Log("site check failed: " .. tostring(err)) end
+            end
+        end
     end
 end
 Log("Tasking_Pick v" .. CFG.VERSION .. " done")

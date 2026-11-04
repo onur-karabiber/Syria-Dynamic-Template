@@ -1,4 +1,5 @@
-# scenario_test/run.py | v1.5.0
+# scenario_test/run.py | v1.5.1
+# v1.5.1: case audit (flag 221: site check + dry JTAC post search for every pool entry).
 # v1.5.0: target pool (Tasking_Pick v1.0.0): the four pool groups exist late-activated next to set A; Tasking_Pick.lua
 #         runs after the pack (env.mission built from the mock groups); kills follow the picked target group; cases
 #         pick_B / pick_C force entries B / C with flags 217 / 219.
@@ -435,6 +436,10 @@ CASES = [
     ("pick_B", {210: 1, 211: 9, 212: 2, 214: 1, 217: 2, 219: 2}, {},
      lambda r: [r.cd().res.J1 == "done" and r.cd().res.J2 == "done", radio_has(r, r"T-72 tank"),
                 radio_has(r, r"three T-72 tanks and BMP"), r.log_has(r"\[PICK\] J1 -> B"), r.log_has(r"removed SAM BV51")]),
+    ("audit", {210: 1, 211: 9, 212: 2, 214: 1, 221: 1}, {},          # v1.5.1 Tasking_Pick v1.1.0 / JC v0.14.2
+     lambda r: [r.cd().res.J1 == "done" and r.cd().res.J2 == "done", r.log_has(r"AUDIT mode"),
+                all(r.log_has(r"\[JC\] AUDIT %s-%s .* -> OK$" % (k, e)) for k in ("J1", "J2") for e in "ABC"),
+                all(r.log_has(r"\[PICK\] site %s-%s " % (k, e)) for k in ("J1", "J2") for e in "ABC")]),
     ("pick_C", {210: 3, 211: 9, 212: 2, 217: 3, 219: 3}, {},
      lambda r: [r.cd().res.J1 == "done" and r.cd().res.J2 == "done", radio_has(r, r"two self-propelled howitzers"),
                 radio_has(r, r"four self-propelled howitzers"), r.log_has(r"\[PICK\] J2 -> C")]),

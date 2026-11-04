@@ -1,5 +1,10 @@
--- JTAC_Controller | v0.14.1
+-- JTAC_Controller | v0.14.2
 --[[
+  v0.14.2 - target-pool audit (Tasking_Pick >= v1.1.0, TRT.PICK.audit = ME flag 221): after the normal start-up
+           relocation, the post search runs dry (JTAC not moved) for EVERY pool entry of every JTAC, on the units' ME
+           positions (late-activated groups need not be active), and logs "AUDIT <k>-<id>: ..." with the same
+           numbers as RELOCATE (posts tried, LOS, threat-clear FAH window). The search itself is PostSearch(),
+           shared with Relocate() (unchanged results).
   v0.14.1 - target pool (Tasking_Pick v1.0.0): label "self-propelled howitzer" for SAU Gvozdika (2S1) and "truck"
            for Ural-375, voiced by the new pj_ / ej_lab_sp_howitzer(_pl) clips. The picked targets reach CFG.JTACS
            through CAS_PACK (Tasking_Pick writes them before this file loads).
@@ -271,7 +276,7 @@ end
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "0.14.1",
+    VERSION      = "0.14.2",
     VOICE        = true,      -- v0.7.0 spoken transmissions (needs Comms_Director >= v1.6.4)
     PLAYER_UNIT  = P.hero,
     CS           = P.cs,
@@ -2288,12 +2293,10 @@ local function SetupGround(gname, skill)
     end, nil, timer.getTime() + 1)
 end
 
-local function Relocate(k)
-    local j = J(k)
+--- v0.14.2: observation-post search around the units tus (objects with getPoint), shared by Relocate and the
+--- pool audit. Returns best post (or nil), threat-clear flag, stats table.
+local function PostSearch(j, tus)
     local op = j.op
-    if not op then return end
-    local ju, tus = JtacUnit(k), TargetUnits(k)
-    if not ju or #tus == 0 then Log("RELOCATE " .. k .. ": no JTAC / target, ME position kept"); return end
     local tp = Centroid(tus)
     local tgtH = GroundY(tp)
     local threats = op.auto and Threats() or {}
@@ -2330,6 +2333,17 @@ local function Relocate(k)
             end
         end
     end
+    return best, bClear, { n = n, surf = nSurf, near = nNear, los = nLos, clear = nClear, tp = tp, tgtH = tgtH }
+end
+
+local function Relocate(k)
+    local j = J(k)
+    local op = j.op
+    if not op then return end
+    local ju, tus = JtacUnit(k), TargetUnits(k)
+    if not ju or #tus == 0 then Log("RELOCATE " .. k .. ": no JTAC / target, ME position kept"); return end
+    local best, bClear, S = PostSearch(j, tus)
+    local tp, tgtH, n, nSurf, nNear, nLos, nClear = S.tp, S.tgtH, S.n, S.surf, S.near, S.los, S.clear
     if not best then
         Log(string.format("RELOCATE %s: no point with LOS (%d tried: surface %d, too close %d, no LOS %d), ME position kept",
             k, n, nSurf, nNear, nLos))
@@ -2351,6 +2365,35 @@ local function Relocate(k)
     SetupGround(j.group)
     Log(string.format("RELOCATE %s: %s -> %s, %s %.0f m from target, %.0f m off the requested point, LOS to %d units",
         k, MGRS(old), MGRS(best), Dir8(BrgT(tp, best)), D2(tp, best), bd, #tus))
+end
+
+--- v0.14.2: dry post search for every pool entry (Tasking_Pick audit mode), on ME positions
+local function PoolAudit()
+    local P = _G.CAS_PACK
+    for _, k in ipairs(CFG.ORDER) do
+        local j = J(k)
+        for _, e in ipairs((P.jtacs[k] or {}).pool or {}) do
+            local tus = {}
+            for _, gname in ipairs(e.targets or {}) do
+                for _, u in ipairs((TRT.PICK.meUnits and TRT.PICK.meUnits(gname)) or {}) do
+                    local pt = { x = u.x, y = 0, z = u.y }
+                    tus[#tus + 1] = { getPoint = function() return pt end }
+                end
+            end
+            if #tus == 0 then
+                Log(string.format("AUDIT %s-%s: no units found in env.mission", k, tostring(e.id)))
+            elseif not j.op then
+                Log(string.format("AUDIT %s-%s: JTAC has no observation-post search (op)", k, tostring(e.id)))
+            else
+                local best, clear, S = PostSearch(j, tus)
+                Log(string.format("AUDIT %s-%s %s: %d units, %d posts tried (surface %d, too close %d, no LOS %d, "
+                    .. "threat-clear %d) -> %s%s", k, tostring(e.id), tostring(e.name), #tus, S.n, S.surf, S.near, S.los,
+                    S.clear, best and ("post " .. MGRS(best) .. ", " .. Dir8(BrgT(S.tp, best)) .. " " ..
+                    math.floor(D2(S.tp, best) + 0.5) .. " m, threat-clear window " .. tostring(clear)) or "NO POST WITH LOS",
+                    (best and clear) and " -> OK" or " -> CHECK"))
+            end
+        end
+    end
 end
 
 -- ══════════════════════════════════════════════════════════════
@@ -2572,6 +2615,10 @@ timer.scheduleFunction(function()
     for _, k in ipairs(CFG.ORDER) do
         local ok, err = pcall(Relocate, k)
         if not ok then Log("RELOCATE " .. k .. " error: " .. tostring(err)) end
+    end
+    if TRT.PICK and TRT.PICK.audit then                          -- v0.14.2
+        local ok, err = pcall(PoolAudit)
+        if not ok then Log("AUDIT error: " .. tostring(err)) end
     end
     timer.scheduleFunction(Tick, nil, timer.getTime() + 2)
 end, nil, timer.getTime() + 2)
