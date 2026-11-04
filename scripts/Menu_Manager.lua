@@ -1,4 +1,17 @@
--- Menu_Manager | v1.1.0
+-- Menu_Manager | v1.2.0
+-- v1.2.0: voice dispatch. TRT.Menu.Voice(section, key, said) runs the CURRENT item whose label matches a key
+--         (VoiceAttack -> UDP -> Scripts/Hooks/TRT_VoiceBridge.lua -> a_do_script). Labels are matched, not
+--         F-key positions, so items that come and go per phase cannot shift a voice call onto the wrong item.
+--         Key syntax (lower case, matched against the lower-cased label, whitespace collapsed):
+--           "overlord: request picture"   prefix match
+--           "*: ip inbound"               "*:" = any agency ("POINTER 11:", "MARSHAL:", ...)
+--           "*: off="                     trailing "=" = exact (end of label)
+--           "a | b"                       alternatives, tried in order
+--           "*: correlation > tally="     " > " = submenu path
+--           "*: readback > #2"            "#n" = n-th item of that submenu
+--         Section "*" searches COMMS, CARRIER, INFO, TRAINING in that order. Not found -> retried every
+--         0.5 s for VOICE_WAIT s (the item may open while the other station is still talking), then
+--         "[VOICE] not available". A key that ends on a submenu lists its items on screen.
 -- v1.1.0: prefix-stable rebuild. Only the items from the first changed position on are removed and
 --         re-added; the DCS handles of the items above stay. Flight 2026-10-29 #2: a COMMS rebuild
 --         (label change, no press) 5 s before a press made DCS deliver "OVERLORD: feet dry" for a
@@ -39,6 +52,7 @@
     TRT.Menu.SetHint(owner, phase | nil)            "DEPARTURE" / "MISSION" / "RECOVERY"
     TRT.Menu.Refresh()                              rebuild now (call after a phase change)
     TRT.Menu.Msg(text, dur)                         text to the hero's group
+    TRT.Menu.Voice(section, key, said)              v1.2.0: run the item a voice key names (see v1.2.0)
   A pressed item is looked up by its label path in the CURRENT item list, so a
   provider's closures are never stale. A pressed item triggers Refresh().
 ]]
@@ -50,13 +64,16 @@ if TRT.Menu then
 end
 
 local CFG = {
-    VERSION     = "1.1.0",
+    VERSION     = "1.2.0",
     PLAYER_UNIT = "Player_01",
     TICK        = 2,                                          -- s
     SECTIONS    = { "COMMS", "INFO", "CARRIER", "TRAINING" }, -- F1..F4, fixed order
     HIDE_EMPTY  = { TRAINING = true },                        -- only trailing roots
     RANK        = { RECOVERY = 3, DEPARTURE = 2, MISSION = 1 },
     MSG_DUR     = 10,
+    VOICE_WAIT  = 4,                                          -- s, v1.2.0
+    VOICE_STEP  = 0.5,                                        -- s
+    VOICE_ORDER = { "COMMS", "CARRIER", "INFO", "TRAINING" }, -- section "*"
 }
 
 local M = {
@@ -311,6 +328,112 @@ Press = function(arg)
         Log("stale press ignored: " .. arg.section .. " > " .. table.concat(arg.path, " > "))
     end
     M.Refresh()
+end
+
+-- ══════════════════════════════════════════════════════════════
+--  VOICE (v1.2.0)
+-- ══════════════════════════════════════════════════════════════
+local function Norm(s)
+    return (tostring(s or ""):lower():gsub("%s+", " "):gsub("^ ", ""):gsub(" $", ""))
+end
+
+-- one key segment -> Lua pattern | { index = n }
+local function SegPattern(seg)
+    seg = Norm(seg)
+    local n = seg:match("^#(%d+)$")
+    if n then return { index = tonumber(n) } end
+    local exact = seg:sub(-1) == "="
+    if exact then seg = Norm(seg:sub(1, -2)) end
+    local wild = seg:sub(1, 2) == "*:"
+    if wild then seg = seg:sub(3) end
+    local lit = seg:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1")
+    return { pat = "^" .. (wild and "[^:]+:" or "") .. lit .. (exact and "$" or "") }
+end
+
+local function SplitPath(alt)
+    local segs, rest = {}, alt
+    while true do
+        local a, b = rest:find(" > ", 1, true)
+        if not a then segs[#segs + 1] = SegPattern(rest); break end
+        segs[#segs + 1] = SegPattern(rest:sub(1, a - 1))
+        rest = rest:sub(b + 1)
+    end
+    return segs
+end
+
+-- depth-first: a label that matches but whose subtree does not is skipped, the next one is tried
+local function Match(items, segs, depth)
+    local sp = segs[depth]
+    for i, it in ipairs(items or {}) do
+        local ok
+        if sp.index then ok = (i == sp.index)
+        else ok = Norm(it[1]):find(sp.pat) ~= nil end
+        if ok then
+            if depth == #segs then return it end
+            if it.sub then
+                local r = Match(it.sub, segs, depth + 1)
+                if r then return r end
+            end
+        end
+    end
+    return nil
+end
+
+local function VoiceFind(section, key)
+    local secs = (section == "*" or section == nil or section == "") and CFG.VOICE_ORDER or { section }
+    for alt in (key .. " | "):gmatch("(.-) | ") do
+        alt = Norm(alt)
+        if alt ~= "" then
+            local ok, segs = pcall(SplitPath, alt)
+            if ok then
+                for _, s in ipairs(secs) do
+                    local it = Match(M.cur[s], segs, 1)
+                    if it then return it, s end
+                end
+            else
+                Log("voice: bad key '" .. alt .. "': " .. tostring(segs))
+            end
+        end
+    end
+    return nil
+end
+
+M.voice = { seq = 0 }
+
+function M.Voice(section, key, said)
+    section = tostring(section or "COMMS"):upper()
+    key     = tostring(key or "")
+    said    = tostring(said or key)
+    M.voice.seq = M.voice.seq + 1
+    local seq, t0 = M.voice.seq, timer.getTime()
+    Log(string.format("voice: '%s' -> %s | %s", said, section, key))
+    local function try()
+        if seq ~= M.voice.seq then return nil end              -- a newer voice call replaced this one
+        M.Refresh()
+        local it, s = VoiceFind(section, key)
+        if it then
+            if it.sub then                                     -- submenu named: list its items
+                local out = { "[VOICE] " .. it[1] .. ":" }
+                for i, c in ipairs(it.sub) do out[#out + 1] = string.format("  %d  %s", i, c[1]) end
+                M.Msg(table.concat(out, "\n"), 15)
+                Log("voice: submenu '" .. it[1] .. "' listed")
+            elseif it[2] then
+                Log("voice press: " .. s .. " > " .. it[1])
+                local ok, err = pcall(it[2])
+                if not ok then Log("voice item '" .. it[1] .. "': " .. tostring(err)) end
+                M.Refresh()
+            end
+            return nil
+        end
+        if timer.getTime() - t0 >= CFG.VOICE_WAIT then
+            Log("voice: not available: " .. section .. " | " .. key)
+            M.Msg("[VOICE] not available now: " .. said, 4)
+            return nil
+        end
+        return timer.getTime() + CFG.VOICE_STEP
+    end
+    local nxt = try()
+    if nxt then timer.scheduleFunction(function() return try() end, nil, nxt) end
 end
 
 -- ══════════════════════════════════════════════════════════════

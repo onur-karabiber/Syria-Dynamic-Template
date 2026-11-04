@@ -1,0 +1,728 @@
+{
+ "suffix": [
+  {
+   "phrase": "checking in [as fragged;outbound;]",
+   "key": "@ag: check in | @ag: rv initial",
+   "expect": [
+    [
+     "overlord",
+     "OVERLORD: check in (btn 3)"
+    ],
+    [
+     "strike",
+     "STRIKE: check in (btn 6)"
+    ],
+    [
+     "marshal",
+     "MARSHAL: check in 264.00 (#16)"
+    ],
+    [
+     "approach",
+     "APPROACH: check in 271.00 (#15)"
+    ],
+    [
+     "pointer 11",
+     "POINTER 11: check in (btn 4)"
+    ],
+    [
+     "ankara",
+     "ANKARA: check in (357.5)"
+    ],
+    [
+     "tower",
+     "TOWER: check in (360.1)"
+    ],
+    [
+     "texaco",
+     "TEXACO: RV initial (btn 7)"
+    ]
+   ]
+  },
+  {
+   "phrase": "inbound;checking in inbound",
+   "key": "@ag: check in inbound",
+   "expect": [
+    [
+     "strike",
+     "STRIKE: check in inbound (btn 6)"
+    ]
+   ]
+  },
+  {
+   "phrase": "request taxi",
+   "key": "@ag: request taxi",
+   "expect": [
+    [
+     "ground",
+     "GROUND: request taxi (250.0)"
+    ]
+   ]
+  },
+  {
+   "phrase": "request picture;picture",
+   "key": "@ag: request picture",
+   "expect": [
+    [
+     "overlord",
+     "OVERLORD: request picture"
+    ]
+   ]
+  },
+  {
+   "phrase": "feet dry",
+   "key": "@ag: feet dry",
+   "expect": [
+    [
+     "overlord",
+     "OVERLORD: feet dry"
+    ]
+   ]
+  },
+  {
+   "phrase": "feet wet",
+   "key": "@ag: feet wet",
+   "expect": [
+    [
+     "overlord",
+     "OVERLORD: feet wet"
+    ]
+   ]
+  },
+  {
+   "phrase": "in flight rep;in flight report;ready to pass in flight rep",
+   "key": "@ag: infltrep",
+   "expect": [
+    [
+     "overlord",
+     "OVERLORD: INFLTREP"
+    ]
+   ]
+  },
+  {
+   "phrase": "wilco [divert;]",
+   "key": "@ag: wilco divert",
+   "expect": [
+    [
+     "overlord",
+     "OVERLORD: wilco divert (Eyeball 11)"
+    ]
+   ]
+  },
+  {
+   "phrase": "unable [divert;]",
+   "key": "@ag: unable divert",
+   "expect": [
+    [
+     "overlord",
+     "OVERLORD: unable divert, state 6.2"
+    ]
+   ]
+  },
+  {
+   "phrase": "continuing mission [without tanker;no tanker;]",
+   "key": "@ag: continuing mission",
+   "expect": [
+    [
+     "overlord",
+     "OVERLORD: continuing mission, no tanker"
+    ]
+   ]
+  },
+  {
+   "phrase": "RTB;off Texaco RTB;no tanker required RTB",
+   "key": "@ag: rtb= | @ag: rtb (no tanker)",
+   "expect": [
+    [
+     "overlord",
+     "OVERLORD: RTB"
+    ]
+   ]
+  },
+  {
+   "phrase": "mission abort [RTB;];abort mission [RTB;]",
+   "key": "@ag: rtb (mission abort)",
+   "expect": [
+    [
+     "overlord",
+     "OVERLORD: RTB (mission abort)"
+    ]
+   ]
+  },
+  {
+   "phrase": "request Texaco;request tanker",
+   "key": "@ag: request texaco",
+   "expect": [
+    [
+     "overlord",
+     "OVERLORD: request Texaco (AR1 top-off)"
+    ]
+   ]
+  },
+  {
+   "phrase": "negative Texaco;no top off",
+   "key": "@ag: skip ar1",
+   "expect": [
+    [
+     "overlord",
+     "OVERLORD: skip AR1 (no top-off)"
+    ]
+   ]
+  },
+  {
+   "phrase": "off Texaco [proceeding [C P;] Tiger;]",
+   "key": "@ag: off texaco",
+   "expect": [
+    [
+     "overlord",
+     "OVERLORD: off Texaco, proceeding TIGER"
+    ]
+   ]
+  },
+  {
+   "phrase": "bingo [fuel;] [diverting;] [nearest field;Incirlik;Injirlik;Akrotiri;]",
+   "key": "@ag: bingo",
+   "expect": [
+    [
+     "overlord",
+     "OVERLORD: bingo / divert (nearest field)"
+    ]
+   ]
+  },
+  {
+   "phrase": "execute overrun",
+   "key": "@ag: execute overrun",
+   "expect": [
+    [
+     "texaco",
+     "TEXACO: execute overrun"
+    ]
+   ]
+  },
+  {
+   "phrase": "breakaway [breakaway;] [breakaway;]",
+   "key": "@ag: breakaway",
+   "expect": [
+    [
+     "texaco",
+     "TEXACO: breakaway (emergency)"
+    ]
+   ]
+  },
+  {
+   "phrase": "state",
+   "key": "@ag: state",
+   "expect": [
+    [
+     "texaco",
+     "TEXACO: state"
+    ]
+   ]
+  },
+  {
+   "phrase": "readback",
+   "key": "@ag: 9-line readback | @ag: readback",
+   "expect": [
+    [
+     "marshal",
+     "MARSHAL: readback"
+    ],
+    [
+     "pointer 11",
+     "POINTER 11: 9-line readback (4/6/8)"
+    ]
+   ]
+  },
+  {
+   "phrase": "established [angels [1..30];]",
+   "key": "@ag: established",
+   "expect": [
+    [
+     "marshal",
+     "MARSHAL: established"
+    ]
+   ]
+  },
+  {
+   "phrase": "commencing",
+   "key": "@ag: commencing",
+   "expect": [
+    [
+     "marshal",
+     "MARSHAL: commencing (EAT :25, T-1:30)"
+    ]
+   ]
+  },
+  {
+   "phrase": "see you at ten",
+   "key": "@ag: see you at 10",
+   "expect": [
+    [
+     "marshal",
+     "MARSHAL: see you at 10"
+    ],
+    [
+     "approach",
+     "APPROACH: see you at 10"
+    ]
+   ]
+  },
+  {
+   "phrase": "platform",
+   "key": "@ag: platform",
+   "expect": [
+    [
+     "approach",
+     "APPROACH: platform"
+    ]
+   ]
+  },
+  {
+   "phrase": "needles up and on;up and on",
+   "key": "@ag: needles up and on",
+   "expect": [
+    [
+     "approach",
+     "APPROACH: needles up and on"
+    ]
+   ]
+  },
+  {
+   "phrase": "negative needles;needles negative",
+   "key": "@ag: needles negative",
+   "expect": [
+    [
+     "approach",
+     "APPROACH: needles negative"
+    ]
+   ]
+  },
+  {
+   "phrase": "Popeye [angels [1..30];]",
+   "key": "@ag: popeye",
+   "expect": [
+    [
+     "departure",
+     "DEPARTURE: Popeye, angels 5"
+    ]
+   ]
+  },
+  {
+   "phrase": "on top [angels [1..30];]",
+   "key": "@ag: on top",
+   "expect": [
+    [
+     "departure",
+     "DEPARTURE: on top, angels 7"
+    ]
+   ]
+  },
+  {
+   "phrase": "tanking complete",
+   "key": "@ag: tanking complete",
+   "expect": [
+    [
+     "departure",
+     "DEPARTURE: tanking complete (state) 251.00 (#2)"
+    ]
+   ]
+  },
+  {
+   "phrase": "how copy",
+   "key": "@ag: how copy",
+   "expect": [
+    [
+     "pointer 11",
+     "POINTER 11: how copy? (no answer)"
+    ]
+   ]
+  },
+  {
+   "phrase": "off Pointer one one [mission complete;] [ready for retasking;]",
+   "key": "@ag: off pointer 11",
+   "expect": [
+    [
+     "overlord",
+     "OVERLORD: off Pointer 11, ready for retasking"
+    ]
+   ]
+  },
+  {
+   "phrase": "off Eyeball one one [mission complete;] [ready for retasking;]",
+   "key": "@ag: off eyeball 11",
+   "expect": [
+    [
+     "overlord",
+     "OVERLORD: off Eyeball 11, ready for retasking"
+    ]
+   ]
+  },
+  {
+   "phrase": "off Axeman one one [mission complete;] [ready for retasking;]",
+   "key": "@ag: off axeman 11",
+   "expect": [
+    [
+     "overlord",
+     "OVERLORD: off Axeman 11, ready for retasking"
+    ]
+   ]
+  },
+  {
+   "phrase": "off Darknight;Dark Knight one one [mission complete;] [ready for retasking;]",
+   "key": "@ag: off darknight 11",
+   "expect": [
+    [
+     "overlord",
+     "OVERLORD: off Darknight 11, ready for retasking"
+    ]
+   ]
+  },
+  {
+   "phrase": "unable contact Pointer one one",
+   "key": "@ag: unable contact pointer 11",
+   "expect": [
+    [
+     "overlord",
+     "OVERLORD: unable contact Pointer 11"
+    ]
+   ]
+  },
+  {
+   "phrase": "unable contact Eyeball one one",
+   "key": "@ag: unable contact eyeball 11",
+   "expect": [
+    [
+     "overlord",
+     "OVERLORD: unable contact Eyeball 11"
+    ]
+   ]
+  },
+  {
+   "phrase": "unable contact Axeman one one",
+   "key": "@ag: unable contact axeman 11",
+   "expect": [
+    [
+     "overlord",
+     "OVERLORD: unable contact Axeman 11"
+    ]
+   ]
+  },
+  {
+   "phrase": "unable contact Darknight;Dark Knight one one",
+   "key": "@ag: unable contact darknight 11",
+   "expect": [
+    [
+     "overlord",
+     "OVERLORD: unable contact Darknight 11"
+    ]
+   ]
+  }
+ ],
+ "full": [
+  {
+   "phrase": "[Pointer one one;Eyeball one one;Axeman one one;Darknight one one;Dark Knight one one;] [Hornet five one;] ready for game plan",
+   "section": "COMMS",
+   "key": "*: ready for game plan",
+   "expect": "POINTER 11: ready for game plan"
+  },
+  {
+   "phrase": "[Pointer one one;Eyeball one one;Axeman one one;Darknight one one;Dark Knight one one;] [Hornet five one;] ready for nine line",
+   "section": "COMMS",
+   "key": "*: ready for 9-line",
+   "expect": "POINTER 11: ready for 9-line"
+  },
+  {
+   "phrase": "[Pointer one one;Eyeball one one;Axeman one one;Darknight one one;Dark Knight one one;] [Hornet five one;] ready for remarks",
+   "section": "COMMS",
+   "key": "*: ready for remarks",
+   "expect": "POINTER 11: ready for remarks"
+  },
+  {
+   "phrase": "[Pointer one one;Eyeball one one;Axeman one one;Darknight one one;Dark Knight one one;] [Hornet five one;] IP inbound",
+   "section": "COMMS",
+   "key": "*: ip inbound",
+   "expect": "POINTER 11: IP INBOUND"
+  },
+  {
+   "phrase": "[Pointer one one;Eyeball one one;Axeman one one;Darknight one one;Dark Knight one one;] Hornet five one in [from the north;from the northeast;from the east;from the southeast;from the south;from the southwest;from the west;from the northwest;]",
+   "section": "COMMS",
+   "key": "*: in (",
+   "expect": "POINTER 11: IN (direction auto)"
+  },
+  {
+   "phrase": "[Pointer one one;Eyeball one one;Axeman one one;Darknight one one;Dark Knight one one;] Hornet five one off [north;northeast;east;southeast;south;southwest;west;northwest;]",
+   "section": "COMMS",
+   "key": "*: off= | *: off (dry)",
+   "expect": "POINTER 11: OFF"
+  },
+  {
+   "phrase": "[Pointer one one;Eyeball one one;Axeman one one;Darknight one one;Dark Knight one one;] [Hornet five one;] ten seconds",
+   "section": "COMMS",
+   "key": "*: ten seconds",
+   "expect": "POINTER 11: TEN SECONDS"
+  },
+  {
+   "phrase": "[Pointer one one;Eyeball one one;Axeman one one;Darknight one one;Dark Knight one one;] [Hornet five one;] laser on",
+   "section": "COMMS",
+   "key": "*: laser on",
+   "expect": "POINTER 11: LASER ON"
+  },
+  {
+   "phrase": "[Pointer one one;Eyeball one one;Axeman one one;Darknight one one;Dark Knight one one;] [Hornet five one;] spot",
+   "section": "COMMS",
+   "key": "*: spot=",
+   "expect": "POINTER 11: SPOT"
+  },
+  {
+   "phrase": "[Pointer one one;Eyeball one one;Axeman one one;Darknight one one;Dark Knight one one;] [Hornet five one;] negative laser",
+   "section": "COMMS",
+   "key": "*: negative laser",
+   "expect": "POINTER 11: NEGATIVE LASER"
+  },
+  {
+   "phrase": "[Pointer one one;Eyeball one one;Axeman one one;Darknight one one;Dark Knight one one;] [Hornet five one;] shift [laser;]",
+   "section": "COMMS",
+   "key": "*: shift",
+   "expect": "POINTER 11: SHIFT (laser to next target)"
+  },
+  {
+   "phrase": "[Pointer one one;Eyeball one one;Axeman one one;Darknight one one;Dark Knight one one;] [Hornet five one;] cease laser;[Pointer one one;Eyeball one one;Axeman one one;Darknight one one;Dark Knight one one;] [Hornet five one;] terminate [laser;]",
+   "section": "COMMS",
+   "key": "*: cease laser",
+   "expect": "POINTER 11: CEASE LASER"
+  },
+  {
+   "phrase": "[Pointer one one;Eyeball one one;Axeman one one;Darknight one one;Dark Knight one one;] [Hornet five one;] tally [target;]",
+   "section": "COMMS",
+   "key": "*: correlation > tally=",
+   "expect": "POINTER 11: correlation > TALLY"
+  },
+  {
+   "phrase": "[Pointer one one;Eyeball one one;Axeman one one;Darknight one one;Dark Knight one one;] [Hornet five one;] captured",
+   "section": "COMMS",
+   "key": "*: correlation > captured=",
+   "expect": "POINTER 11: correlation > CAPTURED"
+  },
+  {
+   "phrase": "[Pointer one one;Eyeball one one;Axeman one one;Darknight one one;Dark Knight one one;] [Hornet five one;] no joy",
+   "section": "COMMS",
+   "key": "*: correlation > no joy=",
+   "expect": "POINTER 11: correlation > NO JOY"
+  },
+  {
+   "phrase": "[Pointer one one;Eyeball one one;Axeman one one;Darknight one one;Dark Knight one one;] [Hornet five one;] aborting [aborting;] [aborting;]",
+   "section": "COMMS",
+   "key": "*: aborting",
+   "expect": "POINTER 11: ABORTING"
+  },
+  {
+   "phrase": "[Pointer one one;Eyeball one one;Axeman one one;Darknight one one;Dark Knight one one;] [Hornet five one;] authenticate",
+   "section": "COMMS",
+   "key": "*: authenticate",
+   "expect": "POINTER 11: AUTHENTICATE"
+  },
+  {
+   "phrase": "[Pointer one one;Eyeball one one;Axeman one one;Darknight one one;Dark Knight one one;] [Hornet five one;] Winchester",
+   "section": "COMMS",
+   "key": "*: winchester",
+   "expect": "POINTER 11: WINCHESTER (check out)"
+  },
+  {
+   "phrase": "[readback;] option one",
+   "section": "COMMS",
+   "key": "*: readback > #1",
+   "expect": "POINTER 11: READBACK 1/3: Line 4 > #1"
+  },
+  {
+   "phrase": "[readback;] option two",
+   "section": "COMMS",
+   "key": "*: readback > #2",
+   "expect": "POINTER 11: READBACK 1/3: Line 4 > #2"
+  },
+  {
+   "phrase": "[readback;] option three",
+   "section": "COMMS",
+   "key": "*: readback > #3",
+   "expect": "POINTER 11: READBACK 1/3: Line 4 > #3"
+  },
+  {
+   "phrase": "[readback;] option four",
+   "section": "COMMS",
+   "key": "*: readback > #4",
+   "expect": "POINTER 11: READBACK 1/3: Line 4 > #4"
+  },
+  {
+   "phrase": "[four six seven;] Hornet ball [state;]",
+   "section": "COMMS",
+   "key": "paddles: ball",
+   "expect": "PADDLES: ball (Hornet ball, state)"
+  },
+  {
+   "phrase": "[four six seven;] Clara [ship;]",
+   "section": "COMMS",
+   "key": "paddles: clara",
+   "expect": "PADDLES: Clara"
+  },
+  {
+   "phrase": "[Overlord;] [Hornet five one;] Judy",
+   "section": "COMMS",
+   "key": "overlord: judy",
+   "expect": "OVERLORD: Judy (tanker visual)"
+  },
+  {
+   "phrase": "breakaway breakaway [breakaway;]",
+   "section": "COMMS",
+   "key": "texaco: breakaway",
+   "expect": "TEXACO: breakaway (emergency)"
+  },
+  {
+   "phrase": "[Hornet five one;] spokes",
+   "section": "COMMS",
+   "key": "texaco: spokes",
+   "expect": "TEXACO: spokes (drogue damaged)"
+  },
+  {
+   "phrase": "[Marshal;Paddles;] [four six seven;] spinning",
+   "section": "CARRIER",
+   "key": "spinning",
+   "expect": "Spinning"
+  },
+  {
+   "phrase": "[Marshal;] [four six seven;] declaring emergency;request emergency landing",
+   "section": "CARRIER",
+   "key": "emergency landing",
+   "expect": "Emergency landing"
+  },
+  {
+   "phrase": "ready to start;ready for start",
+   "section": "CARRIER",
+   "key": "plane captain > ready to start",
+   "expect": "Plane captain > Ready to start"
+  },
+  {
+   "phrase": "ready for checks",
+   "section": "CARRIER",
+   "key": "plane captain > ready for checks",
+   "expect": "Plane captain > Ready for checks (engines running)"
+  },
+  {
+   "phrase": "step complete;check complete",
+   "section": "CARRIER",
+   "key": "plane captain > done",
+   "expect": "Plane captain > Done (pilot signal)"
+  },
+  {
+   "phrase": "skip step;skip this step",
+   "section": "CARRIER",
+   "key": "plane captain > skip step",
+   "expect": "Plane captain > Skip step"
+  },
+  {
+   "phrase": "abort checks",
+   "section": "CARRIER",
+   "key": "plane captain > abort checks",
+   "expect": "Plane captain > Abort checks"
+  },
+  {
+   "phrase": "next call;say next call;what's next",
+   "section": "COMMS",
+   "key": "show: next call",
+   "expect": "Show: next call"
+  },
+  {
+   "phrase": "[show;] comm card",
+   "section": "INFO",
+   "key": "show: comm card",
+   "expect": "Show: comm card"
+  },
+  {
+   "phrase": "[show;] hard deck",
+   "section": "INFO",
+   "key": "show: hard deck",
+   "expect": "Show: hard deck"
+  },
+  {
+   "phrase": "[show;] flight card",
+   "section": "INFO",
+   "key": "show: flight card",
+   "expect": "Show: flight card"
+  },
+  {
+   "phrase": "[show;] timeline",
+   "section": "INFO",
+   "key": "show: timeline",
+   "expect": "Show: timeline"
+  },
+  {
+   "phrase": "[show;] ELINT picture",
+   "section": "INFO",
+   "key": "show: elint picture",
+   "expect": "Show: ELINT picture"
+  },
+  {
+   "phrase": "[show;] divert summary",
+   "section": "INFO",
+   "key": "show: divert summary",
+   "expect": "Show: divert summary"
+  },
+  {
+   "phrase": "end sortie;show flight report",
+   "section": "INFO",
+   "key": "flight report: end sortie",
+   "expect": "FLIGHT REPORT: end sortie (show report)"
+  },
+  {
+   "phrase": "[show;] score detail",
+   "section": "INFO",
+   "key": "flight report: score detail",
+   "expect": "FLIGHT REPORT: score detail"
+  },
+  {
+   "phrase": "[show;] text report",
+   "section": "INFO",
+   "key": "flight report: text report",
+   "expect": "FLIGHT REPORT: text report"
+  },
+  {
+   "phrase": "[show;] carrier info",
+   "section": "CARRIER",
+   "key": "carrier info",
+   "expect": "Carrier info"
+  },
+  {
+   "phrase": "carrier weather;[show;] weather report",
+   "section": "CARRIER",
+   "key": "weather report",
+   "expect": "Weather report"
+  },
+  {
+   "phrase": "[show;] my status",
+   "section": "CARRIER",
+   "key": "my status",
+   "expect": "My status"
+  },
+  {
+   "phrase": "[show;] attitude monitor",
+   "section": "CARRIER",
+   "key": "attitude monitor",
+   "expect": "Attitude monitor"
+  },
+  {
+   "phrase": "[show;] greenie board",
+   "section": "CARRIER",
+   "key": "results > greenie board",
+   "expect": "Results > Greenie board"
+  },
+  {
+   "phrase": "[show;] my grades;[show;] my LSO grades",
+   "section": "CARRIER",
+   "key": "results > my lso grades",
+   "expect": "Results > My LSO grades"
+  },
+  {
+   "phrase": "[show;] last debrief",
+   "section": "CARRIER",
+   "key": "results > last debrief",
+   "expect": "Results > Last debrief"
+  }
+ ]
+}
