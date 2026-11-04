@@ -1,4 +1,6 @@
--- Core_Scoring | v1.5.1
+-- Core_Scoring | v1.5.2
+-- v1.5.2 (effects-based tasking, 2026-11-04): JTAC_Controller >= v0.15.0 gives the objective bonus itself
+--         (JC.objectiveBonus) -> its target groups are no longer merged into the group-destroyed bonus (no double +5).
 -- v1.5.1 (report card decisions, Onur 2026-11-02):
 --   * Friendly asset lost (tanker / AWACS, any cause) is a MISSION LOSS, not a pilot penalty: recorded in
 --     TRT.Score.losses { t, name, value } (value = the old -8 / -10), text + log, flag 1908 untouched.
@@ -516,6 +518,7 @@ end
 local function MergeJcTargets()
     local jc = TRT.JC
     if not (jc and jc.CFG and type(jc.CFG.JTACS) == "table") then return end
+    if jc.objectiveBonus then return end   -- v1.5.2: JTAC_Controller scores the objective itself
     local added = {}
     for _, j in pairs(jc.CFG.JTACS) do
         for _, gn in ipairs(j.targets or {}) do
@@ -1115,4 +1118,4 @@ do
     timer.scheduleFunction(watchCaseChange, nil, timer.getTime() + 1)
 end
 
-env.info("[Core_Scoring] v1.5.1 loaded. Player unit: " .. PLAYER_NAME)
+env.info("[Core_Scoring] v1.5.2 loaded. Player unit: " .. PLAYER_NAME)

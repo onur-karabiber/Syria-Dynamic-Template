@@ -1,4 +1,7 @@
--- CAS_Pack | v1.1.0
+-- CAS_Pack | v1.2.0
+-- v1.2.0 (2026-11-04, effects-based tasking): objective per pool entry ({ n = units to destroy, types = which ones
+--         count }, JTAC_Controller >= v0.15.0) and per JTAC (default = entry A); loadout (Tasking_Pick weapons
+--         check: the picked objectives together <= MAV + LGB - 2, one spare per type).
 -- v1.1.0 (2026-11-04): target pool per JTAC (jtacs[k].pool, read by Tasking_Pick.lua at load). targets / ord /
 --         tgt_fallback below are the defaults (= pool entry A); Tasking_Pick overwrites them with the pick.
 -- Tasking pack of CAS-1: geography and comm plan in ONE place (decision Onur 2026-11-04: the pack holds what /
@@ -16,7 +19,7 @@
 -- Positions: DCS world x = north (ME x), z = east (ME y), metres.
 
 CAS_PACK = {
-    version = "1.1.0",
+    version = "1.2.0",
 
     hero    = "Player_01",       -- unit
     group   = "CAS-1",           -- hero's ME group (route = ATO)
@@ -27,6 +30,7 @@ CAS_PACK = {
     cp = { name = "CP TIGER", wp_name = "Contact JTAC", pos = { x = 73640, z = -39914 } },
     hard_deck_ft = 20000,
     hold_angels  = 22,           -- scenario B hold at the CP
+    loadout      = { MAV = 2, LGB = 4 },   -- hero's A/G weapons (AGM-65E, GBU-12); tools/check_pack.py checks the pylons
 
     -- Player_01 COMM1 presets (ch = Comms_Director voice channel of that agency)
     nets = {
@@ -55,14 +59,18 @@ CAS_PACK = {
             -- the kneeboard notes are approved (forced picks for tests: ME flag 217 / 219 = entry index).
             pool = {
                 { id = "A", name = "SHORAD site",   targets = { "SAM BV51 (SA-13)-1" },
-                  statics = { "SAM BV51 (SA-13)-1-Camouflage-1" }, w = 1 },
-                { id = "B", name = "armor section", targets = { "CAS J1-B (Armor)-1" },   w = 0 },
-                { id = "C", name = "SP artillery section", targets = { "CAS J1-C (Battery)-1" }, w = 0 },
+                  statics = { "SAM BV51 (SA-13)-1-Camouflage-1" }, w = 1,
+                  objective = { n = 1, types = { "Strela-10M3" } } },
+                { id = "B", name = "armor section", targets = { "CAS J1-B (Armor)-1" },   w = 0,
+                  objective = { n = 1, types = { "T-72B" } } },
+                { id = "C", name = "SP artillery section", targets = { "CAS J1-C (Battery)-1" }, w = 0,
+                  objective = { n = 1, types = { "SAU Gvozdika" } } },
             },
             ip = { name = "LYNX", mgrs = "37S BV 4071 2864" },
             egress = "north to TIGER",
             mark = { kind = "laser", code = 1688 },
-            ord = "one AGM-65E",
+            ord = "one AGM-65E",                     -- fallback only (v1.2.0: the JTAC picks the weapon by target type)
+            objective = { n = 1, types = { "Strela-10M3" } },   -- default = pool entry A
             friendly_ofs = { brg = 200, m = 1200 },  -- Bravo 2-1 from the target, true deg / m
             op = { auto = true, brg = 238, m = 2500, dmin = 1500, dmax = 4000, step = 150 },   -- JTAC post search
         },
@@ -77,15 +85,19 @@ CAS_PACK = {
             targets = { "SAM YE53 (SA-8)-1" },
             pool = {
                 { id = "A", name = "SA-8 battery",  targets = { "SAM YE53 (SA-8)-1" },
-                  statics = { "SAM YE53 (Camouflage)-1", "SAM YE53 (Camouflage)-2-1", "SAM YE53 (Camouflage)-3" }, w = 1 },   -- static UNIT names
-                { id = "B", name = "armor platoon", targets = { "CAS J2-B (Armor)-1" },   w = 0 },
-                { id = "C", name = "SP artillery battery", targets = { "CAS J2-C (Battery)-1" }, w = 0 },
+                  statics = { "SAM YE53 (Camouflage)-1", "SAM YE53 (Camouflage)-2-1", "SAM YE53 (Camouflage)-3" }, w = 1,   -- static UNIT names
+                  objective = { n = 2, types = { "Osa 9A33 ln" } } },
+                { id = "B", name = "armor platoon", targets = { "CAS J2-B (Armor)-1" },   w = 0,
+                  objective = { n = 2, types = { "T-72B" } } },
+                { id = "C", name = "SP artillery battery", targets = { "CAS J2-C (Battery)-1" }, w = 0,
+                  objective = { n = 2, types = { "SAU Gvozdika" } } },
             },
             tgt_fallback = { x = 59271, z = -1176 }, -- Comms_Director: TIC geometry when the group is not readable
             ip = { name = "PUMA", mgrs = "36S YE 4714 5182" },
             egress = "northwest, feet wet",
             mark = { kind = "laser", code = 1688 },
             ord = "one GBU-12",
+            objective = { n = 2, types = { "Osa 9A33 ln" } },
             friendly_ofs = { brg = 200, m = 1000 },
             op = { auto = true, brg = 250, m = 2500, dmin = 1500, dmax = 4000, step = 150 },
         },

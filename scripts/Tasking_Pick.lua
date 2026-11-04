@@ -1,5 +1,9 @@
--- Tasking_Pick | v1.1.0
+-- Tasking_Pick | v1.2.0
 --[[
+  v1.2.0 - effects-based tasking: the picked entry's objective goes into the pack (jtacs[k].objective); weapons
+           check before anything is activated: the objectives of all picked entries together <= loadout MAV + LGB - 2
+           (one spare per type, decision Onur 2026-11-04), random picks re-drawn up to CFG.TRIES times ("[PICK]
+           weapons check" line); forced picks (flags) are kept even when over.
   v1.1.0 - audit mode (ME flag 221 > 0, tools/make_test_variant.py --audit): the site check runs for EVERY pool entry
            of every JTAC (not only the picked one), and JTAC_Controller (>= v0.14.2) runs its post search dry for every
            entry ("[JC] AUDIT ..."). One mission load audits the whole pool. TRT.PICK.audit, TRT.PICK.meUnits(name).
@@ -27,7 +31,8 @@ local TRT = _G.TRT
 if TRT.PICK then env.info("[PICK] already loaded, second copy ignored") return end
 
 local CFG = {
-    VERSION   = "1.1.0",
+    VERSION   = "1.2.0",
+    TRIES     = 20,                       -- v1.2.0 re-draws for the weapons check
     AUDIT_FLAG = 221,                     -- v1.1.0 > 0: audit every pool entry
     FLAG      = { J1 = 217, J2 = 219 },   -- forced entry index (0 = random)
     SLOPE_MAX = 12,                       -- deg; steeper -> CHECK
@@ -105,57 +110,88 @@ TRT.PICK.audit = Flag(CFG.AUDIT_FLAG) > 0
 if TRT.PICK.audit then Log("AUDIT mode (flag " .. CFG.AUDIT_FLAG .. "): site check of every pool entry") end
 Log(string.format("rng %.6f (first math.random value this mission)", math.random()))
 
+--- one entry index for JTAC k: forced by flag, else weighted random (w > 0), else 1
+local function Choose(k, pool)
+    local f = CFG.FLAG[k] and Flag(CFG.FLAG[k]) or 0
+    if f >= 1 and f <= #pool then return f, true end
+    local sum = 0
+    for _, e in ipairs(pool) do sum = sum + math.max(0, e.w or 0) end
+    if sum > 0 then
+        local r, acc = math.random() * sum, 0
+        for i, e in ipairs(pool) do
+            acc = acc + math.max(0, e.w or 0)
+            if r < acc and (e.w or 0) > 0 then return i, false end
+        end
+    end
+    return 1, false
+end
+
+local function ObjN(j, e) return ((e and e.objective) or j.objective or {}).n or 0 end
+
+-- v1.2.0: choose every JTAC's entry first, then the weapons check (objectives together <= MAV + LGB - 2,
+-- one spare per type; decision Onur 2026-11-04), re-drawing the random picks up to CFG.TRIES times
+local picks, keys = {}, {}
 for _, k in ipairs(P.order or {}) do
     local j = P.jtacs[k]
-    local pool = j and j.pool
-    if type(pool) == "table" and #pool > 0 then
-        local idx, forced = nil, false
-        local f = CFG.FLAG[k] and Flag(CFG.FLAG[k]) or 0
-        if f >= 1 and f <= #pool then
-            idx, forced = f, true
-        else
-            local sum = 0
-            for _, e in ipairs(pool) do sum = sum + math.max(0, e.w or 0) end
-            if sum > 0 then
-                local r, acc = math.random() * sum, 0
-                for i, e in ipairs(pool) do
-                    acc = acc + math.max(0, e.w or 0)
-                    if r < acc and (e.w or 0) > 0 then idx = i; break end
-                end
+    if j and type(j.pool) == "table" and #j.pool > 0 then keys[#keys + 1] = k end
+end
+local L = P.loadout or {}
+local cap = (L.MAV and L.LGB) and (L.MAV + L.LGB - 2) or nil
+local settled = false
+for try = 1, CFG.TRIES do
+    local need, anyRandom = 0, false
+    for _, k in ipairs(keys) do
+        local j = P.jtacs[k]
+        local idx, forced = Choose(k, j.pool)
+        picks[k] = { idx = idx, forced = forced }
+        need = need + ObjN(j, j.pool[idx])
+        anyRandom = anyRandom or not forced
+    end
+    if not cap or need <= cap or not anyRandom then
+        Log(string.format("weapons check: objectives %d, cap %s (try %d)%s", need, tostring(cap), try,
+            (cap and need > cap) and " -> OVER, forced picks kept" or ""))
+        settled = true
+        break
+    end
+    Log(string.format("weapons check: objectives %d > cap %d (try %d), re-draw", need, cap, try))
+end
+if not settled then Log("weapons check: no pick within the cap after " .. CFG.TRIES .. " tries -> last draw kept (OVER)") end
+
+for _, k in ipairs(keys) do
+    local j = P.jtacs[k]
+    local pool = j.pool
+    local idx, forced = picks[k].idx, picks[k].forced
+    local e = pool[idx]
+    j.targets = Copy(e.targets)
+    if e.ord then j.ord = e.ord end
+    if e.objective then j.objective = Copy(e.objective) end   -- v1.2.0
+    j.pick, j.pick_name = e.id, e.name
+    local g0 = MeGroup(e.targets[1])
+    if g0 then j.tgt_fallback = { x = g0.x, z = g0.y } end
+    for i, o in ipairs(pool) do
+        for _, gname in ipairs(o.targets or {}) do
+            local g = Group.getByName(gname)
+            if i == idx then
+                if g and not IsActive(g) then g:activate(); Log(k .. ": activated " .. gname) end
+                if not g then env.error("[PICK] " .. k .. ": picked group missing in the mission: " .. gname) end
+            elseif g and IsActive(g) then
+                g:destroy(); Log(k .. ": removed " .. gname .. " (entry " .. tostring(o.id) .. " not picked)")
             end
-            idx = idx or 1
         end
-        local e = pool[idx]
-        j.targets = Copy(e.targets)
-        if e.ord then j.ord = e.ord end
-        j.pick, j.pick_name = e.id, e.name
-        local g0 = MeGroup(e.targets[1])
-        if g0 then j.tgt_fallback = { x = g0.x, z = g0.y } end
-        for i, o in ipairs(pool) do
-            for _, gname in ipairs(o.targets or {}) do
-                local g = Group.getByName(gname)
-                if i == idx then
-                    if g and not IsActive(g) then g:activate(); Log(k .. ": activated " .. gname) end
-                    if not g then env.error("[PICK] " .. k .. ": picked group missing in the mission: " .. gname) end
-                elseif g and IsActive(g) then
-                    g:destroy(); Log(k .. ": removed " .. gname .. " (entry " .. tostring(o.id) .. " not picked)")
-                end
-            end
-            if i ~= idx then
-                for _, sname in ipairs(o.statics or {}) do
-                    local s = StaticObject.getByName(sname)
-                    if s then s:destroy(); Log(k .. ": removed static " .. sname) end
-                end
+        if i ~= idx then
+            for _, sname in ipairs(o.statics or {}) do
+                local s = StaticObject.getByName(sname)
+                if s then s:destroy(); Log(k .. ": removed static " .. sname) end
             end
         end
-        TRT.PICK[k] = { idx = idx, id = e.id, name = e.name, forced = forced }
-        Log(string.format("%s -> %s %s (%s, entry %d of %d)", k, tostring(e.id), tostring(e.name),
-            forced and ("forced by flag " .. CFG.FLAG[k]) or "random", idx, #pool))
-        for i, o in ipairs(pool) do
-            if i == idx or TRT.PICK.audit then
-                local ok, err = pcall(SiteCheck, k, o)
-                if not ok then Log("site check failed: " .. tostring(err)) end
-            end
+    end
+    TRT.PICK[k] = { idx = idx, id = e.id, name = e.name, forced = forced, objective = ObjN(j, e) }
+    Log(string.format("%s -> %s %s (%s, entry %d of %d, objective %d)", k, tostring(e.id), tostring(e.name),
+        forced and ("forced by flag " .. CFG.FLAG[k]) or "random", idx, #pool, ObjN(j, e)))
+    for i, o in ipairs(pool) do
+        if i == idx or TRT.PICK.audit then
+            local ok, err = pcall(SiteCheck, k, o)
+            if not ok then Log("site check failed: " .. tostring(err)) end
         end
     end
 end

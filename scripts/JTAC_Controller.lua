@@ -1,5 +1,19 @@
--- JTAC_Controller | v0.14.2
+-- JTAC_Controller | v0.15.0
 --[[
+  v0.15.0 - effects-based tasking (decisions Onur 2026-11-04 11:15, plan claude/jtac-roster-effects-plan-2026-11-04.md):
+           * objective: at the hand-off the JTAC picks the units the tasking needs destroyed (J.objective = { n, types }
+             from the pool entry / pack; none = every unit, the old behaviour) - "OBJECTIVE <k>: destroy ..." in the log;
+             the aim point is always an objective unit while one is alive; the game plan names the desired effect
+           * weapon by target type: armored or moving -> one AGM-65E, otherwise one GBU-12, the other type when the
+             preferred one is gone (counted on the hero's ammo); J.ord only when nothing can be counted
+           * success = objective destroyed (st.objDone; Comms_Director treats it like a dead target group); then the
+             aftermath (CFG.EFFECTS.AFTER, ME flag 222 forces 1 withdraw / 2 threat / 3 ignore): withdraw -> the rest
+             get a route away from the friendlies and the BDA says "withdrawing <dir>"; threat -> once per tasking, if
+             the hero has A/G weapons left, "<rest> still a threat to friendlies. Next target ..." (the unit joins the
+             objective), otherwise as ignore; ignore -> BDA activity "<rest> remaining"
+           * objective bonus +5 "JTAC TARGET GROUP OBJECTIVE ACHIEVED: ..." (KILL group) given here; Core_Scoring
+             (>= v1.5.2) leaves the JC target groups out of its group-destroyed bonus (JC.objectiveBonus)
+           New voice tokens: "desired effect destroy", "withdrawing", "location", "still a threat to friendlies".
   v0.14.2 - target-pool audit (Tasking_Pick >= v1.1.0, TRT.PICK.audit = ME flag 221): after the normal start-up
            relocation, the post search runs dry (JTAC not moved) for EVERY pool entry of every JTAC, on the units' ME
            positions (late-activated groups need not be active), and logs "AUDIT <k>-<id>: ..." with the same
@@ -276,7 +290,7 @@ end
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "0.14.2",
+    VERSION      = "0.15.0",
     VOICE        = true,      -- v0.7.0 spoken transmissions (needs Comms_Director >= v1.6.4)
     PLAYER_UNIT  = P.hero,
     CS           = P.cs,
@@ -328,6 +342,18 @@ local CFG = {
               TERMINATED = -10, FRIENDLY_M = 150,   -- v0.9.0 FRIENDLY -30 removed (note only)
               ABORT_ACK_LATE = -2,                  -- v0.12.0 "aborting" later than CFG.ABORT.ack_s
               SPOOF_COMPLY = -5, SPOOF_UNVERIFIED = -10 },   -- v0.13.0 (not ROE incidents)
+    -- v0.15.0 effects-based tasking (decisions Onur 2026-11-04)
+    EFFECTS = {
+        AFTER = { withdraw = 40, threat = 30, ignore = 30 },   -- what the rest does once the objective is destroyed
+        FLAG = 222,                -- ME flag: 1 withdraw / 2 threat / 3 ignore (tests)
+        WITHDRAW_M = 2000, WITHDRAW_MS = 6,
+        BONUS = 5,                 -- objective achieved (was Core_Scoring's JTAC group bonus)
+        ARMOR = { ["T-55"] = true, ["T-72B"] = true, ["T-72B3"] = true, ["T-90"] = true, ["T62M"] = true,
+                  ["BMP-1"] = true, ["BMP-2"] = true, ["BMP-3"] = true, ["BTR-80"] = true, ["BTR-70"] = true,
+                  ["BTR-60"] = true, ["BTR-82A"] = true, ["BRDM-2"] = true, ["Strela-10M3"] = true,
+                  ["Osa 9A33 ln"] = true, ["Tor 9A331"] = true, ["2S6 Tunguska"] = true, ["ZSU-23-4 Shilka"] = true,
+                  ["SAU Gvozdika"] = true, ["SAU Akatsia"] = true, ["SAU Msta"] = true, ["Kub 2P25 ln"] = true },
+    },
     IP_MAX_OFF   = 45,          -- deg: pre-briefed IP run-in vs FAH centre, beyond -> keyhole IP
     KEYHOLE_NM   = 10,
     ABORT        = { challenge = P.abort.challenge,
@@ -367,7 +393,7 @@ local DIR8_TXT = { "north", "northeast", "east", "southeast", "south", "southwes
 -- ══════════════════════════════════════════════════════════════
 --  STATE
 -- ══════════════════════════════════════════════════════════════
-local JC = { version = CFG.VERSION, active = true, CFG = CFG, st = {}, subs = {}, queue = {}, qBusy = false,
+local JC = { version = CFG.VERSION, active = true, objectiveBonus = true, CFG = CFG, st = {}, subs = {}, queue = {}, qBusy = false,
     unauthW = {}, stats = { miss = 0 } }   -- v0.9.1 stats   -- v0.8.1 { id, rec } of every weapon released without clearance
 TRT.JC = JC
 for _, k in ipairs(CFG.ORDER) do JC.st[k] = { phase = "IDLE" } end
@@ -476,6 +502,10 @@ local VOICE = {
         ["bmps"] = "lab_bmp_pl",
         ["btr"] = "lab_btr",
         ["btrs"] = "lab_btr_pl",
+        ["desired effect destroy"] = "w_desired_destroy",     -- v0.15.0 effects-based tasking
+        ["withdrawing"] = "w_withdrawing",
+        ["location"] = "w_location",
+        ["still a threat to friendlies"] = "w_still_threat",
         ["self-propelled howitzer"] = "lab_sp_howitzer",      -- v0.14.1
         ["self-propelled howitzers"] = "lab_sp_howitzer_pl",
         ["call for laser"] = "w_call_laser",
@@ -891,10 +921,25 @@ end
 
 local PRIO = {}
 for i, t in ipairs(CFG.PRIORITY) do PRIO[t] = i end
+--- v0.15.0: objective units of the running tasking (names), chosen at the hand-off
+local function ObjectiveSet(k)
+    local set, st = {}, JC.st[k]
+    for _, n in ipairs((st and st.obj) or {}) do set[n] = true end
+    return set
+end
+local function ObjUnits(k)
+    local set, out = ObjectiveSet(k), {}
+    for _, u in ipairs(TargetUnits(k)) do if set[u:getName()] then out[#out + 1] = u end end
+    return out
+end
 function JC.aimUnit(k)
+    local st = JC.st[k]
+    local set = ObjectiveSet(k)
+    local hasObj = st and st.obj and #st.obj > 0
     local best, bp
     for i, u in ipairs(TargetUnits(k)) do
         local p = PRIO[u:getTypeName()] or (100 + i)
+        if hasObj and not set[u:getName()] then p = p + 1000 end   -- v0.15.0 objective units first
         if not bp or p < bp then best, bp = u, p end
     end
     return best
@@ -925,6 +970,60 @@ local function Describe(units)
     return DescribeLabels(labels)
 end
 
+--- v0.15.0: the JTAC's weapon for unit u (armored / moving -> AGM-65E, else GBU-12; the other type when gone)
+local function WeaponFor(k, u)
+    local h, m, g, seen = Hero(), 0, 0, false
+    for _, a in ipairs((h and h:getAmmo()) or {}) do
+        local tn = tostring((a.desc or {}).typeName or "")
+        if tn:find("AGM_65") then m = m + (a.count or 0); seen = true
+        elseif tn:find("GBU") then g = g + (a.count or 0); seen = true end
+    end
+    if not (u and seen) then return J(k).ord end
+    local ok, v = pcall(u.getVelocity, u)
+    local moving = ok and v and math.sqrt((v.x or 0) ^ 2 + (v.z or 0) ^ 2) > 2
+    local mav, lgb = "one AGM-65E", "one GBU-12"
+    if moving or CFG.EFFECTS.ARMOR[u:getTypeName()] then
+        return (m > 0 and mav) or (g > 0 and lgb) or J(k).ord
+    end
+    return (g > 0 and lgb) or (m > 0 and mav) or J(k).ord
+end
+
+--- v0.15.0: objective of the tasking (J.objective = { n, types }); none = every unit
+local function PickObjective(k)
+    local st, j = JC.st[k], J(k)
+    local o = j.objective or {}
+    local types, any = {}, true
+    for _, t in ipairs(o.types or {}) do types[t] = true; any = false end
+    local cand = {}
+    for i, u in ipairs(TargetUnits(k)) do
+        local t = u:getTypeName()
+        cand[#cand + 1] = { u = u, p = ((any or types[t]) and 0 or 1000) + (PRIO[t] or (100 + i)) }
+    end
+    table.sort(cand, function(a, b) return a.p < b.p end)
+    local n = math.min(o.n or #cand, #cand)
+    st.obj, st.objDone, st.extended, st.aftermath, st.objBonus = {}, false, false, nil, false
+    local lbl = {}
+    for i = 1, n do st.obj[i] = cand[i].u:getName(); lbl[i] = Label(cand[i].u:getTypeName()) end
+    Log(string.format("OBJECTIVE %s: destroy %s (%d of %d units)", k, DescribeLabels(lbl), n, #cand))
+end
+
+--- v0.15.0: aftermath branch, once per tasking (flag CFG.EFFECTS.FLAG forces it)
+local function AfterBranch(k)
+    local st = JC.st[k]
+    if st.aftermath then return st.aftermath end
+    local okF, f = pcall(trigger.misc.getUserFlag, tostring(CFG.EFFECTS.FLAG))
+    local forced = ({ "withdraw", "threat", "ignore" })[okF and tonumber(f) or 0]
+    if forced then st.aftermath = forced
+    else
+        local W = CFG.EFFECTS.AFTER
+        local r = math.random() * (W.withdraw + W.threat + W.ignore)
+        st.aftermath = (r < W.withdraw and "withdraw") or (r < W.withdraw + W.threat and "threat") or "ignore"
+    end
+    Log(string.format("AFTERMATH %s: %s%s", k, st.aftermath, forced and " (flag)" or ""))
+    return st.aftermath
+end
+
+
 local function FriendlyUnit(k)
     local st = JC.st[k]
     if st.tic then
@@ -942,6 +1041,34 @@ local function FriendlyUnit(k)
         end
     end
     return JtacUnit(k), J(k).disp
+end
+
+--- v0.15.0: the rest of the target groups drive away from the friendlies; returns the direction text
+local function Withdraw(k, alive)
+    local tp = Centroid(alive)
+    if not tp then return "north" end
+    local fu = FriendlyUnit(k)
+    local ju = JtacUnit(k)
+    local from = (fu and fu:getPoint()) or (ju and ju:getPoint())
+    local brg = from and BrgT(from, tp) or 0
+    local r = math.rad(brg)
+    local d, ms = CFG.EFFECTS.WITHDRAW_M, CFG.EFFECTS.WITHDRAW_MS
+    local dest = { x = tp.x + math.cos(r) * d, z = tp.z + math.sin(r) * d }
+    for _, gn in ipairs(J(k).targets) do
+        local g = Group.getByName(gn)
+        if g and g:isExist() then
+            local ok, err = pcall(function()
+                local c = g:getController()
+                c:setOption(AI.Option.Ground.id.ROE, AI.Option.Ground.val.ROE.WEAPON_HOLD)
+                c:setTask({ id = "Mission", params = { route = { points = {
+                    { x = tp.x, y = tp.z, type = "Turning Point", action = "Off Road", speed = ms },
+                    { x = dest.x, y = dest.z, type = "Turning Point", action = "Off Road", speed = ms } } } } })
+            end)
+            if not ok then Log("WITHDRAW " .. k .. " " .. gn .. ": " .. tostring(err)) end
+        end
+    end
+    Log(string.format("WITHDRAW %s: %d unit(s) %s %d m", k, #alive, Dir8(brg), d))
+    return Dir8(brg)
 end
 
 -- ── v0.4.0 threats ──────────────────────────────────────────────────────────────────
@@ -1493,9 +1620,12 @@ local function A_ReadyGamePlan(k)
     Busy(k, true)
     Pilot(string.format("%s, %s, ready to copy.", j.disp, CFG.CS))
     st.type = ChooseType(k)
-    Jtac(k, string.format("%s, Type %d control, %s, %s. Advise when ready for 9-line.", CFG.CS, st.type,
-        (j.method == "BOC") and "bomb on coordinate" or "bomb on target", j.ord), CFG.DUR.short, nil, nil, Free(k))
-    Log(string.format("GAME PLAN %s: Type %d %s %s", k, st.type, j.method, j.ord))
+    st.ord = WeaponFor(k, JC.aimUnit(k))   -- v0.15.0
+    local ou = ObjUnits(k)
+    local eff = (#ou > 0) and (" Desired effect, destroy " .. Describe(ou) .. ".") or ""
+    Jtac(k, string.format("%s, Type %d control, %s, %s.%s Advise when ready for 9-line.", CFG.CS, st.type,
+        (j.method == "BOC") and "bomb on coordinate" or "bomb on target", st.ord, eff), CFG.DUR.short + 2, nil, nil, Free(k))
+    Log(string.format("GAME PLAN %s: Type %d %s %s%s", k, st.type, j.method, st.ord, eff))
     SetPhase(k, "GAMEPLAN")
 end
 
@@ -1545,7 +1675,8 @@ local function A_ReadyRemarks(k)
                 via and ("via " .. DIR8_TXT[via / 45 + 1]) or "no clear via point"))
         end
     end
-    rem[#rem + 1] = "request " .. j.ord
+    st.ord = WeaponFor(k, JC.aimUnit(k))   -- v0.15.0
+    rem[#rem + 1] = "request " .. st.ord
     rem[#rem + 1] = "hard deck two-zero thousand in effect"
     Jtac(k, string.format("%s, remarks: %s. Restrictions: final attack heading %s to %s. Report IP inbound.",
         CFG.CS, table.concat(rem, ", "), H3(n.fahLo), H3(n.fahHi)), CFG.DUR.long, function()
@@ -1957,24 +2088,62 @@ local function Assess(k)
     local aimDead = not Alive(Unit.getByName(pass.aim or ""))
     local last = pass.impacts[#pass.impacts]
     local lasing = st.spot ~= nil
-    if #alive == 0 then
+    local objDone = st.obj and #st.obj > 0 and #ObjUnits(k) == 0   -- v0.15.0
+    if #alive == 0 or objDone then
+        local br = (#alive > 0) and AfterBranch(k) or nil   -- v0.15.0 aftermath
+        if br == "threat" and st.extended then br = "ignore" end
+        if br == "threat" then
+            if AgCount(Hero()) > 0 then
+                st.extended = true
+                local nu = JC.aimUnit(k)
+                st.obj[#st.obj + 1] = nu:getName()
+                local corr = ""
+                if last then
+                    local np = nu:getPoint()
+                    corr = string.format(" From your hits, %s %d.", Dir8(BrgT(last, np)), math.floor(D2(last, np) / 10 + 0.5) * 10)
+                end
+                Jtac(k, string.format("%s, %s, %sgood hits. %s still a threat to friendlies. Next target, %s.%s%s Report IN.",
+                    CFG.CS, j.disp, lasing and "splash, " or "", Describe(alive), Label(nu:getTypeName()), corr,
+                    lasing and " Call shift." or ""), CFG.DUR.short + 4)
+                Log(string.format("AFTERMATH %s: threat persists -> re-attack on %s", k, nu:getName()))
+                if st.nine then st.nine.aim = nu:getName() end
+                return
+            end
+            Log("AFTERMATH " .. k .. ": threat persists, no A/G weapon left -> as ignore")
+            br = "ignore"
+        end
+        local act = "none observed"
+        if #alive > 0 then
+            act = (br == "withdraw") and (Describe(alive) .. " withdrawing " .. Withdraw(k, alive))
+                or (Describe(alive) .. " remaining")
+        end
         -- SALT-R BDA, reported only for units the JTAC can see ("if you do not see it, do not report it")
         local seen, unseen = {}, 0
         local ju = JtacUnit(k)
+        local aliveSet = {}
+        for _, u in ipairs(alive) do aliveSet[u:getName()] = true end
         for _, s in ipairs(st.units or {}) do
-            if ju and land.isVisible(Eye(ju:getPoint()), Eye(s.pos, 2)) then seen[#seen + 1] = s.label
-            else unseen = unseen + 1 end
+            if not aliveSet[s.name] then
+                if ju and land.isVisible(Eye(ju:getPoint()), Eye(s.pos, 2)) then seen[#seen + 1] = s.label
+                else unseen = unseen + 1 end
+            end
         end
         LaserOff(k, "target destroyed")
         local sz = (#seen > 0) and (Word(#seen) .. " destroyed, " .. DescribeLabels(seen)) or "unknown"
-        Jtac(k, string.format("%s, %s, %sgood hits. BDA: size, %s%s. Activity, none observed. Location, %s. "
+        Jtac(k, string.format("%s, %s, %sgood hits. BDA: size, %s%s. Activity, %s. Location, %s. "
             .. "Time, %s local. Remarks, mission %s, successful. Cleared to depart, return to Overlord.", CFG.CS,
             j.disp, lasing and "splash, " or "", sz, (unseen > 0) and string.format(", %s not observed", Word(unseen)) or "",
-            st.units and st.units[1] and MGRS(st.units[1].pos) or "unknown", Clock(), j.msn), CFG.DUR.long)
+            act, st.units and st.units[1] and MGRS(st.units[1].pos) or "unknown", Clock(), j.msn), CFG.DUR.long)
         JC.vk = k   -- v0.8.0: pilot acknowledges the release to Overlord
         Pilot(string.format("%s, %s, copy BDA, switching Overlord.", j.disp, CFG.CS), nil, nil, true)
-        Log(string.format("BDA %s: %d seen destroyed, %d not observed", k, #seen, unseen))
-        Emit("DONE", { key = k })
+        Log(string.format("BDA %s: %d seen destroyed, %d not observed, activity: %s", k, #seen, unseen, act))
+        st.objDone = true   -- v0.15.0 (Comms_Director: = target dead)
+        if not st.objBonus then
+            st.objBonus = true
+            Score(CFG.EFFECTS.BONUS, string.format("JTAC TARGET GROUP OBJECTIVE ACHIEVED: %s (%s)",
+                tostring(j.targets[1]), j.disp))
+        end
+        Emit("DONE", { key = k, objective = true, aftermath = br })
         SetPhase(k, "DONE")
         return
     end
@@ -2414,6 +2583,7 @@ local function Handoff(k)
     end
     Log(string.format("HANDOFF %s: %d target units, JTAC LOS %d/%d, IP %s %s", k, n, los, n, J(k).ip.name,
         st.ipPos and MGRS(st.ipPos) or "PARSE FAILED"))
+    PickObjective(k)   -- v0.15.0
     SetPhase(k, "CHECKIN")
 end
 
@@ -2520,6 +2690,7 @@ local function Tick(_, now)
                 and #TargetUnits(k) == 0 and not st.pass then
                 LaserOff(k, "target group dead")
                 Log("target group dead outside a tracked pass: " .. k)
+                st.objDone = true   -- v0.15.0
                 Emit("DONE", { key = k })
                 SetPhase(k, "DONE")
             end

@@ -1,4 +1,7 @@
-# check_pack.py | v1.1.0
+# check_pack.py | v1.2.0
+# v1.2.0 (effects-based tasking): pack loadout (MAV / LGB) = the hero's pylons in the mission (known CLSIDs:
+#         AGM-65E single rail, GBU-12 single / BRU-33 pair); every pool entry has an objective whose n is not larger
+#         than its group(s); the largest possible pair of objectives vs MAV + LGB - 2 (Tasking_Pick re-draws above it).
 # v1.1.0 (target pool, Tasking_Pick v1.0.0): every pool group / static exists; entries after the first are late
 #         activated (the first, set A, is active at start and removed by the pick when not chosen); every entry of a
 #         JTAC has the unit count of its first entry (weapons budget: 2 Pointer / 4 Eyeball), else a warning;
@@ -29,6 +32,11 @@ import dcslua  # noqa: E402
 PACK = os.path.join(REPO, "scripts", "CAS_Pack.lua")
 VOICED = os.path.join(REPO, "tts", "pack_voiced.json")
 CP_TOL_M = 50
+CLSID_WEAPONS = {   # v1.2.0: CLSID -> (class, count)
+    "{F16A4DE0-116C-4A71-97F0-2CF85B0313EC}": ("MAV", 1),   # AGM-65E (LAU-117)
+    "{BRU33_2X_GBU-12}": ("LGB", 2),
+    "{DB769D48-67D7-42ED-A2BE-108D566C8B1E}": ("LGB", 1),   # GBU-12 single
+}
 
 
 def py(v):
@@ -103,6 +111,9 @@ def main():
             continue
         n0 = None
         for i, e in enumerate(pool):
+            ob = e.get("objective") or j.get("objective")              # v1.2.0
+            if not ob:
+                warn.append("pool %s-%s: no objective (the whole group must die)" % (k, e.get("id")))
             cnt = 0
             for gname in e.get("targets") or []:
                 g = groups.get(gname)
@@ -115,6 +126,8 @@ def main():
             for sname in e.get("statics") or []:
                 if sname not in statics:
                     err.append("pool %s-%s: static %r not in the mission" % (k, e.get("id"), sname))
+            if ob and (ob.get("n") or 0) > cnt:
+                err.append("pool %s-%s: objective n %s > %d unit(s)" % (k, e.get("id"), ob.get("n"), cnt))
             if n0 is None:
                 n0 = cnt
             elif cnt != n0:
@@ -139,6 +152,22 @@ def main():
                 warn.append("IP %s (%s): no route point 'IP %s' in %s" % (j["ip"]["name"], k, j["ip"]["name"], p["group"]))
 
     hero = units.get(p["hero"])
+    if hero and p.get("loadout"):                                  # v1.2.0 loadout vs pylons
+        have = {"MAV": 0, "LGB": 0}
+        for py in ((hero.get("payload") or {}).get("pylons") or {}).values() if isinstance(
+                (hero.get("payload") or {}).get("pylons"), dict) else ((hero.get("payload") or {}).get("pylons") or []):
+            w = CLSID_WEAPONS.get((py or {}).get("CLSID"))
+            if w:
+                have[w[0]] += w[1]
+        for cls in ("MAV", "LGB"):
+            if p["loadout"].get(cls) != have[cls]:
+                err.append("loadout %s: pack %s, %s pylons carry %d" % (cls, p["loadout"].get(cls), p["hero"], have[cls]))
+        cap = p["loadout"].get("MAV", 0) + p["loadout"].get("LGB", 0) - 2
+        worst = sum(max((((e.get("objective") or j.get("objective") or {}).get("n") or 0) for e in (j.get("pool") or [j])),
+                        default=0) for j in p["jtacs"].values())
+        if worst > cap:
+            warn.append("weapons: the largest objectives together need %d > cap %d (Tasking_Pick re-draws random picks)"
+                        % (worst, cap))
     if hero:
         radio = hero.get("Radio") or []
         ch1 = (radio[0].get("channels") if len(radio) > 0 else None) or []

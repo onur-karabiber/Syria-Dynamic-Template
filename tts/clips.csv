@@ -464,6 +464,10 @@ pj_bda_wnc;POINTER_JC>POINTER;copy Winchester. B D A. Size,;tok:0.1
 pj_w_none_obs;POINTER_JC>POINTER;none observed.;tok
 pj_w_activity;POINTER_JC>POINTER;Activity,;tok:0.1
 pj_w_remaining;POINTER_JC>POINTER;remaining. Location,;tok:0.1
+pj_w_desired_destroy;POINTER_JC>POINTER;Desired effect, destroy;tok
+pj_w_withdrawing;POINTER_JC>POINTER;withdrawing;tok
+pj_w_location;POINTER_JC>POINTER;Location,;tok:0.1
+pj_w_still_threat;POINTER_JC>POINTER;still a threat to friendlies.;tok
 pj_bda_end_inc;POINTER_JC>POINTER;not complete. Cleared to depart, return to Overlord.;tok
 pj_nj_a;POINTER_JC>POINTER;Hornet five one, target is the;tok
 pj_nj_bravo;POINTER_JC>POINTER;From Bravo two one,;tok:0.1
@@ -648,6 +652,10 @@ ej_bda_wnc;EYEBALL;copy Winchester. B D A. Size,;tok:0.1
 ej_w_none_obs;EYEBALL;none observed.;tok
 ej_w_activity;EYEBALL;Activity,;tok:0.1
 ej_w_remaining;EYEBALL;remaining. Location,;tok:0.1
+ej_w_desired_destroy;EYEBALL;Desired effect, destroy;tok
+ej_w_withdrawing;EYEBALL;withdrawing;tok
+ej_w_location;EYEBALL;Location,;tok:0.1
+ej_w_still_threat;EYEBALL;still a threat to friendlies.;tok
 ej_bda_end_inc;EYEBALL;not complete. Cleared to depart, return to Overlord.;tok
 ej_nj_a;EYEBALL;Hornet five one, target is the;tok
 ej_nj_bravo;EYEBALL;From Bravo two one,;tok:0.1

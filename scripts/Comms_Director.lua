@@ -1,5 +1,9 @@
--- Comms_Director | v1.9.1
+-- Comms_Director | v1.9.2
 --[[
+  v1.9.2 - CFG.AUDIO: pj_ / ej_w_desired_destroy, _withdrawing, _location, _still_threat (Piper, same voices).
+           effects-based tasking (JTAC_Controller v0.15.0): a JTAC tasking whose objective is destroyed (TRT.JC.st[k]
+           .objDone) counts as "target dead" (deadJ1 / deadJ2) even when units of the group are left (withdrawing /
+           remaining) - TIC BDA, VUL, Pilot_Banter and Flight_Timeline follow it as before.
   v1.9.1 - CFG.AUDIO: pj_ / ej_lab_sp_howitzer(_pl) (target pool, JTAC_Controller v0.14.1 label
            "self-propelled howitzer"; Piper, same voices, rendered 2026-11-04).
   v1.9.0 - tasking pack (decision Onur 2026-11-04, plan claude/target-pool-tasking-pack-plan-2026-11-04.md): names,
@@ -1023,6 +1027,10 @@ local CFG = {
         pj_w_none_obs          = { ch = "POINTER", len = 0.77 },
         pj_w_activity          = { ch = "POINTER", len = 0.70 },
         pj_w_remaining         = { ch = "POINTER", len = 1.44 },
+        pj_w_desired_destroy   = { ch = "POINTER", len = 1.64 },
+        pj_w_withdrawing       = { ch = "POINTER", len = 0.69 },
+        pj_w_location          = { ch = "POINTER", len = 0.66 },
+        pj_w_still_threat      = { ch = "POINTER", len = 1.24 },
         pj_bda_end_inc         = { ch = "POINTER", len = 3.17 },
         pj_nj_a                = { ch = "POINTER", len = 1.58 },
         pj_nj_bravo            = { ch = "POINTER", len = 1.18 },
@@ -1207,6 +1215,10 @@ local CFG = {
         ej_w_none_obs          = { ch = "EYEBALL", len = 0.68 },
         ej_w_activity          = { ch = "EYEBALL", len = 0.67 },
         ej_w_remaining         = { ch = "EYEBALL", len = 1.33 },
+        ej_w_desired_destroy   = { ch = "EYEBALL", len = 1.27 },
+        ej_w_withdrawing       = { ch = "EYEBALL", len = 0.62 },
+        ej_w_location          = { ch = "EYEBALL", len = 0.61 },
+        ej_w_still_threat      = { ch = "EYEBALL", len = 1.18 },
         ej_bda_end_inc         = { ch = "EYEBALL", len = 2.23 },
         ej_nj_a                = { ch = "EYEBALL", len = 1.26 },
         ej_nj_bravo            = { ch = "EYEBALL", len = 1.07 },
@@ -3843,8 +3855,10 @@ local function Snapshot(name, rec)
 end
 
 local function TrackTargets()
+    local jc = TRT.JC   -- v1.9.2 objective destroyed = target dead
+    local function ObjDone(k) return jc and jc.st and jc.st[k] and jc.st[k].objDone end
     if not CD.deadJ1 then
-        if GroupAlive(CFG.JTAC1_TGT_GROUP) then
+        if GroupAlive(CFG.JTAC1_TGT_GROUP) and not ObjDone("J1") then
             if not CD.seenJ1 then CD.seenJ1 = true; Snapshot(CFG.JTAC1_TGT_GROUP, CD.j1) end
         elseif CD.seenJ1 then
             CD.deadJ1 = true; CD.j1.tot = timer.getAbsTime()
@@ -3852,7 +3866,7 @@ local function TrackTargets()
         end
     end
     if not CD.deadJ2 then
-        if GroupAlive(CFG.JTAC2_TGT_GROUP) then
+        if GroupAlive(CFG.JTAC2_TGT_GROUP) and not ObjDone("J2") then
             if not CD.seenJ2 then CD.seenJ2 = true; Snapshot(CFG.JTAC2_TGT_GROUP, CD.j2) end
         elseif CD.seenJ2 then
             CD.deadJ2 = true; CD.j2.tot = timer.getAbsTime()
@@ -4221,7 +4235,7 @@ local function CD_Init()
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
     timer.scheduleFunction(MudTick, nil, timer.getTime() + 10)   -- v1.7.9
-    env.info("[CD] Comms_Director v1.9.1 online — CAS-1 Syria (pack " .. tostring(P.version) .. ")")
+    env.info("[CD] Comms_Director v1.9.2 online — CAS-1 Syria (pack " .. tostring(P.version) .. ")")
 end
 
 CD_Init()

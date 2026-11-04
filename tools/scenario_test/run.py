@@ -1,4 +1,7 @@
-# scenario_test/run.py | v1.5.1
+# scenario_test/run.py | v1.6.0
+# v1.6.0: opts passes=True: a cleared attack is a real pass - the hero releases the weapon the JTAC asked for (st.ord) at
+#         the aim unit, only that unit dies at the impact, the hero's ammo goes down (JTAC_Controller v0.15.0 effects-based
+#         tasking: objective, aftermath via flag 222). Cases aft_withdraw / aft_threat / aft_ignore.
 # v1.5.1: case audit (flag 221: site check + dry JTAC post search for every pool entry).
 # v1.5.0: target pool (Tasking_Pick v1.0.0): the four pool groups exist late-activated next to set A; Tasking_Pick.lua
 #         runs after the pack (env.mission built from the mock groups); kills follow the picked target group; cases
@@ -190,6 +193,30 @@ class Run:
             MOCK.event({ id = world.event.S_EVENT_SHOT, time = t0, initiator = Unit.getByName("Player_01"), weapon = w })
         """ % (T1[0], T1[1]))
 
+    def shoot_at(self, aim, ord_text):
+        """v1.6.0: release the JTAC's weapon at unit aim; it impacts after 5 s and kills only that unit"""
+        kind = "AGM_65E" if "AGM" in ord_text else "GBU_12"
+        for i in range(1, len(self.hero.ammo) + 1):
+            a = self.hero.ammo[i]
+            if a.desc.typeName == kind and a.count > 0:
+                a.count -= 1
+                break
+        self.rt.execute("""
+            local t0, aim, kind = MOCK.t, %r, %r
+            local u = Unit.getByName(aim)
+            local p = u and u:getPoint() or { x = 0, y = 0, z = 0 }
+            local w = { id_ = 9900 + math.floor(t0) }
+            function w:getDesc()
+                if kind == "AGM_65E" then return { category = Weapon.Category.MISSILE, missileCategory = 6, typeName = kind, displayName = "AGM-65E" } end
+                return { category = Weapon.Category.BOMB, typeName = kind, displayName = "GBU-12" }
+            end
+            function w:getTypeName() return kind end
+            function w:isExist() return MOCK.t < t0 + 5 end
+            function w:getPoint() return { x = p.x, y = 100, z = p.z } end
+            timer.scheduleFunction(function() local v = Unit.getByName(aim); if v then v.life = 0 end end, nil, t0 + 4.9)
+            MOCK.event({ id = world.event.S_EVENT_SHOT, time = t0, initiator = Unit.getByName("Player_01"), weapon = w })
+        """ % (aim, kind))
+
     # ── bot ──────────────────────────────────────────────────────────────────
     def press(self, it, sub=None):
         lbl = self.label(it)
@@ -259,6 +286,14 @@ class Run:
             if sm and k == "J1" and not (st.spoofDone and (st.att is None or st.att.spoof is None
                                                            or not st.att.spoof.pending)):
                 continue                                    # v1.2.0 hold the kill until the spoof is answered
+            if o.get("passes"):                             # v1.6.0 real passes
+                if st.phase == "ATTACK" and st.att is not None and st.att.cleared and not self.attack.get(k) \
+                        and st.nine is not None:
+                    self.attack[k] = self.t()
+                    self.shoot_at(str(st.nine.aim), str(st.ord or ""))
+                if st.phase != "ATTACK" or st.att is None or not st.att.cleared:
+                    self.attack.pop(k, None)
+                continue
             if st.phase == "ATTACK" and st.att is not None and st.att.cleared and not self.attack.get(k):
                 self.attack[k] = self.t()
                 left = self.alive(g)
@@ -436,6 +471,18 @@ CASES = [
     ("pick_B", {210: 1, 211: 9, 212: 2, 214: 1, 217: 2, 219: 2}, {},
      lambda r: [r.cd().res.J1 == "done" and r.cd().res.J2 == "done", radio_has(r, r"T-72 tank"),
                 radio_has(r, r"three T-72 tanks and BMP"), r.log_has(r"\[PICK\] J1 -> B"), r.log_has(r"removed SAM BV51")]),
+    ("aft_withdraw", {210: 1, 211: 9, 212: 2, 214: 9, 222: 1}, {"passes": True},   # v1.6.0 effects-based
+     lambda r: [r.cd().res.J1 == "done" and r.cd().res.J2 == "done", r.log_has(r"AFTERMATH J1: withdraw \(flag\)"),
+                r.log_has(r"WITHDRAW J1: 1 unit"), radio_has(r, r"T-55 tank withdrawing"),
+                radio_has(r, r"Desired effect, destroy SA-13 launcher"),
+                r.log_has(r"\[SCORE\] \+5 JTAC TARGET GROUP OBJECTIVE ACHIEVED"),
+                not r.log_has(r"VOICE (text only|missing clip)")]),
+    ("aft_threat", {210: 1, 211: 9, 212: 2, 214: 9, 222: 2}, {"passes": True},
+     lambda r: [r.cd().res.J1 == "done" and r.cd().res.J2 == "done", r.log_has(r"threat persists -> re-attack"),
+                radio_has(r, r"still a threat to friendlies"), not r.log_has(r"VOICE (text only|missing clip)")]),
+    ("aft_ignore", {210: 1, 211: 9, 212: 2, 214: 9, 222: 3}, {"passes": True},
+     lambda r: [r.cd().res.J1 == "done" and r.cd().res.J2 == "done", radio_has(r, r"T-55 tank remaining"),
+                radio_has(r, r"BTR and T-72 tank remaining"), not r.log_has(r"VOICE (text only|missing clip)")]),
     ("audit", {210: 1, 211: 9, 212: 2, 214: 1, 221: 1}, {},          # v1.5.1 Tasking_Pick v1.1.0 / JC v0.14.2
      lambda r: [r.cd().res.J1 == "done" and r.cd().res.J2 == "done", r.log_has(r"AUDIT mode"),
                 all(r.log_has(r"\[JC\] AUDIT %s-%s .* -> OK$" % (k, e)) for k in ("J1", "J2") for e in "ABC"),
