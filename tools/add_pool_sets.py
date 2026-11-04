@@ -1,4 +1,8 @@
-# add_pool_sets.py | v1.1.0
+# add_pool_sets.py | v1.2.0
+# v1.2.0 (DCS audit 2026-11-04, JTAC_Controller v0.16.1 SUGGEST): Pointer B / C had no JTAC post with LOS (B also
+#         on a 25 deg slope) -> their centres are set from the audit's suggestions (ABS_POS, ME x / y): B = SUGGEST
+#         J1-B #1 (1500 m SW of A, slope 0.2 deg), C = SUGGEST J1-C #3 (1500 m SW of A, slope 0.6 deg, ~400 m from B;
+#         C's #1 was the same point as B's #1).
 # v1.1.0 (JTAC roster P3): DARKNIGHT 11 (J4, FAC-1 area) sets B (armor section) and C (supply trucks) next to
 #         SAM BV53 (SA-13)-1, 2 units each like set A.
 # CAS-1 target pool, first batch (decisions Onur 2026-11-04 03:28: ME late-activated groups, placed by tool,
@@ -48,6 +52,12 @@ SETS = [
 ]
 
 
+ABS_POS = {   # v1.2.0 group centre, ME x / y (overrides the bearing / distance from set A)
+    "CAS J1-B (Armor)-1": (39613.0, 43145.0),
+    "CAS J1-C (Battery)-1": (39924.0, 42906.0),
+}
+
+
 def r6(v):
     return round(v, 6)
 
@@ -82,6 +92,8 @@ def build(m, name, base_name, brg, dist, form, ids):
     _, c, _, _, _, bg = base
     a = math.radians(brg)
     cx, cy = bg[b"x"] + dist * math.cos(a), bg[b"y"] + dist * math.sin(a)
+    if name in ABS_POS:                                  # v1.2.0
+        cx, cy = ABS_POS[name]
     f, rgt = math.radians(FACE), math.radians(FACE + 90)
     g = copy.deepcopy(bg)
     gid, uid0 = ids
