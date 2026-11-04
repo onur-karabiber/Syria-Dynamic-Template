@@ -1,4 +1,7 @@
-# scenario_test/run.py | v1.9.0
+# scenario_test/run.py | v1.10.0
+# v1.10.0: Tasking_Pick v1.4.1 switches the random pair / XCAS on and CAS_Pack v1.3.1 gives B / C weight 1: every case
+#          runs with flags 225 / 226 = 2 (off) and the pick flags 217 / 219 / 223 / 224 = 1 (entry A) unless it sets
+#          them, so the old cases keep their meaning; cases live_* run the deployed defaults (all random).
 # v1.9.0 (P4): cases xcas_* (flag 226: check-in XCAS, mission number at tasking + pilot readback, digit chains in
 #         off / lost comms / INFLTREP, divert for any pair) and rpair_* (flag 225: random tasked pair, equal odds).
 # v1.8.0: JTAC roster P3: world has AXEMAN 11 (JTAC-8, BASE YE55 insurgents) and DARKNIGHT 11 (ground team JTAC-4,
@@ -78,6 +81,8 @@ class Run:
         self.presses = []
         self.attack = {}
         self.setup_world()
+        if not opts.get("live"):                                                    # v1.10.0
+            flags = {**{225: 2, 226: 2, 217: 1, 219: 1, 223: 1, 224: 1}, **flags}
         for f, v in flags.items():
             lua.eval("function(f, v) MOCK.flags[f] = v end")(str(f), v)
         lua.execute("TRT = TRT or {}; _G.TRT = TRT; TRT.PLAYER_NAME = 'Player_01'; "
@@ -666,6 +671,9 @@ CASES = [
 ] + [("rpair_%02d" % i, {225: 1, 226: 1}, {"seed": 200 + i},
       lambda r: [bool(r.cd().vulDone), r.log_has(r"\[PICK\] tasked: J\d J\d \(random pair\)"),
                  not r.log_has(r"missing clip")]) for i in range(1, 9)
+] + [("live_%02d" % i, {}, {"seed": 300 + i, "live": True, "passes": True},       # v1.10.0 deployed defaults
+      lambda r: [bool(r.cd().vulDone), r.log_has(r"\(random pair\)"), r.log_has(r"XCAS: mission"),
+                 not r.log_has(r"missing clip"), not r.log_has(r"INCIDENT")]) for i in range(1, 25)
 ] + [("random_%02d" % i, {}, {"seed": 100 + i}, lambda r: [bool(r.cd().vulDone)]) for i in range(1, 13)]
 
 

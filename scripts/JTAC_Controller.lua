@@ -1,5 +1,7 @@
--- JTAC_Controller | v0.16.3
+-- JTAC_Controller | v0.16.4
 --[[
+  v0.16.4 - release owner (scenario_test live_08): a JTAC in ATTACK with a clearance owns a release ahead of a
+           nearer target area of another (HOLD / suspended) JTAC.
   v0.16.3 - VOICE block (tools/jc_clips.py v1.6.1): count word "ten" (BDA "ten destroyed" was text only, TSK34 flight).
   v0.16.2 - laser (TEST-J1-C flight 2026-11-04, Onur): CFG.LASER_TIMEOUT_S 180 -> 300, and the timeout never switches
            the laser off while a released weapon of the tasking is still in the air (st.pass.pending > 0) - the
@@ -2132,13 +2134,17 @@ end
 
 -- release / impact ----------------------------------------------------------
 local function ActiveKey(u)
-    local best, bd
+    -- v0.16.4: a JTAC whose attack is cleared owns the release; only then the nearest target area (live_08: a
+    -- release under Eyeball's clearance was charged to the suspended, nearer Darknight -> UNAUTH, TERMINATED)
+    local best, bd, br
     for _, k in ipairs(CFG.ORDER) do
-        local ph = JC.st[k].phase
-        if ph ~= "IDLE" and ph ~= "DONE" then   -- TERMINATED stays: releases are still logged
+        local st = JC.st[k]
+        local ph = st.phase
+        if ph ~= "IDLE" and ph ~= "DONE" then   -- TERMINATED / HOLD stay: releases are still logged
             local tp = Centroid(TargetUnits(k))
             local d = tp and NM(D2(u:getPoint(), tp)) or 999
-            if d <= CFG.REATTACK_NM and (not bd or d < bd) then best, bd = k, d end
+            local r = (ph == "ATTACK" and st.att and st.att.cleared == true) and 0 or 1
+            if d <= CFG.REATTACK_NM and (not br or r < br or (r == br and d < bd)) then best, bd, br = k, d, r end
         end
     end
     return best

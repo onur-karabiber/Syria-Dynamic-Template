@@ -1,4 +1,6 @@
-# roster_clips.py | v1.1.0
+# roster_clips.py | v1.1.1
+# v1.1.1: Pointer / Eyeball get the ROWS they lack from the other one (Eyeball diverted for a TIC with the random
+#         pair: p_divert_eye / eye_divert_ack / ovl_resume_eye; Pointer: ptr_laser_*), scenario_test live_18 / 20.
 # v1.1.0 (P4, XCAS + any pair): rows for EVERY roster JTAC (Pointer / Eyeball too), written from scratch (ALL_ROWS):
 #         ovl_dv_<cn> / ovl_adv_<ck> / ovl_dvu_<ck> (C divert for any pair), p_ovl_off_x_<ck> / ovl_lc_dn_<ck> (the
 #         mission number is chained from digit clips after them); plus the XCAS tokens (XCAS_ROWS).
@@ -111,15 +113,19 @@ def rows(p, have):
             out.append((tid.format(ck=j["ck"], cn=j["cn"]), ag, text.format(CS=cs, BTN=BTN[j["btn"]]), mode))
     out += [r for r in XCAS_ROWS if r[0] not in have]
     for k in p["order"]:
-        if k in SKIP:
-            continue
         j = p["jtacs"][k]
         for tid, sid, sk in ROWS:
+            if k in SKIP and (sk == k or tid.format(ck=j["ck"], cn=j["cn"]) in have):
+                continue                              # v1.1.1 J1 / J2: only the rows they lack
             if sid not in have:
                 sys.exit("source row %s missing in clips.csv" % sid)
             text, agency, mode = have[sid]
             t, ag = convert(text, agency, p["jtacs"][sk], j)
+            if ag == "POINTER":
+                ag = "POINTER_JC>POINTER"             # v1.1.1 Pointer's current voice (make_clips v1.10.0)
             out.append((tid.format(ck=j["ck"], cn=j["cn"]), ag, t, mode))
+        if k in SKIP:
+            continue
         for b in (j["btn"], j["alt"]["btn"]):         # pilot "push button N" readbacks (Comms_Director Ack)
             if "p_push_%d" % b not in have:
                 out.append(("p_push_%d" % b, "PILOT", "Push button %s, Hornet five one." % BTN[b], "tok"))

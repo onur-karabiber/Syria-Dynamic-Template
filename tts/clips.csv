@@ -326,6 +326,12 @@ o_mission;OVERLORD;Mission;tok:0.05
 o_cancelled;OVERLORD;cancelled.;tok
 p_mission;PILOT;Mission;tok:0.05
 p_complete;PILOT;complete,;tok:0.1
+ptr_laser_on;POINTER_JC>POINTER;Hornet five one, Pointer one one, laser on, code one six eight eight.;tok
+ptr_laser_shift;POINTER_JC>POINTER;Pointer one one, shifting laser to next target, same code.;tok
+ptr_laser_off;POINTER_JC>POINTER;Pointer one one, laser off.;tok
+p_divert_eye;PILOT>EYEBALL;Eyeball one one, Hornet five one, diverted by Overlord to troops in contact. Will return when able.;tok
+eye_divert_ack;EYEBALL;Hornet five one, Eyeball one one, copy. No other CAS available, we'll hold. Return when able.;tok
+ovl_resume_eye;OVERLORD;Eyeball one one is holding. Contact Eyeball one one, push button five.;tok
 axe_tic;AXEMAN;Hornet five one, Axeman one one, troops in contact! Troops in contact! Bravo two one is taking effective fire from enemy armor. Request immediate close air support, say time out.;tok
 axe_tic_ack;AXEMAN;Hornet five one, copy. Check in when ready for nine-line, we need you now.;tok
 fr_axe_1;FRIENDLY>AXEMAN;Axeman, Bravo two one! We are pinned down, taking heavy fire from the ridge. Where is my air?;tok

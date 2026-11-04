@@ -1,5 +1,7 @@
--- Comms_Director | v1.11.2
+-- Comms_Director | v1.11.3
 --[[
+  v1.11.3 - Eyeball diverted for a TIC (random pair, scenario_test live_18 / 20): resume line ovl_resume_eye; clips
+           p_divert_eye / eye_divert_ack / ovl_resume_eye (tools/roster_clips.py v1.1.1), CFG.AUDIO 1224 entries.
   v1.11.2 - INFLTREP line 5 (TEST-J1-A-TSK34 flight 2026-11-04): with effects-based tasking a "done" tasking counts
            its dead units (Darknight: SA-13 dead, T-55 withdrawing -> 1, was 2 = the group size).
   v1.11.1 - C divert (TEST-J1-C flight 2026-11-04): after an accepted divert the TIC JTAC's call comes CFG.TIC.DV_S
@@ -907,6 +909,12 @@ local CFG = {
         o_cancelled            = { ch = "OVERLORD", len = 0.45 },
         p_mission              = { ch = "PILOT", len = 0.51 },
         p_complete             = { ch = "PILOT", len = 0.57 },
+        ptr_laser_on           = { ch = "POINTER", len = 4.16 },
+        ptr_laser_shift        = { ch = "POINTER", len = 3.26 },
+        ptr_laser_off          = { ch = "POINTER", len = 1.57 },
+        p_divert_eye           = { ch = "EYEBALL", len = 4.68 },
+        eye_divert_ack         = { ch = "EYEBALL", len = 4.91 },
+        ovl_resume_eye         = { ch = "OVERLORD", len = 3.38 },
         axe_tic                = { ch = "AXEMAN", len = 9.46 },
         axe_tic_ack            = { ch = "AXEMAN", len = 3.81 },
         fr_axe_1               = { ch = "AXEMAN", len = 4.37 },
@@ -3494,7 +3502,7 @@ end
 -- ── OVERLORD tasking calls ────────────────────────────────────────────────────────────────
 local LINE = {   -- clip / text of the contact line per JTAC
     J1 = { on = "ovl_contact_pointer_b", tic = "ovl_tic_pointer_b", res = "ovl_resume_ptr" },
-    J2 = { on = "ovl_contact_eyeball_b", tic = "ovl_tic_eyeball_c" },
+    J2 = { on = "ovl_contact_eyeball_b", tic = "ovl_tic_eyeball_c", res = "ovl_resume_eye" },   -- v1.11.3
 }
 for k, j in pairs(JT) do   -- v1.10.0: other roster keys by their pack clip names (cn / ck)
     LINE[k] = LINE[k] or { on = "ovl_contact_" .. tostring(j.cn) .. "_b", tic = "ovl_tic_" .. tostring(j.cn) .. "_b",

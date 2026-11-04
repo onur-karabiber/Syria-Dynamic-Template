@@ -1,5 +1,7 @@
--- Tasking_Pick | v1.4.0
+-- Tasking_Pick | v1.4.1
 --[[
+  v1.4.1 - (2026-11-04 23:00, decision Onur, after the AXEMAN / DARKNIGHT flight TSK34) CFG.RANDOM_PAIR and CFG.XCAS
+           switched ON. Flags 225 / 226 = 2 switch them off for a test variant.
   v1.4.0 - P4 (decisions Onur 2026-11-04 14:34): random tasked pair and XCAS mission numbers, both OFF by default
            until AXEMAN 11 and DARKNIGHT 11 have been flown once with test variants (--tasked):
            * CFG.RANDOM_PAIR (ME flag 225: 1 on / 2 off): the two taskings are an ordered pair of distinct roster
@@ -44,9 +46,9 @@ local TRT = _G.TRT
 if TRT.PICK then env.info("[PICK] already loaded, second copy ignored") return end
 
 local CFG = {
-    VERSION   = "1.4.0",
-    RANDOM_PAIR = false,                  -- v1.4.0 (flag 225 overrides)
-    XCAS      = false,                    -- v1.4.0 (flag 226 overrides)
+    VERSION   = "1.4.1",
+    RANDOM_PAIR = true,                   -- v1.4.0 (flag 225 overrides); v1.4.1 on
+    XCAS      = true,                     -- v1.4.0 (flag 226 overrides); v1.4.1 on
     MSN_RANGE = { 4101, 4199 },
     TRIES     = 20,                       -- v1.2.0 re-draws for the weapons check
     AUDIT_FLAG = 221,                     -- v1.1.0 > 0: audit every pool entry

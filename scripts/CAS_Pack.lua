@@ -1,4 +1,6 @@
--- CAS_Pack | v1.3.0
+-- CAS_Pack | v1.3.1
+-- v1.3.1 (2026-11-04 23:00, decision Onur): pool sets B / C of Pointer, Eyeball and Darknight w = 1 (DCS audit passed:
+--         Tasking_Pick site check OK, JTAC post / MQ-9 LOS OK; Pointer B / C after the move) - A / B / C equal odds.
 -- v1.3.0 (2026-11-04, roster P3, decisions Onur 12:41): J3 AXEMAN 11 (JTAC-8, BASE YE55 insurgents, IP JACKAL,
 --         COMM1 10 / alternate 13) and J4 DARKNIGHT 11 (ground team JTAC-4, MQ-9 FAC-1 = designator, SAM BV53,
 --         IP COBRA, COMM1 12 / alternate 14). jtacs[k].designator = unit that lases and observes (JTAC_Controller
@@ -27,7 +29,7 @@
 -- Positions: DCS world x = north (ME x), z = east (ME y), metres.
 
 CAS_PACK = {
-    version = "1.3.0",
+    version = "1.3.1",
 
     hero    = "Player_01",       -- unit
     group   = "CAS-1",           -- hero's ME group (route = ATO)
@@ -63,15 +65,15 @@ CAS_PACK = {
             area = "BV 62",                          -- briefed target area (kneeboard); the target comes with the 9-line
             targets = { "SAM BV51 (SA-13)-1" },
             -- Target pool (Tasking_Pick.lua). Weapons budget: Pointer entries 2 units (2x AGM-65E), Eyeball 4
-            -- (4x GBU-12). w = weight of the random pick; B / C stay at 0 until the DCS site audit has passed and
-            -- the kneeboard notes are approved (forced picks for tests: ME flag 217 / 219 = entry index).
+            -- (4x GBU-12). w = weight of the random pick (v1.3.1: A / B / C 1 each after the DCS audit; forced picks
+            -- for tests: ME flags 217 / 219 / 223 / 224 = entry index).
             pool = {
                 { id = "A", name = "SHORAD site",   targets = { "SAM BV51 (SA-13)-1" },
                   statics = { "SAM BV51 (SA-13)-1-Camouflage-1" }, w = 1,
                   objective = { n = 1, types = { "Strela-10M3" } } },
-                { id = "B", name = "armor section", targets = { "CAS J1-B (Armor)-1" },   w = 0,
+                { id = "B", name = "armor section", targets = { "CAS J1-B (Armor)-1" },   w = 1,
                   objective = { n = 1, types = { "T-72B" } } },
-                { id = "C", name = "SP artillery section", targets = { "CAS J1-C (Battery)-1" }, w = 0,
+                { id = "C", name = "SP artillery section", targets = { "CAS J1-C (Battery)-1" }, w = 1,
                   objective = { n = 1, types = { "SAU Gvozdika" } } },
             },
             ip = { name = "LYNX", mgrs = "37S BV 4071 2864" },
@@ -96,9 +98,9 @@ CAS_PACK = {
                 { id = "A", name = "SA-8 battery",  targets = { "SAM YE53 (SA-8)-1" },
                   statics = { "SAM YE53 (Camouflage)-1", "SAM YE53 (Camouflage)-2-1", "SAM YE53 (Camouflage)-3" }, w = 1,   -- static UNIT names
                   objective = { n = 2, types = { "Osa 9A33 ln" } } },
-                { id = "B", name = "armor platoon", targets = { "CAS J2-B (Armor)-1" },   w = 0,
+                { id = "B", name = "armor platoon", targets = { "CAS J2-B (Armor)-1" },   w = 1,
                   objective = { n = 2, types = { "T-72B" } } },
-                { id = "C", name = "SP artillery battery", targets = { "CAS J2-C (Battery)-1" }, w = 0,
+                { id = "C", name = "SP artillery battery", targets = { "CAS J2-C (Battery)-1" }, w = 1,
                   objective = { n = 2, types = { "SAU Gvozdika" } } },
             },
             tgt_fallback = { x = 59271, z = -1176 }, -- Comms_Director: TIC geometry when the group is not readable
@@ -144,9 +146,9 @@ CAS_PACK = {
             pool = {
                 { id = "A", name = "SHORAD site",   targets = { "SAM BV53 (SA-13)-1" }, w = 1,
                   objective = { n = 1, types = { "Strela-10M3" } } },
-                { id = "B", name = "armor section", targets = { "CAS J4-B (Armor)-1" },  w = 0,
+                { id = "B", name = "armor section", targets = { "CAS J4-B (Armor)-1" },  w = 1,
                   objective = { n = 1, types = { "T-72B" } } },
-                { id = "C", name = "supply trucks", targets = { "CAS J4-C (Trucks)-1" }, w = 0,
+                { id = "C", name = "supply trucks", targets = { "CAS J4-C (Trucks)-1" }, w = 1,
                   objective = { n = 1, types = { "Ural-375" } } },
             },
             ip = { name = "COBRA", mgrs = "37S BV 5620 6202" },
