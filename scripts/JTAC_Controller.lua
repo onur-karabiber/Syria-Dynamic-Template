@@ -1,5 +1,6 @@
--- JTAC_Controller | v0.16.2
+-- JTAC_Controller | v0.16.3
 --[[
+  v0.16.3 - VOICE block (tools/jc_clips.py v1.6.1): count word "ten" (BDA "ten destroyed" was text only, TSK34 flight).
   v0.16.2 - laser (TEST-J1-C flight 2026-11-04, Onur): CFG.LASER_TIMEOUT_S 180 -> 300, and the timeout never switches
            the laser off while a released weapon of the tasking is still in the air (st.pass.pending > 0) - the
            flight lost a GBU-12 (released 5 s before the 180 s timeout, 3.5 km miss) and an AGM-65E that way.
@@ -312,7 +313,7 @@ end
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "0.16.2",
+    VERSION      = "0.16.3",
     SUGGEST      = { D = { 600, 900, 1200, 1500, 1800, 2100, 2500, 3000 }, STEP = 15, SLOPE = 8, PREF = 1500,
                      SCENERY_R = 12 },   -- v0.16.1 audit
     VOICE        = true,      -- v0.7.0 spoken transmissions (needs Comms_Director >= v1.6.4)
@@ -649,6 +650,7 @@ local VOICE = {
         ["t-72 tanks"] = "lab_t_72_tank_pl",
         ["technical"] = "lab_technical",
         ["technicals"] = "lab_technical_pl",
+        ["ten"] = "w_ten",
         ["threat"] = "rm_threat",
         ["time"] = "w_time",
         ["to"] = "w_to",

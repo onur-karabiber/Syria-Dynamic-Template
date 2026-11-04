@@ -1,4 +1,5 @@
-# jc_clips.py | v1.6.0
+# jc_clips.py | v1.6.1
+# v1.6.1: count word "ten" (w_ten) for every JTAC voice (TEST-J1-A-TSK34 2026-11-04: BDA "ten destroyed" was text only).
 # v1.6.0 (JTAC roster P3): JTACs aj (AXEMAN 11, voice AXEMAN) and dj (DARKNIGHT 11, voice DARKNIGHT, spoken
 #         "Dark Knight one one": written as one word Piper / listeners hear "dark bank"); their pilot / OVERLORD
 #         rows are copies of the Eyeball rows (ROSTER below); label "technical" (HL_DSHK); IPs Jackal / Cobra;
@@ -188,6 +189,7 @@ JP = {
     "spf_adv": ("hornet 51 {s} be advised last abort was not {s}", "Hornet five one, {S}, be advised, last abort was not {S}."),
     "w_and": ("and", "and"),
     "w_meters": ("meters", "meters."),
+    "w_ten": ("ten", "ten"),   # v1.6.1 count word 10 (JTAC_Controller Word(10), BDA "ten destroyed")
     # JTAC_Controller v0.15.0 effects-based tasking
     "w_desired_destroy": ("desired effect destroy", "Desired effect, destroy"),
     "w_withdrawing": ("withdrawing", "withdrawing"),

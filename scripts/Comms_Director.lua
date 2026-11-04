@@ -1,5 +1,7 @@
--- Comms_Director | v1.11.1
+-- Comms_Director | v1.11.2
 --[[
+  v1.11.2 - INFLTREP line 5 (TEST-J1-A-TSK34 flight 2026-11-04): with effects-based tasking a "done" tasking counts
+           its dead units (Darknight: SA-13 dead, T-55 withdrawing -> 1, was 2 = the group size).
   v1.11.1 - C divert (TEST-J1-C flight 2026-11-04): after an accepted divert the TIC JTAC's call comes CFG.TIC.DV_S
            (3 s) after the diverted JTAC's "we'll hold" instead of FIRST_S (10 s, the gap after the pilot's "push
            button" readback, which the divert has not got). The flight's 59 s real time from the switch to the
@@ -1152,6 +1154,7 @@ local CFG = {
         pj_spf_adv             = { ch = "POINTER", len = 4.10 },
         pj_w_and               = { ch = "POINTER", len = 0.46 },
         pj_w_meters            = { ch = "POINTER", len = 0.54 },
+        pj_w_ten               = { ch = "POINTER", len = 0.37 },
         pj_w_desired_destroy   = { ch = "POINTER", len = 1.64 },
         pj_w_withdrawing       = { ch = "POINTER", len = 0.69 },
         pj_w_location          = { ch = "POINTER", len = 0.66 },
@@ -1344,6 +1347,7 @@ local CFG = {
         ej_spf_adv             = { ch = "EYEBALL", len = 3.82 },
         ej_w_and               = { ch = "EYEBALL", len = 0.33 },
         ej_w_meters            = { ch = "EYEBALL", len = 0.47 },
+        ej_w_ten               = { ch = "EYEBALL", len = 0.40 },
         ej_w_desired_destroy   = { ch = "EYEBALL", len = 1.27 },
         ej_w_withdrawing       = { ch = "EYEBALL", len = 0.62 },
         ej_w_location          = { ch = "EYEBALL", len = 0.61 },
@@ -1536,6 +1540,7 @@ local CFG = {
         aj_spf_adv             = { ch = "AXEMAN", len = 4.33 },
         aj_w_and               = { ch = "AXEMAN", len = 0.50 },
         aj_w_meters            = { ch = "AXEMAN", len = 0.57 },
+        aj_w_ten               = { ch = "AXEMAN", len = 0.42 },
         aj_w_desired_destroy   = { ch = "AXEMAN", len = 1.70 },
         aj_w_withdrawing       = { ch = "AXEMAN", len = 0.75 },
         aj_w_location          = { ch = "AXEMAN", len = 0.71 },
@@ -1728,6 +1733,7 @@ local CFG = {
         dj_spf_adv             = { ch = "DARKNIGHT", len = 4.15 },
         dj_w_and               = { ch = "DARKNIGHT", len = 0.37 },
         dj_w_meters            = { ch = "DARKNIGHT", len = 0.62 },
+        dj_w_ten               = { ch = "DARKNIGHT", len = 0.48 },
         dj_w_desired_destroy   = { ch = "DARKNIGHT", len = 1.49 },
         dj_w_withdrawing       = { ch = "DARKNIGHT", len = 0.75 },
         dj_w_location          = { ch = "DARKNIGHT", len = 0.80 },
@@ -3818,7 +3824,8 @@ local function Destroyed(k)
     local inc = JcInc(k)
     if inc then return inc.destroyed or 0 end
     local r = CD.res[k]
-    if r == "done" then return RS.JD(k).size or 0 end
+    -- v1.11.2: "done" = the objective (JTAC_Controller >= v0.15.0), not every unit: count the dead units
+    if r == "done" and not (JcOn() and _G.TRT.JC.objectiveBonus) then return RS.JD(k).size or 0 end
     local size = RS.JD(k).size or 0
     return math.max(0, size - #AliveUnits(JT[k].tgt))
 end
@@ -4832,7 +4839,7 @@ local function CD_Init()
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
     timer.scheduleFunction(MudTick, nil, timer.getTime() + 10)   -- v1.7.9
-    env.info("[CD] Comms_Director v1.11.1 online — CAS-1 Syria (pack " .. tostring(P.version) .. ")")
+    env.info("[CD] Comms_Director v1.11.2 online — CAS-1 Syria (pack " .. tostring(P.version) .. ")")
 end
 
 CD_Init()

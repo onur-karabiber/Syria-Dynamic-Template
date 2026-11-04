@@ -575,6 +575,7 @@ pj_spf_neg;POINTER_JC>POINTER;Hornet five one, Pointer one one, negative, Pointe
 pj_spf_adv;POINTER_JC>POINTER;Hornet five one, Pointer one one, be advised, last abort was not Pointer one one.;tok
 pj_w_and;POINTER_JC>POINTER;and;tok
 pj_w_meters;POINTER_JC>POINTER;meters.;tok
+pj_w_ten;POINTER_JC>POINTER;ten;tok
 pj_w_desired_destroy;POINTER_JC>POINTER;Desired effect, destroy;tok
 pj_w_withdrawing;POINTER_JC>POINTER;withdrawing;tok
 pj_w_location;POINTER_JC>POINTER;Location,;tok:0.1
@@ -767,6 +768,7 @@ ej_spf_neg;EYEBALL;Hornet five one, Eyeball one one, negative, Eyeball one one d
 ej_spf_adv;EYEBALL;Hornet five one, Eyeball one one, be advised, last abort was not Eyeball one one.;tok
 ej_w_and;EYEBALL;and;tok
 ej_w_meters;EYEBALL;meters.;tok
+ej_w_ten;EYEBALL;ten;tok
 ej_w_desired_destroy;EYEBALL;Desired effect, destroy;tok
 ej_w_withdrawing;EYEBALL;withdrawing;tok
 ej_w_location;EYEBALL;Location,;tok:0.1
@@ -959,6 +961,7 @@ aj_spf_neg;AXEMAN;Hornet five one, Axeman one one, negative, Axeman one one did 
 aj_spf_adv;AXEMAN;Hornet five one, Axeman one one, be advised, last abort was not Axeman one one.;tok
 aj_w_and;AXEMAN;and;tok
 aj_w_meters;AXEMAN;meters.;tok
+aj_w_ten;AXEMAN;ten;tok
 aj_w_desired_destroy;AXEMAN;Desired effect, destroy;tok
 aj_w_withdrawing;AXEMAN;withdrawing;tok
 aj_w_location;AXEMAN;Location,;tok:0.1
@@ -1151,6 +1154,7 @@ dj_spf_neg;DARKNIGHT;Hornet five one, Dark Knight one one, negative, Dark Knight
 dj_spf_adv;DARKNIGHT;Hornet five one, Dark Knight one one, be advised, last abort was not Dark Knight one one.;tok
 dj_w_and;DARKNIGHT;and;tok
 dj_w_meters;DARKNIGHT;meters.;tok
+dj_w_ten;DARKNIGHT;ten;tok
 dj_w_desired_destroy;DARKNIGHT;Desired effect, destroy;tok
 dj_w_withdrawing;DARKNIGHT;withdrawing;tok
 dj_w_location;DARKNIGHT;Location,;tok:0.1

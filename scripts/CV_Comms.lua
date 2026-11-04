@@ -1,4 +1,8 @@
--- CV_Comms | v1.7.8
+-- CV_Comms | v1.7.9
+-- v1.7.9: (TEST-J1-A-TSK34 flight 2026-11-04, Onur: radio calls overlapped at the start of the sortie) the "99,
+--         Mother is now CASE N" announcement waits while the hero is airborne beyond CFG.ANN99_NM (60 NM) from the
+--         ship - he is on the CAS-1 nets then, not on Marshal - and goes out when he comes inside that range
+--         (only the latest case; dropped if it is the case already announced to him).
 -- v1.7.8: (CAS (L) sortie 2026-11-02/03) Marshal / Approach speed calls get the pilot's "<modex>, wilco." (p_wilco).
 -- v1.7.7: (scoring review 2026-11-02, Onur) CV_Comms is the only module grading the marshal fix and the hold
 --         (Recovery_Approach v1.1.0 dropped Initial Fix / Holding duration). A missing report no longer avoids the
@@ -286,7 +290,8 @@
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "1.7.7",
+    VERSION      = "1.7.9",   -- (was left at 1.7.7 in v1.7.8)
+    ANN99_NM     = 60,          -- v1.7.9 case-change 99 call held while the hero is farther
     PLAYER_UNIT  = "Player_01",
     CARRIER_UNIT = "CVN",
     MODEX        = "467",       -- fallback if AIRBOSS has no onboard number yet
@@ -1813,6 +1818,27 @@ local function InstallR5(ab)
         CV.annCase = case
         Log(string.format("recovery start CASE %s (previous %s)", tostring(case), tostring(prev)))
         if prev == case or not CV.air then return end      -- v1.5.1: any range
+        local u, sh = Hero(), Ship()                       -- v1.7.9: held beyond ANN99_NM (on the CAS-1 nets)
+        if u and sh and u:inAir() and DistNM(u:getPoint(), sh:getPoint()) > CFG.ANN99_NM then
+            local first = CV.ann99Pend == nil
+            CV.ann99Pend = case
+            Log(string.format("99 CASE %d held: hero %.0f NM from the ship", case, DistNM(u:getPoint(), sh:getPoint())))
+            if first then
+                timer.scheduleFunction(function(_, t)
+                    local h, s2 = Hero(), Ship()
+                    if not CV.ann99Pend then return nil end
+                    if h and s2 and DistNM(h:getPoint(), s2:getPoint()) <= CFG.ANN99_NM then
+                        local c = CV.ann99Pend
+                        CV.ann99Pend = nil
+                        if c ~= CV.ann99Said then CV.ann99Said = c; Ann99Case(c) end
+                        return nil
+                    end
+                    return t + 10
+                end, nil, timer.getTime() + 10)
+            end
+            return
+        end
+        CV.ann99Said = case
         Ann99Case(case)
         timer.scheduleFunction(function() pcall(ReMarshal, case) end, nil, timer.getTime() + 2)
     end
