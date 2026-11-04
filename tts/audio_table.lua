@@ -185,6 +185,7 @@
         ovl_off_tkr            = { ch = "OVERLORD", len = 2.88 },
         ovl_copy_51            = { ch = "OVERLORD", len = 1.93 },
         p_ovl_req_tkr_a        = { ch = "PILOT", len = 2.45 },
+        p_req_tkr              = { ch = "PILOT", len = 0.97 },
         p_ovl_off_tkr_a        = { ch = "PILOT", len = 2.34 },
         p_ovl_off_tkr_b        = { ch = "PILOT", len = 1.12 },
         p_tkr_rb_a             = { ch = "PILOT", len = 0.92 },

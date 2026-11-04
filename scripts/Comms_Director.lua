@@ -1,5 +1,13 @@
--- Comms_Director | v1.11.4
+-- Comms_Director | v1.12.0
 --[[
+  v1.12.0 - CAS (L) flight 2026-11-05 (Onur):
+           * AR between taskings: <k>_OFF with a tasking left offers "OVERLORD: off <JTAC>, request Texaco"
+             (OVERLORD vector, TEXACO as AR1, then "OVERLORD: off Texaco, ready for retasking" -> next tasking;
+             VUL extended by the AR time). After "skip AR1", ENROUTE offers "OVERLORD: request Texaco" again.
+             New clip p_req_tkr. The hero was at bingo after the TIC with Axeman's resume left and had no AR item.
+           * TIC check-in item opens at the start of the pilot's "copy troops in contact" (was the JTAC's
+             following "check in when ready"); after a divert the diverted JTAC's "we'll hold" ends with its audio
+             (was its 10 s text time). Wilco -> check-in item was 52 s, now about 35 s (estimate from clip lengths).
   v1.11.4 - CFG.AUDIO tq_hose_clear (Traffic v1.2.0 "hose clear, cleared astern"), 1225 entries.
   v1.11.3 - Eyeball diverted for a TIC (random pair, scenario_test live_18 / 20): resume line ovl_resume_eye; clips
            p_divert_eye / eye_divert_ack / ovl_resume_eye (tools/roster_clips.py v1.1.1), CFG.AUDIO 1224 entries.
@@ -788,6 +796,7 @@ local CFG = {
         ovl_off_tkr            = { ch = "OVERLORD", len = 2.88 },
         ovl_copy_51            = { ch = "OVERLORD", len = 1.93 },
         p_ovl_req_tkr_a        = { ch = "PILOT", len = 2.45 },
+        p_req_tkr              = { ch = "PILOT", len = 0.97 },
         p_ovl_off_tkr_a        = { ch = "PILOT", len = 2.34 },
         p_ovl_off_tkr_b        = { ch = "PILOT", len = 1.12 },
         p_tkr_rb_a             = { ch = "PILOT", len = 0.92 },
@@ -2756,6 +2765,7 @@ local function A_TkrRequest()
     local p = Player(); if not p then return end
     if not TkAlive() then Msg("[CAS-1] Texaco 11 not available.", CFG.DUR_SHORT); return end   -- v1.8.0
     CD.awaiting = true
+    CD.ar1Done, CD.ar1Skip = false, nil   -- v1.12.0 (a request after "skip AR1" re-opens AR1)
     TkOpen(1)
     MenuRebuild()
     Pilot(string.format("Overlord, %s, request Texaco, angels %d, state %s.", CFG.CS, Angels(p), State(p)),
@@ -2830,8 +2840,8 @@ local function A_SkipAR1()
         Voiced(S("OVERLORD", "p_ovl_neg_tkr_a", "cv:p_state", PD((State(p):match("^(%d+)%.") or "0")), "cv:p_point",
             PD((State(p):match("%.(%d)$") or "0")), 0.15, "p_ovl_off_tkr_b")))   -- v1.8.3
     Q(string.format("[OVERLORD] %s, Overlord, copy.", CFG.CS), CFG.DUR_SHORT, CFG.REPLY_GAP,
-        function() CD.tk = nil; CD.ar1Done = true; CD.awaiting = false; MenuRebuild() end, nil,
-        Voiced(S("OVERLORD", "ovl_copy_51")))
+        function() CD.tk = nil; CD.ar1Done = true; CD.ar1Skip = true; CD.awaiting = false; MenuRebuild() end, nil,
+        Voiced(S("OVERLORD", "ovl_copy_51")))   -- v1.12.0 ar1Skip: AR1 may be requested again in ENROUTE
     QPlay()
 end
 
@@ -2950,6 +2960,13 @@ local function TkrLostTick()
     local ph, wasOpen = CD.phase, CD.tk ~= nil
     env.info(string.format("[CD] tanker lost (%s) in phase %s%s", CFG.TANKER_UNIT, ph, wasOpen and ", RV open" or ""))
     CD.tk = nil
+    if CD.midAR then   -- v1.12.0 AR between taskings: say intentions, the retasking item comes back
+        CD.midAR, CD.awaiting = nil, false
+        Q(string.format("[OVERLORD] %s, Overlord, Texaco 11 is off station, no tanker available. Say intentions.",
+            CFG.CS), CFG.DUR_LONG, 0, nil, nil, Voiced(S("OVERLORD", "ovl_tkr_lost_si")))
+        MenuRebuild(); QPlay()
+        return
+    end
     local ar1 = (ph == "ENROUTE") and not CD.ar1Done
     if ar1 then CD.ar1Done = true end
     local lastOff = RS.isOff(ph) and not NextKey()   -- v1.8.0 (v1.10.0 roster)
@@ -2968,7 +2985,7 @@ end
 
 local function TkrTick(p)
     local tk = CD.tk
-    if not tk or not (CD.phase == "ENROUTE" or CD.phase == "REFUEL" or CD.phase == "TKR_DONE") then return end
+    if not tk or not (CD.phase == "ENROUTE" or CD.phase == "REFUEL" or CD.phase == "TKR_DONE" or CD.midAR) then return end
     local t = Tanker()
     if tk.vec and not tk.judy and t and not CD.awaiting then
         local d = Dist2D(p:getPoint(), t:getPoint())
@@ -3022,10 +3039,11 @@ local function TkrNext()
     if not tk and CD.phase == "ENROUTE" and Ar1Pending() and not CD.awaiting then   -- v1.7.1
         return "AR1 top-off: OVERLORD, request Texaco (F10), or skip AR1 (F10). The hand-off to " .. P.jtacs[CD.tasked[1]].disp .. " waits for AR1."
     end
-    if not tk or not (CD.phase == "ENROUTE" or CD.phase == "REFUEL" or CD.phase == "TKR_DONE") then return nil end
+    if not tk or not (CD.phase == "ENROUTE" or CD.phase == "REFUEL" or CD.phase == "TKR_DONE" or CD.midAR) then return nil end
     local btn = BtnL("TKR")
     if tk.clear then
         return (tk.ar == 1) and ("Report off Texaco to OVERLORD (F10), then " .. CFG.CP_NAME .. ".")
+            or (tk.ar == 3) and "Report off Texaco to OVERLORD (F10), ready for retasking."   -- v1.12.0
             or "Report RTB to OVERLORD (F10)."
     end
     if tk.rcvd then return "Report state to TEXACO 11 (F10), wait for clear to leave." end
@@ -3284,10 +3302,9 @@ TicHandoff = function(key, opts)
     CD.queue[#CD.queue].hold = 0.1
     local p = Player()
     local m = p and MinutesOut(p, TicTgtPos(j)) or 5
-    Q(string.format("[%s] %s, %s, copy troops in contact, %d minutes out.", CFG.CS, j.disp, CFG.CS, m),
+    local copyIt = Q(string.format("[%s] %s, %s, copy troops in contact, %d minutes out.", CFG.CS, j.disp, CFG.CS, m),
         CFG.DUR_PILOT, 1.0, nil, CFG.PILOT_HOLD, S(j.ch, "p_tic_copy_" .. j.k, PD(m), "p_min_out"), nil, nil, true)
-    Q(string.format("[%s] %s, copy. Check in when ready for nine-line, we need you now.", j.cs, CFG.CS),
-        CFG.DUR_SHORT + 2, CFG.REPLY_GAP, function()
+    local gate = function()
             if JcOn() then   -- v1.6.0
                 Msg(string.format("[CAS-1] Check in with %s: F10 > COMMS.", j.disp), CFG.DUR_HANDOFF)
             else
@@ -3299,10 +3316,12 @@ TicHandoff = function(key, opts)
                 s.next = timer.getTime() + math.random(CFG.TIC.GAP_MIN, CFG.TIC.GAP_MAX)
                 s.ready = true   -- v1.7.11: JTAC_Controller may now offer the check-in
             end
-        end, nil, S(j.ch, j.k .. "_tic_ack"), nil)
-    -- v1.8.4: the check-in item opens when the JTAC's call STARTS again (v1.8.0 had moved it to the end)
-    local it = CD.queue[#CD.queue]
-    AtStart(it, it.fn)
+        end
+    -- v1.12.0: the check-in item opens when the pilot's "copy troops in contact" STARTS (v1.8.4: the JTAC's
+    -- "check in when ready" that follows it; flight 2026-11-05: the item still came late after a divert)
+    AtStart(copyIt, gate)
+    Q(string.format("[%s] %s, copy. Check in when ready for nine-line, we need you now.", j.cs, CFG.CS),
+        CFG.DUR_SHORT + 2, CFG.REPLY_GAP, nil, nil, S(j.ch, j.k .. "_tic_ack"), nil)
 end
 
 --- Main-tick pump for the tension exchanges.
@@ -3595,6 +3614,40 @@ local function A_OvlOffJtac(k)
     QPlay()
 end
 
+--- v1.12.0 AR between taskings (Onur 2026-11-05, bingo after a TIC with a tasking left): in <k>_OFF while a
+--- tasking remains, "off <JTAC>, request Texaco" -> OVERLORD vector (as AR1) -> TEXACO -> "off Texaco, ready for
+--- retasking" -> the next tasking (retask). The phase stays <k>_OFF; CD.midAR = { key, t0 } while the RV is open.
+--- The time from the request to the retasking extends the VUL (CD.vulExtS).
+function CD.A_OffJtacTkr(k)
+    local p = Player(); if not p then return end
+    if not TkAlive() then Msg("[CAS-1] Texaco 11 not available.", CFG.DUR_SHORT); return end
+    local j = JT[k]
+    CD.awaiting = true
+    CD.midAR = { key = k, t0 = timer.getTime() }
+    TkOpen(3)
+    MenuRebuild()
+    Pilot(string.format("Overlord, %s, off %s, mission %s complete, request Texaco, angels %d, state %s.",
+        CFG.CS, j.disp, RS.MSN[k], Angels(p), State(p)),
+        Voiced(S("OVERLORD", P.xcas and { "p_ovl_off_x_" .. j.k, PD(RS.MSN[k]), "p_complete" }
+            or ("p_ovl_off_" .. tostring(j.cn) .. "_a"), "p_req_tkr", PAS(p))))
+    TkrVector(p, 3)
+    env.info("[CD] AR between taskings: off " .. j.disp .. ", Texaco requested")
+    QPlay()
+end
+
+function CD.A_OffTkrMid()
+    local p = Player(); if not (p and CD.midAR) then return end
+    local nk = NextKey()
+    CD.vulExtS = CD.vulExtS + (timer.getTime() - CD.midAR.t0)
+    env.info(string.format("[CD] AR between taskings closed after %.0f s (VUL extended)", timer.getTime() - CD.midAR.t0))
+    CD.midAR, CD.tk = nil, nil
+    CD.awaiting = true; MenuRebuild()
+    Pilot(string.format("Overlord, %s, off Texaco, angels %d, state %s. Ready for retasking.", CFG.CS, Angels(p), State(p)),
+        Voiced(S("OVERLORD", "p_ovl_off_tkr_a", PAS(p), 0.15, "p_ovl_off_pointer_b")))
+    if nk then C_OvlContact(nk, p, "retask") else CD.awaiting = false; MenuRebuild() end
+    QPlay()
+end
+
 -- ── B: hold at CP TIGER ─────────────────────────────────────────────────────────────────
 local function C_OvlHold()
     local SC = CFG.SCEN
@@ -3711,7 +3764,7 @@ local function A_DivertWilco()
     Q(string.format("[%s] " .. jf.disp .. ", %s, diverted by Overlord to troops in contact. Will return when able.", CFG.CS,
         CFG.CS), CFG.DUR_PILOT + 2, 1.5, nil, CFG.PILOT_HOLD, Voiced(S(jf.ch, "p_divert_" .. jf.k)))
     Q(string.format("[" .. jf.cs .. "] %s, " .. jf.disp .. ", copy. No other CAS available, we'll hold. Return when able.", CFG.CS),
-        CFG.DUR_SHORT + 2, CFG.REPLY_GAP, function() JcCall("suspend", f) end, nil,
+        CFG.DUR_SHORT + 2, CFG.REPLY_GAP, function() JcCall("suspend", f) end, 0.5,   -- v1.12.0 ends with its audio
         Voiced(S(jf.ch, jf.k .. "_divert_ack")),
         function()
             CD.order, CD.resume, CD.cur = { t, f }, f, t
@@ -4065,10 +4118,13 @@ local function PhaseActions()
     if CD.awaiting then return a end
     if ph == "STRIKE_OUT" then a[#a+1] = { "STRIKE: check in (btn " .. CFG.BTN.STRIKE .. ")", A_StrikeCheckInOut } end
     if ph == "OVL_OUT"    then a[#a+1] = { "OVERLORD: check in (btn " .. CFG.BTN.OVL .. ")", A_OvlCheckIn } end
-    if RS.isOff(ph) then   -- v1.8.0: next tasking or INFLTREP, whatever the order
+    if RS.isOff(ph) and not CD.midAR then   -- v1.8.0: next tasking or INFLTREP, whatever the order
         local k = KeyOfPhase(ph)
         if NextKey() then
             a[#a+1] = { "OVERLORD: off " .. JT[k].disp .. ", ready for retasking", function() A_OvlOffJtac(k) end }
+            if TkAlive() and not CD.tk and not CD.tkrLost then   -- v1.12.0 AR between taskings
+                a[#a+1] = { "OVERLORD: off " .. JT[k].disp .. ", request Texaco", function() CD.A_OffJtacTkr(k) end }
+            end
         else
             a[#a+1] = { "OVERLORD: INFLTREP", A_Inflrep }
         end
@@ -4093,8 +4149,15 @@ local function PhaseActions()
         a[#a+1] = { "OVERLORD: request Texaco (AR1 top-off)", A_TkrRequest }
         if CFG.TKR.AR1_HOLD then a[#a+1] = { "OVERLORD: skip AR1 (no top-off)", A_SkipAR1 } end
     end
+    if ph == "ENROUTE" and not CD.tk and CD.ar1Skip and TkAlive() and not CD.tkrLost then   -- v1.12.0 after a skip
+        a[#a+1] = { "OVERLORD: request Texaco", A_TkrRequest }
+    end
     local tk = CD.tk
-    if tk and tk.vec and (ph == "ENROUTE" or ph == "REFUEL" or ph == "TKR_DONE") then
+    if tk and tk.vec and CD.midAR then   -- v1.12.0
+        a[#a+1] = { tk.rcvd and "OVERLORD: off Texaco, ready for retasking"
+                    or "OVERLORD: off Texaco (cancel AR), ready for retasking", CD.A_OffTkrMid }
+    end
+    if tk and tk.vec and (ph == "ENROUTE" or ph == "REFUEL" or ph == "TKR_DONE" or CD.midAR) then
         if not tk.init and not tk.rcvd then a[#a+1] = { "TEXACO: RV initial (btn " .. CFG.BTN.TKR .. ")", A_TkrInit } end
         if not tk.judy and not tk.rcvd then a[#a+1] = { "OVERLORD: Judy (tanker visual)", A_Judy } end
         if tk.rcvd and not tk.state then a[#a+1] = { "TEXACO: state", A_TkrState } end

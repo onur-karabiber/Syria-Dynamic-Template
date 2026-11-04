@@ -1,4 +1,6 @@
--- Pilot_Banter | v2.1.4
+-- Pilot_Banter | v2.1.5
+-- v2.1.5 (CAS (L) flight 2026-11-05, Onur): FENCE IN only when OVERLORD gives the first JTAC tasking (CD phase
+--         JTAC<n>); the CP Tiger distance trigger (FENCE_IN_NM) is removed - it fired while turning to the AR1 tanker.
 -- v2.1.4 (JTAC roster, Comms_Director >= v1.10.0): JTAC3 / JTAC4 silent and on station like JTAC1 / JTAC2, J3_OFF /
 --         J4_OFF cruise; "good hits" for every roster JTAC's target (deadJ1 .. deadJ4); fence out on REFUEL by
 --         vulDone (deadJ2 only for Comms_Director < v1.8.0).
@@ -145,7 +147,7 @@ local CFG = {
     REARM_DECK_S = 30,
     THREAT_MIN_S = 20,
     DECK_PARK_FLAG = 1910,
-    FENCE_IN_NM  = 35,             -- fence in when CP Tiger is this close (outbound, AR1 closed)
+    FENCE_IN_NM  = 35,             -- v2.1.5 unused (fence in = first JTAC tasking)
     APPROACH_NM  = 12,             -- Case I/II approach check
     LANDING_NM   = 25,             -- landing check only this close to the carrier (or field arrival)
     AAR_CLOSURE_KT = 15,           -- "too much closure" inside AAR_CLOSURE_NM
@@ -2524,11 +2526,8 @@ local function WatchModules(u, air)
                 Fire("fence_out", "CD " .. tostring(prev) .. " -> " .. tostring(ph))
             end
         end
-        if air and not W.fenceIn and ph and CFG.OUTBOUND_CD[ph] and cd.ar1Done ~= false
-            and tl and tl.ato and tl.ato.cpPos then
-            local d = DistNm(u:getPoint(), tl.ato.cpPos)
-            if d <= CFG.FENCE_IN_NM then W.fenceIn = true; Fire("fence_in", string.format("CP Tiger %.0f NM", d)) end
-        end
+        -- v2.1.5: no distance trigger any more (CP Tiger <= FENCE_IN_NM fired it on the way to the AR1 tanker,
+        -- flight 2026-11-05); FENCE IN comes with the first JTAC tasking (CD phase JTAC<n>) only
         if cd.divert and not W.divert then W.divert = true; if air then Fire("divert_check", "divert " .. tostring(cd.divert.field)) end end
     end
     local md = TRT.MD

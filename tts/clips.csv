@@ -196,6 +196,7 @@ ovl_tkr_bra;OVERLORD;Hornet five one, Texaco;tok:0.05
 ovl_off_tkr;OVERLORD;Hornet five one, Overlord, copy. Proceed C P Tiger,;tok:0.05
 ovl_copy_51;OVERLORD;Hornet five one, Overlord, copy.;tok
 p_ovl_req_tkr_a;PILOT;Overlord, Hornet five one, request Texaco,;tok:0.1
+p_req_tkr;PILOT;request Texaco,;tok:0.1
 p_ovl_off_tkr_a;PILOT;Overlord, Hornet five one, off Texaco,;tok:0.1
 p_ovl_off_tkr_b;PILOT;proceeding C P Tiger.;tok
 p_tkr_rb_a;PILOT;Hornet five one,;tok:0.1

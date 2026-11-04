@@ -1,4 +1,6 @@
-# scenario_test/run.py | v1.10.0
+# scenario_test/run.py | v1.11.0
+# v1.11.0: cases midar_A / B / C (Comms_Director v1.12.0 AR between taskings: request at the first "off", RV initial,
+#          Judy, off Texaco (cancel AR), retasking). live_* 24 seeds, no INCIDENT.
 # v1.10.0: Tasking_Pick v1.4.1 switches the random pair / XCAS on and CAS_Pack v1.3.1 gives B / C weight 1: every case
 #          runs with flags 225 / 226 = 2 (off) and the pick flags 217 / 219 / 223 / 224 = 1 (entry A) unless it sets
 #          them, so the old cases keep their meaning; cases live_* run the deployed defaults (all random).
@@ -371,6 +373,16 @@ class Run:
                             if t0 is None or self.t() - float(t0) < o["abort"][1]:
                                 return None, None
                         return it, None
+        if o.get("midar") and not self.attack.get("midar_req"):      # v1.11.0 AR between taskings, once
+            it = find(r"^OVERLORD: off .*, request Texaco$")
+            if it is not None:
+                self.attack["midar_req"] = True
+                return it, None
+        if o.get("midar"):
+            for rx in (r"^TEXACO: RV initial", r"^OVERLORD: Judy", r"^OVERLORD: off Texaco"):
+                it = find(rx)
+                if it is not None:
+                    return it, None
         order = [
             r"WINCHESTER", r": ABORTING", r": OFF", r"how copy", r"[A-Z]+ 11: check in",
             r"ready for game plan", r"ready for 9-line", r"ready for remarks", r"READBACK \d/3",
@@ -674,6 +686,11 @@ CASES = [
 ] + [("live_%02d" % i, {}, {"seed": 300 + i, "live": True, "passes": True},       # v1.10.0 deployed defaults
       lambda r: [bool(r.cd().vulDone), r.log_has(r"\(random pair\)"), r.log_has(r"XCAS: mission"),
                  not r.log_has(r"missing clip"), not r.log_has(r"INCIDENT")]) for i in range(1, 25)
+] + [("midar_%s" % sc, {210: n, 211: 9, 212: 2}, {"midar": True},                     # v1.11.0 AR between taskings
+      lambda r: [bool(r.cd().vulDone), r.log_has(r"AR between taskings: off"),
+                 r.log_has(r"AR between taskings closed"), radio_has(r, r"request Texaco, angels"),
+                 radio_has(r, r"off Texaco, angels \d+, state [\d.]+\. Ready for retasking"),
+                 not r.log_has(r"missing clip")]) for sc, n in (("A", 1), ("B", 2), ("C", 3))
 ] + [("random_%02d" % i, {}, {"seed": 100 + i}, lambda r: [bool(r.cd().vulDone)]) for i in range(1, 13)]
 
 
