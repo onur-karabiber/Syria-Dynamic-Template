@@ -32,7 +32,7 @@ python build.py
 This will generate `Syria_Dynamic_Template.miz` inside the `build/` folder. The build embeds every Lua script that the mission references (`src/l10n/DEFAULT/mapResource`) from `scripts/`, prints each script's header line, and aborts without writing anything if a referenced script is missing.
 
 ### 2. Editing the Mission (Mission Editor)
-The `.miz` that DCS opens (`config.py`: `Saved Games\DCS\Missions\The Routine Things (With RAT)\Syria_Dynamic_Template.miz`) is the working copy; `src/` is its Git mirror. Syncing is only required **before the next build or commit**, not after every ME save.
+The `.miz` that DCS opens (`config.py`: `Saved Games\DCS\Missions\Syria Dynamic Template\Syria_Dynamic_Template.miz`) is the working copy; `src/` is its Git mirror. Syncing is only required **before the next build or commit**, not after every ME save.
 
 1. Edit and save in the Mission Editor as usual.
 2. Before the next build/commit, pull the ME changes into the repo:

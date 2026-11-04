@@ -1,4 +1,6 @@
-# make_test_variant.py | v1.11.0
+# make_test_variant.py | v1.11.1
+# v1.11.1 (= main v1.9.1, 2026-11-04 folder layout): variants are written to the TESTs subfolder next to the
+#          source .miz (created when missing; --out-dir overrides), not next to the source.
 # v1.11.0 (P4): --random-pair (flag 225 = 1: Tasking_Pick draws the tasked pair, equal odds) and --xcas (flag 226 = 1:
 #          XCAS check-in, mission numbers 4101-4199 at tasking), set in the DO SCRIPT before Tasking_Pick; tags
 #          "RPAIR" / "XCAS".
@@ -359,6 +361,7 @@ def main():
     ap.add_argument("--first", choices=["J1", "J2"], help="v1.5.0 first tasking in scenario B")
     ap.add_argument("--spoof", choices=["J1", "J2", "both", "off"], help="v1.6.0 force the spoofed abort (flag 216)")
     ap.add_argument("--pick", help="v1.8.0 force target-pool entries, e.g. J1=B,J2=C (flags 217 / 219)")
+    ap.add_argument("--out-dir", help="v1.9.1 output folder (default: TESTs next to the source .miz)")
     ap.add_argument("--audit", action="store_true", help="v1.9.0 audit every target-pool entry in one load (flag 221)")
     ap.add_argument("--tasked", help="v1.10.0 the two taskings, e.g. J3,J4 (CAS_PACK.tasked before Tasking_Pick)")
     ap.add_argument("--random-pair", action="store_true", help="v1.11.0 random tasked pair (flag 225)")
@@ -380,7 +383,9 @@ def main():
             if not a.keep_red_air:
                 strip_red_air(mission)
             tag = scen_tag(a)
-            out = os.path.join(os.path.dirname(src), "%s TEST-%s%s.miz" % (stem, key, ("-" + tag) if tag else ""))
+            odir = a.out_dir or os.path.join(os.path.dirname(src), "TESTs")   # v1.9.1
+            os.makedirs(odir, exist_ok=True)
+            out = os.path.join(odir, "%s TEST-%s%s.miz" % (stem, key, ("-" + tag) if tag else ""))
             buf = io.BytesIO()
             with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zout:
                 for info in zin.infolist():
