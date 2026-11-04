@@ -1,5 +1,6 @@
 # make_kneeboard.py | v3.10.0
-# v3.10.0 (effects-based tasking, JTAC_Controller v0.15.0): the JTAC picks the weapon by target type -> 01 ADMIN
+# v3.10.0 (2026-11-04): 01 A/A line = the ME pylons, 1× AIM-120 + 2× AIM-9M (was 2× AIM-120 + 2× AIM-9X; confirmed by
+#         Onur). Effects-based tasking, JTAC_Controller v0.15.0): the JTAC picks the weapon by target type -> 01 ADMIN
 #         loadout lines and 04 / 05 ORDNANCE say so (armor / movers AGM-65E, stationary / soft GBU-12) instead of tying a
 #         weapon to a JTAC. Pending Onur's approval (preview 2026-11-04).
 # v3.9.0 (target pool, Tasking_Pick v1.0.0): when a JTAC's pool has an entry after the first with w > 0 (or with
@@ -156,7 +157,7 @@ def admin():
     c.kv("TYPE", "CAS  TYPE II  (Laser)"); c.kv("A/C", "F/A-18C  (single)")
     c.kv("CALLSIGN", "467 (ship)  /  %s (tac)" % PACK["cs"]); c.kv("MSN#", "%s (%s) · %s (%s)" % (J1["msn"], J1["group"], J2["msn"], J2["group"]))
     c.rule(); c.head("LOADOUT")
-    c.kv("A/A", "2× AIM-120  ·  2× AIM-9X"); c.kv("A/G 1", "2× AGM-65E  (armor / movers)")
+    c.kv("A/A", "1× AIM-120  ·  2× AIM-9M"); c.kv("A/G 1", "2× AGM-65E  (armor / movers)")
     c.kv("A/G 2", "4× GBU-12   (stationary / soft)"); c.kv("POD", "ATFLIR  (LST mode)")
     c.rule(); c.head("CARRIER  (CVN)")
     c.kv("TACAN", "72X  WSH"); c.kv("ICLS", "Ch 12  WSH"); c.kv("BRC", "355°M (live: Marshal call)")
