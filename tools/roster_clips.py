@@ -1,4 +1,7 @@
-# roster_clips.py | v1.0.0
+# roster_clips.py | v1.1.0
+# v1.1.0 (P4, XCAS + any pair): rows for EVERY roster JTAC (Pointer / Eyeball too), written from scratch (ALL_ROWS):
+#         ovl_dv_<cn> / ovl_adv_<ck> / ovl_dvu_<ck> (C divert for any pair), p_ovl_off_x_<ck> / ovl_lc_dn_<ck> (the
+#         mission number is chained from digit clips after them); plus the XCAS tokens (XCAS_ROWS).
 # Comms_Director / OVERLORD / pilot / Bravo 2-1 clips of the JTACs beyond Pointer 11 and Eyeball 11 (JTAC roster
 # P3, plan claude/jtac-roster-effects-plan-2026-11-04.md). ONE source: each row is an existing Eyeball 11 row (or a
 # Pointer 11 row for the C divert, where the diverted JTAC is slot 1) with call sign, short name, buttons and
@@ -49,6 +52,25 @@ ROWS = [
 ]
 
 
+# v1.1.0: id template, agency, text ({CS} spoken call sign, {BTN} primary button word)
+ALL_ROWS = [
+    ("ovl_dv_{cn}", "OVERLORD", "{CS} reports troops in contact, priority immediate. Contact {CS}, push button {BTN}, "
+                                "without delay.", "tok:0.1"),
+    ("ovl_adv_{ck}", "OVERLORD", "{CS} is advised.", "tok"),
+    ("ovl_dvu_{ck}", "OVERLORD", "Hornet five one, Overlord, copy. Continue with {CS}.", "tok"),
+    ("p_ovl_off_x_{ck}", "PILOT", "Overlord, Hornet five one, off {CS}, mission", "tok:0.05"),
+    ("ovl_lc_dn_{ck}", "OVERLORD", "Hornet five one, Overlord. {CS} is off the net, unable to raise. Mission", "tok:0.05"),
+]
+XCAS_ROWS = [   # v1.1.0 XCAS (Comms_Director >= v1.11.0)
+    ("p_ovl_checkin_x", "PILOT", "Overlord, Hornet five one, checking in as fragged, X CAS,", "tok:0.1"),
+    ("ovl_ci_xcas", "OVERLORD", "Mission as fragged, close air support on call. Proceed C P Tiger,", "tok:0.1"),
+    ("o_mission", "OVERLORD", "Mission", "tok:0.05"),
+    ("o_cancelled", "OVERLORD", "cancelled.", "tok"),
+    ("p_mission", "PILOT", "Mission", "tok:0.05"),
+    ("p_complete", "PILOT", "complete,", "tok:0.1"),
+]
+
+
 def spoken_cs(j):
     short = SPOKEN.get(j["short"].lower(), j["short"])
     num = " ".join(NUM[int(c)] for c in j["cs"].split()[-1])
@@ -82,6 +104,12 @@ def convert(text, agency, src, dst):
 
 def rows(p, have):
     out = []
+    for k in p["order"]:                                  # v1.1.0 every roster JTAC
+        j = p["jtacs"][k]
+        cs = spoken_cs(j)[1]
+        for tid, ag, text, mode in ALL_ROWS:
+            out.append((tid.format(ck=j["ck"], cn=j["cn"]), ag, text.format(CS=cs, BTN=BTN[j["btn"]]), mode))
+    out += [r for r in XCAS_ROWS if r[0] not in have]
     for k in p["order"]:
         if k in SKIP:
             continue

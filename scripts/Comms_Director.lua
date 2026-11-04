@@ -1,5 +1,14 @@
--- Comms_Director | v1.10.1
+-- Comms_Director | v1.11.0
 --[[
+  v1.11.0 - P4 XCAS (decisions Onur 2026-11-04 14:34; CAS_PACK.xcas set by Tasking_Pick >= v1.4.0, OFF by default):
+           * check-in "checking in as fragged, XCAS" / OVERLORD "close air support on call" (no JTAC names, no
+             mission numbers); OVERLORD gives the mission number with the tasking ("Mission 4137. Axeman 11 is on
+             station ...", also in the divert call), the pilot reads it back ("Mission 4137, push button 10,
+             Hornet 51."); a resumed tasking gets no number again
+           * off / lost comms "cancelled" / INFLTREP speak the generated numbers from digit clips
+           * C divert voiced for any pair (ovl_divert_a + ovl_dv_<cn> + ovl_adv_<ck>; "unable" ovl_dvu_<ck>);
+             Pointer -> Eyeball without XCAS keeps the v1.8 clips
+           Without XCAS nothing changes for Pointer + Eyeball.
   v1.10.1 - JTAC roster P3 (pack v1.3.0: AXEMAN 11 J3, DARKNIGHT 11 J4): CD.tasked from CAS_PACK.tasked (Tasking_Pick
            >= v1.3.0). The OVERLORD check-in clips name Pointer 11 / Eyeball 11 and missions 4101 / 4102: any other
            tasked pair gets that exchange as text only (P4 replaces it with the XCAS check-in). INFLTREP line 2 and
@@ -865,6 +874,32 @@ local CFG = {
         i_rmk_msn              = { ch = "PILOT", len = 0.38 },
         i_rmk_inc_b            = { ch = "PILOT", len = 1.17 },
         i_rmk_can_b            = { ch = "PILOT", len = 1.97 },
+        ovl_dv_pointer         = { ch = "OVERLORD", len = 6.05 },
+        ovl_adv_ptr            = { ch = "OVERLORD", len = 1.40 },
+        ovl_dvu_ptr            = { ch = "OVERLORD", len = 3.33 },
+        p_ovl_off_x_ptr        = { ch = "PILOT", len = 3.00 },
+        ovl_lc_dn_ptr          = { ch = "OVERLORD", len = 4.01 },
+        ovl_dv_eyeball         = { ch = "OVERLORD", len = 5.72 },
+        ovl_adv_eye            = { ch = "OVERLORD", len = 1.30 },
+        ovl_dvu_eye            = { ch = "OVERLORD", len = 3.05 },
+        p_ovl_off_x_eye        = { ch = "PILOT", len = 2.66 },
+        ovl_lc_dn_eye          = { ch = "OVERLORD", len = 4.22 },
+        ovl_dv_axeman          = { ch = "OVERLORD", len = 6.25 },
+        ovl_adv_axe            = { ch = "OVERLORD", len = 1.39 },
+        ovl_dvu_axe            = { ch = "OVERLORD", len = 3.31 },
+        p_ovl_off_x_axe        = { ch = "PILOT", len = 2.66 },
+        ovl_lc_dn_axe          = { ch = "OVERLORD", len = 4.13 },
+        ovl_dv_darknight       = { ch = "OVERLORD", len = 6.16 },
+        ovl_adv_dkn            = { ch = "OVERLORD", len = 1.54 },
+        ovl_dvu_dkn            = { ch = "OVERLORD", len = 3.23 },
+        p_ovl_off_x_dkn        = { ch = "PILOT", len = 2.53 },
+        ovl_lc_dn_dkn          = { ch = "OVERLORD", len = 4.39 },
+        p_ovl_checkin_x        = { ch = "PILOT", len = 3.10 },
+        ovl_ci_xcas            = { ch = "OVERLORD", len = 3.28 },
+        o_mission              = { ch = "OVERLORD", len = 0.39 },
+        o_cancelled            = { ch = "OVERLORD", len = 0.45 },
+        p_mission              = { ch = "PILOT", len = 0.51 },
+        p_complete             = { ch = "PILOT", len = 0.57 },
         axe_tic                = { ch = "AXEMAN", len = 9.46 },
         axe_tic_ack            = { ch = "AXEMAN", len = 3.81 },
         fr_axe_1               = { ch = "AXEMAN", len = 4.37 },
@@ -2552,16 +2587,23 @@ local function A_OvlCheckIn()
     CD.awaiting = true; MenuRebuild()
     local T = CD.tasked   -- v1.10.0
     local std = (T[1] == "J1" and T[2] == "J2")   -- v1.10.1: the check-in clips name Pointer / Eyeball and 4101 / 4102
-    Pilot(string.format("Overlord, %s, checking in as fragged, mission %s and %s, angels %d, state %s.",
-        CFG.CS, RS.MSN[T[1]], RS.MSN[T[2]], Angels(p), State(p)), std and S("OVERLORD", "p_ovl_checkin_a", PAS(p)) or nil)
     local picTxt, picSeq = PictureParts(p:getPoint())
+    if P.xcas then   -- v1.11.0 XCAS: no JTACs, no mission numbers at check-in
+        Pilot(string.format("Overlord, %s, checking in as fragged, XCAS, angels %d, state %s.", CFG.CS, Angels(p), State(p)),
+            S("OVERLORD", "p_ovl_checkin_x", PAS(p)))
+    else
+        Pilot(string.format("Overlord, %s, checking in as fragged, mission %s and %s, angels %d, state %s.",
+            CFG.CS, RS.MSN[T[1]], RS.MSN[T[2]], Angels(p), State(p)), std and S("OVERLORD", "p_ovl_checkin_a", PAS(p)) or nil)
+    end
     Q(string.format("[OVERLORD] %s, Overlord, radar contact. %s "
-        .. "Mission as fragged, " .. P.jtacs[T[1]].disp .. " and " .. P.jtacs[T[2]].disp .. " on station. Proceed %s, %s. "
-        .. "SAM activity reported in both target areas, %s. Report feet dry.",
+        .. (P.xcas and "Mission as fragged, close air support on call."
+            or ("Mission as fragged, " .. P.jtacs[T[1]].disp .. " and " .. P.jtacs[T[2]].disp .. " on station."))
+        .. " Proceed %s, %s. SAM activity reported in both target areas, %s. Report feet dry.",
         CFG.CS, picTxt, CFG.CP_NAME, BrgRng(p:getPoint(), CFG.CP_POS), HD_TEXT),
         CFG.DUR_LONG + 4, CFG.REPLY_GAP, function() SetPhase("ENROUTE") end, nil,
-        std and S("OVERLORD", "ovl_ci_rc", picSeq, 0.1, "ovl_ci_frag", OBR(p:getPoint(), CFG.CP_POS), 0.15, "ovl_checkin_b")
-        or nil)   -- v1.10.1: another pair -> text only until the XCAS check-in (P4)
+        (P.xcas or std) and S("OVERLORD", "ovl_ci_rc", picSeq, 0.1, P.xcas and "ovl_ci_xcas" or "ovl_ci_frag",
+            OBR(p:getPoint(), CFG.CP_POS), 0.15, "ovl_checkin_b")
+        or nil)   -- v1.10.1: another pair without XCAS -> text only
     ReadBack("OVERLORD", string.format("%s, proceeding %s, hard deck two-zero thousand, wilco.", CFG.CS, CFG.CP_NAME),
         "p_ovl_checkin_rb")
     if CD.scen and CD.scen.noShow then C_NoShow() end   -- v1.8.0
@@ -3205,8 +3247,10 @@ TicHandoff = function(key, opts)
     if not (opts and opts.noPush) then
         local prev = CD.queue[#CD.queue]
         if prev then prev.hold = 0.1 end
-        Q(string.format("[%s] Push button %d, %s, buster.", CFG.CS, btn, CFG.CS),
-            CFG.DUR_PILOT, 0.8, nil, CFG.PILOT_HOLD, S("OVERLORD", "p_tic_push_" .. btn), nil, nil, true)
+        local mx = opts and opts.msn   -- v1.11.0 XCAS: "Mission 4137, push button 10, ..."
+        Q(string.format("[%s] %sPush button %d, %s, buster.", CFG.CS, mx and ("Mission " .. mx .. ", ") or "", btn, CFG.CS),
+            CFG.DUR_PILOT, 0.8, nil, CFG.PILOT_HOLD,
+            S("OVERLORD", mx and { "p_mission", PD(mx), 0.1 } or {}, "p_tic_push_" .. btn), nil, nil, true)
     end
     CD.ticState = { key = key, n = 0, used = {}, next = nil, done = false, bda = false }
     Q(string.format("[%s] %s, %s, TROOPS IN CONTACT, troops in contact! " .. P.friendly.name .. " is taking effective "
@@ -3482,8 +3526,12 @@ C_OvlContact = function(k, p, mode)
     end
     CD.awaiting = true
     CD.cur = k
+    -- v1.11.0 XCAS: the mission number comes with the (first) tasking of this JTAC
+    CD.msnGiven = CD.msnGiven or {}
+    local mx = P.xcas and not CD.msnGiven[k] and RS.MSN[k] or nil
+    if mx then CD.msnGiven[k] = true; pre = pre .. "Mission " .. mx .. ". " end
     local ovlIt = Q("[OVERLORD] " .. pre .. line, CFG.DUR_LONG, (mode == "retask") and CFG.REPLY_GAP or 0, nil, nil,
-        Voiced(S("OVERLORD", preSeq, id)))
+        Voiced(S("OVERLORD", preSeq, mx and { "o_mission", OD(mx), 0.15 } or {}, id)))
     local enter = function()
         CD.taskT = CD.taskT or {}
         CD.taskT[k] = timer.getTime()
@@ -3497,11 +3545,18 @@ C_OvlContact = function(k, p, mode)
     -- pilot's push readback); a check-in pressed now is transmitted after the readback (FIFO)
     AtStart(ovlIt, enter)
     if tic then
-        TicHandoff(k)
+        TicHandoff(k, mx and { msn = mx } or nil)
+    elseif mx then   -- v1.11.0 XCAS readback "Mission 4137, push button 10, Hornet 51."
+        local prev = CD.queue[#CD.queue]
+        if prev then prev.hold = 0.1 end
+        Q(string.format("[%s] Mission %s, push button %d, %s.", CFG.CS, mx, CFG.BTN[j.btn], CFG.CS),
+            CFG.DUR_PILOT, 0.8, nil, CFG.PILOT_HOLD, S("OVERLORD", "p_mission", PD(mx), 0.1, "p_push_" .. CFG.BTN[j.btn]),
+            nil, nil, true)
     else
         Ack("OVERLORD", false, CFG.BTN[j.btn])
     end
-    env.info(string.format("[CD] tasking %s (%s%s%s)", j.disp, mode, tic and ", TIC" or "", resume and ", resume" or ""))
+    env.info(string.format("[CD] tasking %s (%s%s%s%s)", j.disp, mode, tic and ", TIC" or "", resume and ", resume" or "",
+        mx and (", mission " .. mx) or ""))
 end
 
 --- F10 in J1_OFF / J2_OFF while a tasking remains.
@@ -3513,7 +3568,8 @@ local function A_OvlOffJtac(k)
     local j = JT[k]
     Pilot(string.format("Overlord, %s, off %s, mission %s complete, angels %d, state %s. Ready for retasking.",
         CFG.CS, j.disp, RS.MSN[k], Angels(p), State(p)),
-        S("OVERLORD", "p_ovl_off_" .. tostring(j.cn) .. "_a", PAS(p), 0.15, "p_ovl_off_pointer_b"))
+        S("OVERLORD", P.xcas and { "p_ovl_off_x_" .. j.k, PD(RS.MSN[k]), "p_complete" }   -- v1.11.0 XCAS numbers
+            or ("p_ovl_off_" .. tostring(j.cn) .. "_a"), PAS(p), 0.15, "p_ovl_off_pointer_b"))
     C_OvlContact(nk, p, "retask")
     QPlay()
 end
@@ -3593,8 +3649,14 @@ local function DivertTick(p)
     end
     dv.state, dv.t = "asked", now
     JcCall("freeze", dv.first, true)
-    local clip = (dv.first == "J1" and dv.tic == "J2") and S("OVERLORD", "ovl_divert_a", 0.15, "ovl_divert_b") or nil
-    AtStart(Q(string.format("[OVERLORD] %s, Overlord, divert, divert. " .. J2.disp .. " reports TROOPS IN CONTACT, priority "
+    CD.msnGiven = CD.msnGiven or {}   -- v1.11.0 XCAS: the TIC tasking's number comes with the divert
+    local mx = P.xcas and not CD.msnGiven[dv.tic] and RS.MSN[dv.tic] or nil
+    if mx then CD.msnGiven[dv.tic] = true; dv.msn = mx end
+    local clip = (dv.first == "J1" and dv.tic == "J2" and not mx) and S("OVERLORD", "ovl_divert_a", 0.15, "ovl_divert_b")
+        or S("OVERLORD", "ovl_divert_a", 0.15, mx and { "o_mission", OD(mx), 0.15 } or {},   -- v1.11.0 any pair
+             "ovl_dv_" .. tostring(JT[dv.tic].cn), "ovl_adv_" .. JT[dv.first].k)
+    AtStart(Q(string.format("[OVERLORD] %s, Overlord, divert, divert. " .. (mx and ("Mission " .. mx .. ". ") or "")
+        .. J2.disp .. " reports TROOPS IN CONTACT, priority "
         .. "immediate. Contact " .. J2.disp .. ", %s, without delay. " .. J1.disp .. " is advised.", CFG.CS, Btn(dv.tic)),
         CFG.DUR_URGENT + 4, 0, nil, nil, clip and Voiced(clip)),
         function() dv.open = true; MenuRebuild() end)   -- v1.8.4: wilco / unable open at the start
@@ -3650,7 +3712,8 @@ local function A_DivertUnable()
     Pilot(string.format("Overlord, %s, unable divert, state %s.", CFG.CS, State(p)),
         Voiced(S("OVERLORD", "p_divert_unable", PState(p))))
     Q(string.format("[OVERLORD] %s, Overlord, copy. Continue with " .. P.jtacs[dv.first].disp .. ".", CFG.CS), CFG.DUR_SHORT,
-        CFG.REPLY_GAP, nil, nil, (dv.first == "J1") and Voiced(S("OVERLORD", "ovl_divert_unable")) or nil,
+        CFG.REPLY_GAP, nil, nil, Voiced(S("OVERLORD", (dv.first == "J1") and "ovl_divert_unable"
+            or ("ovl_dvu_" .. JT[dv.first].k))),   -- v1.11.0 any pair
         function() JcCall("freeze", dv.first, false); CD.awaiting = false; MenuRebuild() end)
     env.info(string.format("[CD] C: divert refused by the pilot, state %s", State(p)))
     QPlay()
@@ -3684,7 +3747,8 @@ local function LcAnswer(k)
         if CD.resume == k then CD.resume = nil end
         JcCall("cancel", k, "lost comms")
         Q(string.format("[OVERLORD] %s, Overlord. %s is off the net, unable to raise. Mission %s cancelled.", CFG.CS,
-            j.disp, RS.MSN[k]), CFG.DUR_LONG, 0, nil, nil, Voiced(S("OVERLORD", "ovl_lc_down_" .. j.k)))
+            j.disp, RS.MSN[k]), CFG.DUR_LONG, 0, nil, nil, Voiced(S("OVERLORD", P.xcas   -- v1.11.0 XCAS numbers
+                and { "ovl_lc_dn_" .. j.k, OD(RS.MSN[k]), "o_cancelled" } or ("ovl_lc_down_" .. j.k))))
         VulCheck()
         local nk = NextKey()
         if nk then
@@ -3761,7 +3825,7 @@ A_Inflrep = function()
     local d1, d2 = RS.JD(T[1]), RS.JD(T[2])
     local n1, n2 = Destroyed(T[1]), Destroyed(T[2])
     local rmk, rmkSeq = "Remarks, SAM activity in both target areas.", {}
-    local std = (T[1] == "J1" and T[2] == "J2")   -- v1.10.1: i_l2 / i_rmk_* clips speak missions 4101 / 4102
+    local std = (T[1] == "J1" and T[2] == "J2") and not P.xcas   -- v1.10.1: i_l2 / i_rmk_* speak 4101 / 4102
     for idx, k in ipairs(T) do
         local r, why = CD.res[k], CD.why[k]
         if r == "incomplete" or (r == "cancelled" and why == "winchester") then
@@ -4665,8 +4729,9 @@ local function AirStartCheck(p, c)
         SetPhase(RS.ph[key])
         local tic = TicPick() == key
         local d = P.jtacs[key].disp
-        Q(string.format("[OVERLORD] %s, Overlord. AIR START: check-in assumed. %s %s. %s Contact " .. d .. ", %s.",
-            CFG.CS, CFG.CP_NAME, BrgRng(pos, CFG.CP_POS),
+        if P.xcas then CD.msnGiven = { [key] = true } end   -- v1.11.0
+        Q(string.format("[OVERLORD] %s, Overlord. AIR START: check-in assumed. %s %s. %s%s Contact " .. d .. ", %s.",
+            CFG.CS, CFG.CP_NAME, BrgRng(pos, CFG.CP_POS), P.xcas and ("Mission " .. RS.MSN[key] .. ". ") or "",
             tic and d .. " reports TROOPS IN CONTACT, priority immediate." or d .. " is on station.",
             Btn(key)), CFG.DUR_LONG, 2)
         if tic then TicHandoff(key) else Ack("OVERLORD", false, CFG.BTN[key]) end
@@ -4762,7 +4827,7 @@ local function CD_Init()
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
     timer.scheduleFunction(MudTick, nil, timer.getTime() + 10)   -- v1.7.9
-    env.info("[CD] Comms_Director v1.10.1 online — CAS-1 Syria (pack " .. tostring(P.version) .. ")")
+    env.info("[CD] Comms_Director v1.11.0 online — CAS-1 Syria (pack " .. tostring(P.version) .. ")")
 end
 
 CD_Init()

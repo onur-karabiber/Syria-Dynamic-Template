@@ -1,4 +1,7 @@
-# make_test_variant.py | v1.10.0
+# make_test_variant.py | v1.11.0
+# v1.11.0 (P4): --random-pair (flag 225 = 1: Tasking_Pick draws the tasked pair, equal odds) and --xcas (flag 226 = 1:
+#          XCAS check-in, mission numbers 4101-4199 at tasking), set in the DO SCRIPT before Tasking_Pick; tags
+#          "RPAIR" / "XCAS".
 # v1.10.0 (JTAC roster P3): --tasked J3,J4 sets CAS_PACK.tasked (the sortie's two taskings, fragged order) in the
 #          DO SCRIPT before Tasking_Pick (>= v1.3.0); tag "TSK34". --pick also takes J3 / J4 (flags 223 / 224).
 # v1.9.0: --audit (Tasking_Pick >= v1.1.0 / JTAC_Controller >= v0.14.2): flag 221 = 1, set before Tasking_Pick like
@@ -197,6 +200,8 @@ def scen_tag(a):
     if a.spoof: parts.append("SPF" + a.spoof)   # v1.6.0
     if getattr(a, "audit", False): parts.append("AUDIT")   # v1.9.0
     if getattr(a, "tasked", None): parts.append("TSK" + "".join(k[1:] for k in a.tasked.split(",")))   # v1.10.0
+    if getattr(a, "random_pair", False): parts.append("RPAIR")   # v1.11.0
+    if getattr(a, "xcas", False): parts.append("XCAS")
     if a.pick: parts.append("PK" + "".join(PICKS(a.pick).get(k, ("-", 0))[0] for k in ("J1", "J2", "J3", "J4")
                                            if k in PICKS(a.pick) or k in ("J1", "J2")))   # v1.8.0
     return "-".join(parts)
@@ -230,6 +235,10 @@ def add_pick_flags(mission, mapres, a):
     sets = [(PICK_FLAG[k], idx) for k, (pid, idx) in sorted(picks.items())]
     if a.audit:
         sets.append((221, 1))                                 # v1.9.0 Tasking_Pick audit mode
+    if a.random_pair:
+        sets.append((225, 1))                                 # v1.11.0
+    if a.xcas:
+        sets.append((226, 1))
     code = "".join('trigger.action.setUserFlag("%d", %d); ' % fv for fv in sets)
     code += 'env.info("[TEST] pick flags: %s")' % ", ".join("%d=%d" % fv for fv in sets)
     if getattr(a, "tasked", None):                            # v1.10.0
@@ -352,6 +361,8 @@ def main():
     ap.add_argument("--pick", help="v1.8.0 force target-pool entries, e.g. J1=B,J2=C (flags 217 / 219)")
     ap.add_argument("--audit", action="store_true", help="v1.9.0 audit every target-pool entry in one load (flag 221)")
     ap.add_argument("--tasked", help="v1.10.0 the two taskings, e.g. J3,J4 (CAS_PACK.tasked before Tasking_Pick)")
+    ap.add_argument("--random-pair", action="store_true", help="v1.11.0 random tasked pair (flag 225)")
+    ap.add_argument("--xcas", action="store_true", help="v1.11.0 XCAS mission numbers at tasking (flag 226)")
     a = ap.parse_args()
     src = os.path.abspath(a.miz)
     if src.startswith(REPO + os.sep):
@@ -364,7 +375,7 @@ def main():
             _, mission = dcslua.parse(raw)
             print(stem, "->", key)
             build(mission, a, key)
-            if a.pick or a.audit or a.tasked:
+            if a.pick or a.audit or a.tasked or a.random_pair or a.xcas:
                 add_pick_flags(mission, mapres, a)
             if not a.keep_red_air:
                 strip_red_air(mission)

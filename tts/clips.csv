@@ -300,6 +300,32 @@ i_rmk_msn;PILOT;Mission;tok:0.05
 i_rmk_inc_b;PILOT;incomplete, Winchester.;tok
 i_rmk_can_b;PILOT;cancelled, no JTAC contact.;tok
 # BEGIN ROSTER (tools/roster_clips.py)
+ovl_dv_pointer;OVERLORD;Pointer one one reports troops in contact, priority immediate. Contact Pointer one one, push button four, without delay.;tok:0.1
+ovl_adv_ptr;OVERLORD;Pointer one one is advised.;tok
+ovl_dvu_ptr;OVERLORD;Hornet five one, Overlord, copy. Continue with Pointer one one.;tok
+p_ovl_off_x_ptr;PILOT;Overlord, Hornet five one, off Pointer one one, mission;tok:0.05
+ovl_lc_dn_ptr;OVERLORD;Hornet five one, Overlord. Pointer one one is off the net, unable to raise. Mission;tok:0.05
+ovl_dv_eyeball;OVERLORD;Eyeball one one reports troops in contact, priority immediate. Contact Eyeball one one, push button five, without delay.;tok:0.1
+ovl_adv_eye;OVERLORD;Eyeball one one is advised.;tok
+ovl_dvu_eye;OVERLORD;Hornet five one, Overlord, copy. Continue with Eyeball one one.;tok
+p_ovl_off_x_eye;PILOT;Overlord, Hornet five one, off Eyeball one one, mission;tok:0.05
+ovl_lc_dn_eye;OVERLORD;Hornet five one, Overlord. Eyeball one one is off the net, unable to raise. Mission;tok:0.05
+ovl_dv_axeman;OVERLORD;Axeman one one reports troops in contact, priority immediate. Contact Axeman one one, push button ten, without delay.;tok:0.1
+ovl_adv_axe;OVERLORD;Axeman one one is advised.;tok
+ovl_dvu_axe;OVERLORD;Hornet five one, Overlord, copy. Continue with Axeman one one.;tok
+p_ovl_off_x_axe;PILOT;Overlord, Hornet five one, off Axeman one one, mission;tok:0.05
+ovl_lc_dn_axe;OVERLORD;Hornet five one, Overlord. Axeman one one is off the net, unable to raise. Mission;tok:0.05
+ovl_dv_darknight;OVERLORD;Dark Knight one one reports troops in contact, priority immediate. Contact Dark Knight one one, push button twelve, without delay.;tok:0.1
+ovl_adv_dkn;OVERLORD;Dark Knight one one is advised.;tok
+ovl_dvu_dkn;OVERLORD;Hornet five one, Overlord, copy. Continue with Dark Knight one one.;tok
+p_ovl_off_x_dkn;PILOT;Overlord, Hornet five one, off Dark Knight one one, mission;tok:0.05
+ovl_lc_dn_dkn;OVERLORD;Hornet five one, Overlord. Dark Knight one one is off the net, unable to raise. Mission;tok:0.05
+p_ovl_checkin_x;PILOT;Overlord, Hornet five one, checking in as fragged, X CAS,;tok:0.1
+ovl_ci_xcas;OVERLORD;Mission as fragged, close air support on call. Proceed C P Tiger,;tok:0.1
+o_mission;OVERLORD;Mission;tok:0.05
+o_cancelled;OVERLORD;cancelled.;tok
+p_mission;PILOT;Mission;tok:0.05
+p_complete;PILOT;complete,;tok:0.1
 axe_tic;AXEMAN;Hornet five one, Axeman one one, troops in contact! Troops in contact! Bravo two one is taking effective fire from enemy armor. Request immediate close air support, say time out.;tok
 axe_tic_ack;AXEMAN;Hornet five one, copy. Check in when ready for nine-line, we need you now.;tok
 fr_axe_1;FRIENDLY>AXEMAN;Axeman, Bravo two one! We are pinned down, taking heavy fire from the ridge. Where is my air?;tok

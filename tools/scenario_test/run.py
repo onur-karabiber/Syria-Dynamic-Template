@@ -1,4 +1,6 @@
-# scenario_test/run.py | v1.8.0
+# scenario_test/run.py | v1.9.0
+# v1.9.0 (P4): cases xcas_* (flag 226: check-in XCAS, mission number at tasking + pilot readback, digit chains in
+#         off / lost comms / INFLTREP, divert for any pair) and rpair_* (flag 225: random tasked pair, equal odds).
 # v1.8.0: JTAC roster P3: world has AXEMAN 11 (JTAC-8, BASE YE55 insurgents) and DARKNIGHT 11 (ground team JTAC-4,
 #         MQ-9 FAC-1-1 designator, SAM BV53 + pool B / C); the bot takes the tasked pair from CAS_PACK.tasked
 #         (Tasking_Pick >= v1.3.0) and reads JTAC menu items by the pack call signs. Cases tasked_J3J4_* (A / B / C).
@@ -643,6 +645,27 @@ CASES = [
     ("tasked_J4J3_B", {210: 2, 211: 9, 212: 2, 214: 1, 215: 2}, {"pack_lua": "CAS_PACK.tasked = { 'J4', 'J3' }"},
      lambda r: [seq_in(r.phases(), "HOLD", "JTAC3", "J3_OFF", "JTAC4", "J4_OFF", "REFUEL"),
                 r.cd().res.J3 == "done" and r.cd().res.J4 == "done", radio_has(r, r"off Axeman 11, mission 4103 complete")]),
+    # v1.9.0 P4 XCAS / random pair (Tasking_Pick v1.4.0, Comms_Director v1.11.0)
+    ("xcas_A", {210: 1, 211: 9, 212: 2, 214: 2, 226: 1}, {"passes": True},
+     lambda r: [radio_has(r, r"checking in as fragged, XCAS"), radio_has(r, r"close air support on call"),
+                radio_has(r, r"Mission 41\d\d\. Pointer 11 is on station"),
+                radio_has(r, r"\] Mission 41\d\d, push button 4, HORNET 51\.$"),
+                radio_has(r, r"Mission 41\d\d\. Eyeball 11 reports TROOPS IN CONTACT"),
+                radio_has(r, r"Mission 41\d\d, Push button 5, HORNET 51, buster"),
+                radio_has(r, r"off Pointer 11, mission 41\d\d complete"), r.log_has(r"XCAS: mission \d+ \(J1\), \d+ \(J2\)"),
+                r.cd().res.J1 == "done" and r.cd().res.J2 == "done",
+                not r.log_has(r"VOICE (text only|missing clip)|missing clip")]),
+    ("xcas_C_J3J4", {210: 3, 212: 2, 226: 1}, {"pack_lua": "CAS_PACK.tasked = { 'J3', 'J4' }", "seed": 1},
+     lambda r: [seq_in(r.phases(), "JTAC3", "JTAC4", "J4_OFF", "JTAC3", "J3_OFF", "REFUEL"),
+                radio_has(r, r"divert, divert\. Mission 41\d\d\. Darknight 11 reports"),
+                radio_has(r, r"Axeman 11 is holding"), not radio_has(r, r"Axeman 11 is holding.*Mission"),
+                not r.log_has(r"VOICE (text only|missing clip)|missing clip")]),
+    ("xcas_LC_down_J4", {210: 1, 211: 4, 212: 2, 214: 1, 226: 1}, {"pack_lua": "CAS_PACK.tasked = { 'J3', 'J4' }"},
+     lambda r: [r.cd().res.J4 == "cancelled", radio_has(r, r"Darknight 11 is off the net.*Mission 41\d\d cancelled"),
+                radio_has(r, r"cancelled, no JTAC contact"), not r.log_has(r"missing clip")]),
+] + [("rpair_%02d" % i, {225: 1, 226: 1}, {"seed": 200 + i},
+      lambda r: [bool(r.cd().vulDone), r.log_has(r"\[PICK\] tasked: J\d J\d \(random pair\)"),
+                 not r.log_has(r"missing clip")]) for i in range(1, 9)
 ] + [("random_%02d" % i, {}, {"seed": 100 + i}, lambda r: [bool(r.cd().vulDone)]) for i in range(1, 13)]
 
 

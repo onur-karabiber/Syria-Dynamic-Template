@@ -1,4 +1,10 @@
-# make_kneeboard.py | v3.10.0
+# make_kneeboard.py | v3.11.0
+# v3.11.0 (P4 XCAS, decisions Onur 2026-11-04 14:34; preview, pending approval): --xcas (with --scripted-jtac)
+#         draws the XCAS set: 01 ADMIN without mission numbers (OVERLORD gives them at tasking), 02 COMM without the
+#         JTAC rows (they are on 04), 03 ROUTE with every roster IP and no target points, 04 JTAC ROSTER (AO): all
+#         CAS_PACK JTACs - call sign, COMM1 button / freq, alternate, IP, target area, designator, CP -> area NM
+#         (from src/mission) - and a tasking block to write the two taskings into; 05 JTAC 9-LINE: one generic
+#         card. Without --xcas the output is unchanged.
 # v3.10.0 (2026-11-04): 01 A/A line = the ME pylons, 1× AIM-120 + 2× AIM-9M (was 2× AIM-120 + 2× AIM-9X; confirmed by
 #         Onur). Effects-based tasking (JTAC_Controller v0.15.0): the JTAC picks the weapon by target type -> 01 ADMIN
 #         loadout lines and 04 / 05 ORDNANCE say so (armor / movers AGM-65E, stationary / soft GBU-12) instead of tying a
@@ -78,6 +84,21 @@ def _py(v):
 PACK = _py(dcslua.parse(open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                                           "scripts", "CAS_Pack.lua"), "rb").read())[1])
 J1, J2, NETS = PACK["jtacs"]["J1"], PACK["jtacs"]["J2"], PACK["nets"]
+XCAS = "--xcas" in sys.argv                                     # v3.11.0
+ROSTER = [PACK["jtacs"][k] for k in PACK["order"]]
+
+
+def area_nm(j):
+    """v3.11.0: NM from the CP to the JTAC's first target group (src/mission)."""
+    import math
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from check_pack import load_mission, index
+    if not hasattr(area_nm, "g"):
+        area_nm.g = index(load_mission(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                                    "src", "mission")))[0]
+    g = area_nm.g.get(j["targets"][0])
+    cp = PACK["cp"]["pos"]
+    return math.hypot(g["x"] - cp["x"], g["y"] - cp["z"]) / 1852 if g else None
 HD = "{:,}".format(PACK["hard_deck_ft"]).replace(",", " ")       # "20 000"
 _DIG = ["ZERO", "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE"]
 
@@ -155,7 +176,9 @@ def admin():
     c = Card("01", "ADMIN", "CAS-1", "SYRIA")
     c.head("MISSION")
     c.kv("TYPE", "CAS  TYPE II  (Laser)"); c.kv("A/C", "F/A-18C  (single)")
-    c.kv("CALLSIGN", "467 (ship)  /  %s (tac)" % PACK["cs"]); c.kv("MSN#", "%s (%s) · %s (%s)" % (J1["msn"], J1["group"], J2["msn"], J2["group"]))
+    c.kv("CALLSIGN", "467 (ship)  /  %s (tac)" % PACK["cs"])
+    if XCAS: c.kv("MSN#", "XCAS · OVERLORD at tasking", "o")   # v3.11.0
+    else: c.kv("MSN#", "%s (%s) · %s (%s)" % (J1["msn"], J1["group"], J2["msn"], J2["group"]))
     c.rule(); c.head("LOADOUT")
     c.kv("A/A", "1× AIM-120  ·  2× AIM-9M"); c.kv("A/G 1", "2× AGM-65E  (armor / movers)")
     c.kv("A/G 2", "4× GBU-12   (stationary / soft)"); c.kv("POD", "ATFLIR  (LST mode)")
@@ -165,10 +188,12 @@ def admin():
     c.rule(); c.head("IFF / MODES")
     c.kv("MODE 4", "Check-in on Strike freq", "o"); c.kv("SQUAWK", "2042")
     c.rule(); c.head("HARD DECK  /  RESTRICTIONS")
-    c.kv("ENGAGE AREA", "%s ft MSL (JTAC-1/2)" % HD, "r"); c.kv("TRANSIT", "not in effect")
+    c.kv("ENGAGE AREA", "%s ft MSL (%s)" % (HD, "every JTAC area" if XCAS else "JTAC-1/2"), "r"); c.kv("TRANSIT", "not in effect")
     c.kv("MANPADS inj", "threat call · deck unchanged", "o")
     c.rule(); c.head("LASER CODES")
-    c.kv(J1["cs"], str(J1["mark"]["code"]), "y"); c.kv(J2["cs"], str(J2["mark"]["code"]), "y")
+    codes = sorted({j["mark"]["code"] for j in ROSTER})
+    if XCAS and len(codes) == 1: c.kv("ALL JTACs", str(codes[0]), "y")   # v3.11.0
+    else: c.kv(J1["cs"], str(J1["mark"]["code"]), "y"); c.kv(J2["cs"], str(J2["mark"]["code"]), "y")
     c.kv("65E code", "Set in cockpit → %d" % J1["mark"]["code"], "o")
     return c
 
@@ -182,8 +207,12 @@ def comm():
             (J1["alt"], J1["short"].upper() + " ALT", J1["group"], "lost comms"),
             (J2["alt"], J2["short"].upper() + " ALT", J2["group"], "lost comms"),
             (NETS["APPROACH"], "APPROACH", "APP", "+CASE III LSO"), (NETS["MARSHAL"], "MARSHAL", "MRS", "")]
+    if XCAS:   # v3.11.0: the JTAC primaries / alternates are on 04 JTAC ROSTER
+        rows = [r for r in rows if r[0] not in (J1, J2, J1["alt"], J2["alt"])]
     for r in [("%02d" % n["btn"], n["freq"] + " AM", a, b, e) for n, a, b, e in sorted(rows, key=lambda x: x[0]["btn"])]:
         c.chrow(*r)
+    if XCAS:
+        c.line("JTACs (%s): 04 JTAC ROSTER" % " ".join("%02d/%02d" % (j["btn"], j["alt"]["btn"]) for j in ROSTER), "y", F11)
     c.rule(); c.band("COMM 2  (UFC → C2)")
     c.chrow("%02d" % NETS["OVL"]["comm2"], NETS["OVL"]["freq"] + " AM", "OVERLORD", "OVL", "keep up on JTAC")
     c.chrow("02", "128.10 AM", "AI traffic", "AI", "02–10: 128.1–128.9")
@@ -196,7 +225,7 @@ def comm():
     flow = [("1","Airborne","DEP",c1(NETS["DEP"]["btn"]),"CASE III dep (I/II zip)"),
             ("2","7 DME/clrd","STK",c1(NETS["STRIKE"]["btn"]),"Mode 4 · Kilo"),
             ("3","Strike h/o","OVL",c1(NETS["OVL"]["btn"]),"check in · picture"),
-            ("4","20 NM to CP","OVL",c2,"tasking / hold CP a%d" % PACK["hold_angels"]),
+            ("4","20 NM to CP","OVL",c2,(("msn# readback · hold a%d" % PACK["hold_angels"]) if XCAS else "tasking / hold CP a%d" % PACK["hold_angels"])),
             ("5","Off JTAC","OVL",c2,"→ next JTAC (OVL order)"),("6","Off last JTAC","OVL",c2,"INFLTREP → Texaco"),
             ("7","Texaco","TKR",c1(NETS["TKR"]["btn"]),"check in · refuel"),
             ("8","Off Texaco","OVL",c1(NETS["OVL"]["btn"]),"RTB · feet wet"),
@@ -225,6 +254,9 @@ def route():
            ("TGT1","TARGET ALPHA","r","BV 6187 2081","elev 570 ft"),
            ("WP4","IP " + J2["ip"]["name"],"y",J2["ip"]["mgrs"],"24 000 ft · " + J2["group"]),
            ("TGT2","TARGET BRAVO","r","YE 5987 3843","elev 150 ft")]
+    if XCAS:   # v3.11.0: every roster IP, targets come with the 9-line
+        wps = wps[:3] + [("WP%d" % (3 + i), "IP " + j["ip"]["name"], "y", j["ip"]["mgrs"], "24 000 ft · " + j["short"])
+                         for i, j in enumerate(ROSTER)]
     for wp, name, col, grid, note in wps:
         y = c.y
         d.text((2, y + 1), wp, font=B10, fill=COL[col] if col != "t" else TXT)
@@ -380,6 +412,42 @@ def jtac2_s():
     return _jtac_card("05", J2, "BRAVO", "WP4", "Via OVERLORD, off " + J1["disp"], "JTAC's choice (code %d)", notes,
         banner="! Any abort call: verify the reply letter (06 AUTH)")
 
+def roster():
+    """v3.11.0 XCAS: 04 JTAC ROSTER (AO)."""
+    c = Card("04", "JTAC ROSTER (AO)", "CAS-1", "XCAS")
+    c.line("OVERLORD tasks 2 of these JTACs · msn# at tasking (read back)", "o", F10)
+    c.line("Fuel: target areas %s NM from %s - recheck after each tasking" % (
+        "–".join("%.0f" % x for x in (min(area_nm(j) or 0 for j in ROSTER), max(area_nm(j) or 0 for j in ROSTER))),
+        PACK["cp"]["name"]), "r", F10)
+    for j in ROSTER:
+        c.rule()
+        c.band("%s   %s" % (j["cs"], spoken(j["cs"]) if spoken(j["cs"]) != j["cs"] else ""))
+        c.kv("COMM1", "%02d  %s AM  · alt %02d %s" % (j["btn"], j["freq"], j["alt"]["btn"], j["alt"]["freq"]))
+        c.kv("IP", "%s  %s" % (j["ip"]["name"], j["ip"]["mgrs"]), "y")
+        nm = area_nm(j)
+        c.kv("AREA", "%s · %s %s NM" % (j["area"], PACK["cp"]["name"].split()[-1], "%.0f" % nm if nm else "?"))
+        c.kv("MARK", "Laser %d · %s" % (j["mark"]["code"], "MQ-9 (%s)" % j["designator"].rsplit("-", 1)[0]
+                                        if j.get("designator") else "JTAC"), "y")
+    c.rule(); c.head("TASKING  (write)")
+    for n in ("1", "2"):
+        c.line("%s  JTAC ____________  MSN# ______  TOT ______" % n, "t", F11)
+        c.y += 4
+    return c
+
+
+def nine_x():
+    """v3.11.0 XCAS: 05 JTAC 9-LINE (one generic card)."""
+    code = J1["mark"]["code"]
+    return jtac_s("05", "JTAC 9-LINE", "CAS-1", "XCAS",
+        [("CALLSIGN", "per tasking (04 ROSTER)", "t"), ("FREQ", "per tasking (04 ROSTER)", "t"),
+         ("MSN#", "OVERLORD at tasking", "o"), ("CHECK-IN", "after OVERLORD's hand-off", "t")],
+        [("IP", "the JTAC's (04 ROSTER)", "y"), ("TGT AREA", "with the 9-line", "t"),
+         ("MARK", "Laser %d · JTAC or MQ-9" % code, "y"),
+         ("CONTROL", "Type II · BOT (JTAC decides)", "t"), ("ORDNANCE", "JTAC's choice (code %d)" % code, "t")],
+        [("Hard deck %s ft MSL (eng. area)" % HD, "r"), ("Expect SHORAD at most target areas", "o")],
+        banner="! Any abort call: verify the reply letter (06 AUTH)")
+
+
 def auth():
     c = Card("06", "AUTHENTICATION", "CAS-1", "VALID 24H")
     c.head("ABORT CODE  (challenge-reply · JP 3-09.3)")
@@ -515,7 +583,9 @@ if __name__ == "__main__":
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src", "KNEEBOARD", "IMAGES")
     os.makedirs(out, exist_ok=True)
     cards = [("01_ADMIN.png", admin), ("02_COMM.png", comm), ("03_ROUTE.png", route)]
-    if SCRIPTED:
+    if SCRIPTED and XCAS:   # v3.11.0
+        cards += [("04_JTAC_ROSTER.png", roster), ("05_JTAC_9LINE.png", nine_x), ("06_AUTH.png", auth)]
+    elif SCRIPTED:
         cards += [("04_JTAC1.png", jtac1_s), ("05_JTAC2.png", jtac2_s), ("06_AUTH.png", auth)]
     else:
         cards += [("04_JTAC1.png", jtac1), ("05_JTAC2.png", jtac2)]

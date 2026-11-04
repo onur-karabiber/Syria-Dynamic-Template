@@ -1,5 +1,13 @@
--- Tasking_Pick | v1.3.0
+-- Tasking_Pick | v1.4.0
 --[[
+  v1.4.0 - P4 (decisions Onur 2026-11-04 14:34): random tasked pair and XCAS mission numbers, both OFF by default
+           until AXEMAN 11 and DARKNIGHT 11 have been flown once with test variants (--tasked):
+           * CFG.RANDOM_PAIR (ME flag 225: 1 on / 2 off): the two taskings are an ordered pair of distinct roster
+             JTACs, every JTAC with equal odds (first 1 of n, second 1 of n-1); re-drawn together with the random
+             pool picks while the weapons check fails. A CAS_PACK.tasked set before this script (test variant
+             --tasked) always wins.
+           * CFG.XCAS (ME flag 226: 1 on / 2 off): CAS_PACK.xcas = true and the tasked JTACs get mission numbers
+             4101-4199, two different ones (jtacs[k].msn); Comms_Director >= v1.11.0 gives them at tasking.
   v1.3.0 - JTAC roster (P3, CAS_PACK >= v1.3.0 with four JTACs): CAS_PACK.tasked = the sortie's two taskings
            (written here when the pack has none: the first two of CAS_PACK.order; P4 will draw them). The weapons
            check counts only the tasked JTACs; every JTAC with a pool still gets its pick (its world stays
@@ -36,7 +44,10 @@ local TRT = _G.TRT
 if TRT.PICK then env.info("[PICK] already loaded, second copy ignored") return end
 
 local CFG = {
-    VERSION   = "1.3.0",
+    VERSION   = "1.4.0",
+    RANDOM_PAIR = false,                  -- v1.4.0 (flag 225 overrides)
+    XCAS      = false,                    -- v1.4.0 (flag 226 overrides)
+    MSN_RANGE = { 4101, 4199 },
     TRIES     = 20,                       -- v1.2.0 re-draws for the weapons check
     AUDIT_FLAG = 221,                     -- v1.1.0 > 0: audit every pool entry
     FLAG      = { J1 = 217, J2 = 219, J3 = 223, J4 = 224 },   -- forced entry index (0 = random)
@@ -145,15 +156,34 @@ for _, k in ipairs(P.order or {}) do
     if j and type(j.pool) == "table" and #j.pool > 0 then keys[#keys + 1] = k end
 end
 -- v1.3.0: the two taskings of this sortie (Comms_Director CD.tasked reads it)
-if type(P.tasked) ~= "table" then P.tasked = { (P.order or {})[1], (P.order or {})[2] } end
+-- v1.4.0: random ordered pair (equal odds) when CFG.RANDOM_PAIR / flag 225 = 1 and no test variant set one
+local function Switch(flag, default)
+    local f = Flag(flag)
+    if f == 1 then return true elseif f == 2 then return false end
+    return default
+end
+local preset = type(P.tasked) == "table"
+local pairRandom = (not preset) and Switch(225, CFG.RANDOM_PAIR) and #(P.order or {}) >= 2
 local tasked = {}
-for _, k in ipairs(P.tasked) do tasked[k] = true end
-Log("tasked: " .. table.concat(P.tasked, " "))
+local function DrawPair()
+    local o = P.order
+    local a = math.random(1, #o)
+    local b = math.random(1, #o - 1)
+    if b >= a then b = b + 1 end
+    P.tasked = { o[a], o[b] }
+    tasked = { [o[a]] = true, [o[b]] = true }
+end
+if pairRandom then DrawPair()
+else
+    if not preset then P.tasked = { (P.order or {})[1], (P.order or {})[2] } end
+    for _, k in ipairs(P.tasked) do tasked[k] = true end
+end
 local L = P.loadout or {}
 local cap = (L.MAV and L.LGB) and (L.MAV + L.LGB - 2) or nil
 local settled = false
 for try = 1, CFG.TRIES do
-    local need, anyRandom = 0, false
+    if pairRandom and try > 1 then DrawPair() end         -- v1.4.0
+    local need, anyRandom = 0, pairRandom
     for _, k in ipairs(keys) do
         local j = P.jtacs[k]
         local idx, forced = Choose(k, j.pool)
@@ -172,6 +202,18 @@ for try = 1, CFG.TRIES do
     Log(string.format("weapons check: objectives %d > cap %d (try %d), re-draw", need, cap, try))
 end
 if not settled then Log("weapons check: no pick within the cap after " .. CFG.TRIES .. " tries -> last draw kept (OVER)") end
+Log(string.format("tasked: %s (%s)", table.concat(P.tasked, " "),
+    preset and "test variant" or (pairRandom and "random pair" or "default pair")))
+-- v1.4.0 XCAS: mission numbers given by OVERLORD at tasking (two different numbers)
+P.xcas = Switch(226, CFG.XCAS) and true or false
+if P.xcas then
+    local lo, hi = CFG.MSN_RANGE[1], CFG.MSN_RANGE[2]
+    local m1 = math.random(lo, hi)
+    local m2 = math.random(lo, hi - 1)
+    if m2 >= m1 then m2 = m2 + 1 end
+    P.jtacs[P.tasked[1]].msn, P.jtacs[P.tasked[2]].msn = tostring(m1), tostring(m2)
+    Log(string.format("XCAS: mission %d (%s), %d (%s)", m1, P.tasked[1], m2, P.tasked[2]))
+end
 
 for _, k in ipairs(keys) do
     local j = P.jtacs[k]
