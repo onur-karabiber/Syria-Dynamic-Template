@@ -1,5 +1,6 @@
--- Comms_Director | v1.11.3
+-- Comms_Director | v1.11.4
 --[[
+  v1.11.4 - CFG.AUDIO tq_hose_clear (Traffic v1.2.0 "hose clear, cleared astern"), 1225 entries.
   v1.11.3 - Eyeball diverted for a TIC (random pair, scenario_test live_18 / 20): resume line ovl_resume_eye; clips
            p_divert_eye / eye_divert_ack / ovl_resume_eye (tools/roster_clips.py v1.1.1), CFG.AUDIO 1224 entries.
   v1.11.2 - INFLTREP line 5 (TEST-J1-A-TSK34 flight 2026-11-04): with effects-based tasking a "done" tasking counts
@@ -851,6 +852,7 @@ local CFG = {
         tq_rcvd41              = { ch = "TEXACO", len = 2.21 },
         tq_rcvd42              = { ch = "TEXACO", len = 2.26 },
         tq_ctl                 = { ch = "TEXACO", len = 0.62 },
+        tq_hose_clear          = { ch = "TEXACO", len = 3.40 },
         a41_ack                = { ch = "TEXACO", len = 0.90 },
         a42_ack                = { ch = "TEXACO", len = 0.76 },
         ovl_contact_eyeball_b  = { ch = "OVERLORD", len = 4.98 },

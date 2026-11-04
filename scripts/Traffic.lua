@@ -1,5 +1,13 @@
--- Traffic | v1.1.0
+-- Traffic | v1.2.0
 --[[
+  v1.2.0 - AAR queue as ATP-56 2.6 (Onur 2026-11-05 01:18): the receivers ahead keep their turn, the hero waits in
+           echelon left. The v1.1.0 hold (Follow 1.5 NM trail) is removed.
+           * TEXACO "Hornet 51, Texaco 11, hose clear, cleared astern." (tq_hose_clear) once every AI receiver of
+             this RV is off, the hero within WAIT_NM, before his first contact; only when there was a queue.
+           * Astern / contact before that call: [TRF] log note + TRT.Traffic.A.earlyAstern, no score.
+           * A receiver of this RV with no contact for STUCK_S (180 s, Onur) after the hero came within JOIN_NM is
+             "done" and leaves (no call if it never had contact).
+           * Queue credit while any receiver of this RV is ahead (was: both hoses in contact).
   v1.1.0 - AAR queue deconfliction (CAS (L) flight 2026-11-04, Onur: midair with TRF Hornet 41-1 on the hose).
            The log: Hornet 41 disconnected at 0.48, was "done" 60 s later (TEXACO "clear to leave"), but its DCS
            Refueling task was still open, so it stayed behind the tanker and came back for a hose 4 min later.
@@ -8,7 +16,7 @@
            * the hero astern / in contact (TRT.AAR session phase ASTERN or CONTACT, or within HOLD_NM of the tanker)
              -> every AI receiver not in contact HOLDS: Follow TANKER-1 at HOLD_POS (1.5 NM trail, 1,000 ft low);
              a receiver in contact finishes. Released (Refueling again) once the hero is in POST / LEAVE / no session,
-             RELEASE_S after his last astern / contact moment (Onur 00:04: they wait and refuel after him).
+             RELEASE_S after his last astern / contact moment. REMOVED in v1.2.0 (Onur 01:12: not meaningful).
   Light AI traffic around the CAS-1 sortie (Onur, 2026-11-01). Template and CAS (L).
 
   RECOVERY  When the hero is in AIRBOSS's Marshal queue (after his Marshal check-in), a 2-ship AI F/A-18C
@@ -54,7 +62,7 @@ if TRT.Traffic then
 end
 
 local CFG = {
-    VERSION   = "1.1.0",
+    VERSION   = "1.2.0",
     HERO      = TRT.PLAYER_NAME or "Player_01",
     CARRIER   = "CVN",
     COUNTRY   = country.id.USA,
@@ -89,9 +97,7 @@ local CFG = {
         EXIT_NM = 80, DESPAWN_NM = 30, LIFE_S = 2400,
         -- v1.1.0
         EXIT_RIGHT_NM = 0.5, EXIT_BRG = 30, EXIT_KT = 40, EXIT_DOWN_FT = 1000, DONE_DESPAWN_NM = 10,
-        HOLD_NM = 0.15, HOLD_PH = { ASTERN = true, CONTACT = true }, RELEASE_S = 20,
-        HOLD_POS = { x = -2778, y = -305 },       -- Follow offset from the tanker (m): x ahead, y up, z right
-        HOLD_Z = { -400, -900 },                  -- per receiver (left of the trail line)
+        JOIN_NM = 1.0, STUCK_S = 180,             -- v1.2.0
     },
 }
 
@@ -354,47 +360,16 @@ local function rxExit(r)
         log("AI receiver " .. r.unit .. " cleared off: exit route (refueling task ended)")
     end
 end
-local function rxHold(r, i)
-    local k = alive(CFG.AAR.TANKER); if not k then return end
-    local c = ctl(r); if not c then return end
-    local okG, gid = pcall(function() return k:getGroup():getID() end)
-    if not okG then return end
-    local pos = { x = CFG.AAR.HOLD_POS.x, y = CFG.AAR.HOLD_POS.y, z = CFG.AAR.HOLD_Z[i] or CFG.AAR.HOLD_Z[1] }
-    local ok, err = pcall(c.setTask, c, { id = "Follow", params = { groupId = gid, pos = pos, lastWptIndexFlag = false } })
-    if ok then
-        r.held = true
-        log(string.format("AI receiver %s holds: 1.5 NM trail of the tanker (hero astern / in contact)", r.unit))
-    else
-        log("Follow FAILED " .. r.group .. ": " .. tostring(err))
-    end
-end
-local function rxRelease(r)
-    local k, u = alive(CFG.AAR.TANKER), alive(r.unit)
-    if not (k and u) then return end
-    local spd = spdOf(k) + kt2ms(CFG.AAR.OVERTAKE_KT)
-    local refuel = { number = 1, auto = false, enabled = true, id = "Refueling", params = {} }
-    local exitP = fwd(k:getPoint(), hdgOf(k), nm2m(CFG.AAR.EXIT_NM))
-    if setMission(r, { wpt(u:getPoint(), u:getPoint().y, spd, { refuel }, "Join tanker"),
-                       wpt(exitP, u:getPoint().y, spd, nil, "Exit") }, "release") then
-        r.held = false
-        if r.lastStop then r.lastStop = now() end   -- the partial-fill timer restarts after the hold
-        log("AI receiver " .. r.unit .. " released: refueling after the hero")
-    end
-end
-local function heroOnHose(h, k)
-    local am = TRT.AAR and TRT.AAR.session
-    if am and am.phase and CFG.AAR.HOLD_PH[am.phase] then return true end
-    return h and k and m2nm(d2(h:getPoint(), k:getPoint())) <= CFG.AAR.HOLD_NM or false
-end
-
-local function rxDone(r, t)
+local function rxDone(r, t, why)
     r.done = true
     rxExit(r)   -- v1.1.0
     local u = alive(r.unit)
     local f1 = (u and u:getFuel()) or r.f1 or r.f0 or 0
     local lb = math.max(0, (f1 - (r.f0 or f1)) * CFG.INT_LB)
     local x = klb(lb)
-    log(string.format("AI receiver %s done: onload %d lb (fuel %.2f -> %.2f)", r.unit, math.floor(lb + 0.5), r.f0 or -1, f1))
+    log(string.format("AI receiver %s done%s: onload %d lb (fuel %.2f -> %.2f)", r.unit, why and (" (" .. why .. ")") or "",
+        math.floor(lb + 0.5), r.f0 or -1, f1))
+    if not r.f0 then return end   -- v1.2.0 never in contact: leaves without a call
     local RD = TRT.CD_RADIO
     local h, k = hero(), alive(CFG.AAR.TANKER)
     local near = (TRT.CD and TRT.CD.tk) or (h and k and m2nm(d2(h:getPoint(), k:getPoint())) <= CFG.AAR.RADIO_NM)
@@ -413,26 +388,29 @@ local function aarTick(t, dt)
     if tk and tk ~= A.lastTk then
         A.lastTk = tk
         A.sessionTk, A.heroContact = tk, false
+        A.joinT, A.clearSaid, A.earlyNoted, A.earlyAstern = nil, nil, nil, nil   -- v1.2.0
         if rxActive() == 0 and alive(CFG.AAR.TANKER) then
             if math.random() < CFG.AAR.P then aarSpawn(tk) else log("AAR queue: not this time (AR" .. tostring(tk.ar) .. ")") end
         end
     end
     -- receivers: done / cleanup
     local h, k = hero(), alive(CFG.AAR.TANKER)
-    -- v1.1.0 hero on a hose -> receivers not in contact hold in trail; released RELEASE_S after he is off
-    if heroOnHose(h, k) then A.heroHoseT = t end
-    local hold = A.heroHoseT and (t - A.heroHoseT) < CFG.AAR.RELEASE_S
-    for i, r in ipairs(A.rx) do
-        local u = not r.done and not r.gone and alive(r.unit)
-        local full = u and r.lastStop and (u:getFuel() or 0) >= CFG.AAR.FULL   -- a full one goes "done", not on hold
-        if u and not full then
-            if hold and not r.held and not r.contact then rxHold(r, i)
-            elseif not hold and r.held then rxRelease(r) end
+    -- v1.2.0 hero within JOIN_NM: a receiver of this RV with no contact for STUCK_S is sent off (DCS AI that never
+    -- takes a hose, 2026-11-04 Hornet 42)
+    local dH = h and k and m2nm(d2(h:getPoint(), k:getPoint())) or nil
+    if dH and dH <= CFG.AAR.JOIN_NM and tk and tk == A.sessionTk and not A.joinT then
+        A.joinT = t
+        log(string.format("hero joined (%.1f NM), %d AI receiver(s) ahead", dH, rxActive()))
+    end
+    for _, r in ipairs(A.rx) do
+        if A.joinT and r.tk == A.sessionTk and not r.done and not r.contact and alive(r.unit)
+            and t - math.max(A.joinT, r.lastAct or 0) >= CFG.AAR.STUCK_S then
+            rxDone(r, t, "no contact for " .. CFG.AAR.STUCK_S .. " s after the hero joined")
         end
     end
     for _, r in ipairs(A.rx) do
         local u = alive(r.unit)
-        if not r.done and u and not r.contact and r.lastStop and not r.held then
+        if not r.done and u and not r.contact and r.lastStop then
             local f = u:getFuel() or 0
             if (f >= CFG.AAR.FULL and t - r.lastStop >= CFG.AAR.RCVD_HOLD_S) or t - r.lastStop >= CFG.AAR.PARTIAL_HOLD_S then
                 rxDone(r, t)
@@ -451,15 +429,36 @@ local function aarTick(t, dt)
             end
         end
     end
-    -- queue credit for the hero (before his first contact of this RV)
-    local nIn = 0
-    for _, r in ipairs(A.rx) do if r.contact and not r.done and alive(r.unit) then nIn = nIn + 1 end end
-    if h and k and tk and tk == A.sessionTk and not A.heroContact and nIn >= 2          -- both hoses taken
-        and m2nm(d2(h:getPoint(), k:getPoint())) <= CFG.AAR.WAIT_NM then
+    -- v1.2.0 queue: the hero waits in echelon left while a receiver of this RV is ahead (any, in contact or not)
+    local ahead = 0
+    for _, r in ipairs(A.rx) do if r.tk == A.sessionTk and not r.done and alive(r.unit) then ahead = ahead + 1 end end
+    local had = false
+    for _, r in ipairs(A.rx) do if r.tk == A.sessionTk then had = true end end
+    if h and k and tk and tk == A.sessionTk and not A.heroContact and ahead >= 1 and dH and dH <= CFG.AAR.WAIT_NM then
         A.wait = math.min(CFG.AAR.CREDIT_MAX_S, A.wait + dt)
         local tl = TRT.TL
         if tl and tl.credit then tl.credit.tanker = A.wait end
         if not A.waitLogged then A.waitLogged = true; log("hero waiting for a hose (queue credit running)") end
+    end
+    -- v1.2.0 "hose clear, cleared astern" once the receivers ahead are off (only when there was a queue)
+    if had and ahead == 0 and tk and tk == A.sessionTk and not A.heroContact and not A.clearSaid
+        and dH and dH <= CFG.AAR.WAIT_NM then
+        A.clearSaid, A.clearT = true, t
+        log("TEXACO: hose clear, hero cleared astern")
+        local RD = TRT.CD_RADIO
+        if RD and RD.Q then
+            RD.Q("[TEXACO] HORNET 51, Texaco 11, hose clear, cleared astern.", 6, 1, nil, nil,
+                voiced(seq("TEXACO", "tq_hose_clear")))
+            RD.QPlay()
+        end
+    end
+    -- v1.2.0 astern before the signal: a note, no score (Onur 2026-11-05)
+    local am = TRT.AAR and TRT.AAR.session
+    local onHose = A.heroContact or (am and (am.phase == "ASTERN" or am.phase == "CONTACT"))
+    if onHose and ahead >= 1 and not A.clearSaid and not A.earlyNoted and tk and tk == A.sessionTk then
+        A.earlyNoted = true
+        A.earlyAstern = { t = t, ahead = ahead }
+        log(string.format("hero astern before hose clear (%d receiver(s) ahead) - note, no score", ahead))
     end
 end
 
@@ -484,11 +483,11 @@ function EH:onEvent(e)
     local okF, f = pcall(function() return e.initiator:getFuel() end)
     f = okF and f or nil
     if on then
-        r.contact = true
+        r.contact, r.lastAct = true, now()
         r.f0 = r.f0 or f
         log(string.format("AI receiver %s contact (fuel %.2f)", nm, f or -1))
     else
-        r.contact, r.lastStop, r.f1 = false, now(), f
+        r.contact, r.lastStop, r.f1, r.lastAct = false, now(), f, now()
         log(string.format("AI receiver %s disconnect (fuel %.2f)", nm, f or -1))
     end
 end

@@ -266,6 +266,7 @@ tq_rmk2;TEXACO;Two receivers ahead of you, join echelon left.;tok
 tq_rcvd41;TEXACO;Hornet four one, Texaco one one, you received;tok
 tq_rcvd42;TEXACO;Hornet four two, Texaco one one, you received;tok
 tq_ctl;TEXACO;Clear to leave.;tok
+tq_hose_clear;TEXACO;Hornet five one, Texaco one one, hose clear, cleared astern.;tok
 a41_ack;AI41>TEXACO;Hornet four one.;tok
 a42_ack;AI42>TEXACO;Hornet four two.;tok
 # v1.8.0 Comms_Director tasking scenarios (Onur 2026-11-03): order, hold at CP, divert, lost comms, no-show

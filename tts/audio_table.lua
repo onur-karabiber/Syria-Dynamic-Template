@@ -249,6 +249,7 @@
         tq_rcvd41              = { ch = "TEXACO", len = 2.21 },
         tq_rcvd42              = { ch = "TEXACO", len = 2.26 },
         tq_ctl                 = { ch = "TEXACO", len = 0.62 },
+        tq_hose_clear          = { ch = "TEXACO", len = 3.40 },
         a41_ack                = { ch = "TEXACO", len = 0.90 },
         a42_ack                = { ch = "TEXACO", len = 0.76 },
         ovl_contact_eyeball_b  = { ch = "OVERLORD", len = 4.98 },
