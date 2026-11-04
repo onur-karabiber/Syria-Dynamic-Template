@@ -3,7 +3,7 @@
 #         <id><S>.png (Onur's CRT cards 2026-10-28, C8 has a _corrected copy).
 # Plane captain step cards for PlaneCaptain_Carrier (via Score_Display, CAS (L) only).
 #
-#   python tools/score_cards/make_pc_cards.py "<Saved Games>/DCS/Missions/The Routine Things (With RAT)/Pics"
+#   python tools/score_cards/make_pc_cards.py "<Saved Games>/DCS/Missions/Syria Dynamic Template/Pics"
 #
 # Reads <src>/<STEP>.png for every id in IDS (missing ids are reported and skipped:
 # that step stays text-only), puts each on one common transparent canvas (largest

@@ -35,7 +35,7 @@ F10 › INFO › **Pilot thoughts** › Off / Quiet / Normal / Chatty.
 ```
 python tools/pilot_banter/make_pb_values.py
 python tts/make_clips.py --set pb --missing
-python tools/pilot_banter/install_pilot_banter.py "<Saved Games>/DCS/Missions/The Routine Things (With RAT)/Close Air Support (L).miz"
+python tools/pilot_banter/install_pilot_banter.py "<Saved Games>/DCS/Missions/Syria Dynamic Template/Close Air Support (L).miz"
 ```
 
 `--missing` renders only clips without an `.ogg`; drop it after changing the voice or the chain.
