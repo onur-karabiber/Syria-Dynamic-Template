@@ -1,5 +1,13 @@
--- JTAC_Controller | v0.16.0
+-- JTAC_Controller | v0.16.1
 --[[
+  v0.16.1 - audit SUGGEST (DCS audit 2026-11-04: Pointer B / C have no JTAC post with LOS, B sits on a 25 deg
+           slope): in audit mode every pool entry after the first that ends CHECK gets a search for a new centre
+           around entry A: rings CFG.SUGGEST.D (m) x every CFG.SUGGEST.STEP deg; the entry's own ME formation is moved
+           there; every unit needs LAND / ROAD, slope <= CFG.SUGGEST.SLOPE deg (+/-10 m), no scenery within 12 m, and
+           LOS from the post the search found for entry A (that post is then at least one valid post). The three best
+           (threat-clear FAH window from that post, then closeness to CFG.SUGGEST.PREF m) are logged as
+           "SUGGEST <k>-<id> #n: ME x .. y .. (MGRS), <d> m <dir> of A, slope max .., threat-clear ..". An air
+           designator JTAC (no op) is audited by LOS from the designator's position ("designator ... LOS n/m").
   v0.16.0 - JTAC roster P3 (CAS_PACK >= v1.3.0): J.designator = unit name of an air designator (DARKNIGHT 11: the
            MQ-9 FAC-1-1). While it is alive it lases (Spot.createLaser from 2 m under the aircraft, LOS from its own
            position, no ground clamp) and it is the eye for every LOS test (HANDOFF LOS, BDA / Winchester "seen",
@@ -301,7 +309,9 @@ end
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "0.16.0",
+    VERSION      = "0.16.1",
+    SUGGEST      = { D = { 600, 900, 1200, 1500, 1800, 2100, 2500, 3000 }, STEP = 15, SLOPE = 8, PREF = 1500,
+                     SCENERY_R = 12 },   -- v0.16.1 audit
     VOICE        = true,      -- v0.7.0 spoken transmissions (needs Comms_Director >= v1.6.4)
     PLAYER_UNIT  = P.hero,
     CS           = P.cs,
@@ -2594,12 +2604,65 @@ local function Relocate(k)
         k, MGRS(old), MGRS(best), Dir8(BrgT(tp, best)), D2(tp, best), bd, #tus))
 end
 
+--- v0.16.1: new centres for a CHECK pool entry, around entry A, seen from entry A's post
+local function Suggest(k, e, tus, aTp, aPost)
+    local C = CFG.SUGGEST
+    local tp = Centroid(tus)
+    local threats = Threats()
+    local out = {}
+    local function slopeOk(x, z)
+        local dx = math.abs(GroundY({ x = x + 10, z = z }) - GroundY({ x = x - 10, z = z }))
+        local dz = math.abs(GroundY({ x = x, z = z + 10 }) - GroundY({ x = x, z = z - 10 }))
+        return math.deg(math.atan(math.max(dx, dz) / 20))
+    end
+    for _, d in ipairs(C.D) do
+        for a = 0, 360 - C.STEP, C.STEP do
+            local r = math.rad(a)
+            local cx, cz = aTp.x + math.cos(r) * d, aTp.z + math.sin(r) * d
+            local ok, smax, pts = true, 0, {}
+            for _, u in ipairs(tus) do
+                local up = u:getPoint()
+                local p = { x = cx + (up.x - tp.x), z = cz + (up.z - tp.z) }
+                local okS, sf = pcall(land.getSurfaceType, { x = p.x, y = p.z })
+                if not (okS and (sf == land.SurfaceType.LAND or sf == land.SurfaceType.ROAD)) then ok = false; break end
+                local sl = slopeOk(p.x, p.z)
+                if sl > C.SLOPE then ok = false; break end
+                smax = math.max(smax, sl)
+                if D2(aPost, p) < 1500 then ok = false; break end
+                if not land.isVisible(Eye(aPost), Eye(p, 1.5)) then ok = false; break end
+                if world.searchObjects and world.VolumeType then
+                    local n = 0
+                    pcall(world.searchObjects, Object.Category.SCENERY, { id = world.VolumeType.SPHERE,
+                        params = { point = { x = p.x, y = GroundY(p), z = p.z }, radius = C.SCENERY_R } },
+                        function() n = n + 1; return true end)
+                    if n > 0 then ok = false; break end
+                end
+                pts[#pts + 1] = p
+            end
+            if ok then
+                local c = { x = cx, y = 0, z = cz }
+                local clear = FahSearch(c, aPost, aPost, nil, threats) ~= nil
+                out[#out + 1] = { c = c, d = d, a = a, smax = smax, clear = clear,
+                                  score = (clear and 100 or 0) - math.abs(d - C.PREF) / 100 - smax }
+            end
+        end
+    end
+    table.sort(out, function(x, y) return x.score > y.score end)
+    if #out == 0 then Log(string.format("SUGGEST %s-%s: no centre found", k, tostring(e.id))) end
+    for i = 1, math.min(3, #out) do
+        local o = out[i]
+        Log(string.format("SUGGEST %s-%s #%d: ME x %.0f y %.0f (%s), %d m %s of A, slope max %.1f deg, threat-clear %s",
+            k, tostring(e.id), i, o.c.x, o.c.z, MGRS(o.c), o.d, Dir8(o.a), o.smax, tostring(o.clear)))
+    end
+end
+
 --- v0.14.2: dry post search for every pool entry (Tasking_Pick audit mode), on ME positions
 local function PoolAudit()
     local P = _G.CAS_PACK
     for _, k in ipairs(CFG.ORDER) do
         local j = J(k)
-        for _, e in ipairs((P.jtacs[k] or {}).pool or {}) do
+        local aTp, aPost   -- v0.16.1 entry A's centre and post
+        for ei, e in ipairs((P.jtacs[k] or {}).pool or {}) do
             local tus = {}
             for _, gname in ipairs(e.targets or {}) do
                 for _, u in ipairs((TRT.PICK.meUnits and TRT.PICK.meUnits(gname)) or {}) do
@@ -2609,6 +2672,15 @@ local function PoolAudit()
             end
             if #tus == 0 then
                 Log(string.format("AUDIT %s-%s: no units found in env.mission", k, tostring(e.id)))
+            elseif j.designator then   -- v0.16.1: an air designator: LOS from where it is now
+                local du = Unit.getByName(j.designator)
+                local dp = du and du:getPoint()
+                local los = 0
+                for _, u in ipairs(tus) do
+                    if dp and land.isVisible({ x = dp.x, y = dp.y - 2, z = dp.z }, Eye(u:getPoint(), 1.5)) then los = los + 1 end
+                end
+                Log(string.format("AUDIT %s-%s %s: %d units, designator %s LOS %d/%d -> %s", k, tostring(e.id),
+                    tostring(e.name), #tus, j.designator, los, #tus, (dp and los == #tus) and "OK" or "CHECK"))
             elseif not j.op then
                 Log(string.format("AUDIT %s-%s: JTAC has no observation-post search (op)", k, tostring(e.id)))
             else
@@ -2618,6 +2690,18 @@ local function PoolAudit()
                     S.clear, best and ("post " .. MGRS(best) .. ", " .. Dir8(BrgT(S.tp, best)) .. " " ..
                     math.floor(D2(S.tp, best) + 0.5) .. " m, threat-clear window " .. tostring(clear)) or "NO POST WITH LOS",
                     (best and clear) and " -> OK" or " -> CHECK"))
+                if ei == 1 then aTp, aPost = S.tp, best end
+                local steep = false
+                for _, u in ipairs(tus) do
+                    local q = u:getPoint()
+                    local dx = math.abs(GroundY({ x = q.x + 10, z = q.z }) - GroundY({ x = q.x - 10, z = q.z }))
+                    local dz = math.abs(GroundY({ x = q.x, z = q.z + 10 }) - GroundY({ x = q.x, z = q.z - 10 }))
+                    if math.deg(math.atan(math.max(dx, dz) / 20)) > CFG.SUGGEST.SLOPE then steep = true end
+                end
+                if ei > 1 and (not best or not clear or steep) and aPost then   -- v0.16.1
+                    local okS, errS = pcall(Suggest, k, e, tus, aTp, aPost)
+                    if not okS then Log("SUGGEST error: " .. tostring(errS)) end
+                end
             end
         end
     end
