@@ -1,4 +1,7 @@
--- Core_Scoring | v1.5.2
+-- Core_Scoring | v1.5.3
+-- v1.5.3 (CAS (L) flight 2026-11-04, midair with an AI receiver on the tanker; Onur 00:04): a hit / kill of a
+--         friendly with no weapon object whose weapon name is the hero's own type (DCS reports a collision so) is a
+--         MIDAIR COLLISION: incident record (MIDAIR, sev 2) and a screen line, no score; no FRIENDLY FIRE.
 -- v1.5.2 (effects-based tasking, 2026-11-04): JTAC_Controller >= v0.15.0 gives the objective bonus itself
 --         (JC.objectiveBonus) -> its target groups are no longer merged into the group-destroyed bonus (no double +5).
 -- v1.5.1 (report card decisions, Onur 2026-11-02):
@@ -532,7 +535,25 @@ timer.scheduleFunction(function() pcall(MergeJcTargets) end, nil, timer.getTime(
 do
     local killHandled = {}
     local deadSeen = {}
-    local KEH = {}
+    -- v1.5.3 collision = no weapon object, weapon name = the hero's own aircraft type
+local midair = {}
+local function IsCollision(e)
+    if e.weapon then return false end
+    local okT, it = pcall(function() return e.initiator:getTypeName() end)
+    local wn = e.weapon_name
+    return wn == nil or (okT and wn == it)
+end
+local function Midair(e, n)
+    if midair[n] then return end
+    midair[n] = true
+    local okTN, tn = pcall(function() return e.target:getTypeName() end)
+    local what = string.format("%s (%s)", n, okTN and tn or "?")
+    env.info("[Core_Scoring] MIDAIR COLLISION: " .. PLAYER_NAME .. " with " .. what .. " (no score)")
+    trigger.action.outText("[SAFETY] MIDAIR COLLISION with " .. what .. ". Incident logged, no score.", 12)
+    SC.incident("MIDAIR", 2, "Midair collision: " .. PLAYER_NAME .. " with " .. what, "Core_Scoring")
+end
+
+local KEH = {}
 
     function KEH:onEvent(e)
         if not e then return end
@@ -562,6 +583,7 @@ do
         local okKC, killerCoalition = pcall(function() return killer:getCoalition() end)
         if okCo and okKC and victimCoalition == killerCoalition then          -- v1.5.0 friendly fire
             killHandled[victimName] = true
+            if IsCollision(e) then Midair(e, victimName); return end          -- v1.5.3
             local okTN, tn = pcall(function() return victim:getTypeName() end)
             local what = string.format("%s (%s)", victimName, okTN and tn or "?")
             TRT.addScore(FF_KILL, "FRIENDLY FIRE: destroyed " .. what, "ROE")
@@ -643,6 +665,7 @@ do
             local n = tgt:getName()
             if not n or ffHit[n] or killHandled[n] then return end
             ffHit[n] = true
+            if IsCollision(e) then Midair(e, n); return end                 -- v1.5.3
             local okTN, tn = pcall(function() return tgt:getTypeName() end)
             local wn = (e.weapon_name) or (e.weapon and e.weapon.getTypeName and e.weapon:getTypeName()) or "?"
             local what = string.format("%s (%s)", n, okTN and tn or "?")
