@@ -1,4 +1,6 @@
--- dcs_mock | v1.0.0
+-- dcs_mock | v1.1.0
+-- v1.1.0 (2026-11-04): late-activated groups (g.inactive, Unit:isActive, Group:activate), MOCK.missionFromGroups(),
+--         world.VolumeType.
 -- Minimal DCS mission-environment mock for tools/scenario_test/run.py (lupa, Lua 5.4).
 -- Virtual clock, scheduled functions, units / groups, flags, text / radio capture, F10 commands.
 -- Only what Menu_Manager, Comms_Director and JTAC_Controller touch; unknown API calls are no-ops.
@@ -123,7 +125,7 @@ function UnitMT:getSensors() return {} end
 function UnitMT:getController() return lenient({ getDetectedTargets = function() return {} end }) end
 function UnitMT:destroy() self.removed = true end
 function UnitMT:getCallsign() return self.name end
-function UnitMT:isActive() return true end
+function UnitMT:isActive() return not (self.group and self.group.inactive) end   -- late activation (pool)
 
 local GroupMT = {}
 GroupMT.__index = GroupMT
@@ -146,7 +148,19 @@ function GroupMT:getCoalition() return self.coal end
 function GroupMT:getCategory() return self.cat or 2 end
 function GroupMT:destroy() self.removed = true; for _, u in ipairs(self.units) do u.removed = true end end
 function GroupMT:getController() return lenient({ getDetectedTargets = function() return {} end }) end
-function GroupMT:activate() end
+function GroupMT:activate() self.inactive = false end
+
+--- MOCK.missionFromGroups(): env.mission.coalition from the mock groups (Tasking_Pick reads ME positions there)
+function MOCK.missionFromGroups()
+    local grp = {}
+    for n, g in pairs(M.groups) do
+        local us = {}
+        for i, u in ipairs(g.units) do us[i] = { name = u.name, type = u.type, x = u.p.x, y = u.p.z } end
+        grp[#grp + 1] = { name = n, x = us[1] and us[1].x or 0, y = us[1] and us[1].y or 0, units = us,
+                          lateActivation = g.inactive or nil }
+    end
+    env.mission.coalition = { red = { country = { { name = "MOCK", vehicle = { group = grp } } } } }
+end
 
 --- MOCK.addGroup(name, coal, cat, units = { {name, type, x, z, y?}, ... }) -> group
 function MOCK.addGroup(name, coal, cat, units)
@@ -210,6 +224,7 @@ world = {
     removeEventHandler = noop,
     getAirbases = function() return {} end,
     searchObjects = noop,
+    VolumeType = { SEGMENT = 0, BOX = 1, SPHERE = 2, PYRAMID = 3 },
 }
 function MOCK.event(e)
     for _, h in ipairs(M.handlers) do

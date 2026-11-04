@@ -1,4 +1,7 @@
-# scenario_test/run.py | v1.4.0
+# scenario_test/run.py | v1.5.0
+# v1.5.0: target pool (Tasking_Pick v1.0.0): the four pool groups exist late-activated next to set A; Tasking_Pick.lua
+#         runs after the pack (env.mission built from the mock groups); kills follow the picked target group; cases
+#         pick_B / pick_C force entries B / C with flags 217 / 219.
 # v1.4.0: loads scripts/CAS_Pack.lua first (Comms_Director >= v1.9.0 / JTAC_Controller >= v0.14.0 need the pack).
 # v1.3.0: gates follow JTAC_Controller v0.13.2 / Comms_Director v1.8.4 (items open when the call they answer
 #         STARTS): a JTAC dialogue item may not be offered while that JTAC's non-ack call is still WAITING in the
@@ -35,6 +38,10 @@ CP = (73640.0, -39914.0)
 T1 = (93640.0, -19914.0)          # Pointer 11 targets (SAM BV51 (SA-13)-1)
 T2 = (59271.0, -1176.0)           # Eyeball 11 targets (SAM YE53 (SA-8)-1), Comms_Director CFG.JTAC2_POS
 DEAD_S = 420
+POOL = [("CAS J1-B (Armor)-1", (T1[0] + 900, T1[1] + 400), ["T-72B", "BMP-1"]),
+        ("CAS J1-C (Battery)-1", (T1[0] + 1500, T1[1] + 1500), ["SAU Gvozdika", "SAU Gvozdika"]),
+        ("CAS J2-B (Armor)-1", (T2[0] + 900, T2[1] + 200), ["T-72B", "T-72B", "T-72B", "BMP-1"]),
+        ("CAS J2-C (Battery)-1", (T2[0] + 1500, T2[1] + 1200), ["SAU Gvozdika"] * 4)]
 MAGVAR = 5          # JTAC_Controller CFG.MAGVAR (east)
 MAX_S = 3 * 3600
 
@@ -59,7 +66,8 @@ class Run:
         lua.execute("TRT = TRT or {}; _G.TRT = TRT; TRT.PLAYER_NAME = 'Player_01'; "
                     "TRT.CV_AUDIO = setmetatable({}, { __index = function() return { len = 0.4 } end }); "
                     "TRT.addScore = function(d, r, c) env.info(string.format('[SCORE] %+d %s', d, tostring(r))) end")
-        for f in ("CAS_Pack.lua", "Menu_Manager.lua", "Comms_Director.lua", "JTAC_Controller.lua"):   # v1.4.0 pack first
+        lua.execute("MOCK.missionFromGroups()")                                        # v1.5.0
+        for f in ("CAS_Pack.lua", "Tasking_Pick.lua", "Menu_Manager.lua", "Comms_Director.lua", "JTAC_Controller.lua"):
             src = open(os.path.join(SCRIPTS, f), encoding="utf-8").read()
             ok = lua.eval("function(s, n) local f, e = load(s, '@' .. n); if not f then return e end "
                           "local ok, err = pcall(f); return ok and 'OK' or tostring(err) end")(src, f)
@@ -100,6 +108,11 @@ class Run:
                                              {"name": "YE53-2", "type": "Osa 9A33 ln", "x": T2[0] + 60, "z": T2[1]},
                                              {"name": "YE53-3", "type": "BTR-80", "x": T2[0], "z": T2[1] + 60},
                                              {"name": "YE53-4", "type": "T-72B", "x": T2[0] - 60, "z": T2[1]}]))
+        # v1.5.0 target pool: late-activated groups (Tasking_Pick activates the picked one, removes set A otherwise)
+        for name, (cx, cz), types in POOL:
+            g = add(name, 1, 2, units([{"name": "%s-%d" % (name, i), "type": t, "x": cx + 60 * i, "z": cz}
+                                       for i, t in enumerate(types, 1)]))
+            g.inactive = True
         add("JTAC-1", 2, 2, units([{"name": "JTAC-1-1", "type": "Soldier M4", "x": T1[0] - 3000, "z": T1[1] - 1000}]))
         add("JTAC-2", 2, 2, units([{"name": "JTAC-2-1", "type": "Soldier M4", "x": T2[0] - 2500, "z": T2[1] - 1000}]))
 
@@ -239,7 +252,8 @@ class Run:
                 if it is not None:
                     return it, None
         # attack simulation: a cleared pass destroys targets
-        for k, g in (("J1", "SAM BV51 (SA-13)-1"), ("J2", "SAM YE53 (SA-8)-1")):
+        for k in ("J1", "J2"):
+            g = jc.CFG.JTACS[k].targets[1]                  # v1.5.0 the picked target group
             st = jc.st[k]
             if sm and k == "J1" and not (st.spoofDone and (st.att is None or st.att.spoof is None
                                                            or not st.att.spoof.pending)):
@@ -418,6 +432,12 @@ def kill_jtac_when(k, phase):
 
 
 CASES = [
+    ("pick_B", {210: 1, 211: 9, 212: 2, 214: 1, 217: 2, 219: 2}, {},
+     lambda r: [r.cd().res.J1 == "done" and r.cd().res.J2 == "done", radio_has(r, r"T-72 tank"),
+                radio_has(r, r"three T-72 tanks and BMP"), r.log_has(r"\[PICK\] J1 -> B"), r.log_has(r"removed SAM BV51")]),
+    ("pick_C", {210: 3, 211: 9, 212: 2, 217: 3, 219: 3}, {},
+     lambda r: [r.cd().res.J1 == "done" and r.cd().res.J2 == "done", radio_has(r, r"two self-propelled howitzers"),
+                radio_has(r, r"four self-propelled howitzers"), r.log_has(r"\[PICK\] J2 -> C")]),
     ("A_tic1", {210: 1, 211: 9, 212: 2, 214: 1}, {},
      lambda r: [seq_in(r.phases(), "ENROUTE", "JTAC1", "J1_OFF", "JTAC2", "J2_OFF", "REFUEL"),
                 r.cd().res.J1 == "done" and r.cd().res.J2 == "done", bool(r.cd().vulDone)]),

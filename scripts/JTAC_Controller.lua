@@ -1,5 +1,8 @@
--- JTAC_Controller | v0.14.0
+-- JTAC_Controller | v0.14.1
 --[[
+  v0.14.1 - target pool (Tasking_Pick v1.0.0): label "self-propelled howitzer" for SAU Gvozdika (2S1) and "truck"
+           for Ural-375, voiced by the new pj_ / ej_lab_sp_howitzer(_pl) clips. The picked targets reach CFG.JTACS
+           through CAS_PACK (Tasking_Pick writes them before this file loads).
   v0.14.0 - tasking pack (decision Onur 2026-11-04): call sign, hero, CP, hard deck, abort challenge / AUTH table,
            friendly unit and the JTAC table (call signs, groups, buttons, mission numbers, targets, IP, egress, mark,
            ordnance, friendly offset, observation post) come from CAS_PACK (scripts/CAS_Pack.lua, loaded before this
@@ -268,7 +271,7 @@ end
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "0.14.0",
+    VERSION      = "0.14.1",
     VOICE        = true,      -- v0.7.0 spoken transmissions (needs Comms_Director >= v1.6.4)
     PLAYER_UNIT  = P.hero,
     CS           = P.cs,
@@ -339,6 +342,7 @@ local CFG = {
         ["5p73 s-125 ln"] = "SA-3 launcher", ["5p73 V-601P ln"] = "SA-3 launcher",
         ["T-55"] = "T-55 tank", ["T-72B"] = "T-72 tank", ["BTR-80"] = "BTR", ["BMP-1"] = "BMP", ["BMP-2"] = "BMP",
         ["Ural-4320T"] = "truck", ["Infantry AK"] = "infantry", ["Infantry AK ver2"] = "infantry",
+        ["SAU Gvozdika"] = "self-propelled howitzer", ["Ural-375"] = "truck",   -- v0.14.1 target pool
     },
     FRIENDLY     = Copy(P.friendly),
     DUR = { pilot = 8, short = 9, long = 18, nine = 28, hold_pilot = 2.5, hold = 5,
@@ -467,6 +471,8 @@ local VOICE = {
         ["bmps"] = "lab_bmp_pl",
         ["btr"] = "lab_btr",
         ["btrs"] = "lab_btr_pl",
+        ["self-propelled howitzer"] = "lab_sp_howitzer",      -- v0.14.1
+        ["self-propelled howitzers"] = "lab_sp_howitzer_pl",
         ["call for laser"] = "w_call_laser",
         ["call shift"] = "as_shift",
         ["caution"] = "w_caution",

@@ -1,4 +1,8 @@
-# check_pack.py | v1.0.0
+# check_pack.py | v1.1.0
+# v1.1.0 (target pool, Tasking_Pick v1.0.0): every pool group / static exists; entries after the first are late
+#         activated (the first, set A, is active at start and removed by the pick when not chosen); every entry of a
+#         JTAC has the unit count of its first entry (weapons budget: 2 Pointer / 4 Eyeball), else a warning;
+#         entries with w > 0 are listed (a set enabled before its DCS site audit is a warning).
 # Checks scripts/CAS_Pack.lua (tasking pack, 2026-11-04) against the template mission (src/mission):
 #   * hero unit, hero group, carrier, tanker, JTAC groups and every JTAC target group exist
 #   * cp.wp_name is a point of the hero group's route, within CP_TOL_M of cp.pos; "IP <name>" points exist
@@ -49,15 +53,17 @@ def load_mission(path):
 
 
 def index(m):
-    groups, units = {}, {}
+    groups, units, statics = {}, {}, set()
     for side in (m.get("coalition") or {}).values():
         for c in (side.get("country") or []):
             for cat in ("plane", "helicopter", "vehicle", "ship", "static"):
                 for g in ((c.get(cat) or {}).get("group") or []):
                     groups[g["name"]] = g
+                    if cat == "static":   # StaticObject.getByName takes the UNIT name
+                        statics.update(u["name"] for u in g.get("units") or [])
                     for u in g.get("units") or []:
                         units[u["name"]] = u
-    return groups, units
+    return groups, units, statics
 
 
 def voiced(p):
@@ -77,7 +83,7 @@ def main():
     a = ap.parse_args()
     p = load_pack()
     m = load_mission(a.mission)
-    groups, units = index(m)
+    groups, units, statics = index(m)
     err, warn = [], []
 
     for what, name in (("hero unit", p["hero"]), ("carrier", p["carrier"]), ("tanker", p["tanker"])):
@@ -90,6 +96,32 @@ def main():
     for k in p["order"]:
         if k not in p["jtacs"]:
             err.append("order: %s not in jtacs" % k)
+
+    for k, j in p["jtacs"].items():                             # v1.1.0 target pool
+        pool = j.get("pool") or []
+        if not pool:
+            continue
+        n0 = None
+        for i, e in enumerate(pool):
+            cnt = 0
+            for gname in e.get("targets") or []:
+                g = groups.get(gname)
+                if not g:
+                    err.append("pool %s-%s: group %r not in the mission" % (k, e.get("id"), gname))
+                    continue
+                cnt += len(g.get("units") or [])
+                if i > 0 and not g.get("lateActivation"):
+                    err.append("pool %s-%s: group %r is not late activated" % (k, e.get("id"), gname))
+            for sname in e.get("statics") or []:
+                if sname not in statics:
+                    err.append("pool %s-%s: static %r not in the mission" % (k, e.get("id"), sname))
+            if n0 is None:
+                n0 = cnt
+            elif cnt != n0:
+                warn.append("pool %s-%s: %d target units, entry %s has %d (weapons budget)" % (
+                    k, e.get("id"), cnt, pool[0].get("id"), n0))
+        on = ["%s(w %s)" % (e.get("id"), e.get("w")) for e in pool if (e.get("w") or 0) > 0]
+        print("pool %s: %d entries, random over %s" % (k, len(pool), ", ".join(on) or "none (entry 1)"))
 
     g = groups.get(p["group"])
     if g:

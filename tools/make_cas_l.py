@@ -1,4 +1,5 @@
-# make_cas_l.py | v1.0.0
+# make_cas_l.py | v1.0.1
+# v1.0.1: --accept-new also takes an unpacked mission file (src/mission).
 # Generates "Close Air Support (L).miz" from the template .miz (decision Onur 2026-11-04 03:12: CAS (L) becomes a
 # generated file like the HOUND variants; src/ is the only Mission Editor source). Before v1.0.0 CAS (L) was an
 # own mission edited in its own ME session, and its ME layer drifted from the template (audit 2026-11-04, project
@@ -325,14 +326,17 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--init-spec", action="store_true")
     ap.add_argument("--check", action="store_true")
-    ap.add_argument("--accept-new", metavar="TEMPLATE_MIZ")
+    ap.add_argument("--accept-new", metavar="TEMPLATE_MIZ_OR_MISSION")
     ap.add_argument("paths", nargs="*")
     a = ap.parse_args()
     if a.init_spec:
         return init_spec(*a.paths)
     if a.accept_new:
         spec = load_spec()
-        _, t = read(zipfile.ZipFile(a.accept_new), "mission")
+        if a.accept_new.lower().endswith(".miz"):
+            _, t = read(zipfile.ZipFile(a.accept_new), "mission")
+        else:                                   # v1.0.1: an unpacked mission file (src/mission)
+            _, t = dcslua.parse(open(a.accept_new, "rb").read())
         names = set(S(g[b"name"]) for *_, g in iter_groups(t))
         add = sorted(names - set(spec["known_groups"]))
         spec["known_groups"] = sorted(set(spec["known_groups"]) | names)

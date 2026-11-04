@@ -1,4 +1,6 @@
--- CAS_Pack | v1.0.0
+-- CAS_Pack | v1.1.0
+-- v1.1.0 (2026-11-04): target pool per JTAC (jtacs[k].pool, read by Tasking_Pick.lua at load). targets / ord /
+--         tgt_fallback below are the defaults (= pool entry A); Tasking_Pick overwrites them with the pick.
 -- Tasking pack of CAS-1: geography and comm plan in ONE place (decision Onur 2026-11-04: the pack holds what /
 -- where / who / which frequency; behaviour - scenario weights, timers, scoring - stays in each module's CFG).
 -- Read by Comms_Director (>= v1.9.0), JTAC_Controller (>= v0.14.0), Flight_Timeline (>= v1.3.1), and offline by
@@ -14,7 +16,7 @@
 -- Positions: DCS world x = north (ME x), z = east (ME y), metres.
 
 CAS_PACK = {
-    version = "1.0.0",
+    version = "1.1.0",
 
     hero    = "Player_01",       -- unit
     group   = "CAS-1",           -- hero's ME group (route = ATO)
@@ -48,6 +50,15 @@ CAS_PACK = {
             msn = "4101",
             area = "BV 62",                          -- briefed target area (kneeboard); the target comes with the 9-line
             targets = { "SAM BV51 (SA-13)-1" },
+            -- Target pool (Tasking_Pick.lua). Weapons budget: Pointer entries 2 units (2x AGM-65E), Eyeball 4
+            -- (4x GBU-12). w = weight of the random pick; B / C stay at 0 until the DCS site audit has passed and
+            -- the kneeboard notes are approved (forced picks for tests: ME flag 217 / 219 = entry index).
+            pool = {
+                { id = "A", name = "SHORAD site",   targets = { "SAM BV51 (SA-13)-1" },
+                  statics = { "SAM BV51 (SA-13)-1-Camouflage-1" }, w = 1 },
+                { id = "B", name = "armor section", targets = { "CAS J1-B (Armor)-1" },   w = 0 },
+                { id = "C", name = "SP artillery section", targets = { "CAS J1-C (Battery)-1" }, w = 0 },
+            },
             ip = { name = "LYNX", mgrs = "37S BV 4071 2864" },
             egress = "north to TIGER",
             mark = { kind = "laser", code = 1688 },
@@ -64,6 +75,12 @@ CAS_PACK = {
             msn = "4102",
             area = "YE 53",
             targets = { "SAM YE53 (SA-8)-1" },
+            pool = {
+                { id = "A", name = "SA-8 battery",  targets = { "SAM YE53 (SA-8)-1" },
+                  statics = { "SAM YE53 (Camouflage)-1", "SAM YE53 (Camouflage)-2-1", "SAM YE53 (Camouflage)-3" }, w = 1 },   -- static UNIT names
+                { id = "B", name = "armor platoon", targets = { "CAS J2-B (Armor)-1" },   w = 0 },
+                { id = "C", name = "SP artillery battery", targets = { "CAS J2-C (Battery)-1" }, w = 0 },
+            },
             tgt_fallback = { x = 59271, z = -1176 }, -- Comms_Director: TIC geometry when the group is not readable
             ip = { name = "PUMA", mgrs = "36S YE 4714 5182" },
             egress = "northwest, feet wet",

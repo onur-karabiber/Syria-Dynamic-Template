@@ -380,6 +380,8 @@ pj_lab_btr;POINTER_JC>POINTER;B T R;tok
 pj_lab_btr_pl;POINTER_JC>POINTER;B T Rs;tok
 pj_lab_bmp;POINTER_JC>POINTER;B M P;tok
 pj_lab_bmp_pl;POINTER_JC>POINTER;B M Ps;tok
+pj_lab_sp_howitzer;POINTER_JC>POINTER;self propelled howitzer;tok
+pj_lab_sp_howitzer_pl;POINTER_JC>POINTER;self propelled howitzers;tok
 pj_lab_truck;POINTER_JC>POINTER;truck;tok
 pj_lab_truck_pl;POINTER_JC>POINTER;trucks;tok
 pj_lab_infantry;POINTER_JC>POINTER;infantry;tok
@@ -562,6 +564,8 @@ ej_lab_btr;EYEBALL;B T R;tok
 ej_lab_btr_pl;EYEBALL;B T Rs;tok
 ej_lab_bmp;EYEBALL;B M P;tok
 ej_lab_bmp_pl;EYEBALL;B M Ps;tok
+ej_lab_sp_howitzer;EYEBALL;self propelled howitzer;tok
+ej_lab_sp_howitzer_pl;EYEBALL;self propelled howitzers;tok
 ej_lab_truck;EYEBALL;truck;tok
 ej_lab_truck_pl;EYEBALL;trucks;tok
 ej_lab_infantry;EYEBALL;infantry;tok

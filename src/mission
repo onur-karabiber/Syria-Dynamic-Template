@@ -139725,6 +139725,614 @@ mission =
 								["x"] = 71830.747577419,
 								["y"] = -8384.7083066025,
 							},
+							[13] = 
+							{
+								["groupId"] = 3174,
+								["hidden"] = true,
+								["hiddenOnMFD"] = true,
+								["hiddenOnPlanner"] = true,
+								["lateActivation"] = true,
+								["name"] = "CAS J1-B (Armor)-1",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["ETA"] = 0,
+											["ETA_locked"] = true,
+											["action"] = "Off Road",
+											["alt"] = 161,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["speed"] = 0,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+														[1] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "Hold",
+															["number"] = 1,
+															["params"] = 
+															{
+																["templateId"] = "",
+															},
+														},
+														[2] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 2,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "Option",
+																	["params"] = 
+																	{
+																		["name"] = 0,
+																		["value"] = 4,
+																	},
+																},
+															},
+														},
+														[3] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 3,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "Option",
+																	["params"] = 
+																	{
+																		["name"] = 8,
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 42269.636899,
+											["y"] = 44766.568057,
+										},
+									},
+									["spans"] = 
+									{
+										[1] = 
+										{
+											[1] = 
+											{
+												["x"] = 42269.636899,
+												["y"] = 44766.568057,
+											},
+											[2] = 
+											{
+												["x"] = 42269.636899,
+												["y"] = 44766.568057,
+											},
+										},
+									},
+								},
+								["start_time"] = 0,
+								["task"] = "Ground Nothing",
+								["taskSelected"] = true,
+								["tasks"] = 
+								{
+								},
+								["uncontrollable"] = false,
+								["units"] = 
+								{
+									[1] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 3.490659,
+										["name"] = "CAS J1-B (Armor)-1-1",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "T-72B",
+										["unitId"] = 5580,
+										["x"] = 42261.086395,
+										["y"] = 44790.060372,
+									},
+									[2] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 3.490659,
+										["name"] = "CAS J1-B (Armor)-1-2",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "BMP-1",
+										["unitId"] = 5581,
+										["x"] = 42278.187402,
+										["y"] = 44743.075741,
+									},
+								},
+								["visible"] = false,
+								["x"] = 42269.636899,
+								["y"] = 44766.568057,
+							},
+							[14] = 
+							{
+								["groupId"] = 3175,
+								["hidden"] = true,
+								["hiddenOnMFD"] = true,
+								["hiddenOnPlanner"] = true,
+								["lateActivation"] = true,
+								["name"] = "CAS J1-C (Battery)-1",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["ETA"] = 0,
+											["ETA_locked"] = true,
+											["action"] = "Off Road",
+											["alt"] = 161,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["speed"] = 0,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+														[1] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "Hold",
+															["number"] = 1,
+															["params"] = 
+															{
+																["templateId"] = "",
+															},
+														},
+														[2] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 2,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "Option",
+																	["params"] = 
+																	{
+																		["name"] = 0,
+																		["value"] = 4,
+																	},
+																},
+															},
+														},
+														[3] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 3,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "Option",
+																	["params"] = 
+																	{
+																		["name"] = 8,
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 43028.870405,
+											["y"] = 46482.077527,
+										},
+									},
+									["spans"] = 
+									{
+										[1] = 
+										{
+											[1] = 
+											{
+												["x"] = 43028.870405,
+												["y"] = 46482.077527,
+											},
+											[2] = 
+											{
+												["x"] = 43028.870405,
+												["y"] = 46482.077527,
+											},
+										},
+									},
+								},
+								["start_time"] = 0,
+								["task"] = "Ground Nothing",
+								["taskSelected"] = true,
+								["tasks"] = 
+								{
+								},
+								["uncontrollable"] = false,
+								["units"] = 
+								{
+									[1] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 3.490659,
+										["name"] = "CAS J1-C (Battery)-1-1",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "SAU Gvozdika",
+										["unitId"] = 5582,
+										["x"] = 43018.609801,
+										["y"] = 46510.268306,
+									},
+									[2] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 3.490659,
+										["name"] = "CAS J1-C (Battery)-1-2",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "SAU Gvozdika",
+										["unitId"] = 5583,
+										["x"] = 43039.131009,
+										["y"] = 46453.886749,
+									},
+								},
+								["visible"] = false,
+								["x"] = 43028.870405,
+								["y"] = 46482.077527,
+							},
+							[15] = 
+							{
+								["groupId"] = 3176,
+								["hidden"] = true,
+								["hiddenOnMFD"] = true,
+								["hiddenOnPlanner"] = true,
+								["lateActivation"] = true,
+								["name"] = "CAS J2-B (Armor)-1",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["ETA"] = 0,
+											["ETA_locked"] = true,
+											["action"] = "Off Road",
+											["alt"] = 22,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["speed"] = 0,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+														[1] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "Hold",
+															["number"] = 1,
+															["params"] = 
+															{
+																["templateId"] = "",
+															},
+														},
+														[2] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 2,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "Option",
+																	["params"] = 
+																	{
+																		["name"] = 0,
+																		["value"] = 4,
+																	},
+																},
+															},
+														},
+														[3] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 3,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "Option",
+																	["params"] = 
+																	{
+																		["name"] = 8,
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 60756.52447,
+											["y"] = -950.18103,
+										},
+									},
+									["spans"] = 
+									{
+										[1] = 
+										{
+											[1] = 
+											{
+												["x"] = 60756.52447,
+												["y"] = -950.18103,
+											},
+											[2] = 
+											{
+												["x"] = 60756.52447,
+												["y"] = -950.18103,
+											},
+										},
+									},
+								},
+								["start_time"] = 0,
+								["task"] = "Ground Nothing",
+								["taskSelected"] = true,
+								["tasks"] = 
+								{
+								},
+								["uncontrollable"] = false,
+								["units"] = 
+								{
+									[1] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 3.490659,
+										["name"] = "CAS J2-B (Armor)-1-1",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "T-72B",
+										["unitId"] = 5584,
+										["x"] = 60756.52447,
+										["y"] = -950.18103,
+									},
+									[2] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 3.490659,
+										["name"] = "CAS J2-B (Armor)-1-2",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "T-72B",
+										["unitId"] = 5585,
+										["x"] = 60780.43137,
+										["y"] = -898.91252,
+									},
+									[3] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 3.490659,
+										["name"] = "CAS J2-B (Armor)-1-3",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "T-72B",
+										["unitId"] = 5586,
+										["x"] = 60807.792981,
+										["y"] = -974.08793,
+									},
+									[4] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 3.490659,
+										["name"] = "CAS J2-B (Armor)-1-4",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "BMP-1",
+										["unitId"] = 5587,
+										["x"] = 60831.69988,
+										["y"] = -922.819419,
+									},
+								},
+								["visible"] = false,
+								["x"] = 60756.52447,
+								["y"] = -950.18103,
+							},
+							[16] = 
+							{
+								["groupId"] = 3177,
+								["hidden"] = true,
+								["hiddenOnMFD"] = true,
+								["hiddenOnPlanner"] = true,
+								["lateActivation"] = true,
+								["name"] = "CAS J2-C (Battery)-1",
+								["route"] = 
+								{
+									["points"] = 
+									{
+										[1] = 
+										{
+											["ETA"] = 0,
+											["ETA_locked"] = true,
+											["action"] = "Off Road",
+											["alt"] = 22,
+											["alt_type"] = "BARO",
+											["formation_template"] = "",
+											["speed"] = 0,
+											["speed_locked"] = true,
+											["task"] = 
+											{
+												["id"] = "ComboTask",
+												["params"] = 
+												{
+													["tasks"] = 
+													{
+														[1] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "Hold",
+															["number"] = 1,
+															["params"] = 
+															{
+																["templateId"] = "",
+															},
+														},
+														[2] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 2,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "Option",
+																	["params"] = 
+																	{
+																		["name"] = 0,
+																		["value"] = 4,
+																	},
+																},
+															},
+														},
+														[3] = 
+														{
+															["auto"] = false,
+															["enabled"] = true,
+															["id"] = "WrappedAction",
+															["number"] = 3,
+															["params"] = 
+															{
+																["action"] = 
+																{
+																	["id"] = "Option",
+																	["params"] = 
+																	{
+																		["name"] = 8,
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+											["type"] = "Turning Point",
+											["x"] = 61577.44617,
+											["y"] = 717.709532,
+										},
+									},
+									["spans"] = 
+									{
+										[1] = 
+										{
+											[1] = 
+											{
+												["x"] = 61577.44617,
+												["y"] = 717.709532,
+											},
+											[2] = 
+											{
+												["x"] = 61577.44617,
+												["y"] = 717.709532,
+											},
+										},
+									},
+								},
+								["start_time"] = 0,
+								["task"] = "Ground Nothing",
+								["taskSelected"] = true,
+								["tasks"] = 
+								{
+								},
+								["uncontrollable"] = false,
+								["units"] = 
+								{
+									[1] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 3.490659,
+										["name"] = "CAS J2-C (Battery)-1-1",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "SAU Gvozdika",
+										["unitId"] = 5588,
+										["x"] = 61551.79466,
+										["y"] = 788.186479,
+									},
+									[2] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 3.490659,
+										["name"] = "CAS J2-C (Battery)-1-2",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "SAU Gvozdika",
+										["unitId"] = 5589,
+										["x"] = 61568.895667,
+										["y"] = 741.201848,
+									},
+									[3] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 3.490659,
+										["name"] = "CAS J2-C (Battery)-1-3",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "SAU Gvozdika",
+										["unitId"] = 5590,
+										["x"] = 61585.996674,
+										["y"] = 694.217217,
+									},
+									[4] = 
+									{
+										["coldAtStart"] = false,
+										["heading"] = 3.490659,
+										["name"] = "CAS J2-C (Battery)-1-4",
+										["playerCanDrive"] = false,
+										["skill"] = "Average",
+										["type"] = "SAU Gvozdika",
+										["unitId"] = 5591,
+										["x"] = 61603.097681,
+										["y"] = 647.232586,
+									},
+								},
+								["visible"] = false,
+								["x"] = 61577.44617,
+								["y"] = 717.709532,
+							},
 						},
 					},
 				},
@@ -165197,7 +165805,7 @@ mission =
 		["centerY"] = 50000,
 		["zoom"] = 1254980.0796813,
 	},
-	["maxDictId"] = 331,
+	["maxDictId"] = 332,
 	["pictureFileNameB"] = 
 	{
 	},
@@ -165266,7 +165874,7 @@ mission =
 		["actions"] = 
 		{
 			[1] = "a_set_flag_value(\"100\", 3);a_set_flag_value(\"102\", 2);",
-			[2] = "a_do_script_file(getValueResourceByKey(\"ResKey_Action_286\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_287\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_331\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_316\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_297\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_298\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_299\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_311\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_301\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_302\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_312\"));",
+			[2] = "a_do_script_file(getValueResourceByKey(\"ResKey_Action_286\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_287\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_331\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_332\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_316\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_297\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_298\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_299\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_311\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_301\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_302\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_312\"));",
 			[3] = "a_do_script_file(getValueResourceByKey(\"ResKey_Action_279\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_315\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_282\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_283\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_303\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_313\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_314\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_317\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_326\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_319\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_327\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_328\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_320\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_321\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_329\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_322\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_323\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_324\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_325\"));a_do_script_file(getValueResourceByKey(\"ResKey_Action_330\"));",
 			[4] = "a_do_script_file(getValueResourceByKey(\"ResKey_Action_227\")); mission.trig.func[4]=nil;",
 			[5] = "a_do_script(\"SetSuperCarrier(true)\"); mission.trig.func[5]=nil;",
@@ -167295,40 +167903,45 @@ mission =
 				},
 				[4] = 
 				{
-					["file"] = "ResKey_Action_316",
+					["file"] = "ResKey_Action_332",
 					["predicate"] = "a_do_script_file",
 				},
 				[5] = 
 				{
-					["file"] = "ResKey_Action_297",
+					["file"] = "ResKey_Action_316",
 					["predicate"] = "a_do_script_file",
 				},
 				[6] = 
 				{
-					["file"] = "ResKey_Action_298",
+					["file"] = "ResKey_Action_297",
 					["predicate"] = "a_do_script_file",
 				},
 				[7] = 
 				{
-					["file"] = "ResKey_Action_299",
+					["file"] = "ResKey_Action_298",
 					["predicate"] = "a_do_script_file",
 				},
 				[8] = 
 				{
-					["file"] = "ResKey_Action_311",
+					["file"] = "ResKey_Action_299",
 					["predicate"] = "a_do_script_file",
 				},
 				[9] = 
 				{
-					["file"] = "ResKey_Action_301",
+					["file"] = "ResKey_Action_311",
 					["predicate"] = "a_do_script_file",
 				},
 				[10] = 
 				{
-					["file"] = "ResKey_Action_302",
+					["file"] = "ResKey_Action_301",
 					["predicate"] = "a_do_script_file",
 				},
 				[11] = 
+				{
+					["file"] = "ResKey_Action_302",
+					["predicate"] = "a_do_script_file",
+				},
+				[12] = 
 				{
 					["file"] = "ResKey_Action_312",
 					["predicate"] = "a_do_script_file",

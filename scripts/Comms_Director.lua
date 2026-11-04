@@ -1,5 +1,7 @@
--- Comms_Director | v1.9.0
+-- Comms_Director | v1.9.1
 --[[
+  v1.9.1 - CFG.AUDIO: pj_ / ej_lab_sp_howitzer(_pl) (target pool, JTAC_Controller v0.14.1 label
+           "self-propelled howitzer"; Piper, same voices, rendered 2026-11-04).
   v1.9.0 - tasking pack (decision Onur 2026-11-04, plan claude/target-pool-tasking-pack-plan-2026-11-04.md): names,
            positions, call signs, buttons, frequencies, mission numbers, JTAC target groups and the friendly unit come
            from CAS_PACK (scripts/CAS_Pack.lua, loaded before this file); missing pack -> env.error, module not
@@ -937,6 +939,8 @@ local CFG = {
         pj_lab_btr_pl          = { ch = "POINTER", len = 1.32 },
         pj_lab_bmp             = { ch = "POINTER", len = 0.77 },
         pj_lab_bmp_pl          = { ch = "POINTER", len = 0.85 },
+        pj_lab_sp_howitzer     = { ch = "POINTER", len = 1.22 },
+        pj_lab_sp_howitzer_pl  = { ch = "POINTER", len = 1.34 },
         pj_lab_truck           = { ch = "POINTER", len = 0.42 },
         pj_lab_truck_pl        = { ch = "POINTER", len = 0.55 },
         pj_lab_infantry        = { ch = "POINTER", len = 0.59 },
@@ -1119,6 +1123,8 @@ local CFG = {
         ej_lab_btr_pl          = { ch = "EYEBALL", len = 0.93 },
         ej_lab_bmp             = { ch = "EYEBALL", len = 0.70 },
         ej_lab_bmp_pl          = { ch = "EYEBALL", len = 0.84 },
+        ej_lab_sp_howitzer     = { ch = "EYEBALL", len = 1.03 },
+        ej_lab_sp_howitzer_pl  = { ch = "EYEBALL", len = 1.13 },
         ej_lab_truck           = { ch = "EYEBALL", len = 0.32 },
         ej_lab_truck_pl        = { ch = "EYEBALL", len = 0.40 },
         ej_lab_infantry        = { ch = "EYEBALL", len = 0.54 },
@@ -4215,7 +4221,7 @@ local function CD_Init()
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
     timer.scheduleFunction(MudTick, nil, timer.getTime() + 10)   -- v1.7.9
-    env.info("[CD] Comms_Director v1.9.0 online — CAS-1 Syria (pack " .. tostring(P.version) .. ")")
+    env.info("[CD] Comms_Director v1.9.1 online — CAS-1 Syria (pack " .. tostring(P.version) .. ")")
 end
 
 CD_Init()

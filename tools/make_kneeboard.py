@@ -1,4 +1,7 @@
-# make_kneeboard.py | v3.8.0
+# make_kneeboard.py | v3.9.0
+# v3.9.0 (target pool, Tasking_Pick v1.0.0): when a JTAC's pool has an entry after the first with w > 0 (or with
+#         --pool-notes, for a preview), pages 04 / 05 say the target comes with the 9-line and list the possible
+#         target types instead of naming set A's SAM site. Pending Onur's approval (preview 2026-11-04).
 # v3.8.0 (2026-11-04): call signs, buttons, frequencies, mission numbers, CP / IP names and grids, target areas,
 #         laser codes, hard deck, hold angels, abort challenge and the AUTH table come from scripts/CAS_Pack.lua
 #         (the same data the scripts read; parsed with dcslua). Output identical to v3.7.0 for the current pack.
@@ -352,13 +355,25 @@ def _jtac_card(num, j, tr, wp, checkin, ordnance, notes, banner=None):
          ("CONTROL", "Type II · BOT (JTAC decides)", "t"), ("ORDNANCE", ordnance % code, "t")],
         notes, banner)
 
+POOL_NOTES = "--pool-notes" in sys.argv   # v3.9.0 preview switch
+
+
+def pooled(j):
+    """v3.9.0: the random pick can give this JTAC something other than its first pool entry."""
+    return POOL_NOTES or any((e.get("w") or 0) > 0 for e in (j.get("pool") or [])[1:])
+
+
 def jtac1_s():
-    return _jtac_card("04", J1, "ALPHA", "WP3", "OVERLORD h/o, 20 NM to CP", "AGM-65E (65E code %d)",
-        [("SA-13 at the target site", "r"), ("SA-8 vicinity YE53", "o"), ("Hard deck %s ft MSL (eng. area)" % HD, "r")])
+    notes = ([("Target with the 9-line (%s area)" % J1["area"], "t"), ("Expect SHORAD (SA-13), armor or SP arty", "o"),
+              ("Hard deck %s ft MSL (eng. area)" % HD, "r")] if pooled(J1) else
+             [("SA-13 at the target site", "r"), ("SA-8 vicinity YE53", "o"), ("Hard deck %s ft MSL (eng. area)" % HD, "r")])
+    return _jtac_card("04", J1, "ALPHA", "WP3", "OVERLORD h/o, 20 NM to CP", "AGM-65E (65E code %d)", notes)
 
 def jtac2_s():
-    return _jtac_card("05", J2, "BRAVO", "WP4", "Via OVERLORD, off " + J1["disp"], "GBU-12 (code %d)",
-        [("SA-8 battery = target", "r"), ("MANPADS reported near YE53", "o"), ("Hard deck %s ft MSL (eng. area)" % HD, "r")],
+    notes = ([("Target with the 9-line (%s area)" % J2["area"], "t"), ("Expect SA-8 btry, armor or SP arty; MANPADS near YE53", "o"),
+              ("Hard deck %s ft MSL (eng. area)" % HD, "r")] if pooled(J2) else
+             [("SA-8 battery = target", "r"), ("MANPADS reported near YE53", "o"), ("Hard deck %s ft MSL (eng. area)" % HD, "r")])
+    return _jtac_card("05", J2, "BRAVO", "WP4", "Via OVERLORD, off " + J1["disp"], "GBU-12 (code %d)", notes,
         banner="! Any abort call: verify the reply letter (06 AUTH)")
 
 def auth():

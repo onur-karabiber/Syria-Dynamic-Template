@@ -1,4 +1,8 @@
-# make_test_variant.py | v1.7.0
+# make_test_variant.py | v1.8.0
+# v1.8.0: --pick J1=B,J2=C forces target-pool entries (Tasking_Pick v1.0.0, flags 217 / 219 = entry index in
+#         scripts/CAS_Pack.lua). The flags must be set BEFORE Tasking_Pick runs at load, so they go in as a DO SCRIPT
+#         action right before Tasking_Pick's Do Script File action in its trigger (not a later triggerOnce).
+#         Variant name tag "PK<J1 id><J2 id>", e.g. "TEST-J1-A-PKBC".
 # v1.7.0: waypoint numbers kept (flight 2026-11-03: CP TIGER became WP1 instead of the kneeboard's WP2, the pilot
 #         steered WP2 = IP LYNX and passed CP TIGER 20.3 NM abeam, outside the 20 NM tasking ring). The dropped
 #         departure point(s) are replaced by turning points on the start -> CP leg ("TEST LEG n"), so every point
@@ -187,7 +191,47 @@ def scen_tag(a):
     if a.tic: parts.append("TIC" + a.tic)
     if a.first: parts.append("1ST" + a.first)
     if a.spoof: parts.append("SPF" + a.spoof)   # v1.6.0
+    if a.pick: parts.append("PK" + "".join(PICKS(a.pick).get(k, ("-", 0))[0] for k in ("J1", "J2")))   # v1.8.0
     return "-".join(parts)
+
+
+PICK_FLAG = {"J1": 217, "J2": 219}   # v1.8.0 = Tasking_Pick CFG.FLAG
+
+
+def PICKS(spec):
+    """v1.8.0: "J1=B,J2=C" -> {"J1": ("B", 2), ...} (index in the CAS_Pack.lua pool of that JTAC)."""
+    pack = dcslua.parse(open(os.path.join(REPO, "scripts", "CAS_Pack.lua"), "rb").read())[1]
+    out = {}
+    for part in spec.split(","):
+        k, _, pid = part.strip().partition("=")
+        pool = pack[b"jtacs"][k.encode()].get(b"pool") or {}
+        idx = next((i for i, e in sorted(pool.items()) if e[b"id"].decode() == pid), None)
+        if idx is None:
+            sys.exit("--pick: no entry %s in the %s pool" % (pid, k))
+        out[k] = (pid, idx)
+    return out
+
+
+def add_pick_flags(mission, mapres, a):
+    """v1.8.0: DO SCRIPT (set flags 217 / 219) right before Tasking_Pick.lua in its trigger."""
+    key = next((k for k, v in mapres.items() if v == b"Tasking_Pick.lua"), None)
+    if key is None:
+        sys.exit("--pick: Tasking_Pick.lua not in mapResource")
+    rules, trig = mission[b"trigrules"], mission[b"trig"]
+    rk = next((i for i, r in rules.items() if any(x.get(b"file") == key for x in r[b"actions"].values())), None)
+    picks = PICKS(a.pick)
+    sets = [(PICK_FLAG[k], idx) for k, (pid, idx) in sorted(picks.items())]
+    code = "".join('trigger.action.setUserFlag("%d", %d); ' % fv for fv in sets)
+    code += 'env.info("[TEST] pick flags: %s")' % ", ".join("%d=%d" % fv for fv in sets)
+    acts = [rules[rk][b"actions"][i] for i in sorted(rules[rk][b"actions"])]
+    pos = next(i for i, x in enumerate(acts) if x.get(b"file") == key)
+    acts.insert(pos, {b"predicate": b"a_do_script", b"text": code.encode()})
+    rules[rk][b"actions"] = {i + 1: x for i, x in enumerate(acts)}
+    ref = b'a_do_script_file(getValueResourceByKey("%s"));' % key
+    if trig[b"actions"][rk].count(ref) != 1:
+        sys.exit("--pick: compiled trig.actions[%d] does not contain Tasking_Pick exactly once" % rk)
+    trig[b"actions"][rk] = trig[b"actions"][rk].replace(ref, b'a_do_script("' + lua_str(code.encode()) + b'");' + ref)
+    print("  pick flags before Tasking_Pick in trigger %d: %s" % (rk, code))
 
 
 def add_scen_flags(mission, a):
@@ -290,6 +334,7 @@ def main():
     ap.add_argument("--tic", choices=["J1", "J2", "off"], help="v1.5.0 force the TIC JTAC")
     ap.add_argument("--first", choices=["J1", "J2"], help="v1.5.0 first tasking in scenario B")
     ap.add_argument("--spoof", choices=["J1", "J2", "both", "off"], help="v1.6.0 force the spoofed abort (flag 216)")
+    ap.add_argument("--pick", help="v1.8.0 force target-pool entries, e.g. J1=B,J2=C (flags 217 / 219)")
     a = ap.parse_args()
     src = os.path.abspath(a.miz)
     if src.startswith(REPO + os.sep):
@@ -297,10 +342,13 @@ def main():
     stem = os.path.splitext(os.path.basename(src))[0]
     with zipfile.ZipFile(src) as zin:
         raw = zin.read("mission")
+        mapres = dcslua.parse(zin.read("l10n/DEFAULT/mapResource"))[1]   # v1.8.0
         for key in a.start:
             _, mission = dcslua.parse(raw)
             print(stem, "->", key)
             build(mission, a, key)
+            if a.pick:
+                add_pick_flags(mission, mapres, a)
             if not a.keep_red_air:
                 strip_red_air(mission)
             tag = scen_tag(a)
