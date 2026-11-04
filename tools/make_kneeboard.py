@@ -1,6 +1,6 @@
 # make_kneeboard.py | v3.10.0
 # v3.10.0 (2026-11-04): 01 A/A line = the ME pylons, 1× AIM-120 + 2× AIM-9M (was 2× AIM-120 + 2× AIM-9X; confirmed by
-#         Onur). Effects-based tasking, JTAC_Controller v0.15.0): the JTAC picks the weapon by target type -> 01 ADMIN
+#         Onur). Effects-based tasking (JTAC_Controller v0.15.0): the JTAC picks the weapon by target type -> 01 ADMIN
 #         loadout lines and 04 / 05 ORDNANCE say so (armor / movers AGM-65E, stationary / soft GBU-12) instead of tying a
 #         weapon to a JTAC. Pending Onur's approval (preview 2026-11-04).
 # v3.9.0 (target pool, Tasking_Pick v1.0.0): when a JTAC's pool has an entry after the first with w > 0 (or with
