@@ -1,5 +1,10 @@
--- JTAC_Controller | v0.13.2
+-- JTAC_Controller | v0.14.0
 --[[
+  v0.14.0 - tasking pack (decision Onur 2026-11-04): call sign, hero, CP, hard deck, abort challenge / AUTH table,
+           friendly unit and the JTAC table (call signs, groups, buttons, mission numbers, targets, IP, egress, mark,
+           ordnance, friendly offset, observation post) come from CAS_PACK (scripts/CAS_Pack.lua, loaded before this
+           file). Behaviour per JTAC (control type, attack method, abort inject, CD phase) stays in JBEH below.
+           Missing pack -> env.error, module not started. No behaviour change (scenario_test logs = v0.13.2).
   v0.13.2 (TEST-J1-A-SPFboth 2026-11-03, Onur; needs Comms_Director >= v1.8.4): a JTAC's next F10 item opens when
     its answer STARTS (check-in reply, game plan, 9-line, remarks, readback correct / negative), not when it has
     ended: a player who opened F10 right after the clip found nothing. The Comms_Director queue is FIFO, so a
@@ -233,14 +238,40 @@ _G.TRT = _G.TRT or {}
 local TRT = _G.TRT
 if TRT.JC then env.info("[JC] already loaded, second copy ignored") return end
 
+local P = _G.CAS_PACK   -- v0.14.0
+if type(P) ~= "table" or type(P.jtacs) ~= "table" then
+    env.error("[JC] CAS_PACK missing (Do Script File CAS_Pack.lua before JTAC_Controller.lua) - JTAC_Controller not started")
+    return
+end
+local function Copy(t)
+    if type(t) ~= "table" then return t end
+    local o = {}
+    for k, v in pairs(t) do o[k] = Copy(v) end
+    return o
+end
+-- v0.14.0 behaviour per JTAC (not in the pack)
+local JBEH = {
+    J1 = { cdPhase = "JTAC1", control = "auto", method = "BOT", abort_inject = 0 },
+    J2 = { cdPhase = "JTAC2", control = "auto", method = "BOT", abort_inject = 30 },
+}
+local function PackJtacs()
+    local out = {}
+    for k, pj in pairs(P.jtacs) do
+        local j = Copy(pj)
+        for f, v in pairs(JBEH[k] or {}) do j[f] = v end
+        out[k] = j
+    end
+    return out
+end
+
 -- ══════════════════════════════════════════════════════════════
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "0.13.2",
+    VERSION      = "0.14.0",
     VOICE        = true,      -- v0.7.0 spoken transmissions (needs Comms_Director >= v1.6.4)
-    PLAYER_UNIT  = "Player_01",
-    CS           = "HORNET 51",
+    PLAYER_UNIT  = P.hero,
+    CS           = P.cs,
     NUM_TYPE     = "one Hornet",
     CAPS         = "ATFLIR, laser spot tracker",
     MAGVAR       = 5,            -- east; magnetic = true - MAGVAR (same as Comms_Director)
@@ -248,7 +279,7 @@ local CFG = {
     HANDOFF      = "CD",         -- "CD" (TRT.CD.phase == jtac.cdPhase) | "RANGE"
     HANDOFF_NM   = 25,
     REATTACK_NM  = 30,           -- items stay offered (re-attack after abort / tanker) within this range
-    CP           = { name = "CP TIGER", pos = { x = 73640, z = -39914 } },
+    CP           = { name = P.cp.name, pos = Copy(P.cp.pos) },
     INTERNAL_FUEL_LB = 10860,
     BINGO_LB     = 5000,         -- playtime estimate only (placeholder)
     BURN_LB_MIN  = 80,
@@ -271,7 +302,7 @@ local CFG = {
     THREAT_NM    = 8,
     -- v0.4.0: threats to the run-in (typical envelopes, NM / ft MSL; not verified against DCS models)
     THREAT = {
-        HARD_DECK_FT = 20000, MARGIN_NM = 2, PATH_NM = 14, REMARK_NM = 15,
+        HARD_DECK_FT = P.hard_deck_ft, MARGIN_NM = 2, PATH_NM = 14, REMARK_NM = 15,
         TYPES = {
             ["S-300PS 5P85C ln"] = { nm = 40, ceil = 90000, label = "SA-10" },
             ["S-300PS 5P85D ln"] = { nm = 40, ceil = 90000, label = "SA-10" },
@@ -291,23 +322,12 @@ local CFG = {
               SPOOF_COMPLY = -5, SPOOF_UNVERIFIED = -10 },   -- v0.13.0 (not ROE incidents)
     IP_MAX_OFF   = 45,          -- deg: pre-briefed IP run-in vs FAH centre, beyond -> keyhole IP
     KEYHOLE_NM   = 10,
-    ABORT        = { challenge = "BR",
+    ABORT        = { challenge = P.abort.challenge,
                      ack_s = 8 },    -- v0.12.0 s from the end of the JTAC's abort call to the pilot's "aborting"
     -- v0.13.0 spoofed abort (imitative deception), see header
     SPOOF        = { pct = 10, delay = { 2, 5 }, jtac_s = 25, flag = 216,
                      reason = "Civilian vehicle entering the target area." },
-    -- kneeboard 06 AUTH (tools/make_kneeboard.py AUTH, same seed 20261029) - keep identical
-    AUTH = {
-        A = "BSIAZTXKDGPQVEMCNWFJYLUHOR", B = "AXYSFZJLHPVECBNDRQTWMOGIUK", C = "GDSIVRKUXELOCFHWJQBZYANMPT",
-        D = "TVYMLCBUWEHRDGKAFJQZIXSNPO", E = "GWFIYONQJDATVUZCLMSBKPHEXR", F = "YBOLUVNIPHTKAFQDSRXMEGJZCW",
-        G = "BFMUPEQNRLKSDZXAGVOITCHJWY", H = "MLARHQFGXKSZYIWVPJEONBCTUD", I = "LGOXJHDCEWMSYNTFARVIKBUPQZ",
-        J = "MHFEZPQKCXVJRLOIYUWBNAGTDS", K = "EUQKCOBNGAYHLPTMFRWXJIZSVD", L = "THVCREZAGYBFQXIUNLOPMJDWSK",
-        M = "PVJCEWGTSYHIMZONLDRQKAXUBF", N = "ATWGDVJHPBLOXMICSNUEFQKYZR", O = "UABNFJQGLPIEZTXOMVCSKYDRHW",
-        P = "XMSTRKLFOGVBQWZEDUPJACHIYN", Q = "TULZBGPAXRHWFYJKSOQENVDIMC", R = "CSUIOLMHNFXQGDWZPAJETVBYRK",
-        S = "FDNESUCBQIXZMVJKTWLRYHGOAP", T = "HVAJXUYTEKLWGISDOFMPQRZCBN", U = "TZGCEPRHIVAQXBFSYUJDWMLKON",
-        V = "QXCGHNDVZTOJAUESBYMFPWRLIK", W = "FIZAVYBLSJQHEXMKWNPOTRUDCG", X = "XCSJZBDMTHQEAUFLRGPOINWKYV",
-        Y = "MNFYBDGIUHLJZSKRPQOWCATXVE", Z = "MBSLRJTUINYWQDCXPVHEZFOKAG",
-    },
+    AUTH         = Copy(P.abort.auth),   -- kneeboard 06 AUTH (v0.14.0: one table in CAS_PACK)
     -- aim order inside a target group (SAM / radar first), then ME order
     PRIORITY = { "Osa 9A33 ln", "Strela-10M3", "Tor 9A331", "Kub 1S91 str", "Kub 2P25 ln",
                  "2S6 Tunguska", "ZSU-23-4 Shilka" },
@@ -320,26 +340,12 @@ local CFG = {
         ["T-55"] = "T-55 tank", ["T-72B"] = "T-72 tank", ["BTR-80"] = "BTR", ["BMP-1"] = "BMP", ["BMP-2"] = "BMP",
         ["Ural-4320T"] = "truck", ["Infantry AK"] = "infantry", ["Infantry AK ver2"] = "infantry",
     },
-    FRIENDLY = { name = "Bravo 2-1", cs = "BRAVO 2-1",
-                 units = { "M-2 Bradley", "M-2 Bradley", "Soldier M4", "Soldier M4", "Soldier M4" } },
+    FRIENDLY     = Copy(P.friendly),
     DUR = { pilot = 8, short = 9, long = 18, nine = 28, hold_pilot = 2.5, hold = 5,
             fast_after = 0.2, fast_hold = 1.5 },   -- attack / laser calls: short gaps (time critical)
 
-    JTACS = {
-        J1 = { cs = "POINTER 11", disp = "Pointer 11", vp = "pj", ch = "POINTER", group = "JTAC-1", cdPhase = "JTAC1", btn = 4,
-               msn = "4101", targets = { "SAM BV51 (SA-13)-1" },
-               ip = { name = "LYNX", mgrs = "37S BV 4071 2864" }, egress = "north to TIGER",
-               mark = { kind = "laser", code = 1688 }, control = "auto", method = "BOT",
-               ord = "one AGM-65E", friendly_ofs = { brg = 200, m = 1200 }, abort_inject = 0,
-               op = { auto = true, brg = 238, m = 2500, dmin = 1500, dmax = 4000, step = 150 } },
-        J2 = { cs = "EYEBALL 11", disp = "Eyeball 11", vp = "ej", ch = "EYEBALL", group = "JTAC-2", cdPhase = "JTAC2", btn = 5,
-               msn = "4102", targets = { "SAM YE53 (SA-8)-1" },
-               ip = { name = "PUMA", mgrs = "36S YE 4714 5182" }, egress = "northwest, feet wet",
-               mark = { kind = "laser", code = 1688 }, control = "auto", method = "BOT",
-               ord = "one GBU-12", friendly_ofs = { brg = 200, m = 1000 }, abort_inject = 30,
-               op = { auto = true, brg = 250, m = 2500, dmin = 1500, dmax = 4000, step = 150 } },
-    },
-    ORDER = { "J1", "J2" },
+    JTACS        = PackJtacs(),
+    ORDER        = Copy(P.order),
 }
 
 local PHON = { A = "Alfa", B = "Bravo", C = "Charlie", D = "Delta", E = "Echo", F = "Foxtrot", G = "Golf",

@@ -1,4 +1,6 @@
-# sync_missions.py | v1.4.0
+# sync_missions.py | v1.4.1
+# v1.4.1: guards run tools/check_pack.py first (CAS_Pack.lua vs src/mission: names, CP, COMM presets; voiced values
+#         vs the rendered clips) and stop on an error.
 # v1.4.0: CAS (L) is GENERATED from the template (tools/make_cas_l.py, decision Onur 2026-11-04 03:12). The cas
 #         step backs up the old file and regenerates it (was: refresh_scripts.py on an own mission). Guard: the
 #         deployed CAS (L) must equal make_cas_l(deployed template) in its ME data, else it was edited in the ME
@@ -133,6 +135,10 @@ GUARD_MAX_S = 3600
 
 def step_guards(argv, do_hound, do_cas_hound, do_cas=True):
     """Both guards before anything is written (against the bases as currently deployed)."""
+    if os.path.isfile(os.path.join(REPO, "scripts", "CAS_Pack.lua")) and \
+            run([PY, os.path.join("tools", "check_pack.py")]) != 0:     # v1.4.1
+        print("STOP: tools/check_pack.py found errors (CAS_Pack.lua does not match src/mission).")
+        return 2
     if do_hound and "--force-hound" not in argv and not hound_guard():
         print("STOP: HOUND not regenerated. Move ME edits into tools/add_elint.py, or --force-hound / --skip-hound.")
         return 2

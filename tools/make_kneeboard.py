@@ -1,4 +1,7 @@
-# make_kneeboard.py | v3.7.0
+# make_kneeboard.py | v3.8.0
+# v3.8.0 (2026-11-04): call signs, buttons, frequencies, mission numbers, CP / IP names and grids, target areas,
+#         laser codes, hard deck, hold angels, abort challenge and the AUTH table come from scripts/CAS_Pack.lua
+#         (the same data the scripts read; parsed with dcslua). Output identical to v3.7.0 for the current pack.
 # v3.7.0: 06 AUTH (JTAC_Controller v0.13.0): ABORT CALL block - right letter: ABORTING at once, OFF later;
 #         wrong letter: AUTHENTICATE <two letters>, hold fire, check the JTAC's "I authenticate <x>" (same table).
 # v3.6.0: 02 COMM: alternate JTAC buttons C1-09 POINTER ALT 255.00 / C1-11 EYEBALL ALT 259.00 (lost comms, Comms_Director
@@ -50,6 +53,36 @@
 # file or set KB_FONT_DIR).
 import os, sys
 from PIL import Image, ImageDraw, ImageFont
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import dcslua  # noqa: E402
+
+
+def _py(v):
+    if isinstance(v, bytes):
+        return v.decode("utf-8")
+    if isinstance(v, dict):
+        if v and all(isinstance(k, int) for k in v):
+            return [_py(v[k]) for k in sorted(v)]
+        return {(k.decode() if isinstance(k, bytes) else k): _py(x) for k, x in v.items()}
+    return v
+
+
+PACK = _py(dcslua.parse(open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                          "scripts", "CAS_Pack.lua"), "rb").read())[1])
+J1, J2, NETS = PACK["jtacs"]["J1"], PACK["jtacs"]["J2"], PACK["nets"]
+HD = "{:,}".format(PACK["hard_deck_ft"]).replace(",", " ")       # "20 000"
+_DIG = ["ZERO", "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE"]
+
+
+def spoken(cs):
+    """'POINTER 11' -> 'POINTER ONE-ONE'"""
+    w = cs.split()
+    return " ".join(w[:-1] + ["-".join(_DIG[int(c)] for c in w[-1])]) if w and w[-1].isdigit() else cs
+
+
+def c1(btn):
+    return "C1-%02d" % btn
 
 W, H   = 512, 768
 MX, MY = 26, 18                     # margin (clip-free area)
@@ -115,7 +148,7 @@ def admin():
     c = Card("01", "ADMIN", "CAS-1", "SYRIA")
     c.head("MISSION")
     c.kv("TYPE", "CAS  TYPE II  (Laser)"); c.kv("A/C", "F/A-18C  (single)")
-    c.kv("CALLSIGN", "467 (ship)  /  HORNET 51 (tac)"); c.kv("MSN#", "4101 (JTAC-1) · 4102 (JTAC-2)")
+    c.kv("CALLSIGN", "467 (ship)  /  %s (tac)" % PACK["cs"]); c.kv("MSN#", "%s (%s) · %s (%s)" % (J1["msn"], J1["group"], J2["msn"], J2["group"]))
     c.rule(); c.head("LOADOUT")
     c.kv("A/A", "2× AIM-120  ·  2× AIM-9X"); c.kv("A/G 1", "2× AGM-65E  (Pointer target)")
     c.kv("A/G 2", "4× GBU-12   (Eyeball target)"); c.kv("POD", "ATFLIR  (LST mode)")
@@ -125,38 +158,45 @@ def admin():
     c.rule(); c.head("IFF / MODES")
     c.kv("MODE 4", "Check-in on Strike freq", "o"); c.kv("SQUAWK", "2042")
     c.rule(); c.head("HARD DECK  /  RESTRICTIONS")
-    c.kv("ENGAGE AREA", "20 000 ft MSL (JTAC-1/2)", "r"); c.kv("TRANSIT", "not in effect")
+    c.kv("ENGAGE AREA", "%s ft MSL (JTAC-1/2)" % HD, "r"); c.kv("TRANSIT", "not in effect")
     c.kv("MANPADS inj", "threat call · deck unchanged", "o")
     c.rule(); c.head("LASER CODES")
-    c.kv("POINTER 11", "1688", "y"); c.kv("EYEBALL 11", "1688", "y"); c.kv("65E code", "Set in cockpit → 1688", "o")
+    c.kv(J1["cs"], str(J1["mark"]["code"]), "y"); c.kv(J2["cs"], str(J2["mark"]["code"]), "y")
+    c.kv("65E code", "Set in cockpit → %d" % J1["mark"]["code"], "o")
     return c
 
 def comm():
     c = Card("02", "COMM LADDER", "CAS-1", "SYRIA")
     c.band("COMM 1  (UFC → C1)   all AM")
-    for r in [("01","262.00 AM","TOWER/PADDLES","TWR","CASE I/II"),("02","269.00 AM","DEPARTURE","DEP",""),
-              ("03","265.00 AM","STRIKE","STK",""),("04","333.30 AM","POINTER 11","JTAC-1",""),
-              ("05","333.40 AM","EYEBALL 11","JTAC-2",""),("06","251.10 AM","OVERLORD","OVL",""),
-              ("07","252.10 AM","TEXACO 11","TKR",""),("08","252.30 AM","ARCO 31 (RCV)","RTK","CVN tanker"),
-              ("09","255.00 AM","POINTER ALT","JTAC-1","lost comms"),
-              ("11","259.00 AM","EYEBALL ALT","JTAC-2","lost comms"),
-              ("15","263.00 AM","APPROACH","APP","+CASE III LSO"),
-              ("16","261.00 AM","MARSHAL","MRS","")]:
+    rows = [(NETS["TOWER"], "TOWER/PADDLES", "TWR", "CASE I/II"), (NETS["DEP"], "DEPARTURE", "DEP", ""),
+            (NETS["STRIKE"], "STRIKE", "STK", ""), (J1, J1["cs"], J1["group"], ""), (J2, J2["cs"], J2["group"], ""),
+            (NETS["OVL"], "OVERLORD", "OVL", ""), (NETS["TKR"], "TEXACO 11", "TKR", ""),
+            (NETS["ARCO"], "ARCO 31 (RCV)", "RTK", "CVN tanker"),
+            (J1["alt"], J1["short"].upper() + " ALT", J1["group"], "lost comms"),
+            (J2["alt"], J2["short"].upper() + " ALT", J2["group"], "lost comms"),
+            (NETS["APPROACH"], "APPROACH", "APP", "+CASE III LSO"), (NETS["MARSHAL"], "MARSHAL", "MRS", "")]
+    for r in [("%02d" % n["btn"], n["freq"] + " AM", a, b, e) for n, a, b, e in sorted(rows, key=lambda x: x[0]["btn"])]:
         c.chrow(*r)
     c.rule(); c.band("COMM 2  (UFC → C2)")
-    c.chrow("01", "251.10 AM", "OVERLORD", "OVL", "keep up on JTAC")
+    c.chrow("%02d" % NETS["OVL"]["comm2"], NETS["OVL"]["freq"] + " AM", "OVERLORD", "OVL", "keep up on JTAC")
     c.chrow("02", "128.10 AM", "AI traffic", "AI", "02–10: 128.1–128.9")
     c.rule(); c.head("DISCRETE / GUARD")
     c.kv("GUARD", "243.00 AM (monitor)", "m")
     c.kv("ABORT (tac)", 'JTAC: "ABORT <reply> x3" (06 AUTH)' if SCRIPTED else 'JTAC: "abort, abort, abort"')
     c.kv("CVN native", "127.60 AM not used (F1)", "m")
     c.rule(); c.head("COMM FLOW   (F10 > COMMS)")
-    flow = [("1","Airborne","DEP","C1-02","CASE III dep (I/II zip)"),("2","7 DME/clrd","STK","C1-03","Mode 4 · Kilo"),
-            ("3","Strike h/o","OVL","C1-06","check in · picture"),("4","20 NM to CP","OVL","C2-01","tasking / hold CP a22"),
-            ("5","Off JTAC","OVL","C2-01","→ next JTAC (OVL order)"),("6","Off last JTAC","OVL","C2-01","INFLTREP → Texaco"),
-            ("7","Texaco","TKR","C1-07","check in · refuel"),("8","Off Texaco","OVL","C1-06","RTB · feet wet"),
-            ("9","90 NM CVN","STK","C1-03","check in inbound"),("10","50 NM CVN","MRS","C1-16","check in · readback"),
-            ("11","Marshal h/o","APP","C1-15","CASE II/III appr"),("12","See you at 10","TWR","C1-01","ZIPLIP (CASE I/II)")]
+    c2 = "C2-%02d" % NETS["OVL"]["comm2"]
+    flow = [("1","Airborne","DEP",c1(NETS["DEP"]["btn"]),"CASE III dep (I/II zip)"),
+            ("2","7 DME/clrd","STK",c1(NETS["STRIKE"]["btn"]),"Mode 4 · Kilo"),
+            ("3","Strike h/o","OVL",c1(NETS["OVL"]["btn"]),"check in · picture"),
+            ("4","20 NM to CP","OVL",c2,"tasking / hold CP a%d" % PACK["hold_angels"]),
+            ("5","Off JTAC","OVL",c2,"→ next JTAC (OVL order)"),("6","Off last JTAC","OVL",c2,"INFLTREP → Texaco"),
+            ("7","Texaco","TKR",c1(NETS["TKR"]["btn"]),"check in · refuel"),
+            ("8","Off Texaco","OVL",c1(NETS["OVL"]["btn"]),"RTB · feet wet"),
+            ("9","90 NM CVN","STK",c1(NETS["STRIKE"]["btn"]),"check in inbound"),
+            ("10","50 NM CVN","MRS",c1(NETS["MARSHAL"]["btn"]),"check in · readback"),
+            ("11","Marshal h/o","APP",c1(NETS["APPROACH"]["btn"]),"CASE II/III appr"),
+            ("12","See you at 10","TWR",c1(NETS["TOWER"]["btn"]),"ZIPLIP (CASE I/II)")]
     for n, a, b, ch, e in flow:
         d = c.d; y = c.y
         d.text((2, y), n, font=F11, fill=TXT); d.text((22, y), a, font=F11, fill=TXT)
@@ -173,10 +213,10 @@ def route():
     d = c.d
     d.text((2, c.y), "WP", font=F10, fill=GRY); d.text((42, c.y), "NAME", font=F10, fill=GRY); d.text((190, c.y), "NOTES", font=F10, fill=GRY); c.y += 14
     wps = [("WP0","CATAPULT","t","CVN","CASE III dep"),("WP1","DEPART","t","","22 000 ft · alt hold"),
-           ("WP2","CP TIGER","t","YE 1990 4989","22 000 ft · JTAC h/o 20 NM out"),
-           ("WP3","IP LYNX","y","37S BV 4071 2864","24 000 ft · JTAC-1"),
+           ("WP2",PACK["cp"]["name"],"t","YE 1990 4989","22 000 ft · JTAC h/o 20 NM out"),
+           ("WP3","IP " + J1["ip"]["name"],"y",J1["ip"]["mgrs"],"24 000 ft · " + J1["group"]),
            ("TGT1","TARGET ALPHA","r","BV 6187 2081","elev 570 ft"),
-           ("WP4","IP PUMA","y","36S YE 4714 5182","24 000 ft · JTAC-2"),
+           ("WP4","IP " + J2["ip"]["name"],"y",J2["ip"]["mgrs"],"24 000 ft · " + J2["group"]),
            ("TGT2","TARGET BRAVO","r","YE 5987 3843","elev 150 ft")]
     for wp, name, col, grid, note in wps:
         y = c.y
@@ -184,16 +224,16 @@ def route():
         d.text((42, y), name, font=F13, fill=COL[col]); c.y += 15
         d.text((50, c.y), grid, font=F11, fill=TXT); d.text((190, c.y), note, font=F11, fill=GRY); c.y += 14
     c.rule(); c.head("TANKER / EGRESS")
-    c.kv("TEXACO 11", "YE 0694 6582 · FL150", "g"); c.kv("FREQ", "252.10 · btn 7 (COMM1-07)")
+    c.kv("TEXACO 11", "YE 0694 6582 · FL150", "g"); c.kv("FREQ", "%s · btn %d (COMM1-%02d)" % (NETS["TKR"]["freq"], NETS["TKR"]["btn"], NETS["TKR"]["btn"]))
     c.kv("TACAN", "21Y · TCN: T/R + A/A (range)", "o")
     c.kv("EGRESS", "Feet wet → RTB 043°M rev")
     c.rule(); c.head("RETURN CORRIDOR")
-    c.kv("CORRIDOR", "050° radial ±15° (035–065)", "o"); c.kv("MARSHAL", "50 NM → COMM1-16 (261.00 AM)")
+    c.kv("CORRIDOR", "050° radial ±15° (035–065)", "o"); c.kv("MARSHAL", "50 NM → COMM1-%02d (%s AM)" % (NETS["MARSHAL"]["btn"], NETS["MARSHAL"]["freq"]))
     c.kv("RECOVERY", "BRC 355° · CASE II (flag 102)")
     c.rule(); c.head("MAG VARIATION")
     c.kv("AREA", "True − 5°  →  Mag ≈ True+5°", "m")
     c.rule(); c.head("HARD DECK")
-    c.kv("ENGAGE AREA", "20 000 ft MSL", "r"); c.kv("TRANSIT", "not in effect")
+    c.kv("ENGAGE AREA", "%s ft MSL" % HD, "r"); c.kv("TRANSIT", "not in effect")
     c.rule(); c.head("MORSE  (NAVAID IDENT · CVN = WSH)")
     morse(c)
     return c
@@ -268,17 +308,8 @@ def jtac2():
         banner="! MANPADS inject (25%): threat call · deck 20 000 MSL")
 
 # ── scripted JTAC variant (JTAC_Controller) ────────────────────────────────────────────
-ABORT_CHALLENGE = "BR"
-AUTH_ROWS = [  # identical to scripts/JTAC_Controller.lua CFG.AUTH (seed 20261029)
-    "BSIAZTXKDGPQVEMCNWFJYLUHOR", "AXYSFZJLHPVECBNDRQTWMOGIUK", "GDSIVRKUXELOCFHWJQBZYANMPT",
-    "TVYMLCBUWEHRDGKAFJQZIXSNPO", "GWFIYONQJDATVUZCLMSBKPHEXR", "YBOLUVNIPHTKAFQDSRXMEGJZCW",
-    "BFMUPEQNRLKSDZXAGVOITCHJWY", "MLARHQFGXKSZYIWVPJEONBCTUD", "LGOXJHDCEWMSYNTFARVIKBUPQZ",
-    "MHFEZPQKCXVJRLOIYUWBNAGTDS", "EUQKCOBNGAYHLPTMFRWXJIZSVD", "THVCREZAGYBFQXIUNLOPMJDWSK",
-    "PVJCEWGTSYHIMZONLDRQKAXUBF", "ATWGDVJHPBLOXMICSNUEFQKYZR", "UABNFJQGLPIEZTXOMVCSKYDRHW",
-    "XMSTRKLFOGVBQWZEDUPJACHIYN", "TULZBGPAXRHWFYJKSOQENVDIMC", "CSUIOLMHNFXQGDWZPAJETVBYRK",
-    "FDNESUCBQIXZMVJKTWLRYHGOAP", "HVAJXUYTEKLWGISDOFMPQRZCBN", "TZGCEPRHIVAQXBFSYUJDWMLKON",
-    "QXCGHNDVZTOJAUESBYMFPWRLIK", "FIZAVYBLSJQHEXMKWNPOTRUDCG", "XCSJZBDMTHQEAUFLRGPOINWKYV",
-    "MNFYBDGIUHLJZSKRPQOWCATXVE", "MBSLRJTUINYWQDCXPVHEZFOKAG"]
+ABORT_CHALLENGE = PACK["abort"]["challenge"]
+AUTH_ROWS = [PACK["abort"]["auth"][ch] for ch in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"]   # v3.8.0: = JTAC_Controller CFG.AUTH
 PHON = dict(zip("ABCDEFGHIJKLMNOPQRSTUVWXYZ", ["ALFA", "BRAVO", "CHARLIE", "DELTA", "ECHO", "FOXTROT",
     "GOLF", "HOTEL", "INDIA", "JULIETT", "KILO", "LIMA", "MIKE", "NOVEMBER", "OSCAR", "PAPA", "QUEBEC",
     "ROMEO", "SIERRA", "TANGO", "UNIFORM", "VICTOR", "WHISKEY", "XRAY", "YANKEE", "ZULU"]))
@@ -311,28 +342,30 @@ def jtac_s(num, name, tl, tr, contact, ip, notes, banner=None):
         c.d.text((4, c.y + 3), banner, font=F10, fill=OCH); c.y += 20
     return c
 
+def _jtac_card(num, j, tr, wp, checkin, ordnance, notes, banner=None):
+    code = j["mark"]["code"]
+    return jtac_s(num, j["cs"], j["group"], tr,
+        [("CALLSIGN", spoken(j["cs"]), "t"), ("FREQ", "%s AM · COMM1-%02d" % (j["freq"], j["btn"]), "t"),
+         ("MSN#", j["msn"], "t"), ("CHECK-IN", checkin, "t")],
+        [("IP  (%s)" % wp, "%s  %s" % (j["ip"]["name"], j["ip"]["mgrs"]), "y"), ("TGT AREA", "%s (general)" % j["area"], "t"),
+         ("MARK", "Laser · JTAC · %d" % code, "y"),
+         ("CONTROL", "Type II · BOT (JTAC decides)", "t"), ("ORDNANCE", ordnance % code, "t")],
+        notes, banner)
+
 def jtac1_s():
-    return jtac_s("04", "POINTER 11", "JTAC-1", "ALPHA",
-        [("CALLSIGN", "POINTER ONE-ONE", "t"), ("FREQ", "333.30 AM · COMM1-04", "t"), ("MSN#", "4101", "t"),
-         ("CHECK-IN", "OVERLORD h/o, 20 NM to CP", "t")],
-        [("IP  (WP3)", "LYNX  37S BV 4071 2864", "y"), ("TGT AREA", "BV 62 (general)", "t"), ("MARK", "Laser · JTAC · 1688", "y"),
-         ("CONTROL", "Type II · BOT (JTAC decides)", "t"), ("ORDNANCE", "AGM-65E (65E code 1688)", "t")],
-        [("SA-13 at the target site", "r"), ("SA-8 vicinity YE53", "o"), ("Hard deck 20 000 ft MSL (eng. area)", "r")])
+    return _jtac_card("04", J1, "ALPHA", "WP3", "OVERLORD h/o, 20 NM to CP", "AGM-65E (65E code %d)",
+        [("SA-13 at the target site", "r"), ("SA-8 vicinity YE53", "o"), ("Hard deck %s ft MSL (eng. area)" % HD, "r")])
 
 def jtac2_s():
-    return jtac_s("05", "EYEBALL 11", "JTAC-2", "BRAVO",
-        [("CALLSIGN", "EYEBALL ONE-ONE", "t"), ("FREQ", "333.40 AM · COMM1-05", "t"), ("MSN#", "4102", "t"),
-         ("CHECK-IN", "Via OVERLORD, off Pointer 11", "t")],
-        [("IP  (WP4)", "PUMA  36S YE 4714 5182", "y"), ("TGT AREA", "YE 53 (general)", "t"), ("MARK", "Laser · JTAC · 1688", "y"),
-         ("CONTROL", "Type II · BOT (JTAC decides)", "t"), ("ORDNANCE", "GBU-12 (code 1688)", "t")],
-        [("SA-8 battery = target", "r"), ("MANPADS reported near YE53", "o"), ("Hard deck 20 000 ft MSL (eng. area)", "r")],
+    return _jtac_card("05", J2, "BRAVO", "WP4", "Via OVERLORD, off " + J1["disp"], "GBU-12 (code %d)",
+        [("SA-8 battery = target", "r"), ("MANPADS reported near YE53", "o"), ("Hard deck %s ft MSL (eng. area)" % HD, "r")],
         banner="! Any abort call: verify the reply letter (06 AUTH)")
 
 def auth():
     c = Card("06", "AUTHENTICATION", "CAS-1", "VALID 24H")
     c.head("ABORT CODE  (challenge-reply · JP 3-09.3)")
     ch = ABORT_CHALLENGE
-    c.kv("HORNET 51", "challenge  %s %s" % (PHON[ch[0]], PHON[ch[1]]), "y")
+    c.kv(PACK["cs"], "challenge  %s %s" % (PHON[ch[0]], PHON[ch[1]]), "y")
     c.line("Pass the challenge in the JTAC check-in. The JTAC", f=F10)
     c.line("aborts with the REPLY letter: ABORT <reply> x3.", f=F10)
     c.line("Reply = letter RIGHT of the 2nd challenge letter,", f=F10)

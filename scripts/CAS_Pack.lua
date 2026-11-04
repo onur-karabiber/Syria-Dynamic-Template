@@ -1,0 +1,97 @@
+-- CAS_Pack | v1.0.0
+-- Tasking pack of CAS-1: geography and comm plan in ONE place (decision Onur 2026-11-04: the pack holds what /
+-- where / who / which frequency; behaviour - scenario weights, timers, scoring - stays in each module's CFG).
+-- Read by Comms_Director (>= v1.9.0), JTAC_Controller (>= v0.14.0), Flight_Timeline (>= v1.3.1), and offline by
+-- tools/make_kneeboard.py, tools/check_pack.py and tools/scenario_test (dcslua.parse: keep this file a plain
+-- data table - no code, no functions, no locals).
+-- Load: before every reader (Do Script File right after mist in the MOOSE trigger, so that a later target-pool
+-- pick can run before Skynet init).
+-- Voiced values: call signs, button numbers, frequencies, CP / IP names and mission numbers are also spoken in
+-- the pre-rendered clips (Sounds/CAS1, tts/clips.csv). Changing one here needs the clips re-rendered;
+-- tools/check_pack.py compares the voiced values with tts/pack_voiced.json (the values the clips were made with).
+-- ME coupling (checked by tools/check_pack.py against src/mission): hero / group / unit names exist, cp.wp_name
+-- is a CAS-1 route point at cp.pos, every btn / freq pair is a Player_01 COMM1 preset.
+-- Positions: DCS world x = north (ME x), z = east (ME y), metres.
+
+CAS_PACK = {
+    version = "1.0.0",
+
+    hero    = "Player_01",       -- unit
+    group   = "CAS-1",           -- hero's ME group (route = ATO)
+    cs      = "HORNET 51",
+    carrier = "CVN",
+    tanker  = "TANKER-1-1",      -- KC-130, Texaco 11
+
+    cp = { name = "CP TIGER", wp_name = "Contact JTAC", pos = { x = 73640, z = -39914 } },
+    hard_deck_ft = 20000,
+    hold_angels  = 22,           -- scenario B hold at the CP
+
+    -- Player_01 COMM1 presets (ch = Comms_Director voice channel of that agency)
+    nets = {
+        TOWER    = { btn = 1,  freq = "262.00" },                     -- carrier nets: shown on the COMM card only
+        DEP      = { btn = 2,  freq = "269.00", ch = "DEPARTURE" },
+        STRIKE   = { btn = 3,  freq = "265.00", ch = "STRIKE" },
+        OVL      = { btn = 6,  freq = "251.10", ch = "OVERLORD", comm2 = 1 },   -- also COMM2 btn 1
+        TKR      = { btn = 7,  freq = "252.10", ch = "TEXACO" },
+        ARCO     = { btn = 8,  freq = "252.30" },                     -- recovery tanker TANKER-3
+        APPROACH = { btn = 15, freq = "263.00" },
+        MARSHAL  = { btn = 16, freq = "261.00" },
+    },
+
+    jtacs = {
+        J1 = {
+            cs = "POINTER 11", disp = "Pointer 11", short = "Pointer",
+            group = "JTAC-1",
+            btn = 4, freq = "333.30", ch = "POINTER",
+            alt = { btn = 9, freq = "255.00" },      -- lost comms "tech": radio failure on primary
+            vp = "pj", ck = "ptr",                   -- clip prefixes: JTAC_Controller / Comms_Director
+            msn = "4101",
+            area = "BV 62",                          -- briefed target area (kneeboard); the target comes with the 9-line
+            targets = { "SAM BV51 (SA-13)-1" },
+            ip = { name = "LYNX", mgrs = "37S BV 4071 2864" },
+            egress = "north to TIGER",
+            mark = { kind = "laser", code = 1688 },
+            ord = "one AGM-65E",
+            friendly_ofs = { brg = 200, m = 1200 },  -- Bravo 2-1 from the target, true deg / m
+            op = { auto = true, brg = 238, m = 2500, dmin = 1500, dmax = 4000, step = 150 },   -- JTAC post search
+        },
+        J2 = {
+            cs = "EYEBALL 11", disp = "Eyeball 11", short = "Eyeball",
+            group = "JTAC-2",
+            btn = 5, freq = "333.40", ch = "EYEBALL",
+            alt = { btn = 11, freq = "259.00" },
+            vp = "ej", ck = "eye",
+            msn = "4102",
+            area = "YE 53",
+            targets = { "SAM YE53 (SA-8)-1" },
+            tgt_fallback = { x = 59271, z = -1176 }, -- Comms_Director: TIC geometry when the group is not readable
+            ip = { name = "PUMA", mgrs = "36S YE 4714 5182" },
+            egress = "northwest, feet wet",
+            mark = { kind = "laser", code = 1688 },
+            ord = "one GBU-12",
+            friendly_ofs = { brg = 200, m = 1000 },
+            op = { auto = true, brg = 250, m = 2500, dmin = 1500, dmax = 4000, step = 150 },
+        },
+    },
+    order = { "J1", "J2" },      -- fragged order
+
+    friendly = { name = "Bravo 2-1", cs = "BRAVO 2-1",
+                 units = { "M-2 Bradley", "M-2 Bradley", "Soldier M4", "Soldier M4", "Soldier M4" } },
+
+    -- Abort code: challenge passed at check-in; reply = AUTH row of the challenge's first letter (kneeboard 06 AUTH,
+    -- tools/make_kneeboard.py prints this table; seed 20261029 generated it).
+    abort = {
+        challenge = "BR",
+        auth = {
+            A = "BSIAZTXKDGPQVEMCNWFJYLUHOR", B = "AXYSFZJLHPVECBNDRQTWMOGIUK", C = "GDSIVRKUXELOCFHWJQBZYANMPT",
+            D = "TVYMLCBUWEHRDGKAFJQZIXSNPO", E = "GWFIYONQJDATVUZCLMSBKPHEXR", F = "YBOLUVNIPHTKAFQDSRXMEGJZCW",
+            G = "BFMUPEQNRLKSDZXAGVOITCHJWY", H = "MLARHQFGXKSZYIWVPJEONBCTUD", I = "LGOXJHDCEWMSYNTFARVIKBUPQZ",
+            J = "MHFEZPQKCXVJRLOIYUWBNAGTDS", K = "EUQKCOBNGAYHLPTMFRWXJIZSVD", L = "THVCREZAGYBFQXIUNLOPMJDWSK",
+            M = "PVJCEWGTSYHIMZONLDRQKAXUBF", N = "ATWGDVJHPBLOXMICSNUEFQKYZR", O = "UABNFJQGLPIEZTXOMVCSKYDRHW",
+            P = "XMSTRKLFOGVBQWZEDUPJACHIYN", Q = "TULZBGPAXRHWFYJKSOQENVDIMC", R = "CSUIOLMHNFXQGDWZPAJETVBYRK",
+            S = "FDNESUCBQIXZMVJKTWLRYHGOAP", T = "HVAJXUYTEKLWGISDOFMPQRZCBN", U = "TZGCEPRHIVAQXBFSYUJDWMLKON",
+            V = "QXCGHNDVZTOJAUESBYMFPWRLIK", W = "FIZAVYBLSJQHEXMKWNPOTRUDCG", X = "XCSJZBDMTHQEAUFLRGPOINWKYV",
+            Y = "MNFYBDGIUHLJZSKRPQOWCATXVE", Z = "MBSLRJTUINYWQDCXPVHEZFOKAG",
+        },
+    },
+}

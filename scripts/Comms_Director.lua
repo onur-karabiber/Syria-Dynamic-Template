@@ -1,5 +1,10 @@
--- Comms_Director | v1.8.4
+-- Comms_Director | v1.9.0
 --[[
+  v1.9.0 - tasking pack (decision Onur 2026-11-04, plan claude/target-pool-tasking-pack-plan-2026-11-04.md): names,
+           positions, call signs, buttons, frequencies, mission numbers, JTAC target groups and the friendly unit come
+           from CAS_PACK (scripts/CAS_Pack.lua, loaded before this file); missing pack -> env.error, module not
+           started. Text that named Pointer 11 / Eyeball 11 / Bravo 2-1 literally now uses the pack values; the COMM
+           card buttons too. No behaviour change: scenario_test radio logs identical to v1.8.4.
   v1.8.4 - menu items open when the call they answer STARTS (Onur, TEST-J1-A-SPFboth 2026-11-03: items showed up
            only after the clip had ended, a player who opens F10 right after the call finds nothing). The queue is
            FIFO, so a reply pressed while the call is on the air is transmitted after it; timers that measure the
@@ -444,30 +449,37 @@
 ]]
 
 -- ══════════════════════════════════════════════════════════════
---  CONFIG  — update unit/group names to match ME exactly
+--  CONFIG  — v1.9.0: names, positions, call signs, buttons and frequencies come from CAS_PACK
+--  (scripts/CAS_Pack.lua, loaded earlier); behaviour stays here.
 -- ══════════════════════════════════════════════════════════════
+local P = _G.CAS_PACK
+if type(P) ~= "table" or type(P.jtacs) ~= "table" then
+    env.error("[CD] CAS_PACK missing (Do Script File CAS_Pack.lua before Comms_Director.lua) - Comms_Director not started")
+    return
+end
+-- (one local only: the main chunk is at Lua's 200-local limit; Hz = MHz string * 1e6, float as the old literals)
+
 local CFG = {
     -- ME unit / group names
-    PLAYER_UNIT    = "Player_01",
-    CARRIER_UNIT   = "CVN",
-    TANKER_UNIT    = "TANKER-1-1",    -- KC-130, Texaco 11
-    CS             = "HORNET 51",
+    PLAYER_UNIT    = P.hero,
+    CARRIER_UNIT   = P.carrier,
+    TANKER_UNIT    = P.tanker,        -- KC-130, Texaco 11
+    CS             = P.cs,
 
     -- Mission numbers (kneeboard 01 ADMIN)
-    MSN_J1         = "4101",
-    MSN_J2         = "4102",
+    MSN_J1         = P.jtacs.J1.msn,
+    MSN_J2         = P.jtacs.J2.msn,
 
-    -- CP TIGER = CAS-1 route point 3 in src/mission (ME shows it as WP2).
-    -- DCS world coords (ME x = north -> vec3.x, ME y = east -> vec3.z).
-    CP_NAME        = "CP TIGER",
-    CP_POS         = { x = 73640, z = -39914 },   -- update if the WP is moved in ME
+    -- CP = CAS-1 route point (DCS world coords: ME x = north -> vec3.x, ME y = east -> vec3.z)
+    CP_NAME        = P.cp.name,
+    CP_POS         = { x = P.cp.pos.x, z = P.cp.pos.z },
 
     -- JTAC target groups
-    JTAC1_TGT_GROUP = "SAM BV51 (SA-13)-1",       -- Pointer 11, 2 units
-    JTAC2_TGT_GROUP = "SAM YE53 (SA-8)-1",        -- Eyeball 11, 4 units
-    JTAC2_POS      = { x = 59271, z = -1176 },    -- fallback; live centroid preferred
-    JTAC1_GROUP    = "JTAC-1",                    -- v1.5.4: friendlies for Line 8 / TIC
-    JTAC2_GROUP    = "JTAC-2",
+    JTAC1_TGT_GROUP = P.jtacs.J1.targets[1],
+    JTAC2_TGT_GROUP = P.jtacs.J2.targets[1],
+    JTAC2_POS      = P.jtacs.J2.tgt_fallback,            -- fallback; live centroid preferred
+    JTAC1_GROUP    = P.jtacs.J1.group,                   -- v1.5.4: friendlies for Line 8 / TIC
+    JTAC2_GROUP    = P.jtacs.J2.group,
     RB_NM          = 30,
     REL_AGG_S      = 2,     -- v1.5.6: release call aggregation window (s)    -- v1.5.5: readback item outside the JTAC phase within this range
 
@@ -504,7 +516,7 @@ local CFG = {
         HOLD_NM  = 8,        -- B: tasking timer starts inside this range of CP TIGER ...
         HOLD_MAX_S = 300,    -- ... or this long after the hold call
         HOLD_WAIT = { 60, 150 },   -- B: s after that until the tasking call
-        HOLD_ANGELS = 22,
+        HOLD_ANGELS = P.hold_angels,
         STBY_S   = { 30, 50 },     -- lost comms: OVERLORD "stand by" -> answer
         DV_PHASES = { "SITREP", "GAMEPLAN", "NINE", "READBACK" },   -- C: Pointer 11 phases a divert may hit
         DV_DELAY = { 4, 15 },      -- C: s of radio silence in that phase before OVERLORD breaks in
@@ -512,7 +524,8 @@ local CFG = {
         DV_RESERVE_LB = 1000,      -- C: fuel guard, margin above the station BINGO after the transit
     },
     -- v1.8.0 alternate JTAC frequencies = unused COMM1 presets (Player_01 ME: btn 9 255.00, btn 11 259.00)
-    ALT = { J1 = { btn = 9, freq = "255.00", hz = 255.00e6 }, J2 = { btn = 11, freq = "259.00", hz = 259.00e6 } },
+    ALT = { J1 = { btn = P.jtacs.J1.alt.btn, freq = P.jtacs.J1.alt.freq, hz = math.floor(tonumber(P.jtacs.J1.alt.freq) * 1e6 + 0.5) * 1.0 },
+            J2 = { btn = P.jtacs.J2.alt.btn, freq = P.jtacs.J2.alt.freq, hz = math.floor(tonumber(P.jtacs.J2.alt.freq) * 1e6 + 0.5) * 1.0 } },
 
     -- Hand-off geometry (NM)
     DEP_HANDOFF_NM  = 20,    -- only without CV_Comms (legacy)
@@ -533,32 +546,33 @@ local CFG = {
     CORRIDOR_IN    = 50,
 
     MAGVAR         = 5,      -- east; magnetic = true − MAGVAR
-    HARD_DECK_FT   = 20000,  -- MSL, engagement area (v1.6.3)
+    HARD_DECK_FT   = P.hard_deck_ft,  -- MSL, engagement area (v1.6.3)
     INTERNAL_FUEL_LB = 10860,
 
     -- v1.5.3: Player_01 COMM1 preset buttons (ME, checked 2026-10-28)
-    BTN = { DEP = 2, STRIKE = 3, J1 = 4, J2 = 5, OVL = 6, TKR = 7, MARSHAL = 16 },
+    BTN = { DEP = P.nets.DEP.btn, STRIKE = P.nets.STRIKE.btn, J1 = P.jtacs.J1.btn, J2 = P.jtacs.J2.btn, OVL = P.nets.OVL.btn,
+            TKR = P.nets.TKR.btn, MARSHAL = P.nets.MARSHAL.btn },
     FREQ = {
-        DEP     = "269.00",
-        STRIKE  = "265.00",
-        J1      = "333.30",
-        J2      = "333.40",
-        OVL     = "251.10",
-        TKR     = "252.10",
-        MARSHAL = "261.00",
+        DEP     = P.nets.DEP.freq,
+        STRIKE  = P.nets.STRIKE.freq,
+        J1      = P.jtacs.J1.freq,
+        J2      = P.jtacs.J2.freq,
+        OVL     = P.nets.OVL.freq,
+        TKR     = P.nets.TKR.freq,
+        MARSHAL = P.nets.MARSHAL.freq,
     },
 
     -- Voice (v1.3.0). Transmitted from 30 m above the player → no range/LOS loss.
     SND_DIR   = "Sounds/CAS1/",
     TX_POWER  = 1000,    -- W
     AUDIO_PAD = 0.5,     -- s after a clip ends before the next clip may start
-    CHAN = {             -- Hz, modulation
-        DEPARTURE = { hz = 269.00e6, mod = radio.modulation.AM },
-        STRIKE    = { hz = 265.00e6, mod = radio.modulation.AM },
-        OVERLORD  = { hz = 251.10e6, mod = radio.modulation.AM },
-        POINTER   = { hz = 333.30e6, mod = radio.modulation.AM },   -- v1.5.4
-        EYEBALL   = { hz = 333.40e6, mod = radio.modulation.AM },
-        TEXACO    = { hz = 252.10e6, mod = radio.modulation.AM },
+    CHAN = {             -- Hz, modulation (v1.9.0: from CAS_PACK nets / jtacs)
+        [P.nets.DEP.ch]    = { hz = math.floor(tonumber(P.nets.DEP.freq) * 1e6 + 0.5) * 1.0,    mod = radio.modulation.AM },
+        [P.nets.STRIKE.ch] = { hz = math.floor(tonumber(P.nets.STRIKE.freq) * 1e6 + 0.5) * 1.0, mod = radio.modulation.AM },
+        [P.nets.OVL.ch]    = { hz = math.floor(tonumber(P.nets.OVL.freq) * 1e6 + 0.5) * 1.0,    mod = radio.modulation.AM },
+        [P.jtacs.J1.ch]           = { hz = math.floor(tonumber(P.jtacs.J1.freq) * 1e6 + 0.5) * 1.0,           mod = radio.modulation.AM },   -- v1.5.4
+        [P.jtacs.J2.ch]           = { hz = math.floor(tonumber(P.jtacs.J2.freq) * 1e6 + 0.5) * 1.0,           mod = radio.modulation.AM },
+        [P.nets.TKR.ch]    = { hz = math.floor(tonumber(P.nets.TKR.freq) * 1e6 + 0.5) * 1.0,    mod = radio.modulation.AM },
     },
     -- generated by tts/make_clips.py; len = clip length (s)
     AUDIO = {
@@ -1918,19 +1932,19 @@ end
 -- Urgent calls bypass the queue: shown immediately, queued routine traffic is dropped.
 local function C_Abort()
     QClear()
-    Msg(string.format("[EYEBALL 11] %s, abort, abort, abort. Civilian vehicle in target area.", CFG.CS),
+    Msg(string.format("[" .. P.jtacs.J2.cs .. "] %s, abort, abort, abort. Civilian vehicle in target area.", CFG.CS),
         CFG.DUR_URGENT + 2)
     Tx("eye_abort", true)
     SetFlag(201, 1)
 end
 
 local function C_Rearm()
-    Q(string.format("[EYEBALL 11] %s, target area clear. Continue as briefed.", CFG.CS), 10, 6, nil, nil, "eye_area_clear")
+    Q(string.format("[" .. P.jtacs.J2.cs .. "] %s, target area clear. Continue as briefed.", CFG.CS), 10, 6, nil, nil, "eye_area_clear")
     SetFlag(201, 2)
 end
 
 local function C_Manpads()
-    Msg(string.format("[EYEBALL 11] %s, MANPADS launch observed one klick east of the target. "
+    Msg(string.format("[" .. P.jtacs.J2.cs .. "] %s, MANPADS launch observed one klick east of the target. "
         .. "Remain at or above hard deck, two-zero thousand MSL.", CFG.CS), CFG.DUR_URGENT + 1)
     Tx("eye_manpads", true)
     SetFlag(203, 1)
@@ -2009,7 +2023,7 @@ local function A_OvlCheckIn()
         CFG.CS, CFG.MSN_J1, CFG.MSN_J2, Angels(p), State(p)), S("OVERLORD", "p_ovl_checkin_a", PAS(p)))
     local picTxt, picSeq = PictureParts(p:getPoint())
     Q(string.format("[OVERLORD] %s, Overlord, radar contact. %s "
-        .. "Mission as fragged, Pointer 11 and Eyeball 11 on station. Proceed %s, %s. "
+        .. "Mission as fragged, " .. P.jtacs.J1.disp .. " and " .. P.jtacs.J2.disp .. " on station. Proceed %s, %s. "
         .. "SAM activity reported in both target areas, %s. Report feet dry.",
         CFG.CS, picTxt, CFG.CP_NAME, BrgRng(p:getPoint(), CFG.CP_POS), HD_TEXT),
         CFG.DUR_LONG + 4, CFG.REPLY_GAP, function() SetPhase("ENROUTE") end, nil,
@@ -2409,7 +2423,7 @@ end
 local function TkrNext()
     local tk = CD.tk
     if not tk and CD.phase == "ENROUTE" and Ar1Pending() and not CD.awaiting then   -- v1.7.1
-        return "AR1 top-off: OVERLORD, request Texaco (F10), or skip AR1 (F10). The hand-off to Pointer 11 waits for AR1."
+        return "AR1 top-off: OVERLORD, request Texaco (F10), or skip AR1 (F10). The hand-off to " .. P.jtacs.J1.disp .. " waits for AR1."
     end
     if not tk or not (CD.phase == "ENROUTE" or CD.phase == "REFUEL" or CD.phase == "TKR_DONE") then return nil end
     local btn = BtnL("TKR")
@@ -2568,25 +2582,25 @@ end
 --  TROOPS IN CONTACT + 9-LINE READBACK  (v1.5.4)
 -- ══════════════════════════════════════════════════════════════
 local JT = {
-    J1 = { ch = "POINTER", k = "ptr", cs = "POINTER 11", disp = "Pointer 11", short = "Pointer",
+    J1 = { ch = P.jtacs.J1.ch, k = P.jtacs.J1.ck, cs = P.jtacs.J1.cs, disp = P.jtacs.J1.disp, short = P.jtacs.J1.short,   -- v1.9.0 from CAS_PACK
            tgt = CFG.JTAC1_TGT_GROUP, jtac = CFG.JTAC1_GROUP, phase = "JTAC1", btn = "J1" },
-    J2 = { ch = "EYEBALL", k = "eye", cs = "EYEBALL 11", disp = "Eyeball 11", short = "Eyeball",
+    J2 = { ch = P.jtacs.J2.ch, k = P.jtacs.J2.ck, cs = P.jtacs.J2.cs, disp = P.jtacs.J2.disp, short = P.jtacs.J2.short,
            tgt = CFG.JTAC2_TGT_GROUP, jtac = CFG.JTAC2_GROUP, phase = "JTAC2", btn = "J2" },
 }
-local FR_CS = "BRAVO 2-1"
+local FR_CS = P.friendly.cs
 
 -- Tension exchanges: Bravo 2-1 -> JTAC (-> pilot). <J> = JTAC short callsign, <CS> = hero.
 -- Clips: fr_<k>_<i>, <k>_t<i>; pilot p_expediting / p_cs + digits + p_min_out.
 local TIC_CALLS = {
-    { fr = "<J>, Bravo 2-1! We are pinned down, taking heavy fire from the ridge. Where is my air?",
-      jt = "Bravo 2-1, <J>. Fast movers inbound, minutes out. Keep your heads down." },
-    { fr = "<J>, Bravo 2-1, we have one wounded! I need that air now!",
+    { fr = "<J>, " .. P.friendly.name .. "! We are pinned down, taking heavy fire from the ridge. Where is my air?",
+      jt = P.friendly.name .. ", <J>. Fast movers inbound, minutes out. Keep your heads down." },
+    { fr = "<J>, " .. P.friendly.name .. ", we have one wounded! I need that air now!",
       jt = "Copy one wounded. <CS>, <J>, friendlies are taking casualties. Expedite.", pilot = "expedite" },
-    { fr = "<J>, Bravo 2-1, enemy armor is pushing toward our position!",
-      jt = "Bravo 2-1, hold what you've got. <CS>, <J>, enemy is closing on friendlies. Say time out.",
+    { fr = "<J>, " .. P.friendly.name .. ", enemy armor is pushing toward our position!",
+      jt = P.friendly.name .. ", hold what you've got. <CS>, <J>, enemy is closing on friendlies. Say time out.",
       pilot = "time" },
-    { fr = "<J>, Bravo 2-1, we are running low on ammo. We can't hold much longer!",
-      jt = "Copy, Bravo 2-1. Air is almost overhead, hang on." },
+    { fr = "<J>, " .. P.friendly.name .. ", we are running low on ammo. We can't hold much longer!",
+      jt = "Copy, " .. P.friendly.name .. ". Air is almost overhead, hang on." },
 }
 
 local function Fill(s, j)
@@ -2663,7 +2677,7 @@ TicHandoff = function(key, opts)
             CFG.DUR_PILOT, 0.8, nil, CFG.PILOT_HOLD, S("OVERLORD", "p_tic_push_" .. btn), nil, nil, true)
     end
     CD.ticState = { key = key, n = 0, used = {}, next = nil, done = false, bda = false }
-    Q(string.format("[%s] %s, %s, TROOPS IN CONTACT, troops in contact! Bravo 2-1 is taking effective "
+    Q(string.format("[%s] %s, %s, TROOPS IN CONTACT, troops in contact! " .. P.friendly.name .. " is taking effective "
         .. "fire from enemy armor. Request immediate CAS, say time out.", j.cs, CFG.CS, j.disp),
         CFG.DUR_URGENT, CFG.TIC.FIRST_S, function()
             env.info("[CD] TIC call " .. j.disp)
@@ -2744,7 +2758,7 @@ local function TicBDA(key)
                 CFG.DUR_SHORT + 2, 0, nil, nil, S(j.ch, j.k .. "_bda"))
             CD.queue[#CD.queue].hold = 0.1
         end
-        AtStart(Q(string.format("[%s] %s, Bravo 2-1, contact broken, fire has stopped. Tell that Hornet thanks.",
+        AtStart(Q(string.format("[%s] %s, " .. P.friendly.name .. ", contact broken, fire has stopped. Tell that Hornet thanks.",
             FR_CS, j.short), CFG.DUR_SHORT + 2, 1.0, nil, nil, S(j.ch, "fr_" .. j.k .. "_bda")),
             function() CD.awaiting = false; MenuRebuild() end)   -- v1.8.4: at the start of the thanks
         ReadBack(j.ch, CFG.CS .. ", copy. Glad to help.", "p_tic_thanks")
@@ -3020,7 +3034,7 @@ local function DivertTick(p)
     if (st.phase == "ATTACK" and not inAtk) or st.phase == "DONE" or st.phase == "TERMINATED" or st.phase == "NOCOMM"
         or st.phase == "SILENT" then
         dv.state = "missed"
-        env.info("[CD] C: divert window missed (Pointer 11 " .. st.phase .. ") -> scenario runs as A")
+        env.info("[CD] C: divert window missed (" .. P.jtacs.J1.disp .. " " .. st.phase .. ") -> scenario runs as A")
         return
     end
     local i = DV_IDX[st.phase] or (inAtk and (#CFG.SCEN.DV_PHASES + 1)) or nil
@@ -3043,11 +3057,11 @@ local function DivertTick(p)
     end
     dv.state, dv.t = "asked", now
     JcCall("freeze", "J1", true)
-    AtStart(Q(string.format("[OVERLORD] %s, Overlord, divert, divert. Eyeball 11 reports TROOPS IN CONTACT, priority "
-        .. "immediate. Contact Eyeball 11, %s, without delay. Pointer 11 is advised.", CFG.CS, Btn("J2")),
+    AtStart(Q(string.format("[OVERLORD] %s, Overlord, divert, divert. " .. P.jtacs.J2.disp .. " reports TROOPS IN CONTACT, priority "
+        .. "immediate. Contact " .. P.jtacs.J2.disp .. ", %s, without delay. " .. P.jtacs.J1.disp .. " is advised.", CFG.CS, Btn("J2")),
         CFG.DUR_URGENT + 4, 0, nil, nil, Voiced(S("OVERLORD", "ovl_divert_a", 0.15, "ovl_divert_b"))),
         function() dv.open = true; MenuRebuild() end)   -- v1.8.4: wilco / unable open at the start
-    env.info(string.format("[CD] C: OVERLORD divert (Pointer 11 in %s, fuel %.0f lb)", st.phase, lb))
+    env.info(string.format("[CD] C: OVERLORD divert (" .. P.jtacs.J1.disp .. " in %s, fuel %.0f lb)", st.phase, lb))
     QPlay()
 end
 
@@ -3072,9 +3086,9 @@ local function A_DivertWilco()
     if t1 then CD.vulExtS = CD.vulExtS + (timer.getTime() - t1) end   -- the Pointer work done so far is repeated
     Q(string.format("[%s] %s, wilco.", CFG.CS, CFG.CS), CFG.DUR_PILOT, 0.3, nil, CFG.PILOT_HOLD,
         S("OVERLORD", "p_wilco"))
-    Q(string.format("[%s] Pointer 11, %s, diverted by Overlord to troops in contact. Will return when able.", CFG.CS,
+    Q(string.format("[%s] " .. P.jtacs.J1.disp .. ", %s, diverted by Overlord to troops in contact. Will return when able.", CFG.CS,
         CFG.CS), CFG.DUR_PILOT + 2, 1.5, nil, CFG.PILOT_HOLD, Voiced(S("POINTER", "p_divert_ptr")))
-    Q(string.format("[POINTER 11] %s, Pointer 11, copy. No other CAS available, we'll hold. Return when able.", CFG.CS),
+    Q(string.format("[" .. P.jtacs.J1.cs .. "] %s, " .. P.jtacs.J1.disp .. ", copy. No other CAS available, we'll hold. Return when able.", CFG.CS),
         CFG.DUR_SHORT + 2, CFG.REPLY_GAP, function() JcCall("suspend", "J1") end, nil,
         Voiced(S("POINTER", "ptr_divert_ack")),
         function()
@@ -3096,7 +3110,7 @@ local function A_DivertUnable()
     CD.awaiting = true; MenuRebuild()
     Pilot(string.format("Overlord, %s, unable divert, state %s.", CFG.CS, State(p)),
         Voiced(S("OVERLORD", "p_divert_unable", PState(p))))
-    Q(string.format("[OVERLORD] %s, Overlord, copy. Continue with Pointer 11.", CFG.CS), CFG.DUR_SHORT, CFG.REPLY_GAP,
+    Q(string.format("[OVERLORD] %s, Overlord, copy. Continue with " .. P.jtacs.J1.disp .. ".", CFG.CS), CFG.DUR_SHORT, CFG.REPLY_GAP,
         nil, nil, Voiced(S("OVERLORD", "ovl_divert_unable")),
         function() JcCall("freeze", "J1", false); CD.awaiting = false; MenuRebuild() end)
     env.info(string.format("[CD] C: divert refused by the pilot, state %s", State(p)))
@@ -3398,12 +3412,12 @@ local NEXT = {
     ENROUTE    = "Proceed " .. CFG.CP_NAME .. ". OVERLORD tasks you about "
                  .. CFG.JTAC_HANDOFF_NM .. " NM from " .. CFG.CP_NAME .. " (Overlord on COMM2 btn 1).",
     HOLD       = "Hold at " .. CFG.CP_NAME .. ", angels " .. CFG.SCEN.HOLD_ANGELS .. ". OVERLORD will task you (COMM2 btn 1).",
-    JTAC1      = "Work Pointer 11 " .. BtnL("J1") .. " (native JTAC menu). After the 9-line: "
+    JTAC1      = "Work " .. P.jtacs.J1.disp .. " " .. BtnL("J1") .. " (native JTAC menu). After the 9-line: "
                  .. "readback via F10 > COMMS.",
-    J1_OFF     = "Check out with Pointer 11, report to OVERLORD (F10).",
-    JTAC2      = "Work Eyeball 11 " .. BtnL("J2") .. " (native JTAC menu). After the 9-line: "
+    J1_OFF     = "Check out with " .. P.jtacs.J1.disp .. ", report to OVERLORD (F10).",
+    JTAC2      = "Work " .. P.jtacs.J2.disp .. " " .. BtnL("J2") .. " (native JTAC menu). After the 9-line: "
                  .. "readback via F10 > COMMS.",
-    J2_OFF     = "Check out with Eyeball 11, pass INFLTREP to OVERLORD (F10).",
+    J2_OFF     = "Check out with " .. P.jtacs.J2.disp .. ", pass INFLTREP to OVERLORD (F10).",
     REFUEL     = "Refuel with TEXACO 11 " .. BtnL("TKR") .. ", TACAN 21Y: use the DCS radio menu (intent to refuel). "
         .. "Then report RTB to OVERLORD (F10).",
     TKR_DONE   = "Report RTB to OVERLORD (F10).",
@@ -3436,7 +3450,7 @@ local function PhaseActions()
     end
     if CD.dv and CD.dv.open then                                          -- v1.8.0 C: divert
         local p = Player()
-        a[#a+1] = { "OVERLORD: wilco divert (Eyeball 11)", A_DivertWilco }
+        a[#a+1] = { "OVERLORD: wilco divert (" .. P.jtacs.J2.disp .. ")", A_DivertWilco }
         a[#a+1] = { "OVERLORD: unable divert" .. (p and (", state " .. State(p)) or ""), A_DivertUnable }
     end
     if ph == "ENROUTE" and CD.ar1Int then                                 -- v1.8.0 AR1 tanker gone
@@ -3465,8 +3479,8 @@ local function PhaseActions()
         if br.spk then a[#a+1] = { "TEXACO: spokes (drogue damaged)", A_Spokes } end
     end
     if ph == "STRIKE_IN"  then a[#a+1] = { "STRIKE: check in inbound (btn " .. CFG.BTN.STRIKE .. ")", A_StrikeCheckInIn } end
-    if RbAvail("J1") then a[#a+1] = { "POINTER 11: 9-line readback (4/6/8)", function() A_Readback("J1") end } end
-    if RbAvail("J2") then a[#a+1] = { "EYEBALL 11: 9-line readback (4/6/8)", function() A_Readback("J2") end } end
+    if RbAvail("J1") then a[#a+1] = { P.jtacs.J1.cs .. ": 9-line readback (4/6/8)", function() A_Readback("J1") end } end
+    if RbAvail("J2") then a[#a+1] = { P.jtacs.J2.cs .. ": 9-line readback (4/6/8)", function() A_Readback("J2") end } end
     if ph == "ENROUTE" or ph == "HOLD" or ph == "JTAC1" or ph == "J1_OFF" or ph == "JTAC2" or ph == "J2_OFF" then
         a[#a+1] = { "OVERLORD: RTB (mission abort)", A_OvlAbort }
     end
@@ -3502,19 +3516,20 @@ end
 
 local function CardData()
     return {
-        buttons = {
-            { n = 1,  f = "262.00 AM", name = "TOWER / PADDLES" },
-            { n = 2,  f = CFG.FREQ.DEP .. " AM",     name = "DEPARTURE" },
-            { n = 3,  f = CFG.FREQ.STRIKE .. " AM",  name = "STRIKE" },
-            { n = 4,  f = CFG.FREQ.J1 .. " AM",      name = "POINTER 11 (JTAC-1)" },
-            { n = 5,  f = CFG.FREQ.J2 .. " AM",      name = "EYEBALL 11 (JTAC-2)" },
-            { n = 6,  f = CFG.FREQ.OVL .. " AM",     name = "OVERLORD (COMM2 btn 1 = 251.10)" },
-            { n = 9,  f = CFG.ALT.J1.freq .. " AM",  name = "POINTER 11 alternate" },
-            { n = 11, f = CFG.ALT.J2.freq .. " AM",  name = "EYEBALL 11 alternate" },
-            { n = 7,  f = CFG.FREQ.TKR .. " AM",     name = "TEXACO 11" },
-            { n = 8,  f = "252.30 AM", name = "ARCO 31 (recovery tanker)" },
-            { n = 15, f = "263.00 AM", name = "APPROACH" },
-            { n = 16, f = CFG.FREQ.MARSHAL .. " AM", name = "MARSHAL" },
+        buttons = {   -- v1.9.0 from CAS_PACK
+            { n = P.nets.TOWER.btn,    f = P.nets.TOWER.freq .. " AM",    name = "TOWER / PADDLES" },
+            { n = CFG.BTN.DEP,         f = CFG.FREQ.DEP .. " AM",         name = "DEPARTURE" },
+            { n = CFG.BTN.STRIKE,      f = CFG.FREQ.STRIKE .. " AM",      name = "STRIKE" },
+            { n = CFG.BTN.J1,          f = CFG.FREQ.J1 .. " AM",          name = P.jtacs.J1.cs .. " (" .. P.jtacs.J1.group .. ")" },
+            { n = CFG.BTN.J2,          f = CFG.FREQ.J2 .. " AM",          name = P.jtacs.J2.cs .. " (" .. P.jtacs.J2.group .. ")" },
+            { n = CFG.BTN.OVL,         f = CFG.FREQ.OVL .. " AM",
+              name = "OVERLORD (COMM2 btn " .. P.nets.OVL.comm2 .. " = " .. CFG.FREQ.OVL .. ")" },
+            { n = CFG.ALT.J1.btn,      f = CFG.ALT.J1.freq .. " AM",      name = P.jtacs.J1.cs .. " alternate" },
+            { n = CFG.ALT.J2.btn,      f = CFG.ALT.J2.freq .. " AM",      name = P.jtacs.J2.cs .. " alternate" },
+            { n = CFG.BTN.TKR,         f = CFG.FREQ.TKR .. " AM",         name = "TEXACO 11" },
+            { n = P.nets.ARCO.btn,     f = P.nets.ARCO.freq .. " AM",     name = "ARCO 31 (recovery tanker)" },
+            { n = P.nets.APPROACH.btn, f = P.nets.APPROACH.freq .. " AM", name = "APPROACH" },
+            { n = CFG.BTN.MARSHAL,     f = CFG.FREQ.MARSHAL .. " AM",     name = "MARSHAL" },
         },
         lines = {
             "CAS-1 FLOW: DEP → (ZIPLIP " .. CFG.DEP_ZIPLIP_NM .. " DME / CASE III cleared) STRIKE → OVERLORD",
@@ -3550,7 +3565,7 @@ local function NextText()
             or ("Check out with " .. d .. ", report to OVERLORD for retasking (F10).")
     end
     if CD.phase == "ENROUTE" and CD.ar1Int then return "No tanker. Tell OVERLORD your intentions (F10): continue, RTB or divert." end
-    if CD.dv and CD.dv.open then return "OVERLORD divert: wilco (F10) - you tell Pointer 11 and switch to Eyeball 11 - or unable." end
+    if CD.dv and CD.dv.open then return "OVERLORD divert: wilco (F10) - you tell " .. P.jtacs.J1.disp .. " and switch to " .. P.jtacs.J2.disp .. " - or unable." end
     if (CD.phase == "JTAC1" or CD.phase == "JTAC2") and LcNeeded(KeyOfPhase(CD.phase)) then
         return "No answer from " .. JT[KeyOfPhase(CD.phase)].disp .. ". Report to OVERLORD on COMM2 (F10)."
     end
@@ -4103,9 +4118,9 @@ local function AirStartCheck(p, c)
         CD.res.J1, CD.cur = "skipped", "J2"   -- v1.8.0
         SetPhase("JTAC2")
         local tic = TicPick() == "J2"
-        Q(string.format("[OVERLORD] %s, Overlord. AIR START: check-in assumed. %s %s. %s Contact Eyeball 11, %s.",
+        Q(string.format("[OVERLORD] %s, Overlord. AIR START: check-in assumed. %s %s. %s Contact " .. P.jtacs.J2.disp .. ", %s.",
             CFG.CS, CFG.CP_NAME, BrgRng(pos, CFG.CP_POS),
-            tic and "Eyeball 11 reports TROOPS IN CONTACT, priority immediate." or "Eyeball 11 is on station.",
+            tic and P.jtacs.J2.disp .. " reports TROOPS IN CONTACT, priority immediate." or P.jtacs.J2.disp .. " is on station.",
             Btn("J2")), CFG.DUR_LONG, 2)
         if tic then TicHandoff("J2") else Ack("OVERLORD", false, CFG.BTN.J2) end
         QPlay()
@@ -4200,7 +4215,7 @@ local function CD_Init()
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
     timer.scheduleFunction(MudTick, nil, timer.getTime() + 10)   -- v1.7.9
-    env.info("[CD] Comms_Director v1.8.4 online — CAS-1 Syria")
+    env.info("[CD] Comms_Director v1.9.0 online — CAS-1 Syria (pack " .. tostring(P.version) .. ")")
 end
 
 CD_Init()

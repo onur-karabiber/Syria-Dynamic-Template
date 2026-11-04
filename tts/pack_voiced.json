@@ -1,0 +1,77 @@
+{
+ "J1": [
+  "POINTER 11",
+  "Pointer 11",
+  "Pointer",
+  4,
+  "333.30",
+  9,
+  "255.00",
+  "4101",
+  "LYNX",
+  1688
+ ],
+ "J2": [
+  "EYEBALL 11",
+  "Eyeball 11",
+  "Eyeball",
+  5,
+  "333.40",
+  11,
+  "259.00",
+  "4102",
+  "PUMA",
+  1688
+ ],
+ "challenge": "BR",
+ "cp": "CP TIGER",
+ "cs": "HORNET 51",
+ "friendly": [
+  "Bravo 2-1",
+  "BRAVO 2-1"
+ ],
+ "hard_deck_ft": 20000,
+ "hold_angels": 22,
+ "nets": {
+  "APPROACH": [
+   15,
+   "263.00",
+   null
+  ],
+  "ARCO": [
+   8,
+   "252.30",
+   null
+  ],
+  "DEP": [
+   2,
+   "269.00",
+   null
+  ],
+  "MARSHAL": [
+   16,
+   "261.00",
+   null
+  ],
+  "OVL": [
+   6,
+   "251.10",
+   1
+  ],
+  "STRIKE": [
+   3,
+   "265.00",
+   null
+  ],
+  "TKR": [
+   7,
+   "252.10",
+   null
+  ],
+  "TOWER": [
+   1,
+   "262.00",
+   null
+  ]
+ }
+}

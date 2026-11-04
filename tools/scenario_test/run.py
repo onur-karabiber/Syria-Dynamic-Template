@@ -1,4 +1,5 @@
-# scenario_test/run.py | v1.3.0
+# scenario_test/run.py | v1.4.0
+# v1.4.0: loads scripts/CAS_Pack.lua first (Comms_Director >= v1.9.0 / JTAC_Controller >= v0.14.0 need the pack).
 # v1.3.0: gates follow JTAC_Controller v0.13.2 / Comms_Director v1.8.4 (items open when the call they answer
 #         STARTS): a JTAC dialogue item may not be offered while that JTAC's non-ack call is still WAITING in the
 #         queue; a non-urgent COMMS item not while CD.gateWaiting(). New check: no pilot reply is transmitted
@@ -58,7 +59,7 @@ class Run:
         lua.execute("TRT = TRT or {}; _G.TRT = TRT; TRT.PLAYER_NAME = 'Player_01'; "
                     "TRT.CV_AUDIO = setmetatable({}, { __index = function() return { len = 0.4 } end }); "
                     "TRT.addScore = function(d, r, c) env.info(string.format('[SCORE] %+d %s', d, tostring(r))) end")
-        for f in ("Menu_Manager.lua", "Comms_Director.lua", "JTAC_Controller.lua"):
+        for f in ("CAS_Pack.lua", "Menu_Manager.lua", "Comms_Director.lua", "JTAC_Controller.lua"):   # v1.4.0 pack first
             src = open(os.path.join(SCRIPTS, f), encoding="utf-8").read()
             ok = lua.eval("function(s, n) local f, e = load(s, '@' .. n); if not f then return e end "
                           "local ok, err = pcall(f); return ok and 'OK' or tostring(err) end")(src, f)

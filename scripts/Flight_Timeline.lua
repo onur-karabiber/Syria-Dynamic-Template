@@ -1,4 +1,6 @@
--- Flight_Timeline | v1.3.0
+-- Flight_Timeline | v1.3.1
+-- v1.3.1 (2026-11-04): hero group, carrier, CP name / route point name / fallback position from CAS_PACK
+--         (scripts/CAS_Pack.lua) when it is loaded; the literals below remain the defaults without a pack.
 -- v1.3.0 (tasking scenarios, Comms_Director >= v1.8.0): VUL END (T3) = every tasking ended (CD.vulDone / vulT), in
 --   any order, not "JTAC-2 target dead"; the VUL END plan is moved by CD.vulExtS (C2-directed delay: B hold at CP
 --   TIGER, C partial Pointer work before OVERLORD's divert) - not the pilot's doing, like the threat / tanker credit.
@@ -90,15 +92,16 @@ if TRT.TL then
     return
 end
 
+local PK = type(_G.CAS_PACK) == "table" and _G.CAS_PACK or { cp = { pos = {} } }   -- v1.3.1
 local CFG = {
-    VERSION        = "1.3.0",
+    VERSION        = "1.3.1",
     PLAYER_UNIT    = TRT.PLAYER_NAME or "Player_01",
-    GROUP          = "CAS-1",          -- ME group whose route builds the ATO
-    CARRIER        = "CVN",
-    CP_WP_NAME     = "Contact JTAC",   -- ME route point name of the CP (fallback: last route point)
-    CP_NAME        = "CP TIGER",
+    GROUP          = PK.group or "CAS-1",               -- ME group whose route builds the ATO
+    CARRIER        = PK.carrier or "CVN",
+    CP_WP_NAME     = PK.cp.wp_name or "Contact JTAC",   -- ME route point name of the CP (fallback: last route point)
+    CP_NAME        = PK.cp.name or "CP TIGER",
     CP_ETE_FALLBACK = 2460,            -- s, used only if the route cannot be read
-    CP_POS_FALLBACK = { x = 73640, z = -39914 },
+    CP_POS_FALLBACK = { x = PK.cp.pos.x or 73640, z = PK.cp.pos.z or -39914 },
 
     SCORING        = true,             -- v1.2.0 live (v1.0.0-v1.1.6: shadow, log + text only)
     SHADOW_MSG     = true,             -- show "[TL shadow]" lines on screen
