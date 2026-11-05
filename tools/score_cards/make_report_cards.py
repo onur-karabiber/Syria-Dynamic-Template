@@ -1,4 +1,5 @@
-# make_report_cards.py | v1.4.2
+# make_report_cards.py | v1.4.3
+# v1.4.3: comment uses the 2026-11-05 mission name (SEA2STEEL).
 # v1.4.2: (Onur 2026-11-02, after the TEST-VIS flight) metal bezel removed: the panels stand on their own on the
 #         transparent canvas; badges 15 % larger (art 116 -> 134 px), the card ends at CARD_B 568.
 # v1.4.1: long-grade glyph names "dash" / "dot" (were "m" / "d": lx_m_ vs lx_M_ collide on case-insensitive
@@ -36,7 +37,7 @@
 # Dot-matrix / scanline grids are anchored to canvas pixels, so separate layers line up.
 # Preview: out/preview/report_preview.png (+ report_preview_bg.png on a backdrop; not packed).
 # Usage: python tools/score_cards/make_report_cards.py [--out DIR]   (Pillow, numpy; default DIR =
-#        src/FlightReport, the template's copy; tools/sync_missions.py copies it into CAS (L))
+#        src/FlightReport, the template's copy; tools/sync_missions.py copies it into SEA2STEEL)
 
 import os
 import re

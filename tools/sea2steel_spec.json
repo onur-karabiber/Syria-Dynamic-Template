@@ -1,5 +1,5 @@
 {
- "_comment": "make_cas_l.py spec. Close Air Support (L) = template minus these. Edit by hand; known_groups = every template group at the last --init-spec / --accept-new.",
+ "_comment": "make_sea2steel.py spec. SEA2STEEL = template minus these. Edit by hand; known_groups = every template group at the last --init-spec / --accept-new.",
  "delete_groups": [
   "ATC DAN (30AM32a)-1",
   "ATC DAN (5MJ)-1",

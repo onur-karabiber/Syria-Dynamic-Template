@@ -1,4 +1,4 @@
-# pilot_banter — the pilot talking to himself (CAS (L) only)
+# pilot_banter — the pilot talking to himself (SEA2STEEL only)
 
 `scripts/Pilot_Banter.lua` (v2.0.0) plays cockpit lines with `outSoundForGroup` (no radio). Not part
 of the template build: the clips live here, not in `src/Sounds`.
@@ -35,7 +35,7 @@ F10 › INFO › **Pilot thoughts** › Off / Quiet / Normal / Chatty.
 ```
 python tools/pilot_banter/make_pb_values.py
 python tts/make_clips.py --set pb --missing
-python tools/pilot_banter/install_pilot_banter.py "<Saved Games>/DCS/Missions/Syria Dynamic Template/Close Air Support (L).miz"
+python tools/pilot_banter/install_pilot_banter.py "<Saved Games>/DCS/Missions/Syria Dynamic Template/SEA2STEEL.miz"
 ```
 
 `--missing` renders only clips without an `.ogg`; drop it after changing the voice or the chain.

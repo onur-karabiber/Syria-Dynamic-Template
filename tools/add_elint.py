@@ -1,6 +1,7 @@
-# add_elint.py | v1.0.0
+# add_elint.py | v1.0.1
+# v1.0.1: usage example uses the 2026-11-05 mission names (SEA2STEEL.miz / SEA2STEEL_HOUND.miz).
 # Writes a COPY of a .miz with Hound ELINT wired in; the source .miz is not touched.
-#   python tools/add_elint.py "<...>/Close Air Support (L).miz" "<...>/Close Air Support (L) HOUND.miz"
+#   python tools/add_elint.py "<...>/SEA2STEEL.miz" "<...>/SEA2STEEL_HOUND.miz"
 # What the copy gets:
 #   * two "Do Script File" actions at the end of the mission-start trigger that loads Core_Scoring.lua:
 #     HoundElint_0.5.2.lua, then Elint_Init.lua (files from scripts/ into l10n/DEFAULT/, keys in

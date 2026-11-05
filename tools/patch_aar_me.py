@@ -1,4 +1,5 @@
-# patch_aar_me.py | v1.0.0
+# patch_aar_me.py | v1.0.1
+# v1.0.1: comment names the 2026-11-05 mission name (SEA2STEEL).
 # Mission Editor changes from the AAR plan (project doc claude/aar-plan-2026-10-30.md,
 # sections 12 and 16). Idempotent: a second run reports "no change".
 #
@@ -10,7 +11,7 @@
 #   2. Player_01: COMM1 preset 8 = 252.3 AM (ARCO 31, recovery tanker TANKER-3).
 #
 #   python tools/patch_aar_me.py --src [--dry-run]          # src/mission (Template, then build.py)
-#   python tools/patch_aar_me.py "<path>.miz" [--dry-run]   # a .miz IN PLACE (CAS (L)),
+#   python tools/patch_aar_me.py "<path>.miz" [--dry-run]   # a .miz IN PLACE (SEA2STEEL),
 #                                                            # backup -> <dir>/BackUps/<name>_before-aar-me-<stamp>.miz
 # The .miz path rewrites only the 'mission' entry (key-sorted, as extract.py writes it);
 # every other archive entry is copied unchanged.

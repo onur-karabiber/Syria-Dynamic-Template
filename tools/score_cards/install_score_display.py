@@ -1,7 +1,8 @@
-# install_score_display.py | v1.2.1
+# install_score_display.py | v1.2.2
+# v1.2.2: usage example uses the 2026-11-05 mission name (SEA2STEEL.miz).
 # Installs / updates Score_Display in a .miz IN PLACE, after a backup.
 #
-#   python tools/score_cards/install_score_display.py "<path>/Close Air Support (L).miz"
+#   python tools/score_cards/install_score_display.py "<path>/SEA2STEEL.miz"
 #
 #   1. backup  -> <dir>/BackUps/<name>_before-SD-<version>.miz; v1.2.1: if that exists
 #                 (asset-only update, same script version) -> ..._before-SD-<version>-2.miz, -3 ...

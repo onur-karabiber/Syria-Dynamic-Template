@@ -19,5 +19,5 @@ src/l10n/DEFAULT/*.lua
 tts/voices/
 
 # Third-party charts (Jeppesen etc., copyright) stay local: kneeboard pages only, never pushed to the public repo
-kneeboard/cas_l_static/*_LCRA_*
+kneeboard/sea2steel_static/*_LCRA_*
 src/KNEEBOARD/IMAGES/*_LCRA_*

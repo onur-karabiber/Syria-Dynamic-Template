@@ -1,4 +1,5 @@
-# make_cards.py | v0.5.1
+# make_cards.py | v0.5.2
+# v0.5.2: comment uses the 2026-11-05 mission name (SEA2STEEL).
 # v0.5.1: total as large as the large screen allows (Onur 2026-11-02), one set per length, all centred on
 #         (165, 213.5) and clear of the small screen (outer edge x 287, top y 197): crt_t2 (1-2 chars, ink 149),
 #         crt_t3 (3 chars, ink 99), crt_t (4 chars, ink 76). Score_Display >= v1.2.7 picks the set by length.
@@ -20,7 +21,7 @@
 # v0.2.0: Onur's "CRT borderless" art (green phosphor, 2026-10-28): CRT 1254x1254,
 #         medal 1333x1180; boxes re-measured; digits green (total), bright green (+),
 #         red (-); medal digits phosphor green.
-# Score card asset generator for Score_Display (CAS (L) only).
+# Score card asset generator for Score_Display (SEA2STEEL only).
 #
 # Output (out/ScoreCards/):
 #   crt_frame.png               CRT card frame (shown on every score change)

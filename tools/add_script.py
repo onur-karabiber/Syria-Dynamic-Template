@@ -1,4 +1,5 @@
-# add_script.py | v1.1.0
+# add_script.py | v1.1.1
+# v1.1.1: usage example uses the 2026-11-05 mission name (SEA2STEEL.miz).
 # v1.1.0 (2026-11-04): --after <script.lua> inserts the action right after that script's action, in that script's
 #         trigger (e.g. CAS_Pack.lua after mist_4_5_126.lua in the MOOSE trigger); without it: end of the trigger
 #         that loads Core_Scoring.lua, as before.
@@ -6,7 +7,7 @@
 # that loads Core_Scoring.lua (appended at its end), in either
 #   * the unpacked template:  python tools/add_script.py --src Missile_Defense.lua
 #       -> edits src/mission + src/l10n/DEFAULT/mapResource (then: python build.py)
-#   * a .miz in place:        python tools/add_script.py --miz "<...>/Close Air Support (L).miz" Missile_Defense.lua
+#   * a .miz in place:        python tools/add_script.py --miz "<...>/SEA2STEEL.miz" Missile_Defense.lua
 #       -> backup BackUps/<name>_before-add-<script>-<YYYYmmdd-HHMMSS>.miz, then the
 #          action, the mapResource key and l10n/DEFAULT/<script> from scripts/
 # Refuses when the script is already referenced (updates: build.py / refresh_scripts.py).

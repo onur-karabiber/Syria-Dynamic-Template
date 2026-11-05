@@ -1,11 +1,12 @@
-# strip_native_jtac.py | v1.1.0
+# strip_native_jtac.py | v1.1.1
+# v1.1.1: usage example uses the 2026-11-05 mission name (SEA2STEEL.miz).
 # v1.1.0: plane and helicopter groups too (FAC-1 MQ-9, JTAC roster P3); their Orbit / other route tasks stay.
 # Removes the native DCS JTAC tasks (FAC, FAC_AttackGroup, FAC_EngageGroup, FAC_AttackUnit)
 # from the route tasks of the named ground groups, so that JTAC_Controller is the only JTAC
 # talking on their frequencies (plan claude/jtac-plan-2026-10-29.md, J2). Other route tasks
 # (SetInvisible / SetImmortal / ROE wrapped actions) are kept and renumbered.
 #
-#   python tools/strip_native_jtac.py --miz "<...>/Close Air Support (L).miz" JTAC-1 JTAC-2 [--dry-run]
+#   python tools/strip_native_jtac.py --miz "<...>/SEA2STEEL.miz" JTAC-1 JTAC-2 [--dry-run]
 #       -> backup BackUps/<name>_before-strip-jtac-<YYYYmmdd-HHMMSS>.miz, then the edited mission
 #   python tools/strip_native_jtac.py --src JTAC-1 JTAC-2 [--dry-run]
 #       -> edits src/mission (then: python build.py)

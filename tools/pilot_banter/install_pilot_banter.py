@@ -1,9 +1,10 @@
-# install_pilot_banter.py | v1.1.0
+# install_pilot_banter.py | v1.1.1
+# v1.1.1: comments use the 2026-11-05 mission name (SEA2STEEL.miz).
 # v1.1.0: also installs Sounds/PBO/*.ogg (Pilot_Banter v2.1.0 oxygen breathing, CFG.OXY) from out/Sounds/PBO/;
 #         checks that CFG.OXY.N matches the oxy_breath_NN.ogg files there.
-# Installs / updates Pilot_Banter in a .miz IN PLACE, after a backup (CAS (L) only).
+# Installs / updates Pilot_Banter in a .miz IN PLACE, after a backup (SEA2STEEL only).
 #
-#   python tools/pilot_banter/install_pilot_banter.py "<path>/Close Air Support (L).miz"
+#   python tools/pilot_banter/install_pilot_banter.py "<path>/SEA2STEEL.miz"
 #
 #   0. checks   -> every AUDIO key in scripts/Pilot_Banter.lua has an .ogg in
 #                  out/Sounds/PB/ and every .ogg there has an AUDIO key

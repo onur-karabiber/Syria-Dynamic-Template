@@ -1,16 +1,20 @@
-# make_cas_l.py | v1.0.1
+# make_sea2steel.py | v1.1.0
+# v1.1.0 (2026-11-05, naming decision Onur): renamed from tools/make_cas_l.py (spec tools/cas_l_spec.json ->
+#         tools/sea2steel_spec.json); the flight "Close Air Support (L)" is now SEA2STEEL.miz, display name
+#         "Sea to Steel". The generated mission's sortie name (briefing title) is set to SORTIE; --check compares
+#         the dictionary against the generated one (with that sortie), not against the template's.
 # v1.0.1: --accept-new also takes an unpacked mission file (src/mission).
-# Generates "Close Air Support (L).miz" from the template .miz (decision Onur 2026-11-04 03:12: CAS (L) becomes a
+# Generates "SEA2STEEL.miz" from the template .miz (decision Onur 2026-11-04 03:12: CAS (L) becomes a
 # generated file like the HOUND variants; src/ is the only Mission Editor source). Before v1.0.0 CAS (L) was an
 # own mission edited in its own ME session, and its ME layer drifted from the template (audit 2026-11-04, project
 # doc claude/sync-audit-2026-11-04.md).
 #
-#   python tools/make_cas_l.py --init-spec <template.miz> <cas.miz>     # once: derive tools/cas_l_spec.json
-#   python tools/make_cas_l.py <template.miz> <out.miz>                 # generate
-#   python tools/make_cas_l.py --check <template.miz> <cas.miz>         # 0 if <cas.miz> == generate(<template.miz>)
-#   python tools/make_cas_l.py --accept-new                             # NEW template groups -> known_groups
+#   python tools/make_sea2steel.py --init-spec <template.miz> <cas.miz>     # once: derive tools/sea2steel_spec.json
+#   python tools/make_sea2steel.py <template.miz> <out.miz>                 # generate
+#   python tools/make_sea2steel.py --check <template.miz> <cas.miz>         # 0 if <cas.miz> == generate(<template.miz>)
+#   python tools/make_sea2steel.py --accept-new                             # NEW template groups -> known_groups
 #
-# CAS (L) = template minus (tools/cas_l_spec.json):
+# SEA2STEEL = template minus (tools/sea2steel_spec.json), sortie name = SORTIE:
 #   delete_groups    groups by name (RAT / civil traffic, base patrols, ambient units ...)
 #   delete_triggers  trigger comments, "comment#n" = n-th trigger with that comment (duplicates)
 #   delete_zones     trigger zones by name (ambient radio / ATIS / salute zones ...)
@@ -18,7 +22,7 @@
 # Derived, not listed: warehouses of deleted units; mapResource entries and l10n/DEFAULT files no kept content
 # references (RAT scripts, ambient radio / ATIS clips). The dictionary is kept whole (unreferenced keys are inert).
 # Trigger indices are renumbered in trigrules and in the compiled trig strings (mission.trig.func[i] ...).
-# Template groups that are in neither delete_groups nor known_groups are NEW: they go into CAS (L) and are reported;
+# Template groups that are in neither delete_groups nor known_groups are NEW: they go into SEA2STEEL and are reported;
 # delete them (add to delete_groups) or accept them (--accept-new).
 # Checks before writing: every unit / group / zone id referenced by kept triggers, kept routes (linkUnit, helipadId,
 # task groupId / unitId) exists. Ignored in --check: map view, currentKey, maxDictId, options (audio device ids),
@@ -37,7 +41,8 @@ REPO = os.path.abspath(os.path.join(HERE, ".."))
 sys.path.insert(0, REPO)
 import dcslua  # noqa: E402
 
-SPEC = os.path.join(HERE, "cas_l_spec.json")
+SPEC = os.path.join(HERE, "sea2steel_spec.json")
+SORTIE = "Sea to Steel"   # v1.1.0: display name of the flight (mission sortie / briefing title)
 CATS = (b"plane", b"helicopter", b"vehicle", b"ship", b"static")
 MAPRES = "l10n/DEFAULT/mapResource"
 DICT = "l10n/DEFAULT/dictionary"
@@ -212,8 +217,17 @@ def generate(tpl_path, spec, report):
     report["dropped_files"] = sorted(drop_files)
     report["triggers"] = (len(keys), len(kept))
     report["groups_deleted"] = len(deleted_groups)
+    # v1.1.0: sortie name. The ME stores it as a dictionary key (DictKey_sortie_n); a literal is set directly.
+    dname, dct = read(zt, DICT)
+    dct = copy.deepcopy(dct)
+    sk = m.get(b"sortie")
+    if isinstance(sk, bytes) and sk in dct:
+        dct[sk] = SORTIE.encode("utf-8")
+    else:
+        m[b"sortie"] = SORTIE.encode("utf-8")
+    report["sortie"] = SORTIE
     out = {"mission": dcslua.dump(S(name), m), "warehouses": dcslua.dump(S(wname), w),
-           MAPRES: dcslua.dump(S(mname), mr2)}
+           MAPRES: dcslua.dump(S(mname), mr2), DICT: dcslua.dump(S(dname), dct)}
     return zt, out, drop_files
 
 
@@ -274,8 +288,9 @@ def check(tpl, cas, spec):
                              "\n    ".join(x[:150] for x in dl[:40]))
             else:
                 diffs.append(k + " differs")
-    # dictionary: every key the CAS has must exist with the same value in the template
-    _, dt = read(zt, DICT)
+    # dictionary: every key the CAS has must exist with the same value in the generated one (v1.1.0: was the
+    # template's; the generated dictionary differs only in the sortie name)
+    _, dt = dcslua.parse(out[DICT])
     _, dc = read(zc, DICT)
     bad = [k for k in dc if dt.get(k) != dc[k]]
     if bad:
@@ -296,11 +311,11 @@ def init_spec(tpl, cas):
     tkeys = [k for _, k in trig_keys(t)]
     it = iter(tkeys)
     if not all(k in it for k in ckeys):
-        raise SystemExit("CAS (L) triggers are not an ordered subset of the template's")
+        raise SystemExit("SEA2STEEL triggers are not an ordered subset of the template's")
     cz = set(S(z[b"name"]) for z in c[b"triggers"][b"zones"].values())
     cd = set((S(l[b"name"]), S(o.get(b"name"))) for _, l, _, o in drawing_objs(c))
     spec = {
-        "_comment": "make_cas_l.py spec. Close Air Support (L) = template minus these. Edit by hand; "
+        "_comment": "make_sea2steel.py spec. SEA2STEEL = template minus these. Edit by hand; "
                     "known_groups = every template group at the last --init-spec / --accept-new.",
         "delete_groups": sorted(n for n in tgn if n not in cg),
         "delete_triggers": [k for k in tkeys if k not in set(ckeys)],
@@ -360,7 +375,7 @@ def main():
     for k, v in rep.items():
         print("%s: %s" % (k, v))
     if rep["new_groups"]:
-        print("NOTE: %d NEW template group(s) included in CAS (L): %s  (delete_groups or --accept-new)"
+        print("NOTE: %d NEW template group(s) included in SEA2STEEL: %s  (delete_groups or --accept-new)"
               % (len(rep["new_groups"]), rep["new_groups"][:20]))
     write(zt, out, drop, a.paths[1])
     print("written: %s" % a.paths[1])

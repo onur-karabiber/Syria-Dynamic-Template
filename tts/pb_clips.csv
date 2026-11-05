@@ -1,4 +1,4 @@
-# pb_clips.csv | Pilot_Banter (CAS (L) only) - the pilot talking to himself
+# pb_clips.csv | Pilot_Banter (SEA2STEEL only) - the pilot talking to himself
 # id;voice;spoken text
 #
 # Render:  python tts/make_clips.py --set pb

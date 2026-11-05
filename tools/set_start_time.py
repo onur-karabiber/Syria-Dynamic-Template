@@ -1,10 +1,11 @@
-# set_start_time.py | v1.0.0
+# set_start_time.py | v1.0.1
+# v1.0.1: usage example uses the 2026-11-05 mission name (SEA2STEEL.miz).
 # Sets the mission start time (top-level ["start_time"], seconds after local midnight) in a .miz IN PLACE
 # after a backup, or in a plain mission file (src/mission). Nothing else is touched; the top-level key is
 # matched as exactly one tab of indentation, so unit/group "start_time" fields stay as they are.
 # Waypoint times (ETA) and trigger times in DCS are relative to the mission start, so they move with it.
 #
-#   python tools/set_start_time.py "<...>/Close Air Support (L).miz" 06:00
+#   python tools/set_start_time.py "<...>/SEA2STEEL.miz" 06:00
 #   python tools/set_start_time.py src/mission 06:00
 #   backup (.miz only) -> <dir>/BackUps/<name>_before-start-HHMM-<YYYYmmdd-HHMMSS>.miz
 import datetime, os, re, shutil, sys, zipfile

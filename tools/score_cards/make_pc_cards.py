@@ -1,7 +1,8 @@
-# make_pc_cards.py | v1.2.0
+# make_pc_cards.py | v1.2.1
+# v1.2.1: comment uses the 2026-11-05 mission name (SEA2STEEL).
 # v1.2.0: --suffix S (e.g. _CRT_borderless): reads <id><S>_corrected.png if present, else
 #         <id><S>.png (Onur's CRT cards 2026-10-28, C8 has a _corrected copy).
-# Plane captain step cards for PlaneCaptain_Carrier (via Score_Display, CAS (L) only).
+# Plane captain step cards for PlaneCaptain_Carrier (via Score_Display, SEA2STEEL only).
 #
 #   python tools/score_cards/make_pc_cards.py "<Saved Games>/DCS/Missions/Syria Dynamic Template/Pics"
 #

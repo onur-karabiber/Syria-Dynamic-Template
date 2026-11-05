@@ -1,11 +1,12 @@
-# make_test_miz.py | v0.1.3
+# make_test_miz.py | v0.1.4
+# v0.1.4 (2026-11-05): usage example uses the mission name SEA2STEEL.miz.
 # v0.1.3 (2026-10-28): LEGACY. Moved to tools/score_cards/legacy/ with
 #   scripts/legacy/Score_Display_Test.lua; paths updated. Test .miz copies deleted.
 # Builds a throwaway test copy of a mission with the score-card assets and
 # Score_Display_Test.lua. The source .miz is only read, never written.
 #
-#   python tools/score_cards/legacy/make_test_miz.py "<path>/Close Air Support (L).miz"
-#   -> "<path>/Close Air Support (L)_ScoreCardTest.miz"   (optional 2nd arg: output path)
+#   python tools/score_cards/legacy/make_test_miz.py "<path>/SEA2STEEL.miz"
+#   -> "<path>/SEA2STEEL_ScoreCardTest.miz"   (optional 2nd arg: output path)
 #
 # Packs:
 #   ScoreCards/*.png              (out/ScoreCards + out/test/sc_test_root.png)

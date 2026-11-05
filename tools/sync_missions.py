@@ -1,4 +1,8 @@
-# sync_missions.py | v1.4.1
+# sync_missions.py | v1.5.0
+# v1.5.0 (2026-11-05, naming decision Onur, rule <CODE>[_<VARIANT>].miz, no versions in file names):
+#         "Syria_Dynamic_Template HOUND.miz" -> SDT_HOUND.miz, "Close Air Support (L).miz" -> SEA2STEEL.miz,
+#         "Close Air Support (L) HOUND.miz" -> SEA2STEEL_HOUND.miz; the template keeps Syria_Dynamic_Template.miz.
+#         tools/make_cas_l.py -> tools/make_sea2steel.py. Step names / options (cas, --force-cas ...) unchanged.
 # v1.4.1: guards run tools/check_pack.py first (CAS_Pack.lua vs src/mission: names, CP, COMM presets; voiced values
 #         vs the rendered clips) and stop on an error.
 # v1.4.0: CAS (L) is GENERATED from the template (tools/make_cas_l.py, decision Onur 2026-11-04 03:12). The cas
@@ -20,10 +24,10 @@
 #         refresh_scripts.py >= v1.4.0); "Not covered" below no longer applies to them.
 # Keeps the four parallel missions in step (decisions Onur 2026-11-02 / 2026-11-04):
 #   Syria_Dynamic_Template.miz          <- built from src/ + scripts/ (build.py)
-#   Syria_Dynamic_Template HOUND.miz    <- GENERATED: template + Hound ELINT (tools/add_elint.py)
-#   Close Air Support (L).miz           <- GENERATED (v1.4.0): template minus tools/cas_l_spec.json (no RAT /
-#                                          ambient radios ...), tools/make_cas_l.py
-#   Close Air Support (L) HOUND.miz     <- GENERATED: CAS (L) + Hound ELINT (tools/add_elint.py)
+#   SDT_HOUND.miz                       <- GENERATED: template + Hound ELINT (tools/add_elint.py)
+#   SEA2STEEL.miz                       <- GENERATED (v1.4.0): template minus tools/sea2steel_spec.json (no RAT /
+#                                          ambient radios ...), tools/make_sea2steel.py; sortie "Sea to Steel"
+#   SEA2STEEL_HOUND.miz                 <- GENERATED: SEA2STEEL + Hound ELINT (tools/add_elint.py)
 #
 #   python tools/sync_missions.py            # all four
 #   python tools/sync_missions.py --dry-run  # report only (build to build/ only, refresh dry run)
@@ -38,11 +42,11 @@
 #      Tower positions belong in tools/add_elint.py TOWERS, not in a HOUND .miz.
 #   2. python build.py  (its copy guard refuses when the deployed template has unextracted ME edits)
 #   3. HOUND: old file -> BackUps/<name>_before-sync-<UTC time>.miz, then add_elint(template, HOUND)
-#   4. CAS (L): old file -> BackUps/<name>_before-sync-<UTC time>.miz, then make_cas_l(template, CAS (L))
-#   5. CAS (L) HOUND: old file -> BackUps/<name>_before-sync-<UTC time>.miz, then add_elint(CAS (L), CAS HOUND)
-# ME edits go into the template only (src/, via the ME + extract.py); CAS (L) follows on the next sync. New template
-# groups go into CAS (L) too and are reported (tools/make_cas_l.py: delete_groups or --accept-new).
-# Not covered: the TEST variants (tools/make_test_variant.py) are rebuilt separately from CAS (L).
+#   4. SEA2STEEL: old file -> BackUps/<name>_before-sync-<UTC time>.miz, then make_sea2steel(template, SEA2STEEL)
+#   5. SEA2STEEL_HOUND: old file -> BackUps/<name>_before-sync-<UTC time>.miz, then add_elint(SEA2STEEL, SEA2STEEL_HOUND)
+# ME edits go into the template only (src/, via the ME + extract.py); SEA2STEEL follows on the next sync. New template
+# groups go into SEA2STEEL too and are reported (tools/make_sea2steel.py: delete_groups or --accept-new).
+# Not covered: the TEST variants (tools/make_test_variant.py) are rebuilt separately from SEA2STEEL.
 
 import datetime
 import os
@@ -58,9 +62,9 @@ sys.path.insert(0, REPO)
 import config  # noqa: E402
 
 TEMPLATE = config.deployed_miz()
-HOUND = os.path.join(config.MISSIONS_DIR, "Syria_Dynamic_Template HOUND.miz")
-CAS = os.path.join(config.MISSIONS_DIR, "Close Air Support (L).miz")
-CAS_HOUND = os.path.join(config.MISSIONS_DIR, "Close Air Support (L) HOUND.miz")   # v1.2.0
+HOUND = os.path.join(config.MISSIONS_DIR, "SDT_HOUND.miz")                # v1.5.0 names
+CAS = os.path.join(config.MISSIONS_DIR, "SEA2STEEL.miz")
+CAS_HOUND = os.path.join(config.MISSIONS_DIR, "SEA2STEEL_HOUND.miz")      # v1.2.0
 ME_DATA = ["mission", "l10n/DEFAULT/dictionary", "l10n/DEFAULT/mapResource", "options", "warehouses"]
 PY = sys.executable or "python"
 
@@ -78,7 +82,7 @@ def me_data(path):
 
 def hound_guard(hound=None, base=None):
     """True if the HOUND variant is missing or equals add_elint(its deployed base) in its ME data.
-    v1.2.0: generic (template HOUND by default, CAS (L) HOUND with hound=CAS_HOUND, base=CAS)."""
+    v1.2.0: generic (SDT_HOUND by default, SEA2STEEL_HOUND with hound=CAS_HOUND, base=CAS)."""
     hound, base = hound or HOUND, base or TEMPLATE
     if not os.path.isfile(hound):
         return True
@@ -122,10 +126,10 @@ def backup(path, ts):
 
 
 def cas_guard():
-    """v1.4.0: True if CAS (L) is missing or equals make_cas_l(deployed template) in its ME data."""
+    """v1.4.0: True if SEA2STEEL is missing or equals make_sea2steel(deployed template) in its ME data."""
     if not os.path.isfile(CAS):
         return True
-    return run([PY, os.path.join("tools", "make_cas_l.py"), "--check", TEMPLATE, CAS]) == 0
+    return run([PY, os.path.join("tools", "make_sea2steel.py"), "--check", TEMPLATE, CAS]) == 0
 
 
 STEPS = ["guards", "template", "hound", "cas", "cas-hound"]   # v1.3.0
@@ -140,14 +144,14 @@ def step_guards(argv, do_hound, do_cas_hound, do_cas=True):
         print("STOP: tools/check_pack.py found errors (CAS_Pack.lua does not match src/mission).")
         return 2
     if do_hound and "--force-hound" not in argv and not hound_guard():
-        print("STOP: HOUND not regenerated. Move ME edits into tools/add_elint.py, or --force-hound / --skip-hound.")
+        print("STOP: SDT_HOUND not regenerated. Move ME edits into tools/add_elint.py, or --force-hound / --skip-hound.")
         return 2
     if do_cas and "--force-cas" not in argv and not cas_guard():   # v1.4.0
-        print("STOP: CAS (L) differs from make_cas_l(template): it was edited in the ME. Make those edits in the "
+        print("STOP: SEA2STEEL differs from make_sea2steel(template): it was edited in the ME. Make those edits in the "
               "template (src/), or --force-cas / --skip-cas.")
         return 2
     if do_cas_hound and "--force-cas-hound" not in argv and os.path.isfile(CAS) and not hound_guard(CAS_HOUND, CAS):
-        print("STOP: CAS (L) HOUND not regenerated. Move ME edits into CAS (L) or tools/add_elint.py, "
+        print("STOP: SEA2STEEL_HOUND not regenerated. Move ME edits into SEA2STEEL or tools/add_elint.py, "
               "or --force-cas-hound / --skip-cas-hound.")
         return 2
     return 0
@@ -162,7 +166,7 @@ def step_template(argv, dry):
 
 def step_hound(dry, ts):
     if dry:
-        print("dry run: HOUND would be regenerated from %s" % TEMPLATE)
+        print("dry run: SDT_HOUND would be regenerated from %s" % TEMPLATE)
         return 0
     rc = regen_hound(HOUND, TEMPLATE, ts)
     if rc != 0:
@@ -171,15 +175,15 @@ def step_hound(dry, ts):
 
 
 def step_cas(dry, ts):
-    """v1.4.0: CAS (L) = make_cas_l(deployed template)."""
+    """v1.4.0: SEA2STEEL = make_sea2steel(deployed template)."""
     if dry:
-        print("dry run: CAS (L) would be regenerated from %s" % TEMPLATE)
+        print("dry run: SEA2STEEL would be regenerated from %s" % TEMPLATE)
         return 0
     if os.path.isfile(CAS):
         backup(CAS, ts)
-    rc = run([PY, os.path.join("tools", "make_cas_l.py"), TEMPLATE, CAS])
+    rc = run([PY, os.path.join("tools", "make_sea2steel.py"), TEMPLATE, CAS])
     if rc != 0:
-        print("STOP: make_cas_l.py returned %d" % rc)
+        print("STOP: make_sea2steel.py returned %d" % rc)
     return rc
 
 
@@ -187,11 +191,11 @@ def step_cas_hound(dry, ts):
     if not os.path.isfile(CAS):
         return 0
     if dry:
-        print("dry run: CAS (L) HOUND would be regenerated from %s" % CAS)
+        print("dry run: SEA2STEEL_HOUND would be regenerated from %s" % CAS)
         return 0
     rc = regen_hound(CAS_HOUND, CAS, ts)
     if rc != 0:
-        print("STOP: add_elint.py (CAS HOUND) returned %d" % rc)
+        print("STOP: add_elint.py (SEA2STEEL_HOUND) returned %d" % rc)
     return rc
 
 

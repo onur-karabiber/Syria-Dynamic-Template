@@ -1,4 +1,5 @@
-# refresh_scripts.py | v1.4.0
+# refresh_scripts.py | v1.4.1
+# v1.4.1: examples use the 2026-11-05 mission name (SEA2STEEL.miz).
 # v1.4.0: --folder NAME (repeatable) syncs the top-level files of src/NAME/ into NAME/ of the .miz
 #         (changed replaced, new added, files only in the .miz kept): FlightReport, ScoreCards, PlaneCaptain.
 # v1.3.1: --kneeboard is repeatable (generated cards + static pages, e.g. kneeboard/cas_l_static/);
@@ -10,11 +11,11 @@
 # v1.1.0: --sounds <SET> (repeatable) also syncs Sounds/<SET>/*.ogg from src/Sounds/<SET>/
 #         (changed files replaced, new files added; files only in the .miz are kept).
 # Refreshes the embedded Lua scripts of a .miz that build.py does not build
-# (e.g. "Close Air Support (L).miz") from scripts/ (source of truth), IN PLACE,
+# (e.g. a TEST variant) from scripts/ (source of truth), IN PLACE,
 # after a backup. Only .lua files named in l10n/DEFAULT/mapResource are touched;
 # mission, triggers, sounds and pictures are copied unchanged.
 #
-#   python tools/refresh_scripts.py "<path>/Close Air Support (L).miz" [--dry-run]
+#   python tools/refresh_scripts.py "<path>/SEA2STEEL.miz" [--dry-run]
 #
 #   backup -> <dir>/BackUps/<name>_before-refresh-<YYYYmmdd-HHMMSS>.miz
 #   A mapped .lua with no counterpart in scripts/ is reported and left as is.

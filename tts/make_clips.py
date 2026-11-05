@@ -1,4 +1,5 @@
-# make_clips.py | v1.13.0
+# make_clips.py | v1.13.1
+# v1.13.1: comment uses the 2026-11-05 mission name (SEA2STEEL).
 # v1.13.0: voices AXEMAN (AXEMAN 11, JTAC-8) / DARKNIGHT (DARKNIGHT 11, FAC-1 area): libritts-high speakers 825
 #          (male, F0 ~128 Hz) / 625 (female, F0 ~200 Hz). Picked 2026-11-04 out of 60 speakers: one-word token
 #          "eight" not collapsed, then call sign / laser code / grid digits through the radio chain scored by an
@@ -13,7 +14,7 @@
 #            table tts/cv_audio_table.lua -> paste into CV_Comms CFG.AUDIO)
 # LTCC transit: python tts/make_clips.py --set fc (tts/fc_clips.csv -> src/Sounds/FC/,
 #            table tts/fc_audio_table.lua -> paste into Field_Comms CFG.AUDIO)
-# Pilot banter (CAS (L) only): python tts/make_clips.py --set pb
+# Pilot banter (SEA2STEEL only): python tts/make_clips.py --set pb
 #            (tts/pb_clips.csv -> tools/pilot_banter/out/Sounds/PB/, NOT src/Sounds, so the
 #            template build never packs it; the AUDIO block in scripts/Pilot_Banter.lua is
 #            rewritten in place between its BEGIN AUDIO / END AUDIO markers - no paste step)

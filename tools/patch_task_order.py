@@ -1,4 +1,5 @@
-# patch_task_order.py | v1.0.0
+# patch_task_order.py | v1.0.1
+# v1.0.1: comment names the 2026-11-05 mission name (SEA2STEEL).
 # Moves waypoint COMMANDS (WrappedAction: SetUnlimitedFuel, ActivateBeacon, Option ...)
 # ahead of the first long-running main task (Follow, RecoveryTanker, Orbit ...) in the
 # listed groups. DCS runs a waypoint's task list in order and a main task without a
@@ -9,7 +10,7 @@
 # Option, SetUnlimitedFuel). Idempotent: a second run reports "no change".
 #
 #   python tools/patch_task_order.py --src [--dry-run]          # src/mission, then build.py
-#   python tools/patch_task_order.py "<path>.miz" [--dry-run]   # a .miz IN PLACE (CAS (L)),
+#   python tools/patch_task_order.py "<path>.miz" [--dry-run]   # a .miz IN PLACE (SEA2STEEL),
 #                                                                # backup -> <dir>/BackUps/
 # Other groups with the same pattern are only REPORTED (red CAP Options after Orbit):
 # moving them changes adversary behaviour and is a separate decision.

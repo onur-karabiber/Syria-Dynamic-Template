@@ -1,6 +1,6 @@
-# score_cards — picture score cards for CAS (L)
+# score_cards — picture score cards for SEA2STEEL
 
-Status: `Score_Display.lua` v1.0.0 installed in CAS (L) only. Not used by the template build.
+Status: `Score_Display.lua` v1.0.0 installed in SEA2STEEL only. Not used by the template build.
 Test kit moved to legacy 2026-10-28 (`scripts/legacy/Score_Display_Test.lua`, `tools/score_cards/legacy/make_test_miz.py`); test .miz copies deleted.
 
 | File | Role |
@@ -21,10 +21,10 @@ so 1–4 characters stay centred with 7 positions per glyph.
 
 Sets: `crt_t` (CRT total, orange), `crt_dp` / `crt_dn` (CRT delta, green / red, under the total), `med_t` (medal total).
 
-## Install / update (CAS (L))
+## Install / update (SEA2STEEL)
 
 ```
-python tools/score_cards/install_score_display.py "<Saved Games>/DCS/Missions/Syria Dynamic Template/Close Air Support (L).miz"
+python tools/score_cards/install_score_display.py "<Saved Games>/DCS/Missions/Syria Dynamic Template/SEA2STEEL.miz"
 ```
 
 Close the mission in DCS / ME first. Placement, sizes, durations: `CFG` at the top of `scripts/Score_Display.lua`, then re-run the installer.
@@ -39,7 +39,7 @@ Close the mission in DCS / ME first. Placement, sizes, durations: `CFG` at the t
 ## Test run
 
 ```
-python tools/score_cards/legacy/make_test_miz.py "<Saved Games>/DCS/Missions/Syria Dynamic Template/Close Air Support (L).miz"
+python tools/score_cards/legacy/make_test_miz.py "<Saved Games>/DCS/Missions/Syria Dynamic Template/SEA2STEEL.miz"
 ```
 
 In DCS: F10 › Other › INFO › Score card test. Read results from `dcs.log` (`Score_Display_Test |` lines) and what is on screen.

@@ -1,4 +1,6 @@
-# make_test_variant.py | v1.11.1
+# make_test_variant.py | v1.12.0
+# v1.12.0 (2026-11-05, naming rule <CODE>[_<VARIANT>].miz): variants are named "<name>_TEST-<key>[-<tag>].miz"
+#         (was "<name> TEST-..."), e.g. SEA2STEEL_TEST-J1-C.miz.
 # v1.11.1 (= main v1.9.1, 2026-11-04 folder layout): variants are written to the TESTs subfolder next to the
 #          source .miz (created when missing; --out-dir overrides), not next to the source.
 # v1.11.0 (P4): --random-pair (flag 225 = 1: Tasking_Pick draws the tasked pair, equal odds) and --xcas (flag 226 = 1:
@@ -42,11 +44,11 @@
 #         mission (CAS (L)) keeps them in any case. (Flight 2026-10-29: a MiG-23 ended a JTAC test.)
 # Builds air-start TEST copies of a CAS mission so a JTAC change can be flown in minutes instead of
 # an hour. The source .miz is read only; each variant is written NEXT TO it (Missions folder) as
-#   "<name> TEST-J1.miz"  hero 30 NM before CP TIGER on the departure->CP leg, heading to CP
-#   "<name> TEST-J2.miz"  hero over CP TIGER, heading to the JTAC-2 target group (Eyeball 11)
+#   "<name>_TEST-J1.miz"  hero 30 NM before CP TIGER on the departure->CP leg, heading to CP
+#   "<name>_TEST-J2.miz"  hero over CP TIGER, heading to the JTAC-2 target group (Eyeball 11)
 # Never writes inside the repo (.miz files stay out of git).
 #
-#   python tools/make_test_variant.py "<...>/Close Air Support (L).miz" --start J1 J2
+#   python tools/make_test_variant.py "<...>/SEA2STEEL.miz" --start J1 J2
 #          [--alt-ft 24000] [--kt 410] [--nm 30] [--group CAS-1] [--unit Player_01]
 #          [--cp-name "Contact JTAC"] [--j2-target "SAM YE53 (SA-8)-1"]
 #
@@ -385,7 +387,7 @@ def main():
             tag = scen_tag(a)
             odir = a.out_dir or os.path.join(os.path.dirname(src), "TESTs")   # v1.9.1
             os.makedirs(odir, exist_ok=True)
-            out = os.path.join(odir, "%s TEST-%s%s.miz" % (stem, key, ("-" + tag) if tag else ""))
+            out = os.path.join(odir, "%s_TEST-%s%s.miz" % (stem, key, ("-" + tag) if tag else ""))
             buf = io.BytesIO()
             with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zout:
                 for info in zin.infolist():
