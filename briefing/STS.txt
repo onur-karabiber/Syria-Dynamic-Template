@@ -1,0 +1,82 @@
+# briefing/STS.txt - SEA2STEEL.miz / SEA2STEEL_HOUND.miz briefing (applied by tools/make_sea2steel.py >= v1.3.0).
+# Sections: [sortie] [situation] [blue] [red] [neutrals]. Lines starting with '#' are comments. ASCII only.
+# Sources (2026-11-05): scripts/CAS_Pack.lua v1.3.1, kneeboard 01-09 (make_kneeboard v3.11.0), Flight_Timeline
+# v1.3.2 (launch = start + 30 min, VUL 35 min), CAS-1 ME route (CP TIGER = launch + 39.5 min), SAM distances
+# measured in SEA2STEEL.miz (pool target groups -> red SAM groups), SAM_FireGate v1.5.4 ceilings.
+[sortie]
+Sea to Steel
+
+[situation]
+12 MARCH 2017 - EASTERN MEDITERRANEAN / NORTHWEST SYRIA
+
+GENERAL
+USS George Washington (CVN-73) is operating in the eastern Mediterranean, 235 NM southwest of CP TIGER. Coalition ground forces are in contact with hostile armor, artillery, air defenses and insurgent groups inland. Four JTACs are on station this morning. OVERLORD will task HORNET 51 to two of them.
+
+ENEMY AIR DEFENSES (distance from the JTAC area)
+POINTER (BV 62): SA-13 in the area. SA-13 BV 53 11 NM, SA-6 and SA-13 HS 02 14 NM, SA-6 BV 22 18 NM.
+EYEBALL (YE 53): SA-8 in the area. SA-3 YE 53 3 NM, SA-8 YE 55 7 NM, SA-15 / SA-13 / 2S6 at Bassel Al-Assad 10 NM, SA-6 BV 22 10 NM, mobile SA-8 / SA-13 group 15 NM, SA-15 YE 60 18 NM.
+AXEMAN (YE 55): SA-8 in the area. SA-3 and SA-8 YE 53 8 NM, SA-6 BV 22 18 NM.
+DARKNIGHT (BV 53): SA-13 in the area. SA-13 BV 51 11 NM, SA-6 BV 22 17 NM, SA-6 and SA-13 HS 02 18 NM.
+SA-10 YD 67: 33-43 NM from the JTAC areas, in range at medium and high altitude.
+Intel assesses that the SA-3 at YE 53 and the SA-6s at BV 22 and HS 02 engage only below 20,000 ft.
+MANPADS (SA-14, SA-18, SA-24) and ZU-23 at every site and airfield.
+The planned route from Mother to CP TIGER stays at least 17 NM from every known SAM site.
+
+ENEMY AIR
+MiG-23, MiG-29 and Su-27 flights can launch from inland airfields at any time. An A-50 is airborne. OVERLORD calls the picture.
+
+FRIENDLY FORCES
+OVERLORD 11 (E-2C): control, tasking and picture.
+TEXACO 11 (KC-130): theater tanker, YE 0694 6582, FL150, TACAN 21Y.
+ARCO 31 (A-6E): carrier recovery tanker, angels 7, TACAN 23Y.
+BRAVO 2-1 (M2 Bradleys and infantry) is close to the target areas. The JTAC passes its position in line 8.
+DARKNIGHT 11 is a ground team. An MQ-9 (FAC-1) observes and lases for it.
+Friendly fighters (F/A-18C, F-16C, F-15C) fly CAP outside the SAM umbrella.
+
+[blue]
+MISSION
+HORNET 51, a single F/A-18C (side number 467), launches from Mother and provides Type II XCAS with laser-guided weapons to the two JTACs OVERLORD assigns, then tanks and recovers aboard.
+
+LOADOUT
+2x AGM-65E (armor, movers), 4x GBU-12 (stationary, soft), 1x AIM-120, 2x AIM-9M, ATFLIR.
+Laser code 1688 for all JTACs. Set 1688 on the AGM-65E in the cockpit.
+
+TIMELINE (local)
+0600 - Cockpit, cold on deck.
+0630 - Launch, CASE III departure.
+0710 - CP TIGER (YE 1990 4989), 22,000 ft. Optional top-off with TEXACO 11 on the way (AR1).
+VUL - 35 minutes from CP TIGER, extended by the time on the tanker.
+After the last JTAC - INFLTREP to OVERLORD, refuel with TEXACO 11 (AR2), RTB feet wet.
+Recovery - CASE II. Inbound on the 050 radial corridor (035-065). Marshal R-196 / 25 DME / angels 10, EAT from Marshal.
+
+TASKING
+STRIKE hands you off to OVERLORD. 20 NM before CP TIGER, OVERLORD gives the JTAC, its frequency and the mission number; read the mission number back. Hold at CP TIGER, angels 22, if told. The target comes with the JTAC's 9-line and the JTAC picks the weapon. Expect retasking, a divert to troops in contact, or a JTAC who cannot be reached.
+
+RESTRICTIONS
+Hard deck 20,000 ft MSL over every JTAC area (not in transit).
+No weapon release without JTAC clearance.
+Abort code: challenge and reply on kneeboard 06 AUTH.
+IFF Mode 3: 2042. Mode 4 check with STRIKE.
+
+COMMS (COMM1 button - frequency, all AM)
+1 Tower/Paddles 262.000 - 2 Departure 269.000 - 3 Strike 265.000 - 6 OVERLORD 251.100 - 7 TEXACO 252.100 - 8 ARCO 31 252.300 - 15 Approach 263.000 - 16 Marshal 261.000.
+JTACs: buttons 4, 5, 10, 12 (alternates 9, 11, 13, 14), kneeboard 04.
+COMM2: 1 OVERLORD 251.100 (keep it up while working a JTAC on COMM1), 4 range radio 128.300.
+Guard 243.000. Radio calls through F10 > COMMS.
+
+CARRIER
+TACAN 72X WSH, ICLS 12, Link 4 337.000. BRC 355; Marshal gives the live BRC.
+
+DIVERT
+On station: LTAG Incirlik, TACAN 21X, ILS 05 109.3, tower 360.100. Joker 5,900 lb, bingo 4,900 lb.
+Recovery: LCRA Akrotiri, tower 252.000.
+
+WEATHER
+Overcast with rain. Expect a poor ATFLIR picture through the weather.
+
+KNEEBOARD
+01 Admin, 02 Comm, 03 Route, 04 JTAC roster, 05 9-line, 06 Auth, 07 AAR, 08 Fuel, 09 Divert LTAG, 10-12 LTAG / LCRA approach charts.
+
+[red]
+
+[neutrals]

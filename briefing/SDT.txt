@@ -1,0 +1,64 @@
+# briefing/SDT.txt - Syria_Dynamic_Template.miz (and SDT_HOUND.miz) briefing.
+# Apply: python tools/briefing.py SDT   (writes src/l10n/DEFAULT/dictionary), then python build.py / sync_missions.py.
+# Sections: [sortie] [situation] [blue] [red] [neutrals]. Lines starting with '#' are comments. ASCII only.
+# Sources (2026-11-05): src/mission (client slots, group frequencies, beacon tasks, radio transmissions),
+# scripts/CAS_Pack.lua v1.3.1, Airboss_Start.lua (Marshal 261 / LSO 262), kneeboard 08/09 (divert towers).
+[sortie]
+Syria Dynamic Template
+
+[situation]
+SYRIA DYNAMIC TEMPLATE (SDT) - 12 MARCH 2017
+
+SDT is the master mission of this project. Every flight is built here first and then shipped as a light mission of its own, for example SEA2STEEL (Sea to Steel). SDT keeps everything in one file: civil traffic (RAT, CAM), ambient radios, populated bases, the Skynet IADS and every support asset. It is heavier than any flight made from it.
+
+COALITION
+USS George Washington (CVN-73) in the eastern Mediterranean, Incirlik (LTAG) and Diyarbakir airfields, AWACS, tankers and fighter CAP.
+
+HOSTILE
+Skynet IADS with SA-2, SA-3, SA-6, SA-8, SA-10, SA-13, SA-15 and SA-19 sites and early warning radars. Populated bases with MANPADS and AAA. Fighter flights (MiG-23, MiG-29, Su-27, Su-33) launching from inland airfields. A-50 and IL-78 airborne.
+
+[blue]
+PLAYER SLOTS (group / call sign / aircraft / start)
+CAS-1 / HORNET 51 / F/A-18C / CVN-73 deck, cold. The scored hero slot (Player_01), with the CAS-1 kneeboard and scripted comms.
+POP-4 / HORNET 41 / F/A-18C / Incirlik, cold
+TOMCAT-2 / CHEVY 21 / F-14B / Incirlik, cold
+PHANTOM-1 / FORD 11 / F-4E / Incirlik, cold
+POP-3 / VIPER 51 / F-16C / Incirlik, cold
+TIGER-1 / COLT 31 / F-5E / Incirlik, cold
+HORNET-467 / DODGE 11 / F/A-18C / Diyarbakir, hot
+POP-1 / VIPER 31 / F-16C / airborne over Cyprus
+POP-2 / SQUID 11 / F/A-18C / airborne over Cyprus
+SEAD-1 / STING 11 / F/A-18C / airborne off Latakia, 24,000 ft
+Aerial-1 / COLT 11 / F/A-18C / airborne inland, 24,000 ft
+Scoring covers Player_01 only.
+
+CARRIER - CVN-73
+TACAN 72X WSH, ICLS 12, Link 4 337.000, ACLS. DCS carrier ATC is not used; AIRBOSS runs Marshal 261.000 and LSO 262.000. CAS-1 scripted nets: Departure 269.000, Strike 265.000, Approach 263.000.
+CASE II/III Marshal: R-196 / 25 DME / angels 10.
+
+AWACS
+OVERLORD 11, E-2C, 253.100 (DCS AWACS). The scripted OVERLORD of CAS-1 talks on 251.100.
+MAGIC 21, E-3A, 251.200.
+
+TANKERS (frequency / TACAN)
+TEXACO 11, KC-130, 252.100 / 21Y
+ARCO 21, KC-135 MPRS, 252.200 / 22Y
+ARCO 31, A-6E, 252.300 / 23Y (CVN recovery tanker)
+SHELL 41, KC-135, 252.400 / 24Y
+SHELL 61, KC-135, 252.600 / 26Y
+
+JTAC / FAC
+Scripted JTACs of CAS-1 (OVERLORD tasks two per sortie, laser 1688): POINTER 11 333.300, EYEBALL 11 333.400, AXEMAN 11 333.500, DARKNIGHT 11 333.100 (an MQ-9, FAC-1, lases).
+DCS AFAC: UZI 21, MQ-9 (FAC-2), 333.200.
+
+AMBIENT RADIO (listen only, AM)
+Range and ATC recordings: 128.100-129.000 and 266.100-267.100 (0.1 MHz steps), 305.500.
+Incirlik ATIS: 129.750 and 267.200.
+
+DIVERT FIELDS
+Incirlik (LTAG): TACAN 21X, ILS 05 109.3, tower 360.100.
+Akrotiri (LCRA): tower 252.000.
+
+[red]
+
+[neutrals]

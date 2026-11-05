@@ -1,4 +1,12 @@
-# make_sea2steel.py | v1.1.0
+# make_sea2steel.py | v1.3.0
+# v1.3.0 (2026-11-05, Onur: briefing written from scratch): the whole briefing - sortie, situation, BLUE / RED /
+#         NEUTRAL task - comes from briefing/STS.txt (tools/briefing.py), replacing the SORTIE constant of v1.1.0.
+#         --check compares the dictionary against the generated one (with that briefing), as before.
+# v1.2.0 (2026-11-05, Onur): briefing image. assets/STS_poster-square.png (1254x1254, Onur's design) goes into
+#         l10n/DEFAULT/ and is set as the BLUE briefing image and the server-list image (pictureFileNameB,
+#         pictureFileNameServer; one ResKey_ImageBriefing_n per slot, as the ME writes it; maxDictId follows).
+#         Any template image in those slots is replaced. Missing PNG -> stop. SEA2STEEL_HOUND inherits it
+#         (add_elint copies every entry). The template itself gets no image.
 # v1.1.0 (2026-11-05, naming decision Onur): renamed from tools/make_cas_l.py (spec tools/cas_l_spec.json ->
 #         tools/sea2steel_spec.json); the flight "Close Air Support (L)" is now SEA2STEEL.miz, display name
 #         "Sea to Steel". The generated mission's sortie name (briefing title) is set to SORTIE; --check compares
@@ -14,7 +22,7 @@
 #   python tools/make_sea2steel.py --check <template.miz> <cas.miz>         # 0 if <cas.miz> == generate(<template.miz>)
 #   python tools/make_sea2steel.py --accept-new                             # NEW template groups -> known_groups
 #
-# SEA2STEEL = template minus (tools/sea2steel_spec.json), sortie name = SORTIE:
+# SEA2STEEL = template minus (tools/sea2steel_spec.json), briefing = briefing/STS.txt (v1.3.0):
 #   delete_groups    groups by name (RAT / civil traffic, base patrols, ambient units ...)
 #   delete_triggers  trigger comments, "comment#n" = n-th trigger with that comment (duplicates)
 #   delete_zones     trigger zones by name (ambient radio / ATIS / salute zones ...)
@@ -39,10 +47,15 @@ import zipfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(HERE, ".."))
 sys.path.insert(0, REPO)
+sys.path.insert(0, HERE)
 import dcslua  # noqa: E402
+import briefing  # noqa: E402   v1.3.0
+
+BRIEFING = briefing.path_for("STS")   # v1.3.0: sortie + situation + coalition tasks
 
 SPEC = os.path.join(HERE, "sea2steel_spec.json")
-SORTIE = "Sea to Steel"   # v1.1.0: display name of the flight (mission sortie / briefing title)
+IMAGE = os.path.join(REPO, "assets", "STS_poster-square.png")         # v1.2.0
+IMAGE_SLOTS = (b"pictureFileNameB", b"pictureFileNameServer")          # v1.2.0: BLUE briefing + server list
 CATS = (b"plane", b"helicopter", b"vehicle", b"ship", b"static")
 MAPRES = "l10n/DEFAULT/mapResource"
 DICT = "l10n/DEFAULT/dictionary"
@@ -208,8 +221,28 @@ def generate(tpl_path, spec, report):
     wh = w.get(b"warehouses") or {}
     w[b"warehouses"] = {k: v for k, v in wh.items() if k not in deleted_units}
 
-    # mapResource: referenced keys only; l10n files they name
+    # v1.2.0: briefing image. Set before the mapResource filter so a replaced template image is dropped.
     mname, mr = read(zt, MAPRES)
+    mr = copy.deepcopy(mr)
+    dname, dct = read(zt, DICT)
+    dct = copy.deepcopy(dct)
+    if not os.path.isfile(IMAGE):
+        raise SystemExit("briefing image missing: %s" % IMAGE)
+    img_name = os.path.basename(IMAGE)
+    img_arc = "l10n/DEFAULT/" + img_name
+    if img_arc in zt.namelist():
+        raise SystemExit("%s already in the template .miz: rename assets/%s" % (img_arc, img_name))
+    nums = [int(x.group(1)) for k in list(mr) + list(dct) for x in [re.search(rb"_(\d+)$", k)] if x]
+    n = max(nums + [int(m.get(b"maxDictId", 0))])
+    for slot in IMAGE_SLOTS:
+        n += 1
+        key = b"ResKey_ImageBriefing_%d" % n
+        m[slot] = {1: key}
+        mr[key] = img_name.encode("utf-8")
+    m[b"maxDictId"] = n
+    report["briefing_image"] = "%s -> %s" % (img_name, ", ".join(S(x) for x in IMAGE_SLOTS))
+
+    # mapResource: referenced keys only; l10n files they name
     refs = set(re.findall(rb"ResKey_[A-Za-z]+_\d+", dcslua.dump("m", m)))
     mr2 = {k: v for k, v in mr.items() if k in refs}
     keep_files = set("l10n/DEFAULT/" + S(v) for v in mr2.values())
@@ -217,17 +250,16 @@ def generate(tpl_path, spec, report):
     report["dropped_files"] = sorted(drop_files)
     report["triggers"] = (len(keys), len(kept))
     report["groups_deleted"] = len(deleted_groups)
-    # v1.1.0: sortie name. The ME stores it as a dictionary key (DictKey_sortie_n); a literal is set directly.
-    dname, dct = read(zt, DICT)
-    dct = copy.deepcopy(dct)
-    sk = m.get(b"sortie")
-    if isinstance(sk, bytes) and sk in dct:
-        dct[sk] = SORTIE.encode("utf-8")
-    else:
-        m[b"sortie"] = SORTIE.encode("utf-8")
-    report["sortie"] = SORTIE
+    # v1.3.0: briefing (was v1.1.0 sortie name only). DictKey fields -> dictionary, literals -> mission.
+    texts = briefing.parse(BRIEFING)
+    briefing.apply(m, dct, texts)
+    report["sortie"] = texts["sortie"]
+    report["briefing"] = "%s (%s)" % (os.path.relpath(BRIEFING, REPO).replace(os.sep, "/"),
+                                      ", ".join("%s %d ch" % (k, len(v)) for k, v in texts.items() if v))
     out = {"mission": dcslua.dump(S(name), m), "warehouses": dcslua.dump(S(wname), w),
            MAPRES: dcslua.dump(S(mname), mr2), DICT: dcslua.dump(S(dname), dct)}
+    with open(IMAGE, "rb") as f:                                         # v1.2.0
+        out[img_arc] = f.read()
     return zt, out, drop_files
 
 
@@ -238,6 +270,8 @@ def write(zt, out, drop_files, path):
             if info.filename in drop_files:
                 continue
             zo.writestr(info, out[info.filename] if info.filename in out else zt.read(info.filename))
+        for name in sorted(set(out) - set(zt.namelist())):             # v1.2.0: added entries (briefing image)
+            zo.writestr(name, out[name])
     with zipfile.ZipFile(tmp) as t:
         bad = t.testzip()
         if bad:
@@ -263,7 +297,7 @@ def semantic(files):
 
 def zip_files(z, out=None, drop=()):
     f = {n: (out or {}).get(n) or z.read(n) for n in ("mission", "warehouses", MAPRES)}
-    f["entries"] = sorted(n for n in z.namelist() if n not in drop)
+    f["entries"] = sorted((set(z.namelist()) | set(out or {})) - set(drop))   # v1.2.0: + added entries
     return f
 
 
