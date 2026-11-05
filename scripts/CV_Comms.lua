@@ -1,4 +1,6 @@
--- CV_Comms | v1.7.9
+-- CV_Comms | v1.8.0
+-- v1.8.0: (Into The Grey P1) TRT.CFG_OVERRIDE.CV_Comms = { KEY = value, AUDIO = { id = false } } from a mission pack
+--         replaces CFG keys (ITG: RTANKER = Arco 51); AUDIO id = false drops a clip (text only). SDT / SEA2STEEL: none.
 -- v1.7.9: (TEST-J1-A-TSK34 flight 2026-11-04, Onur: radio calls overlapped at the start of the sortie) the "99,
 --         Mother is now CASE N" announcement waits while the hero is airborne beyond CFG.ANN99_NM (60 NM) from the
 --         ship - he is on the CAS-1 nets then, not on Marshal - and goes out when he comes inside that range
@@ -290,7 +292,7 @@
 --  CONFIG
 -- ══════════════════════════════════════════════════════════════
 local CFG = {
-    VERSION      = "1.7.9",   -- (was left at 1.7.7 in v1.7.8)
+    VERSION      = "1.8.0",   -- (was left at 1.7.7 in v1.7.8)
     ANN99_NM     = 60,          -- v1.7.9 case-change 99 call held while the hero is farther
     PLAYER_UNIT  = "Player_01",
     CARRIER_UNIT = "CVN",
@@ -576,6 +578,25 @@ local CFG = {
         ["LSO-PaddlesContact"] = true,
     },
 }
+
+-- v1.8.0 (2026-11-05, Into The Grey P1): mission pack overrides. TRT.CFG_OVERRIDE.CV_Comms = { KEY = value, ... }
+--   replaces CFG.KEY; AUDIO = { id = false | {...} } drops / replaces single clips. Nothing set (SDT / SEA2STEEL): no change.
+do
+    local o = (((_G.TRT or {}).CFG_OVERRIDE) or {}).CV_Comms
+    if type(o) == "table" then
+        local keys = {}
+        for k, v in pairs(o) do
+            if k == "AUDIO" and type(v) == "table" and type(CFG.AUDIO) == "table" then
+                for id, a in pairs(v) do CFG.AUDIO[id] = a or nil end
+            else
+                CFG[k] = v
+            end
+            keys[#keys + 1] = tostring(k)
+        end
+        table.sort(keys)
+        env.info("CV_Comms | mission overrides: " .. table.concat(keys, ", "))
+    end
+end
 
 -- ══════════════════════════════════════════════════════════════
 --  STATE

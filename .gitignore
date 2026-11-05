@@ -21,3 +21,11 @@ tts/voices/
 # Third-party charts (Jeppesen etc., copyright) stay local: kneeboard pages only, never pushed to the public repo
 kneeboard/sea2steel_static/*_LCRA_*
 src/KNEEBOARD/IMAGES/*_LCRA_*
+
+# Into The Grey (2026-11-05): ITG audio / pictures are recordings, music and third-party radio clips -> local only,
+# packed by build.py --mission ITG when present on disk. The old MOOSE copy (9.7 MB) stays local until P1 replaces it.
+missions/ITG/src/l10n/DEFAULT/*.ogg
+missions/ITG/src/l10n/DEFAULT/*.png
+missions/ITG/scripts/legacy/Moose.lua
+# ITG kneeboard: LTAG / CASE III chart scans (.jpg) are third-party -> local only, like the LCRA charts
+missions/ITG/src/KNEEBOARD/**/*.jpg

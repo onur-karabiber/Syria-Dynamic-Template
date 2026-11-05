@@ -1,4 +1,6 @@
--- AAR_Monitor | v1.1.5
+-- AAR_Monitor | v1.1.6
+-- v1.1.6: (Into The Grey P1) TRT.CFG_OVERRIDE.AAR_Monitor = { KEY = value } from a mission pack replaces CFG keys
+--         (ITG: TANKERS = Texaco 11 + Arco 51). SDT / SEA2STEEL: none.
 -- v1.1.5: CONTACT_CLOS row (Onur, 2026-10-31): the highest closure measured at S_EVENT_REFUELING over the session's
 --   contacts <= CONTACT_CLOS_KT (5 kt) +1, else -1 [A1-F18AC-NFM-000 9.2.2.1: "minimum closure rate on the drogue
 --   not to exceed 5 knots"]. Closure = 3-D relative velocity along the line of sight at the event tick.
@@ -72,7 +74,7 @@ if TRT.AAR then
 end
 
 local CFG = {
-    VERSION      = "1.1.5",
+    VERSION      = "1.1.6",
     PLAYER_UNIT  = TRT.PLAYER_NAME or "Player_01",
     TANKERS      = { "TANKER-1-1",       -- unit names; the nearest existing (eligible) one is used
                      { unit = "TANKER-3-1", kind = "RECOVERY" } },   -- v1.1.4 Arco 31, only while TRT.CV.tanking
@@ -110,6 +112,25 @@ local CFG = {
     CAP_MIN = -10, CAP_MAX = 10,
     FLAGS = { CONTACT = 3200, DONE = 3201 },
 }
+
+-- v1.1.6 (2026-11-05, Into The Grey P1): mission pack overrides. TRT.CFG_OVERRIDE.AAR_Monitor = { KEY = value, ... }
+--   replaces CFG.KEY. Nothing set (SDT / SEA2STEEL): no change.
+do
+    local o = (((_G.TRT or {}).CFG_OVERRIDE) or {}).AAR_Monitor
+    if type(o) == "table" then
+        local keys = {}
+        for k, v in pairs(o) do
+            if k == "AUDIO" and type(v) == "table" and type(CFG.AUDIO) == "table" then
+                for id, a in pairs(v) do CFG.AUDIO[id] = a or nil end
+            else
+                CFG[k] = v
+            end
+            keys[#keys + 1] = tostring(k)
+        end
+        table.sort(keys)
+        env.info("AAR_Monitor | mission overrides: " .. table.concat(keys, ", "))
+    end
+end
 
 local NM, FT, KT, LB = 1852, 3.28084, 1.94384, 2.2046226218
 

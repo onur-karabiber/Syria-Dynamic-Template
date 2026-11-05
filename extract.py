@@ -1,4 +1,6 @@
-# extract.py | v1.1.1
+# extract.py | v1.2.0
+# v1.2.0 (2026-11-05): --mission <KEY> (config.MISSIONS; default SDT, unchanged): ITG -> missions/ITG/src,
+#         default .miz = Missions\Into The Grey\Into The Grey.miz.
 # Mission Editor'de kaydedilmiş .miz  ->  src/   (build.py'nin tersi)
 #
 #   python extract.py                  # config.py'deki Missions\...\Syria_Dynamic_Template.miz
@@ -70,7 +72,12 @@ def file_crc(path):
     return crc & 0xFFFFFFFF
 
 
-def plan(miz, src_dir=SRC_DIR, normalize=True, verify=False):
+def is_shared(arc, shared):
+    """v1.2.0: archive path inside one of the profile's shared folders (packed from the template src/)."""
+    return any(arc == s or arc.startswith(s + '/') for s in shared)
+
+
+def plan(miz, src_dir=SRC_DIR, normalize=True, verify=False, shared=()):
     """.miz'i src_dir ile karşılaştırır, hiçbir şey yazmaz.
     new/changed: src'ye yazılacaklar, deleted: src'den silinecekler.
     normalize=True: NORMALIZE'daki dosyalar anahtar-sıralı biçimleriyle karşılaştırılır
@@ -85,7 +92,7 @@ def plan(miz, src_dir=SRC_DIR, normalize=True, verify=False):
             if info.is_dir():
                 continue
             arc = clean_arc(info.filename)
-            if is_embedded_lua(arc):
+            if is_embedded_lua(arc) or is_shared(arc, shared):
                 skipped += 1
                 continue
             e = {'size': info.file_size, 'crc': info.CRC,
@@ -171,7 +178,9 @@ def show(label, names, limit=30):
 
 def main():
     ap = argparse.ArgumentParser(description=".miz -> src/ (build.py'nin tersi)")
-    ap.add_argument('miz', nargs='?', help="varsayılan: %s" % config.deployed_miz())
+    ap.add_argument('miz', nargs='?', help="varsayılan: profilin .miz'i (SDT: %s)" % config.deployed_miz())
+    ap.add_argument('--mission', default='SDT', choices=sorted(config.MISSIONS),
+                    help="görev profili (config.MISSIONS), varsayılan SDT")
     ap.add_argument('-n', '--dry-run', action='store_true',
                     help="yazma/silme yapmadan raporla")
     ap.add_argument('--force', action='store_true',
@@ -180,14 +189,17 @@ def main():
                     help="Lua tablolarını anahtar-sıralı yazma, ME'nin ham çıktısını olduğu gibi yaz")
     args = ap.parse_args()
 
-    miz = os.path.abspath(args.miz) if args.miz else config.deployed_miz()
+    prof = config.profile(args.mission)
+    miz = os.path.abspath(args.miz) if args.miz else prof['deployed']
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    src = prof['src']
+    os.makedirs(src, exist_ok=True)
 
     if not os.path.isfile(miz):
         print("HATA: .miz bulunamadı: %s" % miz)
         return 1
     try:
-        p = plan(miz, normalize=not args.no_normalize, verify=True)
+        p = plan(miz, src, normalize=not args.no_normalize, verify=True, shared=prof['shared'])
     except (zipfile.BadZipFile, ValueError) as e:
         print("HATA: %s" % e)
         return 1
@@ -211,16 +223,17 @@ def main():
     for w in p['warnings']:
         print("UYARI: " + w)
     if p['skipped_lua']:
-        print("Atlandı: %d adet l10n/DEFAULT/*.lua (scripts/ geçerli)" % p['skipped_lua'])
+        print("Atlandı: %d adet l10n/DEFAULT/*.lua (scripts/ geçerli)%s" % (p['skipped_lua'],
+              ' ve ortak klasör dosyası (%s)' % ', '.join(prof['shared']) if prof['shared'] else ''))
 
     n = len(p['new']) + len(p['changed']) + len(p['deleted'])
     if n == 0:
-        print("src/ zaten .miz ile aynı, değişiklik yok.")
+        print("%s/ zaten .miz ile aynı, değişiklik yok." % src)
         return 0
     if args.dry_run:
         print("Dry-run: hiçbir şey yazılmadı.")
         return 0
-    apply_plan(miz, p)
+    apply_plan(miz, p, src)
     print("Tamam: %d yeni, %d değişen, %d silinen. 'git status' ile kontrol et."
           % (len(p['new']), len(p['changed']), len(p['deleted'])))
     return 0

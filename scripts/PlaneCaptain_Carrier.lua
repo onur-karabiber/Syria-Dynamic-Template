@@ -1,5 +1,7 @@
--- PlaneCaptain_Carrier | v1.3.2
+-- PlaneCaptain_Carrier | v1.3.3
 --[[
+  v1.3.3 (2026-11-05, Into The Grey P1): hero group / unit from TRT.HERO_GROUP / TRT.PLAYER_NAME when a mission pack
+          sets them (ITG: HORNET-5); defaults "CAS-1" / "Player_01" unchanged.
   v1.3.2: phase-end cards S_END (engines running, held until Ready for checks) and C_END
           (stands by for the director, CFG.MSG_END s) when Score_Display has them; text otherwise.
   v1.3.1: a step closed by the aircraft itself (reason "condition", wait type arg / argDelta /
@@ -66,9 +68,9 @@ if TRT.PlaneCaptain then
 end
 
 local CFG = {
-  VERSION       = "1.3.2",
-  PLAYER_UNIT   = "Player_01",
-  PLAYER_GROUP  = "CAS-1",
+  VERSION       = "1.3.3",
+  PLAYER_UNIT   = TRT.PLAYER_NAME or "Player_01",   -- v1.3.3
+  PLAYER_GROUP  = TRT.HERO_GROUP or "CAS-1",        -- v1.3.3
   CARRIER_UNIT  = "CVN",       -- movement is measured relative to this unit (deck is moving)
   MENU_SECTION  = "CARRIER",   -- Menu_Manager section
   MENU_ORDER    = 5,           -- before the AIRBOSS items

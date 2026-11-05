@@ -1,4 +1,12 @@
--- Airboss_CaseSync.lua | v1.0.9
+-- Airboss_CaseSync.lua | v1.1.0
+-- v1.1.0 (2026-11-05, Into The Grey P1): optional fixed hold radial. When a mission pack sets
+--   TRT.HOLD_RADIAL_MAG (magnetic, e.g. ITG 195), the CASE II / III holding offset is computed from the LIVE
+--   carrier heading instead of the OFFSET table: CASE III baseline = final bearing (mag) - 180, CASE II =
+--   BRC (mag) - 180 (AIRBOSS:GetRadial), offset = radial - baseline (-180..180). The ITG carrier changes
+--   course on its route (legs 000 / 082 / 209 / 267 T), so a fixed offset would move the hold with the ship.
+--   Re-aligned (window rebuilt) while recovery is not armed (flag 101) whenever the hold radial is more than
+--   TRT.HOLD_RADIAL_TOL (default 2) deg off, and once more when recovery arms; never after that (a rebuild
+--   with the hero in the stack would reset AIRBOSS's queue). TRT.HOLD_RADIAL_MAG nil (SDT / SEA2STEEL): no change.
 -- v1.0.9: comment only - polling-pattern reference now names Carrier_Geometry
 --   (merged Distance_Flag_v3 / Radial_Flag_v1) instead of the unloaded Radial_Flag_v1.2.0.
 -- TRT Syria Recovery Framework - syncs TRT.Airboss recovery case to ME flag 100
@@ -195,6 +203,24 @@ end
 
 TRT.CaseSync.ApplyRecoveryCase = ApplyRecoveryCase   -- v1.0.7
 
+-- v1.1.0: fixed hold radial (TRT.HOLD_RADIAL_MAG) -------------------------------------------------------
+local function norm180(a) return ((a + 180) % 360) - 180 end
+local function armed()
+  local a = trigger.misc.getUserFlag(TRT.CaseSync.COMMENCE_FLAG)
+  return a == true or (type(a) == "number" and a ~= 0)
+end
+--- Offset (deg) that puts the CASE II / III hold on TRT.HOLD_RADIAL_MAG, or nil (not set / no carrier).
+function TRT.CaseSync.HoldOffset(case)
+  if not TRT.HOLD_RADIAL_MAG or (case ~= 2 and case ~= 3) then return nil end
+  local ok, base = pcall(function()
+    if case == 3 then return TRT.Airboss:GetFinalBearing(true) end
+    return TRT.Airboss:GetBRC()
+  end)
+  if not ok or type(base) ~= "number" then return nil end
+  return math.floor(norm180(TRT.HOLD_RADIAL_MAG - (base - 180)) + 0.5)
+end
+local alignedOffset, alignedArmed = nil, false
+
 local function CheckFlag100(_, time)
   pcall(ApplyRecoveryCase)
   pcall(BanklerSync, trigger.misc.getUserFlag(100))
@@ -207,7 +233,8 @@ local function CheckFlag100(_, time)
 
     if current == 1 or current == 2 or current == 3 then
 
-      local offset = TRT.CaseSync.OFFSET[current]
+      local offset = TRT.CaseSync.HoldOffset(current) or TRT.CaseSync.OFFSET[current]   -- v1.1.0
+      alignedOffset, alignedArmed = offset, armed()
 
       if DEBUG_LOG_CASE_SYNC then
         env.info(string.format("AIRBOSS CaseSync | flag 100 -> CASE %d (offset %d deg) -- rebuilding recovery window", current, offset))
@@ -226,6 +253,23 @@ local function CheckFlag100(_, time)
 
   end
 
+  -- v1.1.0: keep a fixed hold radial on the live carrier heading (see header)
+  if TRT.HOLD_RADIAL_MAG and (current == 2 or current == 3) and alignedOffset and not alignedArmed then
+    local want = TRT.CaseSync.HoldOffset(current)
+    local nowArmed = armed()
+    if want and (nowArmed or math.abs(norm180(want - alignedOffset)) > (TRT.HOLD_RADIAL_TOL or 2)) then
+      env.info(string.format("AIRBOSS CaseSync | hold R-%03d: offset %d -> %d deg%s -- rebuilding recovery window",
+        TRT.HOLD_RADIAL_MAG, alignedOffset, want, nowArmed and " (recovery armed, final)" or ""))
+      TRT.CaseSync.tRebuild = timer.getTime()
+      TRT.Airboss:DeleteAllRecoveryWindows()
+      TRT.Airboss:AddRecoveryWindow(nil, WINDOW_STOP, current, want)
+      alignedOffset, alignedArmed = want, nowArmed
+    elseif nowArmed then
+      alignedArmed = true
+      env.info(string.format("AIRBOSS CaseSync | hold R-%03d: recovery armed, offset %d deg kept", TRT.HOLD_RADIAL_MAG, alignedOffset))
+    end
+  end
+
   return time + 5 -- reschedule, 5s poll interval
 end
 
@@ -234,4 +278,4 @@ timer.scheduleFunction(CheckFlag100, nil, timer.getTime() + 5)
 if type(_G.SetSuperCarrier) ~= "function" then   -- v1.0.8
   function _G.SetSuperCarrier(enabled) _G.carrierTCN = enabled and "72X" or "74X" end
 end
-env.info("Airboss_CaseSync | v1.0.9 | listening on flag 100")
+env.info("Airboss_CaseSync | v1.1.0 | listening on flag 100" .. (TRT.HOLD_RADIAL_MAG and string.format(" | hold R-%03d", TRT.HOLD_RADIAL_MAG) or ""))
