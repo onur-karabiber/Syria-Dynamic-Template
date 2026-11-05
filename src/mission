@@ -166286,9 +166286,10 @@ mission =
 		["centerY"] = 50000,
 		["zoom"] = 1254980.0796813,
 	},
-	["maxDictId"] = 332,
+	["maxDictId"] = 334,
 	["pictureFileNameB"] = 
 	{
+		[1] = "ResKey_ImageBriefing_333",
 	},
 	["pictureFileNameN"] = 
 	{
@@ -166298,6 +166299,7 @@ mission =
 	},
 	["pictureFileNameServer"] = 
 	{
+		[1] = "ResKey_ImageBriefing_334",
 	},
 	["requiredModules"] = 
 	{
