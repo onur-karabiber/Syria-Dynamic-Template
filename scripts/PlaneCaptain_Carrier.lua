@@ -1,5 +1,20 @@
--- PlaneCaptain_Carrier | v1.3.4
+-- PlaneCaptain_Carrier | v1.3.5
 --[[
+  v1.3.5 (2026-11-06, SEA2STEEL flight 18:56): C3 FLAPS HALF and C4 RUDDERS could not close and had to be skipped.
+          Cause: the flaps were already down when C3 opened (cold start: FLAP switch, cockpit arg 234, reads -1 = FULL,
+          or the pilot set HALF ahead of the card), so the flap draw argument 9 never moved the 0.1 that C3 waited
+          for; at C4 both rudders sat at full toe-in (args 17 / 18 = +1 / -1 for 24.7 s) and the pedals moved neither,
+          so the 0.8 sweep never came. In earlier flights C4 closed in 3-4.5 s because the rudders were still swinging
+          into toe-in after C3 - the toe-in, not the pedals, met the sweep.
+          Now:
+            C3 closes on the FLAP switch at HALF (arg 234 = 0, read through the export environment like the RPM:
+            DCS-BIOS FLAP_SW AUTO / HALF / FULL = 1 / 0 / -1; airborne logs read 1 = AUTO), or on the old 0.1 move
+            of arg 9; it is skipped as already done when the switch is at HALF and the flaps are down when it opens.
+            C4 closes on the old sweep of both rudders, or on a 0.5 sweep of either; when both rudders are at full
+            toe-in when it opens (|arg| >= 0.95), the pedals cannot be seen and "Done (pilot signal)" is accepted
+            (note on screen). Cockpit args 395-399 are logged with their min / max over C4 (pedal calibration [V]).
+          A step closed by "Skip step" or "Done" now logs the base and last value of every argument it waited on.
+          New wait types: "ck" (cockpit argument near a value, export read), "any" / "all" (lists of conditions).
   v1.3.4 (2026-11-06, Pilot_Banter v2.2.0 deck self-talk): step events for listeners.
           TRT.PlaneCaptain.on(fn) -> fn(event, data):
             "GATE"  { phase }                       a phase opened from F10
@@ -76,7 +91,7 @@ if TRT.PlaneCaptain then
 end
 
 local CFG = {
-  VERSION       = "1.3.4",
+  VERSION       = "1.3.5",
   PLAYER_UNIT   = TRT.PLAYER_NAME or "Player_01",   -- v1.3.3
   PLAYER_GROUP  = TRT.HERO_GROUP or "CAS-1",        -- v1.3.3
   CARRIER_UNIT  = "CVN",       -- movement is measured relative to this unit (deck is moving)
@@ -174,10 +189,14 @@ local STEPS = {
   { id = "C2", phase = "CHECKS", check = { "13. Controls - CHECK",
       "a. Control stick - CYCLE: full aft, full forward, full left, full right (any order)" },
     wait = { type = "range", args = { { 395, 0.7, -0.5 }, { 396, 0.7, -0.7 } } } },
-  { id = "C3", phase = "CHECKS", signal = "FLAPS_LOWER", wait = { type = "argDelta", arg = 9, d = 0.1 } },
+  { id = "C3", phase = "CHECKS", signal = "FLAPS_LOWER",                                    -- v1.3.5
+    wait = { type = "any", conds = { { type = "ck", arg = 234, v = 0, tol = 0.2 }, { type = "argDelta", arg = 9, d = 0.1 } } },
+    skipIf = { type = "all", conds = { { type = "ck", arg = 234, v = 0, tol = 0.2 }, { type = "arg", arg = 9, op = ">", v = 0.3 } } } },
   { id = "C4", phase = "CHECKS", check = { "13. Controls - CHECK",
       "c. Rudder pedals - CYCLE 30 degrees left and right (any order)" },
-    wait = { type = "span", args = { 17, 18 }, d = 0.8 } },
+    wait = { type = "any", conds = { { type = "span", args = { 17, 18 }, d = 0.8 },          -- v1.3.5
+                                     { type = "span", args = { 17, 18 }, d = 0.5, anyOne = true } } },
+    satDone = { args = { 17, 18 }, v = 0.95 }, ckLog = { 395, 396, 397, 398, 399 } },
   { id = "C5", phase = "CHECKS", signal = "PROBE_EXT", wait = { type = "arg", arg = 22, op = ">", v = 0.9 } },
   { id = "C6", phase = "CHECKS", signal = "PROBE_RET", wait = { type = "arg", arg = 22, op = "<", v = 0.1 },
     skipIf = { type = "arg", arg = 22, op = "<", v = 0.1 } },
@@ -316,6 +335,34 @@ function PC.readRPM()
   return nil
 end
 
+-- v1.3.5: cockpit arguments through the export environment (same route as the RPM read)
+PC.ck = { available = nil, t = 0, v = {} }
+function PC.readCockpit(args)
+  local C = PC.ck
+  if C.available == false then return nil end
+  if now() - C.t < 0.2 and C.v.__key == table.concat(args, ",") then return C.v end
+  C.t = now()
+  local code = 'local d = GetDevice and GetDevice(0) if not d then return "" end local o = {} ' ..
+               'for _, n in ipairs({' .. table.concat(args, ",") .. '}) do ' ..
+               'local ok, v = pcall(function() return d:get_argument_value(n) end) ' ..
+               'o[#o + 1] = n .. "=" .. ((ok and type(v) == "number") and string.format("%.3f", v) or "x") end ' ..
+               'return table.concat(o, ";")'
+  local ok, res = pcall(function()
+    if type(net) ~= "table" or type(net.dostring_in) ~= "function" then error("net.dostring_in not available") end
+    return net.dostring_in("export", code)
+  end)
+  if ok and type(res) == "string" and res ~= "" then
+    local v = { __key = table.concat(args, ",") }
+    for k, x in string.gmatch(res, "(%d+)=([^;]*)") do v[tonumber(k)] = tonumber(x) end
+    if C.available ~= true then log("cockpit read: available (" .. res .. ")") end
+    C.available, C.v = true, v
+    return v
+  end
+  if C.available == nil then log("cockpit read: not available (" .. tostring(res) .. ")") end
+  C.available = false
+  return nil
+end
+
 -- aircraft position in the carrier's own frame (forward, right), so that the carrier's speed and
 -- turns do not count as movement; world x/z if the carrier is not found
 local function deckPos(u)
@@ -441,10 +488,22 @@ local function phaseIndex(name)
   for i, p in ipairs(PHASES) do if p == name then return i end end
 end
 
-local function evalCond(c, u, F)
+local evalCond
+evalCond = function(c, u, F)
   if not c then return false end
   local t = c.type
-  if t == "timer" then return (now() - F.t0) >= c.t
+  if t == "any" then                                               -- v1.3.5
+    local hit = false
+    for _, cc in ipairs(c.conds) do if evalCond(cc, u, F) then hit = true end end   -- evaluate all (span bookkeeping)
+    return hit
+  elseif t == "all" then
+    for _, cc in ipairs(c.conds) do if not evalCond(cc, u, F) then return false end end
+    return true
+  elseif t == "ck" then
+    local v = PC.readCockpit({ c.arg })
+    v = v and v[c.arg]
+    return v ~= nil and math.abs(v - c.v) <= c.tol
+  elseif t == "timer" then return (now() - F.t0) >= c.t
   elseif t == "ack" or t == "calib" then return false
   elseif t == "engineIdle" then
     local l, r = PC.readRPM()
@@ -477,8 +536,9 @@ local function evalCond(c, u, F)
     end
     return all
   elseif t == "span" then
-    -- every argument must sweep at least d since the step started (rudders toe in with the flaps down)
-    local all = true
+    -- every argument must sweep at least d since the step started (rudders toe in with the flaps down);
+    -- v1.3.5 anyOne: one argument is enough
+    local all, one = true, false
     for _, a in ipairs(c.args) do
       local v = argValue(u, a)
       local sn = F.seen[a]
@@ -487,8 +547,9 @@ local function evalCond(c, u, F)
         if not sn.mn or v < sn.mn then sn.mn = v end
         if not sn.mx or v > sn.mx then sn.mx = v end
       end
-      if not (sn.mn and sn.mx and sn.mx - sn.mn >= c.d) then all = false end
+      if sn.mn and sn.mx and sn.mx - sn.mn >= c.d then one = true else all = false end
     end
+    if c.anyOne then return one end
     return all
   end
   return false
@@ -496,6 +557,8 @@ end
 
 local function condArgs(c, out)
   if not c then return end
+  if c.conds then for _, cc in ipairs(c.conds) do condArgs(cc, out) end end    -- v1.3.5
+  if c.type == "ck" then return end                                             -- cockpit, not a draw argument
   if c.arg then out[#out + 1] = c.arg end
   if c.args then for _, r in ipairs(c.args) do out[#out + 1] = (type(r) == "table") and r[1] or r end end
 end
@@ -506,6 +569,7 @@ local function doneAccepted(s)
   if not s or not s.wait then return false end
   if s.wait.type == "ack" or s.wait.type == "calib" then return true end
   if s.wait.type == "engineIdle" then return PC.rpm.available ~= true end
+  if PC.flow.allowDone then return true end                                    -- v1.3.5 (C4 at full toe-in)
   return false
 end
 
@@ -516,7 +580,8 @@ end
 local enterStep
 
 -- v1.3.1: wait types where "condition" means the aircraft did it (pcOk sound)
-local OK_WAITS = { arg = true, argDelta = true, argNear = true, range = true, span = true, engineIdle = true }
+local OK_WAITS = { arg = true, argDelta = true, argNear = true, range = true, span = true, engineIdle = true,
+                   any = true, all = true, ck = true }                         -- v1.3.5
 
 local function completeStep(reason)
   local F = PC.flow
@@ -531,7 +596,21 @@ local function completeStep(reason)
   end
   emit("DONE", { id = s.id, phase = s.phase, reason = reason, ok = okAc })   -- v1.3.4
   if s.lbar == "raise" and PC.calib then calibReport() end
+  if s.ckLog and F.ckSeen then                                              -- v1.3.5 pedal calibration
+    local t = {}
+    for _, a in ipairs(s.ckLog) do
+      local r = F.ckSeen[a]
+      t[#t + 1] = string.format("%d=%s..%s", a, r and string.format("%.3f", r.mn) or "x", r and string.format("%.3f", r.mx) or "x")
+    end
+    log("  cockpit over " .. s.id .. ": " .. table.concat(t, " "))
+  end
   if reason ~= "condition" then
+    local u = hero()
+    local args = {}
+    condArgs(s.wait, args)
+    for _, a in ipairs(args) do                                                -- v1.3.5
+      log(string.format("  arg %s base=%s now=%s", tostring(a), tostring(F.base[a]), tostring(u and argValue(u, a))))
+    end
     for a, sn in pairs(F.seen) do
       log(string.format("  arg %s seen: min=%s max=%s hi=%s lo=%s base=%s", tostring(a), tostring(sn.mn), tostring(sn.mx),
         tostring(sn.hi), tostring(sn.lo), tostring(F.base[a])))
@@ -579,6 +658,7 @@ enterStep = function(i, pilotKey)
   local s = STEPS[i]
   local u = hero()
   F.idx, F.step, F.t0, F.base, F.seen, F.ending = i, s, now(), {}, {}, false
+  F.allowDone, F.ckSeen = false, nil                                           -- v1.3.5
   F.phase = s.phase
   log(string.format("step %s enter (%s) t=%.2f", s.id, s.signal or "-", F.t0))
   if s.lbar == "lower" and s.wait.type == "calib" then
@@ -600,6 +680,18 @@ enterStep = function(i, pilotKey)
     end
   end
   showStep(s, pilotKey)
+  if u and s.satDone then                                                      -- v1.3.5
+    local sat = true
+    for _, a in ipairs(s.satDone.args) do
+      local v = F.base[a]
+      if not v or math.abs(v) < s.satDone.v then sat = false end
+    end
+    if sat then
+      F.allowDone = true
+      log("  " .. s.id .. ": rudders at full toe-in at entry -> Done (pilot signal) accepted")
+      note("Rudders at full toe-in (flaps down): cycle the pedals, then Plane captain > Done (pilot signal)")
+    end
+  end
   emit("ENTER", { id = s.id, signal = s.signal, phase = s.phase })         -- v1.3.4
   refreshMenu()
 end
@@ -696,6 +788,21 @@ local function flowTick(u)
   local s = F.step
   if PC.calib then calibScan(u) end
   if not s or F.ending then return end
+  if s.ckLog then                                                              -- v1.3.5 pedal calibration
+    local v = PC.readCockpit(s.ckLog)
+    if v then
+      F.ckSeen = F.ckSeen or {}
+      for _, a in ipairs(s.ckLog) do
+        local x = v[a]
+        if x then
+          local r = F.ckSeen[a] or { mn = x, mx = x }
+          if x < r.mn then r.mn = x end
+          if x > r.mx then r.mx = x end
+          F.ckSeen[a] = r
+        end
+      end
+    end
+  end
   if evalCond(s.wait, u, F) then completeStep("condition"); return end
   if s.timeout and (now() - F.t0) >= s.timeout then completeStep("timeout") end
 end
