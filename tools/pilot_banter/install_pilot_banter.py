@@ -1,4 +1,7 @@
-# install_pilot_banter.py | v1.1.1
+# install_pilot_banter.py | v1.2.0
+# v1.2.0: clips from src/Sounds/PB and src/Sounds/PBO (tools/pilot_banter/out removed, make_clips v1.14.0 renders to
+#         src/). The four missions are kept in step by tools/sync_missions.py; this installer is only for a .miz that
+#         is not generated from the template.
 # v1.1.1: comments use the 2026-11-05 mission name (SEA2STEEL.miz).
 # v1.1.0: also installs Sounds/PBO/*.ogg (Pilot_Banter v2.1.0 oxygen breathing, CFG.OXY) from out/Sounds/PBO/;
 #         checks that CFG.OXY.N matches the oxy_breath_NN.ogg files there.
@@ -34,8 +37,8 @@ sys.path.insert(0, REPO)
 import dcslua  # noqa: E402
 
 SCRIPT = "Pilot_Banter.lua"
-ASSET_DIRS = (("Sounds/PB", os.path.join(HERE, "out", "Sounds", "PB")),
-              ("Sounds/PBO", os.path.join(HERE, "out", "Sounds", "PBO")))   # v1.1.0 breathing
+ASSET_DIRS = (("Sounds/PB", os.path.join(REPO, "src", "Sounds", "PB")),     # v1.2.0
+              ("Sounds/PBO", os.path.join(REPO, "src", "Sounds", "PBO")))   # v1.1.0 breathing
 ASSET_PREFIXES = tuple(a + "/" for a, _ in ASSET_DIRS)
 ANCHORS = (b"Flight_Timeline.lua", b"Score_Display.lua", b"Core_Scoring.lua")
 

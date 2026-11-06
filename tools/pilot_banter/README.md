@@ -15,6 +15,7 @@ What he says:
 | JOKER / BINGO / TANK crossed | the call | `TRT.TL` flags |
 | Tanker | checks at join (probe, master arm, radar), closure > 15 kt inside 0.5 NM, astern, fuel every 50 s in contact, disconnect, post-tanker (probe, fuel) | `TRT.AAR` session |
 | Recovery | holding (fuel, push), commencing (hook, fuel vs tank), Case I/II approach check at 12 NM, landing check on gear-down (wheels, flaps, hook, harness) | CV phases, external model |
+| Engine start / BEFORE TAXI checks (v2.2.0) | when a plane captain step appears: what he is about to do ("Okaaay… let's get that hook dooown."); after the check_ok beep: what he sees ("Probe's out. Looks fiiine."); engines with the idle rpm and "gauges look normal" | PlaneCaptain_Carrier ≥ v1.3.4 `TRT.PlaneCaptain.on` |
 | Events (v1.x) | canopy, engines, checks, cat shot, feet dry / wet, contact, good hits, weapon away, missile defeated, CAP splash, threat over, trap / bolter / waveoff, shutdown | |
 
 A line is a chain of clips: header + value + comment ("Fuel check..." / "nine point eight" /
@@ -27,7 +28,7 @@ F10 › INFO › **Pilot thoughts** › Off / Quiet / Normal / Chatty.
 |---|---|
 | `../../tts/pb_clips.csv` | Lines. `id = <group>_<n>`; a new variant is one row + render, no Lua edit |
 | `make_pb_values.py` | Writes `../../tts/pb_values.csv`: one whole-phrase clip per value (fuel 0.0–20.0, thousands, miles, minutes, early / late, percent, burn rate, weapons left, laser code) and the synthesized noises |
-| `../../tts/make_clips.py --set pb [--missing]` | Renders `out/Sounds/PB/*.ogg` (cockpit chain) from both CSVs and rewrites the `AUDIO` block of `scripts/Pilot_Banter.lua` |
+| `../../tts/make_clips.py --set pb [--missing]` | Renders `src/Sounds/PB/*.ogg` (cockpit chain; v1.14.0, was `out/`) from both CSVs; `{word|k}` in a text renders that word k× slower (drawl) and rewrites the `AUDIO` block of `scripts/Pilot_Banter.lua` |
 | `install_pilot_banter.py` | Installs / updates script + clips in a `.miz` in place (backup `BackUps/<name>_before-PB-<ver>.miz`) |
 
 ## Render and install

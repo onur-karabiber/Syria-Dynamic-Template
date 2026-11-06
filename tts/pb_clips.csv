@@ -389,3 +389,105 @@ noise_5;PILOT_IN;Aaah... hmm.
 noise_6;PILOT_IN;Hm hm hmm.
 noise_7;PILOT_IN;Okay, okay.
 noise_8;PILOT_IN;Whew.
+
+# ════════════════════════════════════════════════════════════════════════
+#  v2.2.0 (Onur, 2026-11-06): self-talk during engine start and BEFORE TAXI checks (PlaneCaptain steps).
+#  pc_<step>_in = when the plane captain's card for the step appears (what he is about to do),
+#  pc_<step>_ok = after the check_ok beep, when the aircraft has done it (what he sees).
+#  {word|k} = that word rendered k x slower (make_clips v1.14.0): the natural drawl ("Okaaay", "dooown").
+# ════════════════════════════════════════════════════════════════════════
+
+# ── phase opened (F10 Ready to start / Ready for checks)
+pc_gate_start_1;PILOT_IN;{Alright|2.0}... let's wake her up.
+pc_gate_start_2;PILOT_IN;{Okay|2.3}... time to start up.
+pc_gate_start_3;PILOT_IN;{So|2.4}... here we go.
+pc_gate_start_4;PILOT_IN;Let's get this thing {going|2.0}.
+pc_gate_start_5;PILOT_IN;{Uhh|1.6}... okay. Start.
+pc_gate_checks_1;PILOT_IN;{Alright|2.0}... checks.
+pc_gate_checks_2;PILOT_IN;{Okay|2.3}... let's run the checks.
+pc_gate_checks_3;PILOT_IN;{So|2.4}... before taxi.
+pc_gate_checks_4;PILOT_IN;{Hmm|1.8}... okay, checks.
+
+# ── START
+pc_s0p_in_1;PILOT_IN;A P U... {here|1.9} we go.
+pc_s0p_in_2;PILOT_IN;{Okay|2.2}... A P U.
+pc_s0p_in_3;PILOT_IN;Let's light the A P U.
+pc_s3_in_1;PILOT_IN;Number two... crank it {up|2.0}.
+pc_s3_in_2;PILOT_IN;{Right|2.0} engine... here we go.
+pc_s3_in_3;PILOT_IN;{Okay|2.2}... engine two.
+pc_s3_in_4;PILOT_IN;Two... {come on|1.8}.
+pc_s4_in_1;PILOT_IN;{And|2.6}... number one.
+pc_s4_in_2;PILOT_IN;Left engine... {here|1.9} we go.
+pc_s4_in_3;PILOT_IN;{Okay|2.2}, engine one.
+pc_s3_ok_1;PILOT_IN;Right engine's {up|2.0}.
+pc_s3_ok_2;PILOT_IN;Two's {turning|1.8}.
+pc_s3_ok_3;PILOT_IN;{Yep|2.0}, number two's running.
+pc_s3_ok_4;PILOT_IN;{There|2.0} it is. Engine two.
+pc_s4_ok_1;PILOT_IN;Left engine's {up|2.0}.
+pc_s4_ok_2;PILOT_IN;{And|2.6}... number one's running.
+pc_s4_ok_3;PILOT_IN;{Yep|2.0}, one's turning.
+pc_idle_1;PILOT_IN;At idle...
+pc_idle_2;PILOT_IN;Sitting at...
+pc_both_1;PILOT_IN;Both sitting at...
+pc_eng_ok_1;PILOT_IN;Gauges look {normal|1.7}.
+pc_eng_ok_2;PILOT_IN;Temps and pressures... {normal|1.7}.
+pc_eng_ok_3;PILOT_IN;Oil pressure's {good|2.0}.
+pc_eng_ok_4;PILOT_IN;Everything in the {green|1.8}.
+
+# ── CHECKS (NATOPS BEFORE TAXI order)
+pc_c1_in_1;PILOT_IN;Wings... {spread|2.0} 'em.
+pc_c1_in_2;PILOT_IN;{Okay|2.2}, wings out.
+pc_c1_ok_1;PILOT_IN;Wings spread. {Good|2.0}.
+pc_c1_ok_2;PILOT_IN;{Yep|2.0}, wings are out.
+pc_c2_in_1;PILOT_IN;Stick... {aft|1.8}, forward, left, right.
+pc_c2_in_2;PILOT_IN;{Okay|2.2}, controls.
+pc_c2_ok_1;PILOT_IN;Stick's free and {correct|1.7}.
+pc_c2_ok_2;PILOT_IN;Controls... {good|2.0}.
+pc_c3_in_1;PILOT_IN;Flaps... {half|2.0}.
+pc_c3_in_2;PILOT_IN;{So|2.4}... flaps half.
+pc_c3_ok_1;PILOT_IN;Flaps half. {Good|2.0}.
+pc_c3_ok_2;PILOT_IN;{Yep|2.0}, flaps are set.
+pc_c4_in_1;PILOT_IN;Rudders... {left|1.8}... right.
+pc_c4_in_2;PILOT_IN;{Okay|2.2}, rudders.
+pc_c4_ok_1;PILOT_IN;Rudders free. {Good|2.0}.
+pc_c4_ok_2;PILOT_IN;{Yep|2.0}, rudders check.
+pc_c5_in_1;PILOT_IN;Probe... out we {go|2.0}.
+pc_c5_in_2;PILOT_IN;{And|2.6}... probe out.
+pc_c5_ok_1;PILOT_IN;Probe's out. Looks {fine|2.2}.
+pc_c5_ok_2;PILOT_IN;{Okay|2.2}, probe's fine.
+pc_c5_ok_3;PILOT_IN;Probe out... no {problems|1.6}.
+pc_c6_in_1;PILOT_IN;{Okay|2.2}, probe back in.
+pc_c6_ok_1;PILOT_IN;{And|2.6}... probe's in. No problems there.
+pc_c6_ok_2;PILOT_IN;Probe's in. {Good|2.0}.
+pc_c7_in_1;PILOT_IN;Speed brake... {out|2.0}.
+pc_c7_ok_1;PILOT_IN;Speed brake out. {Good|2.0}.
+pc_c7_ok_2;PILOT_IN;{Yep|2.0}, boards out.
+pc_c8_in_1;PILOT_IN;{And|2.6}... speed brake in.
+pc_c8_ok_1;PILOT_IN;{And|2.6}... boards in.
+pc_c8_ok_2;PILOT_IN;Speed brake's in. {Good|2.0}.
+pc_c9_in_1;PILOT_IN;Launch bar... {down|2.2}.
+pc_c9_ok_1;PILOT_IN;Bar's {down|2.2}.
+pc_c9_ok_2;PILOT_IN;Launch bar down. {Good|2.0}.
+pc_c10_in_1;PILOT_IN;{And|2.6}... bar up.
+pc_c10_ok_1;PILOT_IN;Bar's up. {Good|2.0}.
+pc_c10_ok_2;PILOT_IN;{Yep|2.0}, bar's up.
+pc_c11_in_1;PILOT_IN;{Okay|2.3}... let's get that hook {down|2.2}.
+pc_c11_in_2;PILOT_IN;Hook... {down|2.2} we go.
+pc_c11_ok_1;PILOT_IN;Hook's down. Looks {good|2.0}.
+pc_c11_ok_2;PILOT_IN;{Yep|2.0}, hook's down.
+pc_c12_in_1;PILOT_IN;{And|2.6}... hook up.
+pc_c12_ok_1;PILOT_IN;Hook's up. {Good|2.0}.
+pc_c12_ok_2;PILOT_IN;{And|2.6}... hook up. Fine.
+pc_c13_in_1;PILOT_IN;{Okay|2.2}, fold 'em up.
+pc_c13_in_2;PILOT_IN;Wings... {fold|2.0}.
+pc_c13_ok_1;PILOT_IN;Wings folded. {Good|2.0}.
+pc_c13_ok_2;PILOT_IN;{Yep|2.0}, folded.
+pc_c14_in_1;PILOT_IN;{Alright|2.0}... thumbs up.
+pc_c14_in_2;PILOT_IN;That's {it|2.0}. Thumbs up.
+
+# ── short acknowledgement after a beep, used now and then instead of the step's own line
+pc_tick_1;PILOT_IN;{Alright|1.8}.
+pc_tick_2;PILOT_IN;Check.
+pc_tick_3;PILOT_IN;{Yep|2.0}.
+pc_tick_4;PILOT_IN;{Good|2.0}.
+pc_tick_5;PILOT_IN;{Okay|2.2}.

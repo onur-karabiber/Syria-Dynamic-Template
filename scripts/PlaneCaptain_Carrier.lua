@@ -1,5 +1,13 @@
--- PlaneCaptain_Carrier | v1.3.3
+-- PlaneCaptain_Carrier | v1.3.4
 --[[
+  v1.3.4 (2026-11-06, Pilot_Banter v2.2.0 deck self-talk): step events for listeners.
+          TRT.PlaneCaptain.on(fn) -> fn(event, data):
+            "GATE"  { phase }                       a phase opened from F10
+            "ENTER" { id, signal, phase }           a step is shown (not for steps skipped as already done)
+            "DONE"  { id, phase, reason, ok }       a step closed; ok = true when the aircraft did it
+                                                    (the same case that plays check_ok, sent after pcOk)
+            "ABORT" { reason }
+          A listener error is logged and does not stop the flow. No behaviour change without listeners.
   v1.3.3 (2026-11-05, Into The Grey P1): hero group / unit from TRT.HERO_GROUP / TRT.PLAYER_NAME when a mission pack
           sets them (ITG: HORNET-5); defaults "CAS-1" / "Player_01" unchanged.
   v1.3.2: phase-end cards S_END (engines running, held until Ready for checks) and C_END
@@ -68,7 +76,7 @@ if TRT.PlaneCaptain then
 end
 
 local CFG = {
-  VERSION       = "1.3.3",
+  VERSION       = "1.3.4",
   PLAYER_UNIT   = TRT.PLAYER_NAME or "Player_01",   -- v1.3.3
   PLAYER_GROUP  = TRT.HERO_GROUP or "CAS-1",        -- v1.3.3
   CARRIER_UNIT  = "CVN",       -- movement is measured relative to this unit (deck is moving)
@@ -215,8 +223,18 @@ local PC = {
   gid = nil,
   ownMenu = nil,
   milestones = {},            -- v1.2.2: phase -> first completion time (Flight_Timeline)
+  listeners = {},             -- v1.3.4
 }
 TRT.PlaneCaptain = PC
+
+-- v1.3.4: step events (Pilot_Banter)
+function PC.on(fn) if type(fn) == "function" then PC.listeners[#PC.listeners + 1] = fn end end
+local function emit(ev, data)
+  for _, fn in ipairs(PC.listeners) do
+    local ok, err = pcall(fn, ev, data)
+    if not ok then env.info("PlaneCaptain | listener error (" .. ev .. "): " .. tostring(err)) end
+  end
+end
 
 local function now() return timer.getTime() end
 local function log(s) env.info("PlaneCaptain | " .. s) end
@@ -506,10 +524,12 @@ local function completeStep(reason)
   if not s or F.ending then return end
   F.ending = true
   log(string.format("step %s done (%s) after %.1f s", s.id, reason, now() - F.t0))
-  if reason == "condition" and s.wait and OK_WAITS[s.wait.type] then      -- v1.3.1
+  local okAc = reason == "condition" and s.wait and OK_WAITS[s.wait.type] and true or false
+  if okAc then                                                             -- v1.3.1
     local SD = TRT.ScoreDisplay
     if SD and SD.pcOk then pcall(SD.pcOk) end
   end
+  emit("DONE", { id = s.id, phase = s.phase, reason = reason, ok = okAc })   -- v1.3.4
   if s.lbar == "raise" and PC.calib then calibReport() end
   if reason ~= "condition" then
     for a, sn in pairs(F.seen) do
@@ -580,6 +600,7 @@ enterStep = function(i, pilotKey)
     end
   end
   showStep(s, pilotKey)
+  emit("ENTER", { id = s.id, signal = s.signal, phase = s.phase })         -- v1.3.4
   refreshMenu()
 end
 
@@ -595,6 +616,7 @@ function PC.gate(phase)
   local i = firstStepOf(phase)
   if not i then return end
   log("gate " .. phase .. " opened")
+  emit("GATE", { phase = phase })                                          -- v1.3.4
   F.gen = F.gen + 1
   F.step, F.ending = nil, false
   if phase == "START" then F.mem = {} end
@@ -633,6 +655,7 @@ function PC.abort(reason, why)
   PC.move.anchor = nil
   PC.calib = nil
   log("flow aborted: " .. reason)
+  emit("ABORT", { reason = reason })                                       -- v1.3.4
   if why then say("[PLANE CAPTAIN] " .. why, CFG.MSG_END, true) end
   refreshMenu()
 end

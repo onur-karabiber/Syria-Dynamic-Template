@@ -1,4 +1,12 @@
--- Pilot_Banter | v2.1.5
+-- Pilot_Banter | v2.2.0
+-- v2.2.0 (Onur, 2026-11-06): self-talk during engine start and BEFORE TAXI checks, in natural speech (drawn words,
+--         fillers). PlaneCaptain_Carrier >= v1.3.4 step events: GATE -> pc_gate ("Alright... let's wake her up."),
+--         ENTER -> pc_intent (what he is about to do, only while that step is still on), DONE with the aircraft
+--         having done it -> pc_done after the check_ok beep ("Probe's out. Looks fiiine."); engine steps -> pc_engine
+--         2 s later with the idle rpm from PlaneCaptain's export read ("Right engine's up. Idle... sixty seven percent.
+--         Gauges look normal."). The newest deck event replaces an older one still waiting (.fresh). Drawn words are
+--         rendered slower (make_clips v1.14.0 {word|k}). engines_on / checks_done now follow the step lines (delay 5 /
+--         3.5 s, gap 3 s). CFG.VERSION was left at 2.1.4 in v2.1.5; now matches the header.
 -- v2.1.5 (CAS (L) flight 2026-11-05, Onur): FENCE IN only when OVERLORD gives the first JTAC tasking (CD phase
 --         JTAC<n>); the CP Tiger distance trigger (FENCE_IN_NM) is removed - it fired while turning to the AR1 tanker.
 -- v2.1.4 (JTAC roster, Comms_Director >= v1.10.0): JTAC3 / JTAC4 silent and on station like JTAC1 / JTAC2, J3_OFF /
@@ -102,7 +110,8 @@ if TRT.PB then
 end
 
 local CFG = {
-    VERSION      = "2.1.4",
+    VERSION      = "2.2.0",
+    DECK         = { TICK_P = 0.25, RPM_P = 0.7, ENG_OK_P = 0.6 },   -- v2.2.0 pc_done: short ack / rpm / gauges
     LEVEL        = "NORMAL",       -- start level: OFF | QUIET | NORMAL | CHATTY
     LEVELS = {
         QUIET  = { cruise = { 120, 240 }, muse = 0.30, max = 80 },
@@ -200,8 +209,13 @@ local CFG = {
     -- quiet = needs RADIO_QUIET_S s of radio silence · prio = not limited by LEVELS.max
     MOMENTS = {
         canopy_close = { p = 0.85, delay = 1.0, ttl = 12, cd = 300, gap = 15 },
-        engines_on   = { p = 0.60, delay = 2.0, ttl = 15, cd = 600, gap = 15 },
-        checks_done  = { p = 0.70, delay = 2.0, ttl = 20, cd = 600, gap = 15 },
+        engines_on   = { p = 0.60, delay = 5.0, ttl = 15, cd = 600, gap = 3 },     -- v2.2.0 after the step lines
+        checks_done  = { p = 0.70, delay = 3.5, ttl = 20, cd = 600, gap = 3 },
+        -- v2.2.0 deck self-talk (PlaneCaptain step events)
+        pc_gate      = { p = 0.85, delay = 0.8,  ttl = 5, cd = 0, gap = 1,   prio = true, fresh = true },
+        pc_intent    = { p = 0.55, delay = 1.0,  ttl = 4, cd = 0, gap = 1,   prio = true, fresh = true },
+        pc_done      = { p = 0.75, delay = 0.45, ttl = 4, cd = 0, gap = 0.5, prio = true, fresh = true },
+        pc_engine    = { p = 0.90, delay = 2.0,  ttl = 6, cd = 0, gap = 0.5, prio = true, fresh = true },
         cat_shot     = { p = 0.90, delay = 3.5, ttl = 12, cd = 120 },
         feet_dry     = { p = 0.85, delay = 1.0, ttl = 20, cd = 600 },
         feet_wet     = { p = 0.85, delay = 1.0, ttl = 20, cd = 600 },
@@ -558,6 +572,93 @@ local CFG = {
         noise_6            = { len = 0.98, text = "Hm hm hmm." },
         noise_7            = { len = 1.31, text = "Okay, okay." },
         noise_8            = { len = 0.77, text = "Whew." },
+        pc_gate_start_1    = { len = 2.03, text = "Alright... let's wake her up." },
+        pc_gate_start_2    = { len = 2.55, text = "Okay... time to start up." },
+        pc_gate_start_3    = { len = 2.29, text = "So... here we go." },
+        pc_gate_start_4    = { len = 2.16, text = "Let's get this thing going." },
+        pc_gate_start_5    = { len = 1.98, text = "Uhh... okay. Start." },
+        pc_gate_checks_1   = { len = 1.83, text = "Alright... checks." },
+        pc_gate_checks_2   = { len = 2.48, text = "Okay... let's run the checks." },
+        pc_gate_checks_3   = { len = 2.81, text = "So... before taxi." },
+        pc_gate_checks_4   = { len = 1.76, text = "Hmm... okay, checks." },
+        pc_s0p_in_1        = { len = 2.51, text = "A P U... here we go." },
+        pc_s0p_in_2        = { len = 2.18, text = "Okay... A P U." },
+        pc_s0p_in_3        = { len = 1.55, text = "Let's light the A P U." },
+        pc_s3_in_1         = { len = 1.62, text = "Number two... crank it up." },
+        pc_s3_in_2         = { len = 2.98, text = "Right engine... here we go." },
+        pc_s3_in_3         = { len = 2.50, text = "Okay... engine two." },
+        pc_s3_in_4         = { len = 1.91, text = "Two... come on." },
+        pc_s4_in_1         = { len = 1.98, text = "And... number one." },
+        pc_s4_in_2         = { len = 2.57, text = "Left engine... here we go." },
+        pc_s4_in_3         = { len = 2.12, text = "Okay, engine one." },
+        pc_s3_ok_1         = { len = 1.93, text = "Right engine's up." },
+        pc_s3_ok_2         = { len = 1.72, text = "Two's turning." },
+        pc_s3_ok_3         = { len = 2.17, text = "Yep, number two's running." },
+        pc_s3_ok_4         = { len = 2.45, text = "There it is. Engine two." },
+        pc_s4_ok_1         = { len = 1.79, text = "Left engine's up." },
+        pc_s4_ok_2         = { len = 2.27, text = "And... number one's running." },
+        pc_s4_ok_3         = { len = 1.89, text = "Yep, one's turning." },
+        pc_idle_1          = { len = 1.04, text = "At idle..." },
+        pc_idle_2          = { len = 0.96, text = "Sitting at..." },
+        pc_both_1          = { len = 1.26, text = "Both sitting at..." },
+        pc_eng_ok_1        = { len = 2.02, text = "Gauges look normal." },
+        pc_eng_ok_2        = { len = 2.39, text = "Temps and pressures... normal." },
+        pc_eng_ok_3        = { len = 1.90, text = "Oil pressure's good." },
+        pc_eng_ok_4        = { len = 2.01, text = "Everything in the green." },
+        pc_c1_in_1         = { len = 2.54, text = "Wings... spread 'em." },
+        pc_c1_in_2         = { len = 2.40, text = "Okay, wings out." },
+        pc_c1_ok_1         = { len = 1.96, text = "Wings spread. Good." },
+        pc_c1_ok_2         = { len = 1.92, text = "Yep, wings are out." },
+        pc_c2_in_1         = { len = 3.30, text = "Stick... aft, forward, left, right." },
+        pc_c2_in_2         = { len = 2.19, text = "Okay, controls." },
+        pc_c2_ok_1         = { len = 1.95, text = "Stick's free and correct." },
+        pc_c2_ok_2         = { len = 1.67, text = "Controls... good." },
+        pc_c3_in_1         = { len = 1.95, text = "Flaps... half." },
+        pc_c3_in_2         = { len = 2.40, text = "So... flaps half." },
+        pc_c3_ok_1         = { len = 1.81, text = "Flaps half. Good." },
+        pc_c3_ok_2         = { len = 1.90, text = "Yep, flaps are set." },
+        pc_c4_in_1         = { len = 2.39, text = "Rudders... left... right." },
+        pc_c4_in_2         = { len = 2.09, text = "Okay, rudders." },
+        pc_c4_ok_1         = { len = 1.76, text = "Rudders free. Good." },
+        pc_c4_ok_2         = { len = 1.88, text = "Yep, rudders check." },
+        pc_c5_in_1         = { len = 2.05, text = "Probe... out we go." },
+        pc_c5_in_2         = { len = 2.13, text = "And... probe out." },
+        pc_c5_ok_1         = { len = 2.86, text = "Probe's out. Looks fine." },
+        pc_c5_ok_2         = { len = 2.36, text = "Okay, probe's fine." },
+        pc_c5_ok_3         = { len = 1.98, text = "Probe out... no problems." },
+        pc_c6_in_1         = { len = 2.28, text = "Okay, probe back in." },
+        pc_c6_ok_1         = { len = 2.59, text = "And... probe's in. No problems there." },
+        pc_c6_ok_2         = { len = 1.77, text = "Probe's in. Good." },
+        pc_c7_in_1         = { len = 2.41, text = "Speed brake... out." },
+        pc_c7_ok_1         = { len = 2.17, text = "Speed brake out. Good." },
+        pc_c7_ok_2         = { len = 1.67, text = "Yep, boards out." },
+        pc_c8_in_1         = { len = 2.67, text = "And... speed brake in." },
+        pc_c8_ok_1         = { len = 1.69, text = "And... boards in." },
+        pc_c8_ok_2         = { len = 1.83, text = "Speed brake's in. Good." },
+        pc_c9_in_1         = { len = 2.46, text = "Launch bar... down." },
+        pc_c9_ok_1         = { len = 1.91, text = "Bar's down." },
+        pc_c9_ok_2         = { len = 1.99, text = "Launch bar down. Good." },
+        pc_c10_in_1        = { len = 1.88, text = "And... bar up." },
+        pc_c10_ok_1        = { len = 1.51, text = "Bar's up. Good." },
+        pc_c10_ok_2        = { len = 1.60, text = "Yep, bar's up." },
+        pc_c11_in_1        = { len = 3.32, text = "Okay... let's get that hook down." },
+        pc_c11_in_2        = { len = 2.37, text = "Hook... down we go." },
+        pc_c11_ok_1        = { len = 2.07, text = "Hook's down. Looks good." },
+        pc_c11_ok_2        = { len = 1.81, text = "Yep, hook's down." },
+        pc_c12_in_1        = { len = 1.42, text = "And... hook up." },
+        pc_c12_ok_1        = { len = 1.44, text = "Hook's up. Good." },
+        pc_c12_ok_2        = { len = 2.08, text = "And... hook up. Fine." },
+        pc_c13_in_1        = { len = 1.94, text = "Okay, fold 'em up." },
+        pc_c13_in_2        = { len = 2.05, text = "Wings... fold." },
+        pc_c13_ok_1        = { len = 1.79, text = "Wings folded. Good." },
+        pc_c13_ok_2        = { len = 1.66, text = "Yep, folded." },
+        pc_c14_in_1        = { len = 1.87, text = "Alright... thumbs up." },
+        pc_c14_in_2        = { len = 1.97, text = "That's it. Thumbs up." },
+        pc_tick_1          = { len = 1.20, text = "Alright." },
+        pc_tick_2          = { len = 0.77, text = "Check." },
+        pc_tick_3          = { len = 0.80, text = "Yep." },
+        pc_tick_4          = { len = 1.00, text = "Good." },
+        pc_tick_5          = { len = 1.39, text = "Okay." },
         v_fuel_0           = { len = 1.22, text = "point zero" },
         v_fuel_1           = { len = 1.01, text = "point one" },
         v_fuel_2           = { len = 1.03, text = "point two" },
@@ -1895,6 +1996,54 @@ B.divert_check = function(u)
 end
 
 --- Cruise item: chosen when the line is due (ctx.kind = transit | station | hold)
+-- ── v2.2.0: deck self-talk (PlaneCaptain step events) ──
+local PC_ENGINE = { S3 = "right", S4 = "left" }
+
+B.pc_gate = function(u, ctx)
+    local g = "pc_gate_" .. string.lower(tostring(ctx and ctx.phase))
+    if not HasGroup(g) then return nil end
+    return { G(g) }
+end
+
+B.pc_intent = function(u, ctx)
+    local pc = TRT.PlaneCaptain
+    local F = pc and pc.flow
+    if not (F and F.step and ctx and F.step.id == ctx.id) or F.ending then return nil end   -- step already over
+    local g = "pc_" .. string.lower(ctx.id) .. "_in"
+    if not HasGroup(g) then return nil end
+    return { G(g) }
+end
+
+B.pc_done = function(u, ctx)
+    local g = "pc_" .. string.lower(tostring(ctx and ctx.id)) .. "_ok"
+    if not HasGroup(g) then return nil end
+    if HasGroup("pc_tick") and Rand() < CFG.DECK.TICK_P then return { G("pc_tick") } end
+    return { G(g) }
+end
+
+B.pc_engine = function(u, ctx)
+    local id = ctx and ctx.id
+    local g = "pc_" .. string.lower(tostring(id)) .. "_ok"
+    if not HasGroup(g) then return nil end
+    local s = Seq():add(G(g))
+    local pc = TRT.PlaneCaptain
+    local l, r
+    if pc and type(pc.readRPM) == "function" then
+        local ok, a, b = pcall(pc.readRPM)
+        if ok then l, r = a, b end
+    end
+    local side = PC_ENGINE[id]
+    local v = (side == "left" and l) or (side == "right" and r) or nil
+    if id == "S4" and l and r and l > 50 and r > 50 and math.abs(l - r) < 3 and Rand() < 0.5 then
+        s:pair(G("pc_both"), VPct((l + r) / 2))
+    elseif v and v > 50 and Rand() < CFG.DECK.RPM_P then
+        s:pair(G("pc_idle"), VPct(v))
+    end
+    if not KnownFailure() and Rand() < CFG.DECK.ENG_OK_P then s:add(G("pc_eng_ok")) end
+    Log(string.format("deck %s rpm L=%s R=%s", tostring(id), tostring(l), tostring(r)))
+    return s:list()
+end
+
 B.cruise_item = function(u, ctx)
     local kind = ctx and ctx.kind or "transit"
     local lv = CFG.LEVELS[PB.level] or CFG.LEVELS.NORMAL
@@ -2059,7 +2208,13 @@ local function Fire(name, why, ctx, force)
     if not force and PB.lastPlay[name] and t - PB.lastPlay[name] < (m.cd or 0) then
         Log(string.format("%s: cooldown (%s)", name, why or "-")); return
     end
-    for _, it in ipairs(PB.pending) do if it.name == name then return end end
+    for i, it in ipairs(PB.pending) do
+        if it.name == name then
+            if not m.fresh then return end
+            table.remove(PB.pending, i)                    -- v2.2.0: the newest deck event wins
+            break
+        end
+    end
     if not B[name] and not HasGroup(name) then Log(name .. ": no clips (" .. (why or "-") .. ")"); return end
     if not force then
         local roll = Rand()
@@ -2212,6 +2367,33 @@ local function HookJC()
     end)
     PB.jcHooked = true
     Log("JTAC_Controller events subscribed")
+end
+
+-- ── v2.2.0: PlaneCaptain step events ──
+local function HookPC()
+    if PB.pcHooked then return end
+    local pc = TRT.PlaneCaptain
+    if not (pc and type(pc.on) == "function") then return end
+    pc.on(function(ev, data)
+        if type(data) ~= "table" then return end
+        if ev == "GATE" then
+            Fire("pc_gate", "PC gate " .. tostring(data.phase), { phase = data.phase })
+        elseif ev == "ENTER" then
+            Fire("pc_intent", "PC " .. tostring(data.id), { id = data.id })
+        elseif ev == "DONE" and data.ok then
+            for i = #PB.pending, 1, -1 do                       -- the intent for this step is stale now
+                local it = PB.pending[i]
+                if it.name == "pc_intent" and it.ctx and it.ctx.id == data.id then table.remove(PB.pending, i) end
+            end
+            Fire(PC_ENGINE[data.id] and "pc_engine" or "pc_done", "PC " .. tostring(data.id) .. " done", { id = data.id })
+        elseif ev == "ABORT" then
+            for i = #PB.pending, 1, -1 do
+                if string.sub(PB.pending[i].name, 1, 3) == "pc_" then table.remove(PB.pending, i) end
+            end
+        end
+    end)
+    PB.pcHooked = true
+    Log("PlaneCaptain step events subscribed")
 end
 
 -- ── v2.1.0: oxygen mask breathing (OBOGS) ──
@@ -2549,6 +2731,7 @@ local function Tick()
         RegisterMenu()
         HookAirboss()
         HookJC()
+        HookPC()                                            -- v2.2.0
         if RadioBusy() then PB.lastRadio = now() end
         if JcBusy() then PB.lastJcBusy = now() end
         local u = Hero()
