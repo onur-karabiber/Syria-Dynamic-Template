@@ -1,5 +1,9 @@
--- Comms_Director | v1.13.0
+-- Comms_Director | v1.13.1
 --[[
+  v1.13.1 - RV initial keeps the scripted exchange (Onur 2026-11-06): F10 "TEXACO: RV initial" plays the v1.12.0
+           pilot call + TEXACO "RV Alpha ... available" (voice + subtitle) AND, at the same moment, asks for the
+           native "intent to refuel". DCS's short call overlaps ours on purpose (exception to the v1.13.0 rule
+           "native call -> only DCS speaks"). Ready pre-contact stays native-only.
   v1.13.0 - native DCS radio calls through the F10 Wheel (Onur 2026-11-06). Rule: when a call is made on the
            native DCS radio, only DCS speaks and prints it (no script clip, no script subtitle).
            * F10 "TEXACO: RV initial" -> silent in the script; asks Wheel_Bridge (>= 0.3.0) for the native
@@ -11,6 +15,7 @@
            * Without Wheel_Bridge or with the overlay not running the native call is not made: the log says so,
              and the pilot uses the DCS radio menu as before.
            * Load log line said v1.11.2 under the v1.12.0 header; now the same version as the header.
+           (v1.13.1 changed the RV initial part: scripted exchange kept, native call added.)
   v1.12.0 - CAS (L) flight 2026-11-05 (Onur):
            * AR between taskings: <k>_OFF with a tasking left offers "OVERLORD: off <JTAC>, request Texaco"
              (OVERLORD vector, TEXACO as AR1, then "OVERLORD: off Texaco, ready for retasking" -> next tasking;
@@ -2806,12 +2811,7 @@ end
 
 local function A_TkrInit()
     local p, t = Player(), Tanker(); if not (p and t and CD.tk) then return end
-    if CFG.NATIVE.ENABLE then                                      -- v1.13.0 native "intent to refuel", DCS speaks
-        CD.tk.init = true
-        CD.Native("TKR_INIT")
-        MenuRebuild()
-        return
-    end
+    if CFG.NATIVE.ENABLE then CD.Native("TKR_INIT") end           -- v1.13.1 native "intent to refuel" + our exchange
     CD.tk.init = true
     CD.awaiting = true; MenuRebuild()
     local ta = FL(t)
@@ -4958,7 +4958,7 @@ local function CD_Init()
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
     timer.scheduleFunction(MudTick, nil, timer.getTime() + 10)   -- v1.7.9
-    env.info("[CD] Comms_Director v1.13.0 online — CAS-1 Syria (pack " .. tostring(P.version) .. ")")
+    env.info("[CD] Comms_Director v1.13.1 online — CAS-1 Syria (pack " .. tostring(P.version) .. ")")
 end
 
 CD_Init()
