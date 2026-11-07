@@ -1,5 +1,10 @@
--- Trap_Weight | v1.1.0
+-- Trap_Weight | v1.1.1
 --[[
+  v1.1.1 (2026-11-07, Onur's second ME measurements, 100 % fuel): FPU-8A "remove payload" 45,728 -> 43,193 (tank
+         + its 2,244 lb of fuel: empty tank 291 lb), "remove pylon" -> 43,052 (centerline pylon 141 lb). The wingtip
+         AIM-9M and the AIM-120B on station 6 have no "remove pylon": their launchers are inside the 189 / 348 lb.
+         FPU-8A entry 427 -> 432 (291 + 141). The model now gives 45,733 for the full loadout vs the ME's 45,728
+         (ME rounding of each displayed weight).
   v1.1.0 (2026-11-07, Onur's Mission Editor weights): GROSS WEIGHT against the NATOPS arrestment limits instead of
          the USNI 5,600 lb "fuel + weapons + sensors" allowance (a magazine figure; the real rule is the maximum trap
          weight). GROSS = DCS EMPTY 25,093 + 130 fixed + gun rounds x 0.5 + 42 chaff / flare + fuel + weapons on
@@ -7,8 +12,7 @@
          Masses measured in the DCS ME by Onur (TOTAL before / after "remove payload" / "remove pylon"):
            AIM-9M 189, AGM-65E 760 (+ LAU-117 311), AIM-120B 348, ATFLIR 366, GBU-12 711 (+ BRU-33 311);
            empty 25,093; no stores, no fuel: 461 (gun 100 %, 60 chaff, 60 flare) / 130 (gun and CM at 0).
-           The remaining 427 lb of that loadout (FPU-8A empty + AIM-9 / AIM-120 launchers) is booked on the FPU-8A
-           until measured separately [V].
+           (v1.1.1: FPU-8A empty 291 + centerline pylon 141; AIM-9M / AIM-120B launchers inside their masses.)
          Limits (NATOPS A1-F18AC-NFM-000 as quoted on the ED forum, not read first-hand [V]): 33,000 lb
          unrestricted arrestment, 34,000 lb absolute (restricted). Over 33,000 -> PTS_RESTRICTED (-3),
          over 34,000 -> PTS_OVER (-10). Jettison "required" = gross without fuel + TRAP_FUEL_LB > 33,000.
@@ -51,7 +55,7 @@ if TRT.TW then
 end
 
 local CFG = {
-    VERSION        = "1.1.0",
+    VERSION        = "1.1.1",
     HERO           = TRT.PLAYER_NAME or "Player_01",
     CARRIER        = "CVN",
     KG2LB          = 2.20462,
@@ -87,7 +91,7 @@ local CFG = {
     -- getFuel()). v1.1.0 values from the DCS ME (Onur 2026-11-07); a CLSID matching a pattern in POD_PAT counts too.
     POD_LB = {
         ["{AN_ASQ_228}"]       = 366,   -- AN/ASQ-228 ATFLIR
-        ["{FPU_8A_FUEL_TANK}"] = 427,   -- FPU-8A empty + (for now) the AIM-9 / AIM-120 launchers [V]
+        ["{FPU_8A_FUEL_TANK}"] = 432,   -- v1.1.1 FPU-8A empty 291 + centerline pylon 141 (ME, Onur)
         ["{F16A4DE0-116C-4A71-97F0-2CF85B0313EC}"] = 311,   -- LAU-117 (AGM-65E)
     },
     POD_PAT = { { "^{BRU33_", 311 } },  -- BRU-33 VER (2x GBU-12 etc.)
