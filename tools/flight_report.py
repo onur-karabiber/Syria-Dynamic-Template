@@ -1,4 +1,14 @@
-# flight_report.py | v1.1.0
+# flight_report.py | v1.2.0
+# v1.2.0 (2026-11-07, Onur: every sortie saved as HTML under Saved Games\DCS\Missions\Sortie Reports, the mission
+#         name and the flight date in the file name): options for the DCS hook hooks/TRT_SortieReport.lua, which
+#         starts this tool when a mission ends:
+#           --since "YYYY-MM-DD HH:MM:SS"  only sorties that start at / after this log time (UTC, as dcs.log writes
+#                                          it): a mission that ends unscored never re-saves an older sortie
+#           --name STEM --outdir DIR       DIR\STEM.html (STEM.html exists -> STEM_2.html ...)
+#           --save-log                     also DIR\logs\STEM.log: the sortie's script lines (dcs.log is
+#                                          overwritten at every DCS start)
+#           --wait S                       sleep S s first (DCS finishes writing the log)
+#         No scored sortie -> exit code 2, nothing written. Without the new options: as v1.1.0.
 # v1.1.0: badges shown with Onur's art (tools/score_cards/src_art/badges/<ID>.png, embedded as data URIs).
 # Full flight report (HTML, one self-contained file) from dcs.log, decision Onur 2026-11-02
 # (project doc claude/report-card-design-2026-11-02.md). DCS cannot write files itself (io/lfs sanitized), so
@@ -19,6 +29,7 @@ import json
 import os
 import re
 import sys
+import time
 
 GROUPS = [("LAUNCH", "Launch & departure"), ("TIMING", "Mission timing"), ("AAR", "Aerial refuelling"),
           ("CAS", "VUL / CAS procedure"), ("KILL", "Targets"), ("THREAT", "Threat avoidance"),
@@ -32,7 +43,7 @@ CAT_RULES = [  # Core_Scoring v1.5.x CAT_RULES (fallback when the log has no cat
     (r"^Successful carrier", "TRAP"), (r"^Groove fuel", "TRAP"), (r"^Fuel state", "TRAP"), (r"^Deck park", "TRAP"),
     (r"^MARSHAL ZONE", "RECOVERY"), (r"^Established", "RECOVERY"), (r"^Commenced", "RECOVERY"),
     (r"^No established", "RECOVERY"), (r"^No commencing", "RECOVERY"), (r"12NM", "RECOVERY"),
-    (r"10NM", "RECOVERY"), (r"^Initial Fix", "RECOVERY"), (r"^Holding", "RECOVERY")]
+    (r"10NM", "RECOVERY"), (r"^Initial Fix", "RECOVERY"), (r"^Holding", "RECOVERY"), (r"^Jettison", "RECOVERY")]
 CAT2GROUP = {"DEP": "LAUNCH", "AAR": "AAR", "CAS": "CAS", "KILL": "KILL", "THREAT": "THREAT", "ROE": "ROE",
              "RECOVERY": "RECOVERY", "TRAP": "TRAP", "DIVERT": "DIVERT", "MISSION": "MISSION", "OTHER": "MISSION",
              "ASSET": "MISSION"}
@@ -298,13 +309,47 @@ def main():
     ap.add_argument("log", nargs="?", default=os.path.join(os.path.expanduser("~"), "Saved Games", "DCS", "Logs", "dcs.log"))
     ap.add_argument("-o", "--out")
     ap.add_argument("--all", action="store_true", help="one report per sortie in the log")
+    ap.add_argument("--since", help="v1.2.0: only sorties starting at / after this log time (YYYY-MM-DD HH:MM:SS)")
+    ap.add_argument("--name", help="v1.2.0: output file stem (with --outdir)")
+    ap.add_argument("--outdir", help="v1.2.0: output folder for --name")
+    ap.add_argument("--save-log", action="store_true", help="v1.2.0: also <outdir>/logs/<name>.log")
+    ap.add_argument("--wait", type=float, default=0, help="v1.2.0: seconds to wait before reading the log")
     a = ap.parse_args()
+    if a.wait > 0:
+        time.sleep(a.wait)
     if not os.path.isfile(a.log):
         sys.exit("no log: " + a.log)
     lines = read_lines(a.log)
     chunks = [c for c in sorties(lines) if any(m.startswith("[Core_Scoring] SCORE") or m.startswith("[FR] JSON") for _, m in c)]
+    if a.since:
+        chunks = [c for c in chunks if c and c[-1][0] >= a.since]   # the sortie ran (at least partly) after --since
+        chunks = [[(t, m) for t, m in c if t >= a.since] for c in chunks]
+        chunks = [c for c in chunks if any(m.startswith("[Core_Scoring] SCORE") or m.startswith("[FR] JSON") for _, m in c)]
     if not chunks:
-        sys.exit("no scored sortie in " + a.log)
+        print("no scored sortie in " + a.log + (" since " + a.since if a.since else ""))
+        sys.exit(2)
+    if a.name and a.outdir:                                  # v1.2.0 hook mode: the last sortie only
+        stem = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", a.name).strip(" .") or "sortie"
+        os.makedirs(a.outdir, exist_ok=True)
+        out, k = os.path.join(a.outdir, stem + ".html"), 1
+        while os.path.exists(out):
+            k += 1
+            out = os.path.join(a.outdir, "%s_%d.html" % (stem, k))
+        c = chunks[-1]
+        D = build(c)
+        S = summarize(D)
+        with open(out, "w", encoding="utf-8") as f:
+            f.write(render(D, S, a.log, len(chunks)))
+        print("written", out, "|", S["src"], "| total", S["total"], "| grade", S["grade"])
+        if a.save_log:
+            ld = os.path.join(a.outdir, "logs")
+            os.makedirs(ld, exist_ok=True)
+            lp = os.path.join(ld, os.path.splitext(os.path.basename(out))[0] + ".log")
+            with open(lp, "w", encoding="utf-8") as f:
+                for t, m in c:
+                    f.write("%s %s\n" % (t, m))
+            print("written", lp)
+        return
     pick = list(enumerate(chunks, 1)) if a.all else [(len(chunks), chunks[-1])]
     outdir = os.path.join(os.path.dirname(os.path.abspath(a.log)), "FlightReports")
     stamp = lines[0][0][:16].replace("-", "").replace(":", "").replace(" ", "-") if lines else "log"

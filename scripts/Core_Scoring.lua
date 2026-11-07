@@ -1,4 +1,6 @@
--- Core_Scoring | v1.5.3
+-- Core_Scoring | v1.5.4
+-- v1.5.4 (2026-11-07): category rule "^Jettison" -> RECOVERY (Trap_Weight v1.0.0; "Carrier landing weight" is
+--         already TRAP through "^Carrier landing").
 -- v1.5.3 (CAS (L) flight 2026-11-04, midair with an AI receiver on the tanker; Onur 00:04): a hit / kill of a
 --         friendly with no weapon object whose weapon name is the hero's own type (DCS reports a collision so) is a
 --         MIDAIR COLLISION: incident record (MIDAIR, sev 2) and a screen line, no score; no FRIENDLY FIRE.
@@ -160,6 +162,7 @@ local CAT_RULES = {   -- first match wins (reason, case-sensitive Lua patterns)
     { "^TIMING", "TIME" }, { "^Departure", "DEP" }, { "^Divert", "DIVERT" },
     { "land%-based", "DIVERT" }, { "^Carrier landing", "TRAP" }, { "^Successful carrier", "TRAP" },
     { "^Groove fuel", "TRAP" }, { "^Deck park", "TRAP" }, { "^MARSHAL ZONE", "RECOVERY" },
+    { "^Jettison", "RECOVERY" },                                                   -- v1.5.4
     { "^Established", "RECOVERY" }, { "^Commenced", "RECOVERY" }, { "^No established", "RECOVERY" },
     { "^No commencing", "RECOVERY" }, { "12NM", "RECOVERY" }, { "10NM", "RECOVERY" },
 }

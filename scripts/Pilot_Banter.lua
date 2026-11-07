@@ -1,4 +1,9 @@
--- Pilot_Banter | v2.2.1
+-- Pilot_Banter | v2.2.2
+-- v2.2.2 (SEA2STEEL flight 2026-11-06, Onur): PB.cockpit() exports the cockpit read (AAR_Monitor v1.1.7 master arm).
+--        FENCE IN right after the pilot's "push button N" readback: quiet
+--        window 5 -> 1.5 s. The FENCE IN over the end of OVERLORD's tasking was Comms_Director's double queue runner
+--        (fixed in CD v1.13.2): the second runner's short readback ended, cd.qPlaying went false while OVERLORD was
+--        still on the air, and the 5 s quiet window opened under him.
 -- v2.2.1 (Onur, 2026-11-06): drawl removed. The slowed words ({word|k}) were hard to hear; the 82 deck lines are
 --         re-rendered as plain speech (pauses only from "..."), best of 5 takes by ASR. AUDIO lengths updated.
 -- v2.2.0 (Onur, 2026-11-06): self-talk during engine start and BEFORE TAXI checks, in natural speech (drawn words,
@@ -112,7 +117,7 @@ if TRT.PB then
 end
 
 local CFG = {
-    VERSION      = "2.2.1",
+    VERSION      = "2.2.2",
     DECK         = { TICK_P = 0.25, RPM_P = 0.7, ENG_OK_P = 0.6 },   -- v2.2.0 pc_done: short ack / rpm / gauges
     LEVEL        = "NORMAL",       -- start level: OFF | QUIET | NORMAL | CHATTY
     LEVELS = {
@@ -237,7 +242,7 @@ local CFG = {
         shutdown     = { p = 0.85, delay = 17,  ttl = 20, cd = 600, gap = 12, any = true },
         -- v2.0.0
         cruise_item    = { p = 1.00, delay = 0,   ttl = 20, cd = 0,   quiet = true },
-        fence_in       = { p = 1.00, delay = 2,   ttl = 420, cd = 0,  quietS = 5, prio = true, gap = 8,
+        fence_in       = { p = 1.00, delay = 2,   ttl = 420, cd = 0,  quietS = 1.5, prio = true, gap = 8,   -- v2.2.2
                            jcok = { CHECKIN = true, SITREP = true, GAMEPLAN = true } },   -- v2.1.0
         fence_out      = { p = 1.00, delay = 15,  ttl = 120, cd = 0,  quiet = true, prio = true },
         attack_check   = { p = 1.00, delay = 3,   ttl = 40, cd = 60,  quiet = true, prio = true, jtac = true, gap = 8 },
@@ -1594,6 +1599,11 @@ local function Cockpit()
     CK.v = nil
     return nil
 end
+
+--- v2.2.2: cockpit state for other modules (AAR_Monitor master arm at the tanker): table or nil, never errors.
+--- .marm true = ARM (after the release calibration), .avail via PB.cockpitAvail().
+function PB.cockpit() local ok, v = pcall(Cockpit); return ok and v or nil end
+function PB.cockpitAvail() return CK.avail end
 
 -- ── fuel / plan helpers ──
 local function FuelLb(u)

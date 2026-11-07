@@ -1,4 +1,10 @@
--- AAR_Monitor | v1.1.6
+-- AAR_Monitor | v1.1.7
+-- v1.1.7: MASTER ARM (Onur, 2026-11-07, flight 2026-11-06: AR2 joined with master arm ARMED after the VUL while the
+--         RV call said "switches safe"). Master arm sampled every tick inside JOIN_NM (1 NM) until the last
+--         disconnect: ARM seen -> MASTER_ARM_PTS (-10) at once, once per session, outside the session CAP clip
+--         ("Aerial Refuel: MASTER ARM ARMED at the tanker"). Read: Pilot_Banter PB.cockpit().marm (calibrated on
+--         the first A/G release), else cockpit arg 49 > 0.5 via the export environment (Master Arm Switch
+--         ARM/SAFE, clickabledata.lua pnt_49; 1.000 = ARM confirmed 2026-11-06). Unreadable -> not scored.
 -- v1.1.6: (Into The Grey P1) TRT.CFG_OVERRIDE.AAR_Monitor = { KEY = value } from a mission pack replaces CFG keys
 --         (ITG: TANKERS = Texaco 11 + Arco 51). SDT / SEA2STEEL: none.
 -- v1.1.5: CONTACT_CLOS row (Onur, 2026-10-31): the highest closure measured at S_EVENT_REFUELING over the session's
@@ -74,7 +80,8 @@ if TRT.AAR then
 end
 
 local CFG = {
-    VERSION      = "1.1.6",
+    VERSION      = "1.1.7",
+    MASTER_ARM_PTS = -10,                -- v1.1.7 master arm ARMED inside JOIN_NM (once per session, not clipped)
     PLAYER_UNIT  = TRT.PLAYER_NAME or "Player_01",
     TANKERS      = { "TANKER-1-1",       -- unit names; the nearest existing (eligible) one is used
                      { unit = "TANKER-3-1", kind = "RECOVERY" } },   -- v1.1.4 Arco 31, only while TRT.CV.tanking
@@ -144,6 +151,24 @@ local function now() return timer.getTime() end
 local function hero()
     local u = Unit.getByName(CFG.PLAYER_UNIT)
     if u and u:isExist() then return u end
+    return nil
+end
+
+-- v1.1.7 master arm: true ARM / false SAFE / nil unknown
+local function masterArm()
+    local PB = TRT.PB
+    if PB and PB.cockpit then
+        local v = PB.cockpit()
+        if v and v.marm ~= nil then return v.marm end
+        if PB.cockpitAvail and PB.cockpitAvail() == false then return nil end
+    end
+    local ok, res = pcall(function()
+        if type(net) ~= "table" or type(net.dostring_in) ~= "function" then return nil end
+        return net.dostring_in("export",
+            'local d = GetDevice and GetDevice(0) if not d then return "" end return tostring(d:get_argument_value(49))')
+    end)
+    local x = ok and tonumber(res)
+    if x then return x > 0.5 end
     return nil
 end
 
@@ -294,6 +319,10 @@ local function evaluate(S)
     end
     add("OVERRUN", (S.overruns > 0) and -2 or 0, string.format("%d overrun(s)", S.overruns))
     add("WEAPON", (S.weapons > 0) and -5 or 0, string.format("%d shot(s) near the tanker", S.weapons))
+    if S.armSeen then                                            -- v1.1.7 booked at once, outside the clip
+        add("MASTER_ARM", 0, string.format("ARMED at %.2f NM (%s), %+d booked separately", S.armSeen.dNm,
+            tostring(S.armSeen.phase), CFG.MASTER_ARM_PTS))
+    end
     if (S.attEvt or 0) > 0 then
         add("TKR_ATT", 0, string.format("%d of %d contact/disconnect(s) during a tanker attitude change (log only)",
             S.attChg or 0, S.attEvt))
@@ -411,6 +440,18 @@ local function tick(_, t)
     end
 
     local contact = S.openStart ~= nil
+
+    -- v1.1.7 master arm inside JOIN_NM, until the last disconnect
+    if not S.armSeen and r.dNm <= CFG.JOIN_NM and (#S.contacts == 0 or contact) then
+        if masterArm() == true then
+            S.armSeen = { dNm = r.dNm, phase = S.phase, contact = contact }
+            log(string.format("S%d MASTER ARM ARMED at %.2f NM (phase %s%s)", S.n, r.dNm, tostring(S.phase),
+                contact and ", in contact" or ""))
+            if CFG.SCORING and TRT.addScore then
+                TRT.addScore(CFG.MASTER_ARM_PTS, "Aerial Refuel: MASTER ARM ARMED at the tanker")
+            end
+        end
+    end
 
     if #S.contacts == 0 then
         -- pre-contact

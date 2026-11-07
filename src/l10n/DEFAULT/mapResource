@@ -58,6 +58,7 @@ mapResource =
 	["ResKey_Action_331"] = "CAS_Pack.lua",
 	["ResKey_Action_332"] = "Tasking_Pick.lua",
 	["ResKey_Action_335"] = "Wheel_Bridge.lua",
+	["ResKey_Action_336"] = "Trap_Weight.lua",
 	["ResKey_Action_69"] = "Red_Flag_Radio_9_2002-4-12.ogg",
 	["ResKey_Action_71"] = "Incirlik_ATIS.ogg",
 	["ResKey_Action_76"] = "Red_Flag_Radio_9_2002-4-12.ogg",

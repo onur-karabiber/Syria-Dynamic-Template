@@ -1,5 +1,18 @@
--- PlaneCaptain_Carrier | v1.3.5
+-- PlaneCaptain_Carrier | v1.3.6
 --[[
+  v1.3.6 (2026-11-07, SEA2STEEL flight 2026-11-06 23:41): C3 and C4 closed before the pilot had done them.
+          C3 closed 6.8 s after entry on the FLAP switch at HALF while the flaps were still travelling; C4 closed
+          2.2 s after entry without any pedal input (cockpit 395-399 all 0.000 over C4): the rudders swinging into
+          toe-in behind the HALF flaps met the v1.3.5 0.5 sweep.
+          Now:
+            C3 closes on the switch at HALF (or the old 0.1 move of arg 9) AND the flap surface still: arg 9 > 0.3
+            and moving less than 0.01 for 1.0 s ("still"). A plane captain waits for the surfaces, not the switch.
+            C4 closes on the rudder pedals in the cockpit: cockpit arg 500 (mainpanel_init.lua "Rudder",
+            controllers.Rudder) or 903 must reach +0.6 and -0.6 ("ckRange"). Fallback when the cockpit cannot be
+            read: one rudder (args 17 / 18) sweeps 0.5 measured only after both rudders have been still for 1.5 s
+            ("settledSpan"), so the toe-in no longer counts. "Done (pilot signal)" at full toe-in only when the
+            cockpit is unreadable. Cockpit args 500 / 503 / 900 / 903 / 395 / 396 logged min / max over C4 [V which
+            one is the pedal].
   v1.3.5 (2026-11-06, SEA2STEEL flight 18:56): C3 FLAPS HALF and C4 RUDDERS could not close and had to be skipped.
           Cause: the flaps were already down when C3 opened (cold start: FLAP switch, cockpit arg 234, reads -1 = FULL,
           or the pilot set HALF ahead of the card), so the flap draw argument 9 never moved the 0.1 that C3 waited
@@ -91,7 +104,7 @@ if TRT.PlaneCaptain then
 end
 
 local CFG = {
-  VERSION       = "1.3.5",
+  VERSION       = "1.3.6",
   PLAYER_UNIT   = TRT.PLAYER_NAME or "Player_01",   -- v1.3.3
   PLAYER_GROUP  = TRT.HERO_GROUP or "CAS-1",        -- v1.3.3
   CARRIER_UNIT  = "CVN",       -- movement is measured relative to this unit (deck is moving)
@@ -190,13 +203,16 @@ local STEPS = {
       "a. Control stick - CYCLE: full aft, full forward, full left, full right (any order)" },
     wait = { type = "range", args = { { 395, 0.7, -0.5 }, { 396, 0.7, -0.7 } } } },
   { id = "C3", phase = "CHECKS", signal = "FLAPS_LOWER",                                    -- v1.3.5
-    wait = { type = "any", conds = { { type = "ck", arg = 234, v = 0, tol = 0.2 }, { type = "argDelta", arg = 9, d = 0.1 } } },
+    wait = { type = "all", conds = {                                                       -- v1.3.6
+      { type = "any", conds = { { type = "ck", arg = 234, v = 0, tol = 0.2 }, { type = "argDelta", arg = 9, d = 0.1 } } },
+      { type = "arg", arg = 9, op = ">", v = 0.3 },
+      { type = "still", arg = 9, tol = 0.01, t = 1.0 } } },
     skipIf = { type = "all", conds = { { type = "ck", arg = 234, v = 0, tol = 0.2 }, { type = "arg", arg = 9, op = ">", v = 0.3 } } } },
   { id = "C4", phase = "CHECKS", check = { "13. Controls - CHECK",
       "c. Rudder pedals - CYCLE 30 degrees left and right (any order)" },
-    wait = { type = "any", conds = { { type = "span", args = { 17, 18 }, d = 0.8 },          -- v1.3.5
-                                     { type = "span", args = { 17, 18 }, d = 0.5, anyOne = true } } },
-    satDone = { args = { 17, 18 }, v = 0.95 }, ckLog = { 395, 396, 397, 398, 399 } },
+    wait = { type = "any", conds = { { type = "ckRange", args = { 500, 903 }, hi = 0.6, lo = -0.6 },   -- v1.3.6
+                                     { type = "settledSpan", args = { 17, 18 }, d = 0.5, tol = 0.02, t = 1.5 } } },
+    satDone = { args = { 17, 18 }, v = 0.95 }, ckLog = { 500, 503, 900, 903, 395, 396 } },
   { id = "C5", phase = "CHECKS", signal = "PROBE_EXT", wait = { type = "arg", arg = 22, op = ">", v = 0.9 } },
   { id = "C6", phase = "CHECKS", signal = "PROBE_RET", wait = { type = "arg", arg = 22, op = "<", v = 0.1 },
     skipIf = { type = "arg", arg = 22, op = "<", v = 0.1 } },
@@ -503,6 +519,55 @@ evalCond = function(c, u, F)
     local v = PC.readCockpit({ c.arg })
     v = v and v[c.arg]
     return v ~= nil and math.abs(v - c.v) <= c.tol
+  elseif t == "ckRange" then                                       -- v1.3.6 cockpit pedals: +hi and lo both reached
+    local v = PC.readCockpit(c.args)
+    if not v then return false end
+    F.ckRg = F.ckRg or {}
+    for _, a in ipairs(c.args) do
+      local x = v[a]
+      if x then
+        local r = F.ckRg[a] or {}
+        if x >= c.hi then r.hi = true end
+        if x <= c.lo then r.lo = true end
+        F.ckRg[a] = r
+        if r.hi and r.lo then return true end
+      end
+    end
+    return false
+  elseif t == "still" then                                         -- v1.3.6 draw argument still for t s
+    local v = argValue(u, c.arg)
+    if not v then return false end
+    F.stl = F.stl or {}
+    local r = F.stl[c.arg]
+    if not r or math.abs(v - r.v) > c.tol then F.stl[c.arg] = { v = v, t = now() }; return false end
+    return now() - r.t >= c.t
+  elseif t == "settledSpan" then                                   -- v1.3.6 sweep measured after the args settle
+    F.stl = F.stl or {}
+    if not F.settled then
+      local all = true
+      for _, a in ipairs(c.args) do
+        local v = argValue(u, a)
+        if not v then return false end
+        local r = F.stl[a]
+        if not r or math.abs(v - r.v) > c.tol then F.stl[a] = { v = v, t = now() }; all = false
+        elseif now() - r.t < c.t then all = false end
+      end
+      if not all then return false end
+      F.settled = {}
+      for _, a in ipairs(c.args) do local v = argValue(u, a); F.settled[a] = { mn = v, mx = v } end
+      log(string.format("  rudders settled after %.1f s (17=%.3f 18=%.3f)", now() - F.t0,
+        F.settled[c.args[1]].mn or -9, F.settled[c.args[2]] and F.settled[c.args[2]].mn or -9))
+      return false
+    end
+    for _, a in ipairs(c.args) do
+      local v, r = argValue(u, a), F.settled[a]
+      if v and r then
+        if v < r.mn then r.mn = v end
+        if v > r.mx then r.mx = v end
+        if r.mx - r.mn >= c.d then return true end
+      end
+    end
+    return false
   elseif t == "timer" then return (now() - F.t0) >= c.t
   elseif t == "ack" or t == "calib" then return false
   elseif t == "engineIdle" then
@@ -558,7 +623,7 @@ end
 local function condArgs(c, out)
   if not c then return end
   if c.conds then for _, cc in ipairs(c.conds) do condArgs(cc, out) end end    -- v1.3.5
-  if c.type == "ck" then return end                                             -- cockpit, not a draw argument
+  if c.type == "ck" or c.type == "ckRange" then return end                     -- cockpit, not a draw argument
   if c.arg then out[#out + 1] = c.arg end
   if c.args then for _, r in ipairs(c.args) do out[#out + 1] = (type(r) == "table") and r[1] or r end end
 end
@@ -581,7 +646,7 @@ local enterStep
 
 -- v1.3.1: wait types where "condition" means the aircraft did it (pcOk sound)
 local OK_WAITS = { arg = true, argDelta = true, argNear = true, range = true, span = true, engineIdle = true,
-                   any = true, all = true, ck = true }                         -- v1.3.5
+                   any = true, all = true, ck = true, ckRange = true, still = true, settledSpan = true }   -- v1.3.6
 
 local function completeStep(reason)
   local F = PC.flow
@@ -659,6 +724,7 @@ enterStep = function(i, pilotKey)
   local u = hero()
   F.idx, F.step, F.t0, F.base, F.seen, F.ending = i, s, now(), {}, {}, false
   F.allowDone, F.ckSeen = false, nil                                           -- v1.3.5
+  F.stl, F.settled, F.ckRg = nil, nil, nil                                     -- v1.3.6
   F.phase = s.phase
   log(string.format("step %s enter (%s) t=%.2f", s.id, s.signal or "-", F.t0))
   if s.lbar == "lower" and s.wait.type == "calib" then
@@ -686,7 +752,7 @@ enterStep = function(i, pilotKey)
       local v = F.base[a]
       if not v or math.abs(v) < s.satDone.v then sat = false end
     end
-    if sat then
+    if sat and PC.ck.available ~= true then                                    -- v1.3.6 pedals readable -> no Done
       F.allowDone = true
       log("  " .. s.id .. ": rudders at full toe-in at entry -> Done (pilot signal) accepted")
       note("Rudders at full toe-in (flaps down): cycle the pedals, then Plane captain > Done (pilot signal)")

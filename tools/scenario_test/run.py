@@ -1,4 +1,6 @@
-# scenario_test/run.py | v1.11.0
+# scenario_test/run.py | v1.12.0
+# v1.12.0: "radio overlap" in the log fails a case (Comms_Director v1.13.2 guard); after IN the bot waits while the
+#          radio queue is busy (one queue runner: quick presses go out in turn, the IN may air > 30 s later).
 # v1.11.0: cases midar_A / B / C (Comms_Director v1.12.0 AR between taskings: request at the first "off", RV initial,
 #          Judy, off Texaco (cancel AR), retasking). live_* 24 seeds, no INCIDENT.
 # v1.10.0: Tasking_Pick v1.4.1 switches the random pair / XCAS on and CAS_Pack v1.3.1 gives B / C weight 1: every case
@@ -351,7 +353,7 @@ class Run:
             who = str(jc.CFG.JTACS[k].cs)[:-3]   # "POINTER 11" -> "POINTER"
             a = jc.st[k].att
             if str(jc.st[k].phase) == "ATTACK" and a is not None and a.inCalled and not a.cleared \
-                    and not a.aborted and self.t() - float(a.inT or 0) < 30:
+                    and not a.aborted and (self.t() - float(a.inT or 0) < 30 or self.radio_busy()):
                 return None, None    # IN called: wait for CLEARED HOT (the pilot does not call OFF right away)
             if str(jc.st[k].phase) == "ATTACK":
                 for lbl, it in labels:
@@ -461,14 +463,27 @@ class Run:
         else:
             self.fail.append("timeout, CD %s" % self.cd().phase)
         self.check_order()   # v1.3.0
+        self.check_tic_quiet()   # v1.12.0
         for i in range(1, len(self.M.errors) + 1):
             self.fail.append("Lua: " + str(self.M.errors[i]))
         for i in range(1, len(self.M.log) + 1):
             s = str(self.M.log[i])
-            if re.search(r"error|stale press|subscriber error|BUSY watchdog", s, re.I) and "ERROR" not in s[:20]:
+            if re.search(r"error|stale press|subscriber error|BUSY watchdog|radio overlap", s, re.I) and "ERROR" not in s[:20]:
                 if not re.search(r"no error", s):
                     self.fail.append("log: " + s)
         return self
+
+    def check_tic_quiet(self):    # v1.12.0: no TIC tension call while a JTAC is in SITREP / GAMEPLAN / NINE / READBACK
+        ph = {}
+        for i in range(1, len(self.M.log) + 1):
+            s = str(self.M.log[i])
+            m = re.search(r"\[JC\] (J\d) (\w+) -> (\w+)", s)
+            if m:
+                ph[m.group(1)] = m.group(3)
+            if re.search(r"\[CD\] TIC tension \d", s):
+                busy = [k for k, v in ph.items() if v in ("SITREP", "GAMEPLAN", "NINE", "READBACK")]
+                if busy:
+                    self.fail.append("TIC tension during %s: %s" % (",".join(busy), s))
 
     def phases(self):
         out = []

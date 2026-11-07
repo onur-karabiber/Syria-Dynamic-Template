@@ -1,5 +1,15 @@
--- Comms_Director | v1.13.1
+-- Comms_Director | v1.13.2
 --[[
+  v1.13.2 - SEA2STEEL flight 2026-11-06 (Onur 2026-11-07):
+           * Queue re-entrancy fixed: QFire marks the clip on air (CD.qPlaying, CD.onAir) BEFORE its fn runs. An item
+             with after = 0 (OVERLORD's tasking) ran fn -> SetPhase -> menu rebuild -> QPlay while qPlaying was still
+             false and started a second queue runner: the pilot's "push button 4" readback went out 0.8 s into
+             OVERLORD's call, and two runners alternated for the rest of the flight (calls answered "at once").
+             Guard: a clip starting while another is on air logs "[CD] WARN radio overlap" (scenario_test fails on it).
+           * TIC tension calls wait while the TIC JTAC is in SITREP / GAMEPLAN / NINE / READBACK (CFG.TIC.QUIET_JC);
+             they fell between game plan and 9-line and into the readback.
+           * F10 order: "OVERLORD: RTB (no tanker)" / "OVERLORD: RTB" listed after the TEXACO items, so the expected
+             next call ("TEXACO: ready pre-contact", "TEXACO: state") is F1 (it was F2 at AR2).
   v1.13.1 - RV initial keeps the scripted exchange (Onur 2026-11-06): F10 "TEXACO: RV initial" plays the v1.12.0
            pilot call + TEXACO "RV Alpha ... available" (voice + subtitle) AND, at the same moment, asks for the
            native "intent to refuel". DCS's short call overlaps ours on purpose (exception to the v1.13.0 rule
@@ -550,6 +560,8 @@ local CFG = {
         QUIET_NM  = 10,     -- no tension call with the hero this close to the target group
         BDA_S     = 15,     -- s after the group is dead: "good hits"
         GS_MIN    = 180,    -- m/s ground speed floor for "N minutes out"
+        -- v1.13.2 no tension call while the TIC JTAC is in one of these JTAC_Controller phases
+        QUIET_JC  = { SITREP = true, GAMEPLAN = true, NINE = true, READBACK = true },
     },
     INJ_ARM_NM     = 20,
 
@@ -2215,11 +2227,18 @@ local function QFire()
         timer.scheduleFunction(function() QFire() end, nil, timer.getTime() + clip.after)
         return
     end
+    if CD.onAir and CD.onAir ~= clip then                                  -- v1.13.2 guard
+        env.info("[CD] WARN radio overlap: '" .. tostring(clip.text):sub(1, 50) .. "' over '" ..
+            tostring(CD.onAir.text):sub(1, 50) .. "'")
+    end
+    -- v1.13.2: on air BEFORE the clip's fn runs. fn (phase change -> menu rebuild -> QPlay) used to see
+    -- qPlaying = false for an item with after = 0 and start a second queue runner: the next item (the pilot's
+    -- readback) went out over this one and two runners alternated for the rest of the flight.
+    CD.qPlaying = true
+    CD.onAir = clip
     if clip.text then Msg(clip.text, clip.dur) end
     local len = Tx(clip.audio)
     if clip.fn then pcall(clip.fn) end
-    CD.qPlaying = true
-    CD.onAir = clip
     local wait = clip.hold or clip.dur
     if len > 0 then wait = math.max(wait, len + CFG.AUDIO_PAD) end
     -- v1.8.0: onEnd at the end of the audio (or the hold), never before; the next clip starts after it
@@ -3382,6 +3401,11 @@ local function TicTick(now, p)
         return
     end
     if CD.qPlaying or #CD.queue > 0 then s.next = now + 5; return end
+    -- v1.13.2: not while the pilot works the JTAC's check-in / game plan / 9-line / readback (flight 2026-11-06:
+    -- 1/3 fell between game plan and 9-line, 2/3 into the readback). Before the check-in and on the ingress only.
+    local jc = TRT.JC
+    local jst = jc and type(jc.st) == "table" and jc.st[s.key]
+    if jst and CFG.TIC.QUIET_JC[tostring(jst.phase)] then s.next = now + 3; return end
     local free = {}
     for i = 1, #TIC_CALLS do if not s.used[i] then free[#free + 1] = i end end
     if #free == 0 then s.done = true; return end
@@ -4184,9 +4208,8 @@ local function PhaseActions()
     if ph == "ENROUTE" and CD.ar1Int then                                 -- v1.8.0 AR1 tanker gone
         a[#a+1] = { "OVERLORD: continuing mission, no tanker", A_ContNoTkr }
     end
-    if ph == "REFUEL" or ph == "TKR_DONE" then
-        a[#a+1] = { (ph == "TKR_DONE") and "OVERLORD: RTB" or "OVERLORD: RTB (no tanker)", A_OvlRTB }
-    end
+    -- v1.13.2: OVERLORD RTB moved below the TEXACO items (flight 2026-11-06, AR2: "RTB (no tanker)" sat on F1, so
+    -- "TEXACO: ready pre-contact" and "TEXACO: state" - the expected next calls - were on F2)
     -- v1.7.0 tanker RV (EMCON 2)
     if ph == "ENROUTE" and not CD.tk and not CD.ar1Done and TkAlive() and not CD.tkrLost then   -- v1.8.0
         a[#a+1] = { "OVERLORD: request Texaco (AR1 top-off)", A_TkrRequest }
@@ -4215,6 +4238,9 @@ local function PhaseActions()
         if br.ovr then a[#a+1] = { "TEXACO: execute overrun", A_Overrun } end
         if br.bkw then a[#a+1] = { "TEXACO: breakaway (emergency)", A_Breakaway } end
         if br.spk then a[#a+1] = { "TEXACO: spokes (drogue damaged)", A_Spokes } end
+    end
+    if ph == "REFUEL" or ph == "TKR_DONE" then
+        a[#a+1] = { (ph == "TKR_DONE") and "OVERLORD: RTB" or "OVERLORD: RTB (no tanker)", A_OvlRTB }
     end
     if ph == "STRIKE_IN"  then a[#a+1] = { "STRIKE: check in inbound (btn " .. CFG.BTN.STRIKE .. ")", A_StrikeCheckInIn } end
     for _, k in ipairs(P.order) do   -- v1.10.0
@@ -4958,7 +4984,7 @@ local function CD_Init()
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
     timer.scheduleFunction(MudTick, nil, timer.getTime() + 10)   -- v1.7.9
-    env.info("[CD] Comms_Director v1.13.1 online — CAS-1 Syria (pack " .. tostring(P.version) .. ")")
+    env.info("[CD] Comms_Director v1.13.2 online — CAS-1 Syria (pack " .. tostring(P.version) .. ")")
 end
 
 CD_Init()
