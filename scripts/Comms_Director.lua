@@ -1,5 +1,6 @@
--- Comms_Director | v1.13.2
+-- Comms_Director | v1.13.3
 --[[
+  v1.13.3 - CFG.AUDIO tq_rmk1e / tq_hose for Traffic v1.3.0 (TEXACO "right hose reduced flow, recommend left hose").
   v1.13.2 - SEA2STEEL flight 2026-11-06 (Onur 2026-11-07):
            * Queue re-entrancy fixed: QFire marks the clip on air (CD.qPlaying, CD.onAir) BEFORE its fn runs. An item
              with after = 0 (OVERLORD's tasking) ran fn -> SetPhase -> menu rebuild -> QPlay while qPlaying was still
@@ -886,6 +887,8 @@ local CFG = {
         p_n19                  = { ch = "OVERLORD", len = 0.56 },
         tq_rmk1                = { ch = "TEXACO", len = 1.03 },
         tq_rmk2                = { ch = "TEXACO", len = 2.06 },
+        tq_rmk1e               = { ch = "TEXACO", len = 2.09 },   -- v1.13.3 Traffic v1.3.0
+        tq_hose                = { ch = "TEXACO", len = 2.26 },   -- v1.13.3 Traffic v1.3.0
         tq_rcvd41              = { ch = "TEXACO", len = 2.21 },
         tq_rcvd42              = { ch = "TEXACO", len = 2.26 },
         tq_ctl                 = { ch = "TEXACO", len = 0.62 },
@@ -4984,7 +4987,7 @@ local function CD_Init()
     world.addEventHandler(CD_EVENTS)
     timer.scheduleFunction(CD_Tick, nil, timer.getTime() + CFG.TICK)
     timer.scheduleFunction(MudTick, nil, timer.getTime() + 10)   -- v1.7.9
-    env.info("[CD] Comms_Director v1.13.2 online — CAS-1 Syria (pack " .. tostring(P.version) .. ")")
+    env.info("[CD] Comms_Director v1.13.3 online — CAS-1 Syria (pack " .. tostring(P.version) .. ")")
 end
 
 CD_Init()

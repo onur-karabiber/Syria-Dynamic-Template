@@ -247,6 +247,8 @@
         p_n19                  = { ch = "OVERLORD", len = 0.56 },
         tq_rmk1                = { ch = "TEXACO", len = 1.03 },
         tq_rmk2                = { ch = "TEXACO", len = 2.06 },
+        tq_rmk1e               = { ch = "TEXACO", len = 2.09 },
+        tq_hose                = { ch = "TEXACO", len = 2.26 },
         tq_rcvd41              = { ch = "TEXACO", len = 2.21 },
         tq_rcvd42              = { ch = "TEXACO", len = 2.26 },
         tq_ctl                 = { ch = "TEXACO", len = 0.62 },

@@ -1,25 +1,35 @@
--- Trap_Weight | v1.0.0
+-- Trap_Weight | v1.1.0
 --[[
+  v1.1.0 (2026-11-07, Onur's Mission Editor weights): GROSS WEIGHT against the NATOPS arrestment limits instead of
+         the USNI 5,600 lb "fuel + weapons + sensors" allowance (a magazine figure; the real rule is the maximum trap
+         weight). GROSS = DCS EMPTY 25,093 + 130 fixed + gun rounds x 0.5 + 42 chaff / flare + fuel + weapons on
+         board + racks / launchers / pods / tanks still on the pylons (racks stay after a release).
+         Masses measured in the DCS ME by Onur (TOTAL before / after "remove payload" / "remove pylon"):
+           AIM-9M 189, AGM-65E 760 (+ LAU-117 311), AIM-120B 348, ATFLIR 366, GBU-12 711 (+ BRU-33 311);
+           empty 25,093; no stores, no fuel: 461 (gun 100 %, 60 chaff, 60 flare) / 130 (gun and CM at 0).
+           The remaining 427 lb of that loadout (FPU-8A empty + AIM-9 / AIM-120 launchers) is booked on the FPU-8A
+           until measured separately [V].
+         Limits (NATOPS A1-F18AC-NFM-000 as quoted on the ED forum, not read first-hand [V]): 33,000 lb
+         unrestricted arrestment, 34,000 lb absolute (restricted). Over 33,000 -> PTS_RESTRICTED (-3),
+         over 34,000 -> PTS_OVER (-10). Jettison "required" = gross without fuel + TRAP_FUEL_LB > 33,000.
   Carrier bring-back weight and stores jettison (decision Onur 2026-11-07, flight 2026-11-06: JTAC-2 cleared him
   to depart with 2 GBU-12 left, he trapped with them).
 
   Rule (real world): unexpended ordnance is normally brought back aboard; the limit is the maximum trap weight,
   not a ban. Jettisoning weapons at sea is the exception (too costly, financially and environmentally).
-  Source for the numbers: USNI Proceedings, May 1998, "Super Hornet: Sailors' Aircraft on Track": an F/A-18C "can
-  trap with only 5,600 pounds of fuel, weapons, and external sensors"; with 4,000 lb of fuel reserved for the
-  landing, 1,600 lb is left for stores. The figure is lot / NATOPS-edition dependent [V]; CFG.ALLOWANCE_LB.
+  v1.0.0 used the USNI Proceedings (May 1998) allowance "5,600 pounds of fuel, weapons, and external sensors";
+  v1.1.0 replaces it by the gross weight (see above); the USNI 4,000 lb landing fuel stays as TRAP_FUEL_LB.
 
-  Measured: PAYLOAD = fuel (Unit:getFuel() x desc.fuelMassMax, external tanks included) + weapons on board
-  (Unit:getAmmo(), gun shells and countermeasures not counted) + pods / external tanks from the hero's mission
-  payload (CLSID table; a jettisoned tank is still counted [V]). Pylons, racks and launchers are part of the
-  basic aircraft here (not "weapons and external sensors"). Masses: CFG.STORE_LB / CFG.POD_LB, unknown -> by
-  category (CFG.UNKNOWN_LB) and logged "[TW] unknown store".
+  Measured (v1.1.0): GROSS = base (EMPTY_LB + FIXED_LB + rounds x SHELL_LB + CM_LB) + fuel (Unit:getFuel() x
+  desc.fuelMassMax, external tanks included) + weapons on board (Unit:getAmmo(), CFG.STORE_LB) + racks / launchers /
+  pods / empty tanks from the hero's mission payload (CFG.POD_LB / POD_PAT; a jettisoned tank or rack is still
+  counted [V]). Unknown weapon -> CFG.UNKNOWN_LB by category, logged "[TW] unknown store".
 
   Scoring (TRT.addScore):
-    TRAP     S_EVENT_LAND on the carrier, first landing only: PAYLOAD > ALLOWANCE_LB
-             -> PTS_OVER (-10) "Carrier landing weight: ..." (Trap & deck); within the limit: log only.
+    TRAP     S_EVENT_LAND on the carrier, first landing only: GROSS > MAX_TRAP_LB -> PTS_RESTRICTED (-3),
+             GROSS > ABS_TRAP_LB -> PTS_OVER (-10), "Carrier landing weight: ..." (Trap & deck); else log only.
     JETTISON a drop of the store count with no S_EVENT_SHOT of that type within SHOT_MATCH_S, airborne:
-             inside the jettison area and REQUIRED (stores + TRAP_FUEL_LB > ALLOWANCE_LB)   PTS_JETT_OK (+2)
+             inside the jettison area and REQUIRED (gross - fuel + TRAP_FUEL_LB > ALLOWANCE_LB) PTS_JETT_OK (+2)
              inside the jettison area, not required (the stores would have fitted)            PTS_JETT_UNNEEDED (-2)
              outside the jettison area                                                        PTS_JETT_OUT (-5)
              with a missile engagement on the hero (Missile_Defense) or TL engaged: emergency, no score.
@@ -41,13 +51,20 @@ if TRT.TW then
 end
 
 local CFG = {
-    VERSION        = "1.0.0",
+    VERSION        = "1.1.0",
     HERO           = TRT.PLAYER_NAME or "Player_01",
     CARRIER        = "CVN",
     KG2LB          = 2.20462,
-    ALLOWANCE_LB   = 5600,      -- fuel + weapons + external sensors at the trap (USNI 1998, F/A-18C)
-    TRAP_FUEL_LB   = 4000,      -- fuel reserved for the landing (same source) -> "required" jettison test
-    PTS_OVER       = -10,
+    EMPTY_LB       = 25093,     -- v1.1.0 DCS ME "EMPTY" (F/A-18C)
+    FIXED_LB       = 130,       -- v1.1.0 ME "WEAPONS" with no stores, gun 0 %, chaff / flare 0
+    SHELL_LB       = 0.5,       -- v1.1.0 per M61 round (461 - 130 - CM over 578 rounds, CM split assumed)
+    CM_LB          = 42,        -- v1.1.0 60 chaff + 60 flare (assumed share of the 331 lb)
+    MAX_TRAP_LB    = 33000,     -- v1.1.0 unrestricted arrestment
+    ABS_TRAP_LB    = 34000,     -- v1.1.0 absolute (restricted) arrestment
+    ALLOWANCE_LB   = 33000,     -- "required" jettison test limit (= MAX_TRAP_LB)
+    TRAP_FUEL_LB   = 4000,      -- fuel planned at the trap -> "required" jettison test (USNI 1998: 4,000 for landing)
+    PTS_RESTRICTED = -3,        -- v1.1.0 33,000 < gross <= 34,000
+    PTS_OVER       = -10,       -- gross > 34,000
     PTS_JETT_OK    = 2,
     PTS_JETT_UNNEEDED = -2,
     PTS_JETT_OUT   = -5,
@@ -58,19 +75,22 @@ local CFG = {
     JETT           = { RADIAL_MAG = 120, DME = 25, RADIUS_NM = 5 },
     -- weapon typeName (Unit:getAmmo desc.typeName) -> lb
     STORE_LB = {
-        GBU_12 = 611, GBU_16 = 1092, GBU_10 = 2055, GBU_38 = 558, GBU_32 = 1013, GBU_31 = 2036,
+        GBU_12 = 711, GBU_16 = 1092, GBU_10 = 2055, GBU_38 = 558, GBU_32 = 1013, GBU_31 = 2036,
         Mk_82 = 531, Mk_83 = 1014, Mk_84 = 2039, MK_82 = 531, MK_83 = 1014, MK_84 = 2039,
         CBU_99 = 490, Mk_20 = 490,
-        AGM_65E = 645, AGM_65F = 670, AGM_65G = 670, AGM_88 = 796, AGM_88C = 796,
+        AGM_65E = 760, AGM_65F = 670, AGM_65G = 670, AGM_88 = 796, AGM_88C = 796,
         AGM_154A = 1065, AGM_154C = 1065, AGM_84D = 1145, AGM_84E = 1385, AGM_84H = 1490,
-        AIM_9 = 190, AIM_9M = 190, AIM_9X = 186, ["AIM-9L"] = 190, AIM_120 = 345, AIM_120C = 356, AIM_7 = 510,
+        AIM_9 = 189, AIM_9M = 189, AIM_9X = 186, ["AIM-9L"] = 190, AIM_120 = 348, AIM_120C = 356, AIM_7 = 510,
     },
     UNKNOWN_LB = { bomb = 600, missile = 400, rocket = 25, other = 300 },
-    -- payload CLSID -> lb (pods; external tanks EMPTY - their fuel is in getFuel())
+    -- payload CLSID -> lb of what stays on the pylon: racks / launchers / pods / EMPTY tanks (tank fuel is in
+    -- getFuel()). v1.1.0 values from the DCS ME (Onur 2026-11-07); a CLSID matching a pattern in POD_PAT counts too.
     POD_LB = {
-        ["{AN_ASQ_228}"]       = 420,   -- AN/ASQ-228 ATFLIR
-        ["{FPU_8A_FUEL_TANK}"] = 290,   -- FPU-8A 330 gal tank, empty [V]
+        ["{AN_ASQ_228}"]       = 366,   -- AN/ASQ-228 ATFLIR
+        ["{FPU_8A_FUEL_TANK}"] = 427,   -- FPU-8A empty + (for now) the AIM-9 / AIM-120 launchers [V]
+        ["{F16A4DE0-116C-4A71-97F0-2CF85B0313EC}"] = 311,   -- LAU-117 (AGM-65E)
     },
+    POD_PAT = { { "^{BRU33_", 311 } },  -- BRU-33 VER (2x GBU-12 etc.)
 }
 
 local TW = { version = CFG.VERSION, CFG = CFG, last = nil, trapDone = false, jetts = {} }
@@ -126,6 +146,9 @@ local function podsLb()
     if type(py) == "table" then
         for st, p in pairs(py) do
             local lb = p and p.CLSID and CFG.POD_LB[p.CLSID]
+            if not lb and p and p.CLSID then
+                for _, pp in ipairs(CFG.POD_PAT) do if p.CLSID:match(pp[1]) then lb = pp[2] break end end
+            end
             if lb then
                 POD.lb = POD.lb + lb
                 POD.list[#POD.list + 1] = string.format("st%s %s %d", tostring(st), p.CLSID, lb)
@@ -139,9 +162,10 @@ end
 
 local function stores(u)
     local ammo = safe(u.getAmmo, u) or {}
-    local lb, counts, parts = 0, {}, {}
+    local lb, counts, parts, shells = 0, {}, {}, 0
     for _, a in ipairs(ammo) do
         local d = a.desc
+        if d and d.category == 0 then shells = shells + (a.count or 0) end
         if d and not isShell(d) then
             local n, c = tostring(d.typeName or "?"), a.count or 0
             local m = storeLb(d)
@@ -150,7 +174,7 @@ local function stores(u)
             parts[#parts + 1] = string.format("%dx %s", c, n)
         end
     end
-    return lb, counts, parts
+    return lb, counts, parts, shells
 end
 
 local function fuelLb(u)
@@ -160,19 +184,21 @@ local function fuelLb(u)
     return f * maxKg * CFG.KG2LB
 end
 
---- payload table: { total, fuel, weapons, pods, parts }
+--- v1.1.0 gross weight table: { total, base, fuel, weapons, pods, parts }
 function TW.payload(u)
     u = u or hero()
     if not u then return nil end
-    local w, _, parts = stores(u)
+    local w, _, parts, shells = stores(u)
     local p = podsLb()
     local f = fuelLb(u)
-    return { total = f + w + p, fuel = f, weapons = w, pods = p, parts = parts }
+    local base = CFG.EMPTY_LB + CFG.FIXED_LB + shells * CFG.SHELL_LB + CFG.CM_LB
+    return { total = base + f + w + p, base = base, fuel = f, weapons = w, pods = p, parts = parts }
 end
 
 local function fmtP(P)
-    return string.format("payload %.0f lb = fuel %.0f + weapons %.0f (%s) + pods/tanks %.0f; limit %d",
-        P.total, P.fuel, P.weapons, (#P.parts > 0) and table.concat(P.parts, ", ") or "none", P.pods, CFG.ALLOWANCE_LB)
+    return string.format("gross %.0f lb = base %.0f + fuel %.0f + weapons %.0f (%s) + racks/pods/tanks %.0f; limits %d / %d",
+        P.total, P.base, P.fuel, P.weapons, (#P.parts > 0) and table.concat(P.parts, ", ") or "none", P.pods,
+        CFG.MAX_TRAP_LB, CFG.ABS_TRAP_LB)
 end
 
 -- ── jettison area ────────────────────────────────────────────────
@@ -236,7 +262,8 @@ local function book(B)
     local rad, dme = radialDme(p)
     local inside, dA = inJettArea(p)
     local stLb = B.before                                                   -- weapons + pods before the burst
-    local need = stLb + CFG.TRAP_FUEL_LB > CFG.ALLOWANCE_LB
+    local base = (TW.payload() or { base = CFG.EMPTY_LB }).base
+    local need = base + stLb + CFG.TRAP_FUEL_LB > CFG.ALLOWANCE_LB
     local thr = underThreat()
     local where = (rad and string.format("R-%03d/%.0f DME", math.floor(rad + 0.5), dme)) or "position n/a"
     local what = table.concat(B.items, ", ")
@@ -247,11 +274,11 @@ local function book(B)
         pts, txt = CFG.PTS_JETT_OUT, string.format("Jettison outside the jettison area: %s at %s (area R-%03d/%d, %d NM)",
             what, where, CFG.JETT.RADIAL_MAG, CFG.JETT.DME, CFG.JETT.RADIUS_NM)
     elseif need then
-        pts, txt = CFG.PTS_JETT_OK, string.format("Jettison in the jettison area: %s (stores %.0f + %d fuel > %d)",
-            what, stLb, CFG.TRAP_FUEL_LB, CFG.ALLOWANCE_LB)
+        pts, txt = CFG.PTS_JETT_OK, string.format("Jettison in the jettison area: %s (trap weight %.0f with %d fuel > %d)",
+            what, base + stLb + CFG.TRAP_FUEL_LB, CFG.TRAP_FUEL_LB, CFG.ALLOWANCE_LB)
     else
-        pts, txt = CFG.PTS_JETT_UNNEEDED, string.format("Jettison not required: %s (stores %.0f + %d fuel <= %d)",
-            what, stLb, CFG.TRAP_FUEL_LB, CFG.ALLOWANCE_LB)
+        pts, txt = CFG.PTS_JETT_UNNEEDED, string.format("Jettison not required: %s (trap weight %.0f with %d fuel <= %d)",
+            what, base + stLb + CFG.TRAP_FUEL_LB, CFG.TRAP_FUEL_LB, CFG.ALLOWANCE_LB)
     end
     log(string.format("JETTISON %s at %s (area %s, %.1f NM from its centre), stores before %.0f lb, required %s -> %+d %s",
         what, where, inside and "inside" or "outside", dA or -1, stLb, tostring(need), pts, txt))
@@ -309,11 +336,18 @@ local function onLand(e)
     local P = TW.payload()
     if not P then return end
     TW.last = P
-    local over = P.total - CFG.ALLOWANCE_LB
-    log(string.format("TRAP %s -> %s", fmtP(P), (over > 0) and string.format("OVER by %.0f lb", over) or "within"))
-    if over > 0 and TRT.addScore then
-        TRT.addScore(CFG.PTS_OVER, string.format("Carrier landing weight: %.0f lb over the bring-back limit (%.0f / %d lb)",
-            over, P.total, CFG.ALLOWANCE_LB))
+    local g = P.total
+    local verdict = (g > CFG.ABS_TRAP_LB and "OVER the absolute limit") or (g > CFG.MAX_TRAP_LB and "restricted")
+        or "within"
+    log(string.format("TRAP %s -> %s", fmtP(P), verdict))
+    if TRT.addScore then
+        if g > CFG.ABS_TRAP_LB then
+            TRT.addScore(CFG.PTS_OVER, string.format("Carrier landing weight: %.0f lb, over the %d lb arrestment limit",
+                g, CFG.ABS_TRAP_LB))
+        elseif g > CFG.MAX_TRAP_LB then
+            TRT.addScore(CFG.PTS_RESTRICTED, string.format("Carrier landing weight: %.0f lb, restricted arrestment (> %d lb)",
+                g, CFG.MAX_TRAP_LB))
+        end
     end
 end
 
@@ -344,5 +378,5 @@ timer.scheduleFunction(function()
     if P then log("start " .. fmtP(P)) end
 end, nil, now() + 8)
 
-log(string.format("Trap_Weight v%s loaded (hero %s, limit %d lb, jettison area R-%03d/%d DME r %d NM)",
-    CFG.VERSION, CFG.HERO, CFG.ALLOWANCE_LB, CFG.JETT.RADIAL_MAG, CFG.JETT.DME, CFG.JETT.RADIUS_NM))
+log(string.format("Trap_Weight v%s loaded (hero %s, trap %d / %d lb, jettison area R-%03d/%d DME r %d NM)",
+    CFG.VERSION, CFG.HERO, CFG.MAX_TRAP_LB, CFG.ABS_TRAP_LB, CFG.JETT.RADIAL_MAG, CFG.JETT.DME, CFG.JETT.RADIUS_NM))

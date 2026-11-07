@@ -1,5 +1,14 @@
--- Traffic | v1.2.0
+-- Traffic | v1.3.0
 --[[
+  v1.3.0 - TEXACO explains the wait (Onur 2026-11-07, flight 2026-11-06: one AI receiver on the left hose, he was
+           kept in echelon left with the right hose free - not ATP-56: with two wing stations free the receiver goes
+           RIGHT, ATP-56 2.x e(1)). With exactly one AI receiver ahead, the right hose is declared degraded for the
+           mission and TEXACO's RV reply says "Right hose reduced flow, recommend left hose. One receiver ahead of
+           you, join echelon left." (clips tq_hose + tq_rmk1e). A later RV of the same mission with no AI receiver
+           gets "Right hose reduced flow, recommend left hose." (tq_hose) - the fault persists. Two receivers ahead:
+           unchanged ("Two receivers ahead of you, join echelon left.": both hoses busy). Reduced flow, not
+           "unserviceable": DCS keeps both drogues trailed. Which hose a DCS AI receiver takes is not controlled
+           here [V]; AAR_Monitor does not score the hero's hose.
   v1.2.0 - AAR queue as ATP-56 2.6 (Onur 2026-11-05 01:18): the receivers ahead keep their turn, the hero waits in
            echelon left. The v1.1.0 hold (Follow 1.5 NM trail) is removed.
            * TEXACO "Hornet 51, Texaco 11, hose clear, cleared astern." (tq_hose_clear) once every AI receiver of
@@ -62,7 +71,7 @@ if TRT.Traffic then
 end
 
 local CFG = {
-    VERSION   = "1.2.0",
+    VERSION   = "1.3.0",
     HERO      = TRT.PLAYER_NAME or "Player_01",
     CARRIER   = "CVN",
     COUNTRY   = country.id.USA,
@@ -276,7 +285,8 @@ end
 -- ══════════════════════════════════════════════════════════════
 --  AAR QUEUE
 -- ══════════════════════════════════════════════════════════════
-local A = { lastTk = nil, rx = {}, n = 0, wait = 0, heroContact = false, sessionTk = nil, lastT = nil }
+local A = { lastTk = nil, rx = {}, n = 0, wait = 0, heroContact = false, sessionTk = nil, lastT = nil,
+            rightLow = false }                                   -- v1.3.0 right hose degraded (mission-long)
 
 local function rxActive()
     local n = 0
@@ -501,7 +511,13 @@ local function TkrRemark()
     if not (cd and cd.tk and cd.tk == A.sessionTk) then return nil end
     local n = rxActive()
     if n >= 2 then return { text = "Two receivers ahead of you, join echelon left.", clip = "tq_rmk2" } end
-    if n == 1 then return { text = "One receiver ahead of you.", clip = "tq_rmk1" } end
+    local HOSE = "Right hose reduced flow, recommend left hose."
+    if n == 1 then                                               -- v1.3.0
+        if not A.rightLow then A.rightLow = true; log("TEXACO: right hose reduced flow (mission-long)") end
+        return { text = HOSE .. " One receiver ahead of you, join echelon left.",
+                 clip = { "tq_hose", 0.15, "tq_rmk1e" } }
+    end
+    if A.rightLow then return { text = HOSE, clip = "tq_hose" } end
     return nil
 end
 

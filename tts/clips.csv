@@ -264,6 +264,8 @@ p_n19;PILOT>OVERLORD;nineteen;tok
 # Traffic.lua v1.0.0 / CD v1.7.10: AI receivers at the tanker (TEXACO remark at RV Alpha, their post-AAR calls)
 tq_rmk1;TEXACO;One receiver ahead of you.;tok
 tq_rmk2;TEXACO;Two receivers ahead of you, join echelon left.;tok
+tq_rmk1e;TEXACO;One receiver ahead of you, join echelon left.;tok
+tq_hose;TEXACO;Right hose reduced flow, recommend left hose.;tok
 tq_rcvd41;TEXACO;Hornet four one, Texaco one one, you received;tok
 tq_rcvd42;TEXACO;Hornet four two, Texaco one one, you received;tok
 tq_ctl;TEXACO;Clear to leave.;tok
